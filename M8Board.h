@@ -69,6 +69,12 @@ public:
 
   void setBacklight(uint8_t level);  // 0..255
 
+  // Power button = the Teensy 4 On/Off pin, handled by the SNVS block like the
+  // stock firmware does. Without software the chip only powers off after a ~5 s hold.
+  bool powerButtonPressed();         // true once per press (consumes the request)
+  bool powerButtonHeld();            // live button level
+  [[noreturn]] void powerOff();
+
 private:
   bool initMCP23008();
   bool initSX1508();

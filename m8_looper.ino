@@ -101,7 +101,31 @@ void setup() {
                 codecOk ? "ok" : "missing");
 }
 
+// Short press shows a prompt; keep holding ~1 s to power off, like the stock firmware.
+static void handlePowerButton() {
+  if (!board.powerButtonPressed()) return;
+  auto &t = board.tft();
+  t.fillRect(10, 185, 300, 10, ILI9341_BLACK);
+  t.setTextColor(ILI9341_RED);
+  t.setTextSize(1);
+  t.setCursor(10, 185);
+  t.print("POWER OFF? (KEEP HOLDING)");
+  uint32_t start = millis();
+  while (board.powerButtonHeld()) {
+    if (millis() - start >= 1000) {
+      for (auto &e : env) e.noteOff();
+      codec.volume(0.0f);
+      delay(200);
+      board.powerOff();
+    }
+  }
+  t.fillRect(10, 185, 300, 10, ILI9341_BLACK);
+  board.powerButtonPressed();  // drop a request latched while we were waiting
+}
+
 void loop() {
+  handlePowerButton();
+
   static uint8_t prev = 0;
   uint8_t now;
   if (!board.keysChanged(now)) return;

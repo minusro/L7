@@ -101,6 +101,26 @@ void Board::applyVariantBPanelTuning() {
 
 void Board::setBacklight(uint8_t level) { analogWrite(_pins->backlight, level); }
 
+// ---------------- Power button (SNVS On/Off) ----------------
+static constexpr uint32_t SNVS_LPSR_EO  = 1u << 17;  // emergency-off request
+static constexpr uint32_t SNVS_LPSR_SPO = 1u << 18;  // set-power-off request (short press)
+static constexpr uint32_t SNVS_HPSR_BTN = 1u << 6;   // live button value
+
+bool Board::powerButtonPressed() {
+  if (!(SNVS_LPSR & SNVS_LPSR_SPO)) return false;
+  SNVS_LPSR = SNVS_LPSR_SPO | SNVS_LPSR_EO;  // write-1-to-clear, as stock does
+  return true;
+}
+
+bool Board::powerButtonHeld() { return SNVS_HPSR & SNVS_HPSR_BTN; }
+
+void Board::powerOff() {
+  setBacklight(0);
+  SNVS_LPCR |= SNVS_LPCR_DP_EN | SNVS_LPCR_TOP;  // stock sets TOP, then WFI forever
+  asm volatile("dsb");
+  while (true) asm volatile("wfi");
+}
+
 // Variant B: TI BQ2589x charger @0x6A on Wire. Replays the stock firmware's
 // init sequence verbatim. Without this the chip runs on power-on defaults
 // (2 A fast charge, 40 s I2C watchdog) whenever it has been reset, e.g.
