@@ -13,25 +13,35 @@
 m8::Board board;
 
 // ---- Audio: Teensy Audio Library on SAI1 (MCLK 23, BCLK 21, LRCLK 20, TX 7, RX 8)
-AudioSynthWaveform  osc;
-AudioEffectEnvelope env;
+// One sine voice (osc -> env) per key, summed by two 4-input mixers into a master mixer.
+AudioSynthWaveform  osc[8];
+AudioEffectEnvelope env[8];
+AudioMixer4         mixA, mixB, master;
 AudioOutputI2S      i2sOut;
-AudioConnection     c1(osc, env);
-AudioConnection     c2(env, 0, i2sOut, 0);
-AudioConnection     c3(env, 0, i2sOut, 1);
+AudioConnection     v0(osc[0], env[0]), m0(env[0], 0, mixA, 0);
+AudioConnection     v1(osc[1], env[1]), m1(env[1], 0, mixA, 1);
+AudioConnection     v2(osc[2], env[2]), m2(env[2], 0, mixA, 2);
+AudioConnection     v3(osc[3], env[3]), m3(env[3], 0, mixA, 3);
+AudioConnection     v4(osc[4], env[4]), m4(env[4], 0, mixB, 0);
+AudioConnection     v5(osc[5], env[5]), m5(env[5], 0, mixB, 1);
+AudioConnection     v6(osc[6], env[6]), m6(env[6], 0, mixB, 2);
+AudioConnection     v7(osc[7], env[7]), m7(env[7], 0, mixB, 3);
+AudioConnection     ma(mixA, 0, master, 0), mb(mixB, 0, master, 1);
+AudioConnection     outL(master, 0, i2sOut, 0), outR(master, 0, i2sOut, 1);
 AudioControlSGTL5000 codec;      // SGTL5000 @0x0A on Wire, same as stock firmware
 
 struct KeyUi { uint8_t bit; const char *name; int16_t x, y; float hz; };
-// Laid out like the M8's physical key cluster.
+// Laid out like the M8's physical key cluster. Index = voice number.
+// C major C4..C5, ascending left to right across the columns (bottom key before top).
 static const KeyUi KEYS[8] = {
-  {m8::BTN_UP,    "UP",     70,  70, 392.00f},
-  {m8::BTN_LEFT,  "LEFT",   10, 130, 261.63f},
-  {m8::BTN_DOWN,  "DOWN",   70, 130, 329.63f},
-  {m8::BTN_RIGHT, "RIGHT", 130, 130, 440.00f},
-  {m8::BTN_SHIFT, "SHIFT", 200, 70,  493.88f},
-  {m8::BTN_PLAY,  "PLAY",  260, 70,  523.25f},
-  {m8::BTN_OPT,   "OPT",   200, 130, 587.33f},
-  {m8::BTN_EDIT,  "EDIT",  260, 130, 659.25f},
+  {m8::BTN_LEFT,  "LEFT",   10, 130, 261.63f},  // C4
+  {m8::BTN_DOWN,  "DOWN",   70, 130, 293.66f},  // D4
+  {m8::BTN_UP,    "UP",     70,  70, 329.63f},  // E4
+  {m8::BTN_RIGHT, "RIGHT", 130, 130, 349.23f},  // F4
+  {m8::BTN_OPT,   "OPT",   200, 130, 392.00f},  // G4
+  {m8::BTN_SHIFT, "SHIFT", 200, 70,  440.00f},  // A4
+  {m8::BTN_EDIT,  "EDIT",  260, 130, 493.88f},  // B4
+  {m8::BTN_PLAY,  "PLAY",  260, 70,  523.25f},  // C5
 };
 
 static void drawKey(const KeyUi &k, bool down) {
@@ -56,9 +66,14 @@ static void drawRaw(uint8_t keys) {
 
 void setup() {
   Serial.begin(115200);
-  AudioMemory(12);
-  osc.begin(0.4f, 440.0f, WAVEFORM_SINE);
-  env.attack(5); env.release(150);
+  AudioMemory(32);
+  for (int i = 0; i < 8; i++) {
+    osc[i].begin(1.0f, KEYS[i].hz, WAVEFORM_SINE);
+    env[i].attack(5); env[i].release(150);
+  }
+  // Each voice ends up at 1/8 full scale, so all 8 keys together can't clip.
+  for (int ch = 0; ch < 4; ch++) { mixA.gain(ch, 0.25f); mixB.gain(ch, 0.25f); }
+  master.gain(0, 0.5f); master.gain(1, 0.5f);
 
   bool keysOk = board.begin();
 
@@ -98,15 +113,11 @@ void loop() {
   drawRaw(now);
   Serial.printf("keys 0x%02X\n", now);
 
-  // Each key plays its own sine tone: the newest press wins; if it's released
-  // while others are still held, fall back to one of those. Release when nothing is held.
-  if (now) {
-    uint8_t pressed = now & ~prev;
-    uint8_t pick = pressed ? pressed : now;
-    for (auto &k : KEYS) if (pick & k.bit) { osc.frequency(k.hz); break; }
-    if (!prev) env.noteOn();
-  } else {
-    env.noteOff();
+  // Polyphonic: every key gates its own voice.
+  for (int i = 0; i < 8; i++) {
+    bool was = prev & KEYS[i].bit, is = now & KEYS[i].bit;
+    if (is && !was) env[i].noteOn();
+    if (was && !is) env[i].noteOff();
   }
   prev = now;
 }
