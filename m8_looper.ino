@@ -19,6 +19,7 @@ AudioOutputI2S      i2sOut;
 AudioConnection     c1(osc, env);
 AudioConnection     c2(env, 0, i2sOut, 0);
 AudioConnection     c3(env, 0, i2sOut, 1);
+AudioControlSGTL5000 codec;      // SGTL5000 @0x0A on Wire, same as stock firmware
 
 struct KeyUi { uint8_t bit; const char *name; int16_t x, y; float hz; };
 // Laid out like the M8's physical key cluster.
@@ -56,10 +57,15 @@ static void drawRaw(uint8_t keys) {
 void setup() {
   Serial.begin(115200);
   AudioMemory(12);
-  osc.begin(0.25f, 440.0f, WAVEFORM_SAWTOOTH);
+  osc.begin(0.4f, 440.0f, WAVEFORM_SINE);
   env.attack(5); env.release(150);
 
   bool keysOk = board.begin();
+
+  // Stock firmware retries enable() up to 6 times, 10 ms apart.
+  bool codecOk = false;
+  for (int i = 0; i < 6 && !(codecOk = codec.enable()); i++) delay(10);
+  codec.volume(0.6f);
 
   auto &t = board.tft();
   t.setTextColor(ILI9341_WHITE);
@@ -70,11 +76,14 @@ void setup() {
   t.setCursor(10, 36);
   t.printf("board variant %c   keys %s", board.variant() == m8::VARIANT_A ? 'A' : 'B',
            keysOk ? "OK" : "NOT FOUND");
+  t.setCursor(10, 48);
+  t.printf("codec SGTL5000 %s", codecOk ? "OK" : "NOT FOUND");
   for (auto &k : KEYS) drawKey(k, false);
   drawRaw(0);
 
-  Serial.printf("M8 starter: variant %c, key expander %s\n",
-                board.variant() == m8::VARIANT_A ? 'A' : 'B', keysOk ? "ok" : "missing");
+  Serial.printf("M8 starter: variant %c, key expander %s, codec %s\n",
+                board.variant() == m8::VARIANT_A ? 'A' : 'B', keysOk ? "ok" : "missing",
+                codecOk ? "ok" : "missing");
 }
 
 void loop() {
@@ -89,9 +98,12 @@ void loop() {
   drawRaw(now);
   Serial.printf("keys 0x%02X\n", now);
 
-  // Play the note of the lowest pressed key; release when nothing is held.
+  // Each key plays its own sine tone: the newest press wins; if it's released
+  // while others are still held, fall back to one of those. Release when nothing is held.
   if (now) {
-    for (auto &k : KEYS) if (now & k.bit) { osc.frequency(k.hz); break; }
+    uint8_t pressed = now & ~prev;
+    uint8_t pick = pressed ? pressed : now;
+    for (auto &k : KEYS) if (pick & k.bit) { osc.frequency(k.hz); break; }
     if (!prev) env.noteOn();
   } else {
     env.noteOff();
