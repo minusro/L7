@@ -19,7 +19,8 @@
 //   LEFT/RIGHT       tempo -/+ 1 BPM       SHIFT+L/R    tempo -/+ 0.1 BPM
 //   EDIT             empty track: record / stop recording; full track: mute
 //   SHIFT+EDIT       clear the track
-//   OPT+LEFT/RIGHT   move the loop range   OPT+UP/DOWN  range longer/shorter
+//   OPT+LEFT/RIGHT   move the loop range by one beat
+//   OPT+UP/DOWN      double/halve the loop range (1/4 bar up to the whole loop)
 //   power (hold)     switch off
 //
 // Build: Teensyduino, board "Teensy 4.0", USB type "Serial", CPU speed 600 MHz.
@@ -166,9 +167,13 @@ static void drawTrack(int i) {
   } else {
     uint32_t rs, rb;
     trackRange(i, rs, rb);
-    snprintf(line, sizeof line, "%2lu bars  range %lu-%lu%s @%.1f  x%.2f  drops %lu",
-             tr.loopBars, rs + 1, rs + rb, tr.rangePending ? "*" : " ",
-             bpmForSpb(tr.spbNative), (double)tr.spbNative / transport.spb, tr.underruns);
+    char len[12];                                    // range length in bars
+    if (rb < BEATS_PER_BAR) snprintf(len, sizeof len, "1/%lu", BEATS_PER_BAR / rb);
+    else snprintf(len, sizeof len, "%lu", rb / BEATS_PER_BAR);
+    snprintf(line, sizeof line, "%2lu bars  at %lu.%lu len %-3s%s @%.1f x%.2f dr %lu",
+             tr.loopBars, rs / BEATS_PER_BAR + 1, rs % BEATS_PER_BAR + 1, len,
+             tr.rangePending ? "*" : " ", bpmForSpb(tr.spbNative),
+             (double)tr.spbNative / transport.spb, tr.underruns);
   }
   t.printf("%-46s", line);
 }
@@ -180,12 +185,15 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
   int prevSel = selected;
 
   if (opt) {
-    uint32_t rs, rb;
+    // Range in beats, length a power of two. LEFT/RIGHT move the start by
+    // one beat; UP/DOWN double/halve the length (doubling keeps the range
+    // inside the loop).
+    uint32_t rs, rb, loopBeats = tr.loopBars * BEATS_PER_BAR;
     trackRange(selected, rs, rb);                    // includes a queued change
-    if (pressed & m8::BTN_LEFT && rs > 0) setRange(selected, rs - 1, rb);
-    if (pressed & m8::BTN_RIGHT && rs + rb < tr.loopBars) setRange(selected, rs + 1, rb);
-    if (pressed & m8::BTN_UP) setRange(selected, rs, rb + 1);
-    if (pressed & m8::BTN_DOWN && rb > 1) setRange(selected, rs, rb - 1);
+    if (pressed & m8::BTN_LEFT && rs >= 1) setRange(selected, rs - 1, rb);
+    if (pressed & m8::BTN_RIGHT && rs + 1 + rb <= loopBeats) setRange(selected, rs + 1, rb);
+    if (pressed & m8::BTN_UP && rb * 2 <= loopBeats) setRange(selected, min(rs, loopBeats - rb * 2), rb * 2);
+    if (pressed & m8::BTN_DOWN && rb > 1) setRange(selected, rs, rb / 2);
   } else {
     if (pressed & m8::BTN_UP) selected = (selected + NUM_TRACKS - 1) % NUM_TRACKS;
     if (pressed & m8::BTN_DOWN) selected = (selected + 1) % NUM_TRACKS;

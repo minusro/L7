@@ -20,12 +20,12 @@ struct Track {
   uint32_t spbNative = 0;          // samples per beat at the tempo it was recorded at
   uint32_t loopBars = 0;           // power of two
   uint32_t recordedFrames = 0;     // audio in the file; the rest of the loop is silence
-  uint32_t rangeStartBar = 0, rangeBars = 0;
+  uint32_t rangeStartBeat = 0, rangeBeats = 0;   // loop range; length is a power of two beats
   int32_t anchorBeat = 0;          // transport beat where the loop's first bar fell
   float gain = 1.0f;
 
-  uint32_t rangeStartFrame() const { return rangeStartBar * BEATS_PER_BAR * spbNative; }
-  uint32_t rangeFrames() const { return rangeBars * BEATS_PER_BAR * spbNative; }
+  uint32_t rangeStartFrame() const { return rangeStartBeat * spbNative; }
+  uint32_t rangeFrames() const { return rangeBeats * spbNative; }
 
   // Stream: frames of the looped range in playback order. head is written by
   // loop(), tail by the interrupt. Counters run freely; ring index = n % RING.
@@ -47,10 +47,10 @@ struct Track {
   uint32_t fileFrame = 0;          // loop frame that stream frame `head` comes from
 
   // Queued loop range (loop() only): the stream switches to it at stream
-  // frame switchS, which falls on bar line switchBeat. The old range keeps
-  // playing until then.
+  // frame switchS, which falls on transport beat switchBeat. The old range
+  // keeps playing until then.
   bool rangePending = false;
-  uint32_t pendingStartBar = 0, pendingBars = 0, switchS = 0;
+  uint32_t pendingStartBeat = 0, pendingBeats = 0, switchS = 0;
   int32_t switchBeat = 0;
 };
 

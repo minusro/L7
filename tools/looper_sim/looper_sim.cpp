@@ -152,8 +152,7 @@ static void checkSync(int t, const char *label) {
         uint32_t offset = spb - sib;               // beat starts at this index in the block
         block();
         if (!tr.live || offset >= AUDIO_BLOCK_SAMPLES) break;
-        int32_t phase = ((target - tr.anchorBeat) % (int32_t)(tr.rangeBars * BEATS_PER_BAR) +
-                         tr.rangeBars * BEATS_PER_BAR) % (tr.rangeBars * BEATS_PER_BAR);
+        int32_t phase = ((target - tr.anchorBeat) % (int32_t)tr.rangeBeats + tr.rangeBeats) % tr.rangeBeats;
         uint32_t frame = tr.rangeStartFrame() + phase * tr.spbNative;
         float expect = frame < tr.recordedFrames ? wavLeft(t, frame) * engine.masterGain : 0;
         checked++;
@@ -202,7 +201,13 @@ static int fuzz(int seconds, unsigned seed) {
                   uint32_t spb = spbForBpm(b); bool ok = recording.mode == Recording::Idle && b >= MIN_BPM && b <= MAX_BPM;
                   for (auto &x : tracks) if (x.state != TrackState::Empty) { double sp = (double)x.spbNative / spb; if (sp < MIN_SPEED || sp > MAX_SPEED) ok = false; }
                   if (ok) { bpm = b; transport.pendingSpb = spb; } break; }
-        case 5: lastAction = "range"; if (tr.state != TrackState::Empty) { uint32_t s0 = rand() % tr.loopBars; setRange(sel, s0, 1 + rand() % (tr.loopBars - s0)); } break;
+        case 5: lastAction = "range";
+                if (tr.state != TrackState::Empty) {
+                  uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR, len = 1;
+                  while (len * 2 <= loopBeats && rand() % 2) len *= 2;
+                  setRange(sel, rand() % (loopBeats - len + 1), len);
+                }
+                break;
         case 6: lastAction = "transport"; if (transport.running) transportStop(); else transportStart(); break;
         default: lastAction = "nothing"; break;
       }
@@ -243,7 +248,7 @@ int main(int argc, char **argv) {
   checkSync(0, "track 1 at 90 BPM");
   checkSync(2, "track 3 at 90 BPM");
 
-  printf("loop range of track 1 changed to bars 2-3 while playing\n");
+  printf("loop range of track 1 changed to bars 2-3 (beats 4-11) while playing\n");
   {
     feedRamp = false;
     engine.monitor = false;
@@ -251,9 +256,9 @@ int main(int argc, char **argv) {
     Track &tr = tracks[0];
     tr.gain = 1;
     tr.underruns = 0;
-    uint32_t oldStart = tr.rangeStartBar, oldBars = tr.rangeBars;
+    uint32_t oldStart = tr.rangeStartBeat, oldBeats = tr.rangeBeats;
     int32_t asked = transport.beat;
-    setRange(0, 1, 2);
+    setRange(0, 4, 8);
     int32_t sw = tr.switchBeat;
     char m[128];
     snprintf(m, sizeof m, "queued for bar line beat %d (asked at beat %d), keeps playing meanwhile", sw, asked);
@@ -269,9 +274,9 @@ int main(int argc, char **argv) {
           block();
           if (offset >= AUDIO_BLOCK_SAMPLES) break;
           bool newRange = target >= sw;
-          uint32_t rs = newRange ? 1 : oldStart, rb = newRange ? 2 : oldBars;
-          int32_t ph = ((target - tr.anchorBeat) % (int32_t)(rb * BEATS_PER_BAR) + rb * BEATS_PER_BAR) % (rb * BEATS_PER_BAR);
-          uint32_t frame = rs * BEATS_PER_BAR * tr.spbNative + ph * tr.spbNative;
+          uint32_t rs = newRange ? 4 : oldStart, rb = newRange ? 8 : oldBeats;
+          int32_t ph = ((target - tr.anchorBeat) % (int32_t)rb + rb) % rb;
+          uint32_t frame = rs * tr.spbNative + ph * tr.spbNative;
           float expect = frame < tr.recordedFrames ? wavLeft(0, frame) * engine.masterGain : 0;
           checked++;
           if (!newRange) before++;
@@ -286,7 +291,24 @@ int main(int argc, char **argv) {
     snprintf(m, sizeof m, "%d beats on the old range then %d on the new, all on the right frame; %u dropouts",
              before, checked - before, tr.underruns);
     check(bad == 0 && before > 0 && checked - before > 4 && tr.underruns == 0, m);
-    check(!tr.rangePending && tr.rangeStartBar == 1 && tr.rangeBars == 2, "range applied and kept");
+    check(!tr.rangePending && tr.rangeStartBeat == 4 && tr.rangeBeats == 8, "range applied and kept");
+    check(!setRange(0, 0, 3) && !setRange(0, 0, 0), "lengths that aren't a power of two are refused");
+    for (auto &x : tracks) x.gain = 1;
+    engine.monitor = true;
+  }
+
+  printf("quarter-bar range: beat 6 of track 1 repeated\n");
+  {
+    setRange(0, 5, 1);
+    check(tracks[0].rangePending, "queued");
+    runBeats(3);
+    check(!tracks[0].rangePending && tracks[0].rangeBeats == 1, "switched within a few beats");
+    checkSync(0, "1/4-bar range");
+    setRange(0, 3, 4);                             // a bar starting on beat 4: off the length grid
+    runBeats(6);
+    checkSync(0, "1-bar range starting at beat 4");
+    setRange(0, 4, 8);
+    runBeats(6);
     for (auto &x : tracks) x.gain = 1;
     engine.monitor = true;
   }
@@ -354,8 +376,8 @@ int main(int argc, char **argv) {
     Track saved[NUM_TRACKS];
     for (int t = 0; t < NUM_TRACKS; t++) {
       saved[t].state = tracks[t].state; saved[t].loopBars = tracks[t].loopBars;
-      saved[t].recordedFrames = tracks[t].recordedFrames; saved[t].rangeStartBar = tracks[t].rangeStartBar;
-      saved[t].rangeBars = tracks[t].rangeBars; saved[t].spbNative = tracks[t].spbNative;
+      saved[t].recordedFrames = tracks[t].recordedFrames; saved[t].rangeStartBeat = tracks[t].rangeStartBeat;
+      saved[t].rangeBeats = tracks[t].rangeBeats; saved[t].spbNative = tracks[t].spbNative;
       tracks[t].state = TrackState::Empty; tracks[t].file = FsFile();
     }
     int before = simFsChanges;
@@ -365,8 +387,8 @@ int main(int argc, char **argv) {
       const Track &a = saved[t], &b = tracks[t];
       if (a.state != b.state) same = false;
       if (a.state != TrackState::Empty &&
-          (a.loopBars != b.loopBars || a.recordedFrames != b.recordedFrames || a.rangeStartBar != b.rangeStartBar ||
-           a.rangeBars != b.rangeBars || a.spbNative != b.spbNative)) same = false;
+          (a.loopBars != b.loopBars || a.recordedFrames != b.recordedFrames || a.rangeStartBeat != b.rangeStartBeat ||
+           a.rangeBeats != b.rangeBeats || a.spbNative != b.spbNative)) same = false;
     }
     check(same, "every track's state, length, range and tempo restored");
     check(simFsChanges - before == 8, "second boot only removes the 8 old-style settings files, creates nothing");
