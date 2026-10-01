@@ -133,6 +133,20 @@ static void recordTrack(int t, double beats, uint32_t expectBars, const char *la
   snprintf(msg, sizeof msg, "whole loop is recorded audio (%u of %u frames), last frame continuous",
            tr.recordedFrames, loopFrames);
   check(tr.recordedFrames == loopFrames && wavLeft(t, last) == rampAt(start + last), msg);
+  // Expected overview: per column, the input's peak over the 4096-frame bins
+  // that column touches, on the square-root scale.
+  int wrong = 0;
+  for (int c = 0; c < OVERVIEW_COLS; c++) {
+    uint32_t f0 = (uint64_t)loopFrames * c / OVERVIEW_COLS, f1 = (uint64_t)loopFrames * (c + 1) / OVERVIEW_COLS;
+    uint32_t b0 = f0 / PEAK_BIN_FRAMES, b1 = (f1 - 1) / PEAK_BIN_FRAMES;
+    int peak = 0;
+    for (uint32_t f = b0 * PEAK_BIN_FRAMES; f < (b1 + 1) * PEAK_BIN_FRAMES && f < tr.recordedFrames; f++)
+      peak = std::max(peak, abs((int)rampAt(start + f)));
+    int expect = (int)std::min(255.0f, sqrtf(peak / 32768.0f) * 255.0f + 0.5f);
+    if (abs(expect - tr.overview[c]) > 1) wrong++;
+  }
+  snprintf(msg, sizeof msg, "waveform overview matches the input (%d of %d columns off)", wrong, OVERVIEW_COLS);
+  check(wrong == 0, msg);
 }
 
 static int32_t pmod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; }
@@ -402,6 +416,7 @@ int main(int argc, char **argv) {
       saved[t].recordedFrames = tracks[t].recordedFrames; saved[t].rangeStartBeat = tracks[t].rangeStartBeat;
       saved[t].rangeBeats = tracks[t].rangeBeats; saved[t].spbNative = tracks[t].spbNative;
       saved[t].rangeAnchorQ = tracks[t].rangeAnchorQ;
+      memcpy(saved[t].overview, tracks[t].overview, OVERVIEW_COLS);
       tracks[t].state = TrackState::Empty; tracks[t].file = FsFile();
     }
     int before = simFsChanges;
@@ -414,9 +429,16 @@ int main(int argc, char **argv) {
           (a.loopBars != b.loopBars || a.recordedFrames != b.recordedFrames || a.rangeStartBeat != b.rangeStartBeat ||
            a.rangeBeats != b.rangeBeats || a.spbNative != b.spbNative ||
            // the range's alignment to the bar counter (anchor modulo its length)
-           ((a.rangeAnchorQ - b.rangeAnchorQ) % (int32_t)(4 * a.rangeBeats)) != 0)) same = false;
+           ((a.rangeAnchorQ - b.rangeAnchorQ) % (int32_t)(4 * a.rangeBeats)) != 0 ||
+           memcmp(a.overview, b.overview, OVERVIEW_COLS))) same = false;
     }
-    check(same, "every track's state, length, range, its alignment and tempo restored");
+    check(same, "every track's state, length, range, its alignment, tempo and waveform restored");
+    int cleared = -1;
+    for (int t = 0; t < NUM_TRACKS && cleared < 0; t++) if (tracks[t].state != TrackState::Empty) cleared = t;
+    clearTrack(cleared);
+    bool flat = true;
+    for (int c = 0; c < OVERVIEW_COLS; c++) if (tracks[cleared].overview[c]) flat = false;
+    check(flat, "clearing a track flattens its waveform");
     check(simFsChanges - before == 8, "second boot only removes the 8 old-style settings files, creates nothing");
   }
 

@@ -33,6 +33,11 @@ constexpr float MIN_SPEED = 0.5f, MAX_SPEED = 2.0f;  // vs each track's recorded
 // MIDI clock out (serial MIDI port 2 on variant B, see M8Board.h).
 constexpr bool MIDI_OUT_ENABLED = true;
 
+// Waveform overview per track: OVERVIEW_COLS peak values over the whole loop,
+// stored in the WAV header. Peaks are gathered per PEAK_BIN_FRAMES while recording.
+constexpr int OVERVIEW_COLS = 112;
+constexpr uint32_t PEAK_BIN_FRAMES = 4096;
+
 // WAV files keep their audio at a 512-byte offset so SD reads stay aligned.
 constexpr uint32_t WAV_DATA_OFFSET = 512;
 

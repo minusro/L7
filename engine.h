@@ -26,6 +26,10 @@ struct Track {
   // the recording began; shifts when a range change keeps the playhead.
   int32_t rangeAnchorQ = 0;
   float gain = 1.0f;
+  // Waveform overview (loop() only): peak level per column across the loop,
+  // 0-255 on a square-root scale. overviewVersion changes whenever it does.
+  uint8_t overview[OVERVIEW_COLS] = {};
+  uint8_t overviewVersion = 0;
 
   uint32_t rangeStartFrame() const { return rangeStartBeat * spbNative; }
   uint32_t rangeFrames() const { return rangeBeats * spbNative; }

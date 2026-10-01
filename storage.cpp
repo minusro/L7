@@ -37,9 +37,45 @@ struct TrackInfo {
   uint32_t version, used, spb, loopBars, recordedFrames, rangeStart, rangeLen, muted;
   uint32_t rangePhase;                           // position in the range at transport beat 0
 };
+// Version 5: waveform overview (OVERVIEW_COLS bytes) right after TrackInfo.
 // Version 4: rangePhase in quarter beats. Version 3: rangePhase in beats.
-// Version 2: no rangePhase. Version 1: range in bars. Older ones are converted.
-static constexpr uint32_t INFO_OFFSET = 44, INFO_VERSION = 4;
+// Version 2: no rangePhase. Version 1: range in bars. Older ones are converted
+// (their overview is worked out at boot).
+static constexpr uint32_t INFO_OFFSET = 44, INFO_VERSION = 5;
+static constexpr uint32_t OVERVIEW_OFFSET = INFO_OFFSET + sizeof(TrackInfo);
+static_assert(OVERVIEW_OFFSET + OVERVIEW_COLS <= WAV_DATA_OFFSET - 8, "overview must fit in the header");
+static uint8_t needsOverview = 0;                // bit t: header predates overviews
+
+// ---- Waveform overview
+// Peaks per PEAK_BIN_FRAMES of the recording in progress (max |sample|, both
+// channels), turned into the track's overview when it finishes.
+static uint16_t recPeaks[MAX_REC_FRAMES / PEAK_BIN_FRAMES + 2];
+
+static void addPeaks(const uint32_t *frames, uint32_t n, uint32_t firstFrame, uint16_t *bins) {
+  for (uint32_t i = 0; i < n; i++) {
+    int16_t l = (int16_t)(frames[i] & 0xFFFF), r = (int16_t)(frames[i] >> 16);
+    uint16_t p = max(abs(l), abs(r));
+    uint16_t &b = bins[(firstFrame + i) / PEAK_BIN_FRAMES];
+    if (p > b) b = p;
+  }
+}
+
+// Columns span the whole loop (padding after the recording stays flat).
+static void buildOverview(Track &tr, const uint16_t *bins, uint32_t recordedFrames) {
+  uint32_t loopFrames = tr.loopBars * BEATS_PER_BAR * tr.spbNative;
+  uint32_t lastBin = recordedFrames ? (recordedFrames - 1) / PEAK_BIN_FRAMES : 0;
+  for (int c = 0; c < OVERVIEW_COLS; c++) {
+    uint32_t f0 = (uint64_t)loopFrames * c / OVERVIEW_COLS;
+    uint32_t f1 = (uint64_t)loopFrames * (c + 1) / OVERVIEW_COLS;
+    uint16_t peak = 0;
+    if (recordedFrames && f0 < recordedFrames) {
+      uint32_t b1 = min((max(f1, f0 + 1) - 1) / PEAK_BIN_FRAMES, lastBin);
+      for (uint32_t b = f0 / PEAK_BIN_FRAMES; b <= b1; b++) peak = max(peak, bins[b]);
+    }
+    tr.overview[c] = (uint8_t)min(255.0f, sqrtf(peak / 32768.0f) * 255.0f + 0.5f);
+  }
+  tr.overviewVersion++;
+}
 
 static void put16(uint8_t *p, uint16_t v) { p[0] = v; p[1] = v >> 8; }
 static void put32(uint8_t *p, uint32_t v) { put16(p, v); put16(p + 2, v >> 16); }
@@ -60,6 +96,7 @@ static bool writeHeader(int t) {
                     frames, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted,
                     used ? (uint32_t)posMod(-tr.rangeAnchorQ, 4 * tr.rangeBeats) : 0};
   memcpy(h + INFO_OFFSET, &info, sizeof info);
+  if (used) memcpy(h + OVERVIEW_OFFSET, tr.overview, OVERVIEW_COLS);
   memcpy(h + WAV_DATA_OFFSET - 8, "data", 4);
   put32(h + WAV_DATA_OFFSET - 4, frames * 4);
   debugStage = "SD write (track header)";
@@ -77,7 +114,7 @@ static void readHeader(int t) {
   if (!tr.file.seekSet(0) || tr.file.read(h, sizeof h) != (int)sizeof h) return;
   TrackInfo info;
   memcpy(&info, h + INFO_OFFSET, sizeof info);
-  if (memcmp(h, "RIFF", 4) || memcmp(info.magic, "M8LP", 4) || info.version < 1 || info.version > 4) return;
+  if (memcmp(h, "RIFF", 4) || memcmp(info.magic, "M8LP", 4) || info.version < 1 || info.version > 5) return;
   if (info.version == 1) { info.rangeStart *= BEATS_PER_BAR; info.rangeLen *= BEATS_PER_BAR; }
   if (info.version < 3) info.rangePhase = 0;
   if (info.version < 4) info.rangePhase *= 4;
@@ -93,6 +130,23 @@ static void readHeader(int t) {
   tr.rangeBeats = info.rangeLen;
   tr.rangeAnchorQ = -(int32_t)(info.rangePhase % (4 * info.rangeLen));
   tr.state = info.muted ? TrackState::Muted : TrackState::Playing;
+  if (info.version >= 5) memcpy(tr.overview, h + OVERVIEW_OFFSET, OVERVIEW_COLS);
+  else needsOverview |= 1 << t;
+  tr.overviewVersion++;
+}
+
+// Older headers have no overview: read the recording once (at boot, before
+// anything plays) and save one.
+static void computeOverviewFromFile(int t) {
+  Track &tr = tracks[t];
+  memset(recPeaks, 0, sizeof recPeaks);
+  for (uint32_t f = 0; f < tr.recordedFrames; f += CHUNK_FRAMES) {
+    uint32_t n = min(CHUNK_FRAMES, tr.recordedFrames - f);
+    if (!tr.file.seekSet(WAV_DATA_OFFSET + (uint64_t)f * 4) || tr.file.read(chunk, n * 4) != (int)(n * 4)) break;
+    addPeaks(chunk, n, f, recPeaks);
+  }
+  buildOverview(tr, recPeaks, tr.recordedFrames);
+  writeHeader(t);
 }
 
 void trackChanged(int t) { headerDirty |= 1 << t; }
@@ -174,6 +228,14 @@ bool storageBegin(void (*progress)(const char *)) {
     SD.sdfs.remove(path);                        // settings files of the previous version
     ok &= prepareTrackFile(t, progress);
   }
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    if (!(needsOverview & (1 << t)) || tracks[t].state == TrackState::Empty) continue;
+    char msg[48];
+    snprintf(msg, sizeof msg, "drawing track %d waveform (once)...", t + 1);
+    progress(msg);
+    computeOverviewFromFile(t);
+  }
+  needsOverview = 0;
   return ok;
 }
 
@@ -366,6 +428,15 @@ static void finishRecording() {
   tr.rangeBeats = tr.loopBars * BEATS_PER_BAR;
   tr.rangeAnchorQ = 4 * recording.startBeat;
   tr.state = TrackState::Playing;
+  if (recording.written > tr.recordedFrames && tr.recordedFrames % PEAK_BIN_FRAMES) {
+    // Trimmed: the last bin also saw audio past the new end. Re-measure it.
+    uint32_t b = tr.recordedFrames / PEAK_BIN_FRAMES, f0 = b * PEAK_BIN_FRAMES;
+    uint32_t n = tr.recordedFrames - f0;
+    recPeaks[b] = 0;
+    if (tr.file.seekSet(WAV_DATA_OFFSET + (uint64_t)f0 * 4) && tr.file.read(chunk, n * 4) == (int)(n * 4))
+      addPeaks(chunk, n, f0, recPeaks);
+  }
+  buildOverview(tr, recPeaks, tr.recordedFrames);
   recording.mode = Recording::Idle;
   recording.track = -1;
   trackChanged(t);                               // header saved when the buffers allow
@@ -417,6 +488,7 @@ static void serviceRecorder() {
     sdFailed = true;
     return;
   }
+  addPeaks(chunk, n, recording.written, recPeaks);
   recording.written += n;
   writePending = false;
 }
@@ -428,6 +500,7 @@ bool recordPress(int t) {
       recording.track = t;
       recording.written = 0;
       recording.overruns = 0;
+      memset(recPeaks, 0, sizeof recPeaks);
       if (!transport.running) {
         recording.mode = Recording::WaitBar;     // starts with the transport, on bar 1
         transportStart();
@@ -465,6 +538,8 @@ void clearTrack(int t) {
   tr.live = false;
   tr.armed = false;
   tr.state = TrackState::Empty;
+  memset(tr.overview, 0, sizeof tr.overview);
+  tr.overviewVersion++;
   trackChanged(t);
 }
 

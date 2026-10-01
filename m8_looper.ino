@@ -99,6 +99,40 @@ static bool setTempo(float b) {
 static constexpr int ROW_H = 22;
 static constexpr int TOP_Y = 20;
 static constexpr int ROW_Y = TOP_Y + 26;
+// Row text runs from x = 50 to 200 (25 columns); the waveform sits right of it.
+static constexpr int TEXT_COLS = 25;
+static constexpr int WAVE_X = 204, WAVE_H = 16;
+
+// Waveform of a track: its whole loop, the part inside the loop range in the
+// track's colour, the rest dim. Only redrawn when something it shows changed.
+static void drawWave(int i, int y, bool recordingHere) {
+  const Track &tr = tracks[i];
+  uint32_t rs = 0, rb = 0;
+  if (tr.state != TrackState::Empty) trackRange(i, rs, rb);
+  struct Key { uint8_t version, state; bool rec; uint32_t rs, rb; };
+  static Key last[NUM_TRACKS];
+  static bool drawn[NUM_TRACKS];
+  Key k;
+  memset(&k, 0, sizeof k);                         // padding too: compared with memcmp
+  k.version = tr.overviewVersion; k.state = (uint8_t)tr.state; k.rec = recordingHere;
+  k.rs = rs; k.rb = rb;
+  if (drawn[i] && !memcmp(&k, &last[i], sizeof k)) return;
+  last[i] = k;
+  drawn[i] = true;
+
+  auto &t = board.tft();
+  int top = y + (ROW_H - 2 - WAVE_H) / 2, mid = top + WAVE_H / 2;
+  t.fillRect(WAVE_X, top, OVERVIEW_COLS, WAVE_H + 1, ILI9341_BLACK);
+  if (tr.state == TrackState::Empty || recordingHere) return;
+  uint16_t on = tr.state == TrackState::Muted ? ILI9341_BLUE : ILI9341_GREEN;
+  uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
+  for (int c = 0; c < OVERVIEW_COLS; c++) {
+    uint32_t beatQ = (uint64_t)c * loopBeats * 4 / OVERVIEW_COLS;   // quarter beat at this column
+    bool inRange = beatQ >= rs * 4 && beatQ < (rs + rb) * 4;
+    int h = tr.overview[c] * (WAVE_H / 2) / 255;
+    t.drawFastVLine(WAVE_X + c, mid - h, 2 * h + 1, inRange ? on : ILI9341_DARKGREY);
+  }
+}
 
 
 static void drawHeader() {
@@ -152,11 +186,11 @@ static void drawTrack(int i) {
   char line[64];
   if (isRec && recording.mode == Recording::Running) {
     uint32_t frames = recording.written;
-    snprintf(line, sizeof line, "%5.1f beats   overruns %lu", (double)frames / transport.spb,
+    snprintf(line, sizeof line, "%5.1f beats  ovr %lu", (double)frames / transport.spb,
              recording.overruns);
   } else if (isRec && recording.mode == Recording::Finishing) {
     int32_t left = (int32_t)(recording.targetFrames - (transport.now - recording.startSample));
-    snprintf(line, sizeof line, "-> %lu bars, %4.1f beats to go", recording.loopBars,
+    snprintf(line, sizeof line, "-> %lu bars, %4.1f to go", recording.loopBars,
              left > 0 ? (double)left / transport.spb : 0.0);
   } else if (tr.state == TrackState::Empty) {
     snprintf(line, sizeof line, "%s", "");
@@ -169,10 +203,11 @@ static void drawTrack(int i) {
     snprintf(line, sizeof line, "%2lu bars  at %lu.%lu len %s",
              tr.loopBars, rs / BEATS_PER_BAR + 1, rs % BEATS_PER_BAR + 1, len);
   }
-  // Pad to the screen edge (row text starts at x = 50: 45 columns of 6 px) to
-  // clear older, longer text. Wider padding wrapped onto the next line and put
-  // a black box over the selection bar.
-  t.printf("%-45s", line);
+  // Pad to the waveform (text starts at x = 50) to clear older, longer text;
+  // with wrapping off, anything longer is cut instead of landing elsewhere.
+  line[TEXT_COLS] = 0;
+  t.printf("%-*s", TEXT_COLS, line);
+  drawWave(i, y, isRec);
 }
 
 // ---- Keys
