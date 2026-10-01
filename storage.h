@@ -30,6 +30,11 @@ void saveTempo(float bpm);           // creates/rewrites a file: only while stop
 void trackChanged(int t);            // settings changed: header saved when buffers allow
 void flushHeaders();                 // save all pending headers now (power off)
 
+// Live waveform of the recording in progress (OVERVIEW_COLS columns over
+// `bars` bars: the final loop length once stopped, before that the smallest
+// power of two that holds what's recorded). false = not recording.
+bool recordingWaveform(uint8_t *cols, uint32_t &bars, uint32_t &framesPerBar, uint32_t &recordedFrames);
+
 // Debugging: the step loop() is in, for the freeze detector in the sketch.
 extern volatile const char *debugStage;
 

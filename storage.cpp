@@ -60,9 +60,8 @@ static void addPeaks(const uint32_t *frames, uint32_t n, uint32_t firstFrame, ui
   }
 }
 
-// Columns span the whole loop (padding after the recording stays flat).
-static void buildOverview(Track &tr, const uint16_t *bins, uint32_t recordedFrames) {
-  uint32_t loopFrames = tr.loopBars * BEATS_PER_BAR * tr.spbNative;
+// Columns span loopFrames (anything after recordedFrames stays flat).
+static void binsToColumns(const uint16_t *bins, uint32_t loopFrames, uint32_t recordedFrames, uint8_t *out) {
   uint32_t lastBin = recordedFrames ? (recordedFrames - 1) / PEAK_BIN_FRAMES : 0;
   for (int c = 0; c < OVERVIEW_COLS; c++) {
     uint32_t f0 = (uint64_t)loopFrames * c / OVERVIEW_COLS;
@@ -72,9 +71,29 @@ static void buildOverview(Track &tr, const uint16_t *bins, uint32_t recordedFram
       uint32_t b1 = min((max(f1, f0 + 1) - 1) / PEAK_BIN_FRAMES, lastBin);
       for (uint32_t b = f0 / PEAK_BIN_FRAMES; b <= b1; b++) peak = max(peak, bins[b]);
     }
-    tr.overview[c] = (uint8_t)min(255.0f, sqrtf(peak / 32768.0f) * 255.0f + 0.5f);
+    out[c] = (uint8_t)min(255.0f, sqrtf(peak / 32768.0f) * 255.0f + 0.5f);
   }
+}
+
+static void buildOverview(Track &tr, const uint16_t *bins, uint32_t recordedFrames) {
+  binsToColumns(bins, tr.loopBars * BEATS_PER_BAR * tr.spbNative, recordedFrames, tr.overview);
   tr.overviewVersion++;
+}
+
+bool recordingWaveform(uint8_t *cols, uint32_t &bars, uint32_t &framesPerBar, uint32_t &recordedFrames) {
+  if (recording.mode != Recording::Running && recording.mode != Recording::Finishing) return false;
+  framesPerBar = BEATS_PER_BAR * transport.spb;
+  recordedFrames = recording.written;
+  if (recording.mode == Recording::Finishing) {
+    bars = recording.loopBars;
+  } else {
+    // Smallest power of two bars that holds what's recorded so far.
+    uint32_t sofar = max<int32_t>(0, (int32_t)(transport.now - recording.startSample));
+    bars = 1;
+    while (bars < MAX_BARS && (uint64_t)bars * framesPerBar < sofar) bars *= 2;
+  }
+  binsToColumns(recPeaks, bars * framesPerBar, recordedFrames, cols);
+  return true;
 }
 
 static void put16(uint8_t *p, uint16_t v) { p[0] = v; p[1] = v >> 8; }
