@@ -15,15 +15,15 @@
 //   * MIDI clock + start/stop go out on serial MIDI port 1
 //
 // Keys:
-//   UP/DOWN          select a row: tracks 1-8, then the status row (tempo)
-//   LEFT/RIGHT       select a cell in a track row (the third is the waveform)
+//   UP/DOWN          select a row: tracks 1-8, then the status row
+//   LEFT/RIGHT       select a cell (third cell: waveform; on the status row, tempo)
 //   OPT + arrows     change the current cell:
 //                      waveform: LEFT/RIGHT move the loop range by a beat,
 //                                UP/DOWN double/halve it (1/4 bar to the whole loop)
-//                      status row: LEFT/RIGHT tempo -/+ 1 BPM, UP/DOWN +/- 10 BPM
+//                      tempo: LEFT/RIGHT -/+ 0.1 BPM, UP/DOWN +/- 1 BPM
 //   EDIT             empty track: record / stop recording; full track: mute/unmute
 //   SHIFT+EDIT       clear the track
-//   PLAY             start/stop
+//   PLAY             start/stop (also EDIT on the status row)
 //   power (hold)     switch off
 //
 // Build: Teensyduino, board "Teensy 4.0", USB type "Serial", CPU speed 600 MHz.
@@ -81,7 +81,7 @@ static bool tempoDirty = false;
 
 // ---- Tempo: every loop must stay within 50%-200% of its recorded speed
 static bool setTempo(float b) {
-  b = constrain(roundf(b), MIN_BPM, MAX_BPM);        // whole BPM only
+  b = constrain(roundf(b * 10) / 10, MIN_BPM, MAX_BPM);   // tenths of a BPM
   if (recording.mode != Recording::Idle) return false;   // a recording keeps its tempo
   uint32_t spb = spbForBpm(b);
   for (const auto &tr : tracks) {
@@ -98,16 +98,16 @@ static bool setTempo(float b) {
 
 // ---- Screen (drawn over its own background: no full clears, which would
 // hold up SD streaming)
-// Vertical layout: 9 equal 24 px slices (216 px, 12 px padding above and
-// below), one per track and the last for the tempo/clock line. A row's band
-// fills its slice; the text sits TEXT_DROP px below the centre of its slice.
-static constexpr int SLICES = NUM_TRACKS + 1, SLICE_H = 24, ROW_BAND = 24, TEXT_DROP = 10;
+// Vertical layout: 9 equal 26 px rows (234 px, 3 px padding above and below):
+// the 8 tracks and the status row. Each row's band fills its slice.
+// (26 px is the most that fits: 9 rows of 32 px would need 288 px.)
+static constexpr int SLICES = NUM_TRACKS + 1, SLICE_H = 26, ROW_BAND = 26;
 static constexpr int LAYOUT_TOP = (240 - SLICES * SLICE_H) / 2;
-static constexpr int HEADER_SCALE = 1;                       // text size of the tempo/clock line
+static constexpr int HEADER_SCALE = 1;                       // text size of the status row
 static constexpr int TEXT_H = 8 * HEADER_SCALE;
 static constexpr int sliceTop(int k) { return LAYOUT_TOP + k * SLICE_H; }
 static constexpr int sliceCentredTop(int k, int h) { return sliceTop(k) + (SLICE_H - h) / 2; }
-static constexpr int TEXT_Y = sliceCentredTop(NUM_TRACKS, TEXT_H) + TEXT_DROP;
+static constexpr int TEXT_Y = sliceCentredTop(NUM_TRACKS, TEXT_H);
 // Each track row: three cells, then the button (icon only on the selected
 // track), separated by 1 px gaps. The third cell holds the waveform; the
 // first two are placeholders for future parameters. On the selected row the
@@ -118,11 +118,10 @@ static constexpr int CELLS = 3, WAVE_CELL = 2;
 static constexpr Cell CELL[CELLS] = {{0, 79}, {80, 79}, {160, 135}};
 static constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 296, BUTTON_W = 320 - BUTTON_X;
 static constexpr int WAVE_X = CELL[WAVE_CELL].x + 2, WAVE_W = 130, WAVE_H = 16;   // waveform: x 162-291
-// The status row (tempo, clock) below the tracks is selectable too: one cell,
-// the tempo, at x 0-158.
-static constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1;
-static constexpr Cell TEMPO_CELL = {0, 159};
-static constexpr int TEXT_X = 10;
+// The status row below the tracks has the same cells; its third cell holds
+// the tempo (left-aligned with the waveforms, adjustable) and the clock
+// (right-aligned with them).
+static constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, TEMPO_CELL = 2;
 
 // Blends two RGB565 colours: a at weight w (0-255), b at 255 - w.
 static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
@@ -132,8 +131,6 @@ static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
   return (r << 11) | (g << 5) | bl;
 }
 
-// ---- Accent colour: clock and playheads (CSS DarkTurquoise, 0/206/209).
-static constexpr uint16_t accentColor = 0x067A;
 
 // ---- Waveforms
 // Each track's whole loop, drawn one column at a time: the row background
@@ -145,10 +142,12 @@ static constexpr uint16_t accentColor = 0x067A;
 // something changes; the playhead moves by redrawing just its columns.
 // While a track records it shows the recording growing (live view) with a
 // red record head, over the length it would become.
-static constexpr uint16_t WAVE_IN = ILI9341_WHITE, WAVE_OUT = 0x7BEF;        // white, grey
-static constexpr uint16_t WAVE_IN_BAR = 0xBDF7, WAVE_OUT_BAR = 0x5ACB;       // the same at ~75%
+// Outside the loop range: the same dark grey for playing and muted clips.
+static constexpr uint16_t WAVE_IN = ILI9341_WHITE, WAVE_OUT = 0x2104;        // white, ~33/33/33
+static constexpr uint16_t WAVE_IN_BAR = 0xBDF7, WAVE_OUT_BAR = 0x18C3;       // the same at ~75%
 static constexpr uint16_t BG_SELECTED = 0x2945, BG_RECORDING = 0x3800;       // dim grey, dark red
-static constexpr uint16_t REC_HEAD = ILI9341_RED;
+static constexpr uint16_t PLAYHEAD = 0x6B4D, REC_HEAD = ILI9341_RED;   // grey ~107, red
+static constexpr int HEAD_W = 2;                     // playheads: from the playing column, 2 px to the right
 static constexpr uint16_t MUTED_HEAD = ILI9341_BLACK;
 static constexpr uint16_t BUTTON_ICON = ILI9341_WHITE;
 
@@ -158,7 +157,7 @@ struct WaveView {
   uint16_t bg = ILI9341_BLACK;
   int rangeFirst = 0, rangeLast = -1;              // columns inside the loop range
   int playCol = -1;                                // playhead / record head; -1: none
-  int headHalf = 1;                                // playhead is 2 * headHalf + 1 px wide
+  int headW = HEAD_W;                              // playhead covers playCol .. playCol + headW - 1
   uint16_t headColor = 0;
   // live view
   uint32_t liveBars = 0;
@@ -209,15 +208,16 @@ static void drawColumn(int i, int c) {
   int x = WAVE_X + c, top = waveTop(i), mid = top + WAVE_H / 2;
   t.drawFastVLine(x, rowTop(i), BUTTON_SIZE, v.bg);   // background: the row's full height
   if (!v.visible) return;
-  if (v.playCol >= 0 && abs(c - v.playCol) <= v.headHalf) {
-    t.drawFastVLine(x, top, WAVE_H + 1, v.headColor);
+  if (v.playCol >= 0 && c >= v.playCol && c < v.playCol + v.headW) {
+    t.drawFastVLine(x, rowTop(i), ROW_BAND, v.headColor);   // the row's full height
     return;
   }
   if (v.live && c >= v.liveFilled) return;
   bool bar = isBarColumn(v.live ? v.liveBars : tr.loopBars, c);
   bool in = v.live || (c >= v.rangeFirst && c <= v.rangeLast);
   uint16_t color = in ? (bar ? WAVE_IN_BAR : WAVE_IN) : (bar ? WAVE_OUT_BAR : WAVE_OUT);
-  if (!v.live && tr.state == TrackState::Muted) color = blend565(color, ILI9341_BLACK, 128);   // muted: half brightness
+  if (!v.live && in && tr.state == TrackState::Muted)
+    color = blend565(color, ILI9341_BLACK, 128);   // muted: the loop range at half brightness
   int h = columnLevel(v.live ? v.liveData : tr.overview, c) * (WAVE_H / 2) / 255;
   t.drawFastVLine(x, mid - h, 2 * h + 1, color);
 }
@@ -261,15 +261,15 @@ static void drawWave(int i, bool recordingHere) {
 
 // Moves a view's playhead (or record head) to col with the given look,
 // redrawing only the columns it leaves and covers.
-static void movePlayhead(int i, int col, int half, uint16_t color) {
+static void movePlayhead(int i, int col, int width, uint16_t color) {
   WaveView &v = views[i];
-  if (col == v.playCol && half == v.headHalf && color == v.headColor) return;
-  int old = v.playCol, oldHalf = v.headHalf;
+  if (col == v.playCol && width == v.headW && color == v.headColor) return;
+  int old = v.playCol, oldW = v.headW;
   v.playCol = col;
-  v.headHalf = half;
+  v.headW = width;
   v.headColor = color;
-  if (old >= 0) for (int c = old - oldHalf; c <= old + oldHalf; c++) drawColumn(i, c);
-  if (col >= 0) for (int c = col - half; c <= col + half; c++) drawColumn(i, c);
+  if (old >= 0) for (int c = old; c < old + oldW; c++) drawColumn(i, c);
+  if (col >= 0) for (int c = col; c < col + width; c++) drawColumn(i, c);
 }
 
 // Live view of the recording: new columns as audio is written, a full
@@ -290,7 +290,7 @@ static void updateLive(int i) {
     v.liveFilled = filled;
     memcpy(v.liveData, cols, OVERVIEW_COLS);
     v.playCol = head;
-    v.headHalf = 1;
+    v.headW = HEAD_W;
     v.headColor = REC_HEAD;
     for (int c = 0; c < WAVE_W; c++) drawColumn(i, c);
     return;
@@ -302,7 +302,7 @@ static void updateLive(int i) {
   v.liveFilled = filled;
   for (int c = 0; c < WAVE_W; c++)
     if (columnLevel(v.liveData, c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c);
-  movePlayhead(i, head, 1, REC_HEAD);
+  movePlayhead(i, head, HEAD_W, REC_HEAD);
 }
 
 // Playhead column for each track from the transport position and the
@@ -316,7 +316,7 @@ static void updatePlayheads() {
     const Track &tr = tracks[i];
     WaveView &v = views[i];
     if (v.live) { updateLive(i); continue; }
-    // Unmuted: 3 px in the accent colour. Muted: none, but a thin black line on the
+    // Unmuted: 2 px grey. Muted: none, but a thin black line on the
     // selected track.
     bool muted = tr.state == TrackState::Muted;
     int col = -1;
@@ -326,7 +326,7 @@ static void updatePlayheads() {
       double loopBeat = tr.rangeStartBeat + inRange;
       col = min(WAVE_W - 1, (int)(loopBeat * WAVE_W / (tr.loopBars * BEATS_PER_BAR)));
     }
-    movePlayhead(i, col, muted ? 0 : 1, muted ? MUTED_HEAD : accentColor);
+    movePlayhead(i, col, muted ? 1 : HEAD_W, muted ? MUTED_HEAD : PLAYHEAD);
   }
 }
 
@@ -337,6 +337,7 @@ enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY };
 
 static int buttonIcon(int i) {
   if (i != selected) return ICON_NONE;
+  if (i == STATUS_ROW) return transport.running ? ICON_STOP : ICON_PLAY;   // the transport
   switch (tracks[i].state) {
     case TrackState::Empty:   return ICON_RECORD;
     case TrackState::Playing: return ICON_STOP;
@@ -386,14 +387,15 @@ static void drawIcon(int icon, float cx, float cy, uint16_t color, uint16_t bg) 
 // The row's cells other than the waveform (which drawWave() handles): the two
 // placeholder cells, the gaps and the button. Redrawn only when they change.
 static void drawCells(int i) {
-  struct Key { int icon; uint16_t bg0, bg1, bgButton; };
-  static Key shown[NUM_TRACKS];
-  static bool drawn[NUM_TRACKS];
+  struct Key { int icon; uint16_t bg0, bg1, bg2, bgButton; };
+  static Key shown[ROWS];
+  static bool drawn[ROWS];
   Key k;
   memset(&k, 0, sizeof k);                         // padding too: compared with memcmp
   k.icon = buttonIcon(i);
   k.bg0 = cellBackground(i, 0);
   k.bg1 = cellBackground(i, 1);
+  k.bg2 = i == STATUS_ROW ? cellBackground(i, TEMPO_CELL) : 0;   // tracks: drawWave()'s job
   k.bgButton = cellBackground(i, -1);
   if (drawn[i] && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = true;
@@ -402,6 +404,7 @@ static void drawCells(int i) {
   int y = rowTop(i);
   t.fillRect(CELL[0].x, y, CELL[0].w, ROW_BAND, k.bg0);
   t.fillRect(CELL[1].x, y, CELL[1].w, ROW_BAND, k.bg1);
+  if (i == STATUS_ROW) t.fillRect(CELL[2].x, y, CELL[2].w, ROW_BAND, k.bg2);
   for (int c = 0; c < CELLS; c++)                    // 1 px gaps after each cell
     t.drawFastVLine(CELL[c].x + CELL[c].w, y, ROW_BAND, ILI9341_BLACK);
   t.fillRect(BUTTON_X, y, BUTTON_W, ROW_BAND, k.bgButton);
@@ -411,37 +414,52 @@ static void drawCells(int i) {
 
 extern "C" const unsigned char glcdfont[];     // ILI9341_t3n's built-in 5x7 font
 
-// Tempo at TEXT_X, then the clock (Bar.Beat.Step) at the waveforms' left
-// edge, in the accent colour (grey 1.1.1 while stopped).
+// Status row text, in its tempo cell: the tempo and the clock (Bar.Beat.Step)
+// STATUS_INSET px inside the waveforms' left and right edges; white,
+// the clock grey 1.1.1 while stopped. The font's glyphs carry empty columns
+// left and right, so text is shifted so its first/last lit pixel lands exactly
+// on the edge.
+static int glyphFirstColumn(char c) {
+  int k = 0;
+  while (k < 5 && !glcdfont[(uint8_t)c * 5 + k]) k++;
+  return k;
+}
+static int glyphLastColumn(char c) {
+  int k = 4;
+  while (k > 0 && !glcdfont[(uint8_t)c * 5 + k]) k--;
+  return k;
+}
 
-// Prints text so its first lit pixel is exactly at x (the font's glyphs carry
-// empty columns on their left, so it's shifted left by those of its first
-// character), padded to `cols` characters so shorter text clears longer text.
-static void printAligned(int x, const char *text, int cols, uint16_t color, uint16_t bg) {
+// Text whose first lit pixel is at x, padded to `cols` characters so shorter
+// text clears longer text; the pixels it shifts over (back to clipLeft) are cleared.
+static void printFromLeft(int x, int clipLeft, const char *text, int cols, uint16_t color, uint16_t bg) {
   auto &t = board.tft();
-  int blank = 0;
-  while (blank < 5 && !glcdfont[(uint8_t)text[0] * 5 + blank]) blank++;
-  int left = x - blank * HEADER_SCALE, maxShift = 5 * HEADER_SCALE;
-  t.fillRect(x - maxShift, TEXT_Y, left - (x - maxShift), TEXT_H, bg);
+  int left = x - glyphFirstColumn(text[0]) * HEADER_SCALE;
+  if (left > clipLeft) t.fillRect(clipLeft, TEXT_Y, left - clipLeft, TEXT_H, bg);
   t.setTextColor(color, bg);
   t.setCursor(left, TEXT_Y);
   t.printf("%-*s", cols, text);
 }
 
-static void drawHeader() {
+// Text whose last lit pixel is at x, padded on the left to `cols` characters.
+static void printToRight(int x, const char *text, int cols, uint16_t color, uint16_t bg) {
+  auto &t = board.tft();
+  int n = strlen(text);
+  int left = x - ((cols - 1) * 6 + glyphLastColumn(text[n - 1])) * HEADER_SCALE;
+  t.setTextColor(color, bg);
+  t.setCursor(left, TEXT_Y);
+  t.printf("%*s", cols, text);
+}
+
+static constexpr int STATUS_INSET = 5;             // tempo/clock this far inside the waveforms' edges
+
+static void drawStatus() {
   auto &t = board.tft();
   t.setTextSize(HEADER_SCALE);
-  // The tempo cell: a 24 px box around the tempo, highlighted when selected.
-  static uint16_t shownBg = 1;
-  uint16_t bg = selected == STATUS_ROW ? BG_SELECTED : ILI9341_BLACK;
-  if (bg != shownBg) {
-    shownBg = bg;
-    t.fillRect(TEMPO_CELL.x, TEXT_Y + TEXT_H / 2 - ROW_BAND / 2, TEMPO_CELL.w, ROW_BAND, bg);
-  }
+  uint16_t bg = cellBackground(STATUS_ROW, TEMPO_CELL);
   char text[24];
-  snprintf(text, sizeof text, "%.0f BPM", bpm);
-  int tempoCols = (TEMPO_CELL.x + TEMPO_CELL.w - 5 * HEADER_SCALE - TEXT_X) / (6 * HEADER_SCALE);
-  printAligned(TEXT_X, text, tempoCols, ILI9341_WHITE, bg);
+  snprintf(text, sizeof text, "%.1f BPM", bpm);
+  printFromLeft(WAVE_X + STATUS_INSET, CELL[TEMPO_CELL].x, text, 10, ILI9341_WHITE, bg);
   noInterrupts();
   int32_t beat = transport.beat;
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
@@ -451,14 +469,14 @@ static void drawHeader() {
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR + 1, beat % BEATS_PER_BAR + 1, step + 1);
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
-  printAligned(WAVE_X, text, (320 - WAVE_X) / (6 * HEADER_SCALE), running ? accentColor : ILI9341_DARKGREY,
-               ILI9341_BLACK);
+  printToRight(WAVE_X + WAVE_W - 1 - STATUS_INSET, text, 10, running ? ILI9341_WHITE : ILI9341_DARKGREY, bg);
 }
 
 static void drawTrack(int i) {
-  if (i < 0 || i >= NUM_TRACKS) return;
+  if (i < 0 || i >= ROWS) return;
   drawCells(i);
-  drawWave(i, recordingOn(i));
+  if (i == STATUS_ROW) drawStatus();
+  else drawWave(i, recordingOn(i));
 }
 
 // ---- Keys
@@ -469,11 +487,13 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
 
   if (opt) {
     // OPT (B) + arrows: the current cell's parameters.
-    if (onStatus) {                                  // tempo
-      if (pressed & m8::BTN_LEFT) setTempo(bpm - 1);
-      if (pressed & m8::BTN_RIGHT) setTempo(bpm + 1);
-      if (pressed & m8::BTN_UP) setTempo(bpm + 10);
-      if (pressed & m8::BTN_DOWN) setTempo(bpm - 10);
+    if (onStatus) {
+      if (selectedCell == TEMPO_CELL) {              // tempo: 0.1 BPM steps, or 1 BPM
+        if (pressed & m8::BTN_LEFT) setTempo(bpm - 0.1f);
+        if (pressed & m8::BTN_RIGHT) setTempo(bpm + 0.1f);
+        if (pressed & m8::BTN_UP) setTempo(bpm + 1);
+        if (pressed & m8::BTN_DOWN) setTempo(bpm - 1);
+      }
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats, length a power of two. LEFT/RIGHT move the start
       // by one beat; UP/DOWN double/halve the length (doubling keeps the
@@ -494,6 +514,8 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
     if (pressed & m8::BTN_RIGHT && selectedCell < CELLS - 1) selectedCell++;
   }
 
+  bool toggleTransport = pressed & m8::BTN_PLAY;
+  if (pressed & m8::BTN_EDIT && onStatus) toggleTransport = !toggleTransport;   // A on the status row
   if (pressed & m8::BTN_EDIT && !onStatus) {
     Track &tr = tracks[selected];
     if (shift) {
@@ -505,7 +527,7 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
       trackChanged(selected);
     }
   }
-  if (pressed & m8::BTN_PLAY) {
+  if (toggleTransport) {
     if (transport.running) transportStop();
     else transportStart();
   }
@@ -513,7 +535,6 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
   // selection first, then the old one, so highlight and icon move together.
   drawTrack(selected);
   if (prevSel != selected) drawTrack(prevSel);
-  drawHeader();
 }
 
 // ---- Power
@@ -564,7 +585,7 @@ void setup() {
   if (!storageBegin(progress))
     fatal("SD card missing or full: the looper needs ~180 MB in /looper.");
   progress("");
-  bpm = roundf(loadTempo());                       // older sessions may have saved fractions
+  bpm = roundf(loadTempo() * 10) / 10;
   transport.spb = spbForBpm(bpm);
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   freezeTimer.priority(255);
@@ -613,9 +634,9 @@ void loop() {
   if (millis() - lastDraw >= 30) {
     lastDraw = millis();
     debugStage = "screen";
-    drawHeader();                                    // every pass: the clock shows steps
+    drawStatus();                                    // every pass: the clock shows steps
     updatePlayheads();
     drawTrack(nextRow);
-    if (++nextRow >= NUM_TRACKS) nextRow = 0;
+    if (++nextRow >= ROWS) nextRow = 0;
   }
 }
