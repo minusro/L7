@@ -17,6 +17,8 @@ namespace looper {
 volatile const char *debugStage = "boot";
 static uint32_t chunk[CHUNK_FRAMES];
 static uint8_t headerDirty = 0;                  // bit t: track t's header needs saving
+// A write is waiting for the playback buffers to be topped up (see serviceStreams).
+static bool writePending = false;
 static constexpr uint64_t TRACK_FILE_BYTES = WAV_DATA_OFFSET + (uint64_t)MAX_REC_FRAMES * 4;
 
 static void trackPath(int t, char *buf, size_t n) { snprintf(buf, n, "/looper/track%d.wav", t + 1); }
@@ -77,18 +79,21 @@ static void readHeader(int t) {
 
 void trackChanged(int t) { headerDirty |= 1 << t; }
 
+static bool streamsTopped();
+
 // Writes pending headers, but only when the streams can afford a pause.
 static void serviceHeaders() {
   if (!headerDirty) return;
-  if (transport.running) {
-    for (const auto &tr : tracks)
-      if ((tr.live || tr.armed) && tr.head - tr.tail < RING_FRAMES / 2) return;
+  if (transport.running && !streamsTopped()) {
+    writePending = true;
+    return;
   }
   for (int t = 0; t < NUM_TRACKS; t++) {
     if (!(headerDirty & (1 << t))) continue;
     if (recording.track == t && recording.mode != Recording::Idle) continue;  // written at the end
     headerDirty &= ~(1 << t);
     writeHeader(t);
+    writePending = false;
     return;                                      // one per pass
   }
 }
@@ -249,6 +254,11 @@ static void startTrack(int t, int32_t beat0, bool fillNow) {
   tr.armed = true;
 }
 
+// A write is waiting (recording or a header): top the buffers up with
+// half-chunk reads too, so the write starts with as much playback in reserve
+// as possible. Otherwise read whole chunks only (cheaper per byte).
+static uint32_t refillThreshold() { return writePending ? CHUNK_FRAMES / 2 : CHUNK_FRAMES; }
+
 static void serviceStreams() {
   for (int pass = 0; pass < 4; pass++) {
     Track *best = nullptr;
@@ -256,11 +266,19 @@ static void serviceStreams() {
     for (auto &tr : tracks) {
       if (!(tr.live || tr.armed)) continue;
       uint32_t fill = tr.head - tr.tail;
-      if (RING_FRAMES - fill >= CHUNK_FRAMES && fill < bestFill) { best = &tr; bestFill = fill; }
+      if (RING_FRAMES - fill >= refillThreshold() && fill < bestFill) { best = &tr; bestFill = fill; }
     }
     if (!best) return;
     produce(*best);
   }
+}
+
+// True when every playing track's buffer is topped up, so a slow write starts
+// with the most playback in reserve.
+static bool streamsTopped() {
+  for (const auto &tr : tracks)
+    if ((tr.live || tr.armed) && RING_FRAMES - (tr.head - tr.tail) >= CHUNK_FRAMES / 2) return false;
+  return true;
 }
 
 // ---- Recording
@@ -328,6 +346,12 @@ static void serviceRecorder() {
                    recording.written + avail >= recording.targetFrames;
   if (avail < (int32_t)CHUNK_FRAMES && !finalPart) return;
   if (sdFailed) return;                          // keep it in the input history for now
+  // Write only once the playback buffers are topped up, unless the input
+  // history (~740 ms) is within two chunks of overflowing.
+  if (!streamsTopped() && avail < (int32_t)(INPUT_FRAMES - 2 * CHUNK_FRAMES)) {
+    writePending = true;
+    return;
+  }
   uint32_t n = min((uint32_t)avail, CHUNK_FRAMES);
   for (uint32_t i = 0; i < n; i++) chunk[i] = inputRing[(next + i) % INPUT_FRAMES];
   debugStage = "SD write (recording)";
@@ -343,6 +367,7 @@ static void serviceRecorder() {
     return;
   }
   recording.written += n;
+  writePending = false;
 }
 
 bool recordPress(int t) {

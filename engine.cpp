@@ -3,7 +3,10 @@
 
 namespace looper {
 
-DMAMEM static uint32_t rings[NUM_TRACKS][RING_FRAMES];   // 384 KB in RAM2
+// 8 x 64 KB: seven fit in RAM2 next to the other DMAMEM buffers, the eighth
+// goes in RAM1.
+DMAMEM static uint32_t rings[NUM_TRACKS - 1][RING_FRAMES];
+static uint32_t lastRing[RING_FRAMES];
 uint32_t inputRing[INPUT_FRAMES];
 
 Track tracks[NUM_TRACKS];
@@ -11,7 +14,10 @@ Transport transport;
 Recording recording;
 
 static struct RingInit {
-  RingInit() { for (int t = 0; t < NUM_TRACKS; t++) tracks[t].ring = rings[t]; }
+  RingInit() {
+    for (int t = 0; t < NUM_TRACKS - 1; t++) tracks[t].ring = rings[t];
+    tracks[NUM_TRACKS - 1].ring = lastRing;
+  }
 } ringInit;
 
 uint32_t spbForBpm(float bpm) { return (uint32_t)(AUDIO_SAMPLE_RATE_EXACT * 60.0f / bpm + 0.5f); }

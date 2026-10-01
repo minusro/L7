@@ -20,6 +20,7 @@ std::string simRoot;
 SDClass SD;
 SerialStub Serial;
 int simFailIo = 0, simReinits = 0, simFsChanges = 0;
+void (*simSdLatency)(size_t, bool) = nullptr;
 void (*IntervalTimer::fn)() = nullptr;
 HardwareSerial midi;
 
@@ -37,8 +38,33 @@ static void check(bool ok, const char *what) {
   if (!ok) failures++;
 }
 
+// One audio interrupt only (runs while loop() is blocked in an SD transfer).
+static double pendingUs = 0;
+static void audioBlock();
+
+// Card timing calibrated on the M8's card logs: reads ~4 ms per 16 KB; of the
+// 16 KB writes ~97% are quick (~10 ms), ~2% take ~90 ms and ~1% ~250 ms.
+static void realisticSd(size_t bytes, bool write) {
+  double ms;
+  if (!write) ms = 2.0 + bytes / 10000.0;
+  else { int r = rand() % 100; ms = r < 97 ? 10 : r < 99 ? 90 : 250; }
+  pendingUs += ms * 1000;
+  const double blockUs = AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT;
+  while (pendingUs >= blockUs) { pendingUs -= blockUs; audioBlock(); }
+}
+
 // One audio interrupt + whatever loop() would do in between.
 static void block() {
+  audioBlock();
+  serviceStorage();
+}
+
+#include <map>
+static std::map<std::string, uint32_t> dropStages;   // what loop() was doing when tracks ran dry
+
+static void audioBlock() {
+  uint32_t before = 0;
+  for (auto &tr : tracks) before += tr.underruns;
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
     int16_t v = feedRamp ? rampAt(inputIndex + i) : 0;
     inL.data[i] = v;
@@ -51,7 +77,9 @@ static void block() {
   inputIndex += AUDIO_BLOCK_SAMPLES;
   simMicros += (uint32_t)(AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT);
   for (int k = 0; k < 15; k++) { simMicros += 1; if (IntervalTimer::fn) IntervalTimer::fn(); }
-  serviceStorage();
+  uint32_t after = 0;
+  for (auto &tr : tracks) after += tr.underruns;
+  if (after > before) dropStages[(const char *)debugStage] += after - before;
 }
 
 static void runBeats(double beats) {
@@ -283,6 +311,46 @@ int main(int argc, char **argv) {
     }
     check(same, "every track's state, length, range and tempo restored");
     check(simFsChanges - before == 8, "second boot only removes the 8 old-style settings files, creates nothing");
+  }
+
+  printf("slow card (measurement): 8 tracks playing while track 8 is recorded and cleared again and again\n");
+  {
+    simSdLatency = realisticSd;
+    srand(7);
+    if (!transport.running) transportStart();
+    for (int t = 0; t < 7; t++)
+      if (tracks[t].state == TrackState::Empty) { recordPress(t); runBeats(16.2); recordPress(t); runUntilIdle(); }
+    for (float bpm : {120.0f, 150.0f, 180.0f, 220.0f}) {
+      // Tempo relative to what the tracks were recorded at (mostly 120, one at 90).
+      transport.pendingSpb = spbForBpm(bpm);
+      runBeats(4);
+      for (auto &tr : tracks) tr.underruns = 0;
+      dropStages.clear();
+      uint32_t overruns = 0;
+      for (int cycle = 0; cycle < 6; cycle++) {
+        clearTrack(7);
+        runBeats(2);
+        recordPress(7);
+        runBeats(9 + cycle);
+        overruns += recording.overruns;
+        recordPress(7);
+        runUntilIdle();
+        runBeats(4);
+      }
+      uint32_t drops = 0;
+      for (auto &tr : tracks) drops += tr.underruns;
+      char m[128];
+      snprintf(m, sizeof m, "%.0f BPM (%.2fx): %u dropped samples, %u recording overruns", bpm, bpm / 120.0f,
+               drops, overruns);
+      // Measured, not pass/fail: with 8 stereo tracks the buffers can't cover
+      // the card's rarest stalls at higher speeds (RAM limit, see storage.cpp).
+      printf("  info  %s\n", m);
+      for (auto &kv : dropStages) printf("        during '%s': %u\n", kv.first.c_str(), kv.second);
+      dropStages.clear();
+    }
+    simSdLatency = nullptr;
+    transport.pendingSpb = spbForBpm(120);
+    runBeats(2);
   }
 
   printf("random sessions\n");

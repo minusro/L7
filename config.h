@@ -12,8 +12,9 @@ constexpr uint32_t MAX_BARS = 32;                  // longest recording
 constexpr uint32_t MAX_REC_FRAMES = 128u * 44118u;
 
 // Streaming buffers (stereo frames, packed as uint32: left low, right high).
-// 48 KB per track covers ~280 ms of SD stall at 1x speed, ~140 ms at 2x.
-constexpr uint32_t RING_FRAMES = 12288;
+// 64 KB per track covers ~370 ms of SD stall at 1x speed, ~185 ms at 2x
+// (single writes of ~280 ms were seen on the M8's card).
+constexpr uint32_t RING_FRAMES = 16384;
 constexpr uint32_t CHUNK_FRAMES = 4096;            // 16 KB per SD call
 // Input history: pre-roll for late record presses + slack for SD write stalls.
 constexpr uint32_t INPUT_FRAMES = 32768;           // 128 KB, ~740 ms

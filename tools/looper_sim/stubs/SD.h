@@ -19,6 +19,9 @@ extern std::string simRoot;
 extern int simFailIo;      // > 0: that many reads/writes fail (card stopped responding)
 extern int simReinits;
 extern int simFsChanges;   // file creations/truncations/deletions (counted by the test)
+// Optional: called for every transfer so the test can let time pass (and the
+// audio interrupt run) for as long as a real card would take.
+extern void (*simSdLatency)(size_t bytes, bool write);
 
 class FsFile {
 public:
@@ -39,8 +42,16 @@ public:
   }
   explicit operator bool() const { return f_ != nullptr; }
   void close() { if (f_) fclose(f_); f_ = nullptr; }
-  int read(void *buf, size_t n) { if (simFailIo > 0) { simFailIo--; return -1; } return (int)fread(buf, 1, n, f_); }
-  size_t write(const void *buf, size_t n) { if (simFailIo > 0) { simFailIo--; return (size_t)-1; } return fwrite(buf, 1, n, f_); }
+  int read(void *buf, size_t n) {
+    if (simSdLatency) simSdLatency(n, false);
+    if (simFailIo > 0) { simFailIo--; return -1; }
+    return (int)fread(buf, 1, n, f_);
+  }
+  size_t write(const void *buf, size_t n) {
+    if (simSdLatency) simSdLatency(n, true);
+    if (simFailIo > 0) { simFailIo--; return (size_t)-1; }
+    return fwrite(buf, 1, n, f_);
+  }
   bool seekSet(uint64_t pos) { return fseek(f_, (long)pos, SEEK_SET) == 0; }
   uint64_t fileSize() { long c = ftell(f_); fseek(f_, 0, SEEK_END); long s = ftell(f_); fseek(f_, c, SEEK_SET); return s; }
   bool preAllocate(uint64_t) { return true; }

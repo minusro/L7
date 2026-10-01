@@ -276,6 +276,20 @@ void loop() {
     tempoDirty = false;
   }
 
+  // Report dropouts with what the storage code was doing (debugging).
+  static uint32_t lastDropCheck = 0, lastDrops[NUM_TRACKS] = {};
+  if (millis() - lastDropCheck >= 250) {
+    lastDropCheck = millis();
+    for (int t = 0; t < NUM_TRACKS; t++) {
+      uint32_t d = tracks[t].underruns;
+      if (d != lastDrops[t]) {
+        Serial.printf("dropout: track %d +%lu samples (loop in: %s, recording: %d)\n", t + 1,
+                      d - lastDrops[t], (const char *)debugStage, (int)recording.mode);
+        lastDrops[t] = d;
+      }
+    }
+  }
+
   // Redraw a little at a time so SD streaming keeps going.
   static uint32_t lastDraw = 0;
   static int nextRow = -1;
