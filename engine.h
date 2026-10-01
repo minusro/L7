@@ -21,7 +21,10 @@ struct Track {
   uint32_t loopBars = 0;           // power of two
   uint32_t recordedFrames = 0;     // audio in the file; the rest of the loop is silence
   uint32_t rangeStartBeat = 0, rangeBeats = 0;   // loop range; length is a power of two beats
-  int32_t anchorBeat = 0;          // transport beat where the loop's first bar fell
+  // Transport beat at which the loop range is at its first beat (the range
+  // repeats every rangeBeats from there). Starts as the beat the recording
+  // began on; shifts when a range change keeps the playhead where it is.
+  int32_t rangeAnchorBeat = 0;
   float gain = 1.0f;
 
   uint32_t rangeStartFrame() const { return rangeStartBeat * spbNative; }

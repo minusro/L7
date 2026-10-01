@@ -152,7 +152,7 @@ static void checkSync(int t, const char *label) {
         uint32_t offset = spb - sib;               // beat starts at this index in the block
         block();
         if (!tr.live || offset >= AUDIO_BLOCK_SAMPLES) break;
-        int32_t phase = ((target - tr.anchorBeat) % (int32_t)tr.rangeBeats + tr.rangeBeats) % tr.rangeBeats;
+        int32_t phase = ((target - tr.rangeAnchorBeat) % (int32_t)tr.rangeBeats + tr.rangeBeats) % tr.rangeBeats;
         uint32_t frame = tr.rangeStartFrame() + phase * tr.spbNative;
         float expect = frame < tr.recordedFrames ? wavLeft(t, frame) * engine.masterGain : 0;
         checked++;
@@ -257,6 +257,7 @@ int main(int argc, char **argv) {
     tr.gain = 1;
     tr.underruns = 0;
     uint32_t oldStart = tr.rangeStartBeat, oldBeats = tr.rangeBeats;
+    int32_t oldAnchor = tr.rangeAnchorBeat;
     int32_t asked = transport.beat;
     setRange(0, 4, 8);
     int32_t sw = tr.switchBeat;
@@ -275,7 +276,8 @@ int main(int argc, char **argv) {
           if (offset >= AUDIO_BLOCK_SAMPLES) break;
           bool newRange = target >= sw;
           uint32_t rs = newRange ? 4 : oldStart, rb = newRange ? 8 : oldBeats;
-          int32_t ph = ((target - tr.anchorBeat) % (int32_t)rb + rb) % rb;
+          int32_t anchor = newRange ? tr.rangeAnchorBeat : oldAnchor;   // re-anchored at the switch
+          int32_t ph = ((target - anchor) % (int32_t)rb + rb) % rb;
           uint32_t frame = rs * tr.spbNative + ph * tr.spbNative;
           float expect = frame < tr.recordedFrames ? wavLeft(0, frame) * engine.masterGain : 0;
           checked++;
@@ -307,6 +309,26 @@ int main(int argc, char **argv) {
     setRange(0, 3, 4);                             // a bar starting on beat 4: off the length grid
     runBeats(6);
     checkSync(0, "1-bar range starting at beat 4");
+
+    // Slide it one beat right: the beat due at the switch is inside the new
+    // range, so playback must carry on from it instead of jumping.
+    Track &tr = tracks[0];
+    auto posMod = [](int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; };
+    for (int slide = 0; slide < 3; slide++) {
+      uint32_t oldStart = tr.rangeStartBeat;
+      int32_t oldAnchor = tr.rangeAnchorBeat;
+      setRange(0, oldStart + 1, 4);
+      int32_t sw = tr.switchBeat;
+      uint32_t due = oldStart + posMod(sw - oldAnchor, 4);          // file beat the old range would play
+      runBeats(8);
+      uint32_t got = tr.rangeStartBeat + posMod(sw - tr.rangeAnchorBeat, 4);
+      bool inside = due >= oldStart + 1 && due < oldStart + 5;
+      char m[128];
+      snprintf(m, sizeof m, "slide to beat %u: at the switch plays file beat %u (%s, expected %u)",
+               oldStart + 2, got, inside ? "kept" : "outside the new range", inside ? due : got);
+      check(!inside || got == due, m);
+      checkSync(0, "after the slide");
+    }
     setRange(0, 4, 8);
     runBeats(6);
     for (auto &x : tracks) x.gain = 1;
@@ -378,6 +400,7 @@ int main(int argc, char **argv) {
       saved[t].state = tracks[t].state; saved[t].loopBars = tracks[t].loopBars;
       saved[t].recordedFrames = tracks[t].recordedFrames; saved[t].rangeStartBeat = tracks[t].rangeStartBeat;
       saved[t].rangeBeats = tracks[t].rangeBeats; saved[t].spbNative = tracks[t].spbNative;
+      saved[t].rangeAnchorBeat = tracks[t].rangeAnchorBeat;
       tracks[t].state = TrackState::Empty; tracks[t].file = FsFile();
     }
     int before = simFsChanges;
@@ -388,9 +411,11 @@ int main(int argc, char **argv) {
       if (a.state != b.state) same = false;
       if (a.state != TrackState::Empty &&
           (a.loopBars != b.loopBars || a.recordedFrames != b.recordedFrames || a.rangeStartBeat != b.rangeStartBeat ||
-           a.rangeBeats != b.rangeBeats || a.spbNative != b.spbNative)) same = false;
+           a.rangeBeats != b.rangeBeats || a.spbNative != b.spbNative ||
+           // the range's alignment to the bar counter (anchor modulo its length)
+           ((a.rangeAnchorBeat - b.rangeAnchorBeat) % (int32_t)a.rangeBeats) != 0)) same = false;
     }
-    check(same, "every track's state, length, range and tempo restored");
+    check(same, "every track's state, length, range, its alignment and tempo restored");
     check(simFsChanges - before == 8, "second boot only removes the 8 old-style settings files, creates nothing");
   }
 
