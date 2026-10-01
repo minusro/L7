@@ -16,7 +16,7 @@
 //
 // Keys:
 //   UP/DOWN          select track          PLAY         start/stop
-//   LEFT/RIGHT       tempo -/+ 1 BPM       SHIFT+L/R    tempo -/+ 0.1 BPM
+//   LEFT/RIGHT       tempo -/+ 1 BPM (whole BPM only)
 //   EDIT             empty track: record / stop recording; full track: mute
 //   SHIFT+EDIT       clear the track
 //   OPT+LEFT/RIGHT   move the loop range by one beat
@@ -77,7 +77,7 @@ static bool tempoDirty = false;
 
 // ---- Tempo: every loop must stay within 50%-200% of its recorded speed
 static bool setTempo(float b) {
-  b = constrain(b, MIN_BPM, MAX_BPM);
+  b = constrain(roundf(b), MIN_BPM, MAX_BPM);        // whole BPM only
   if (recording.mode != Recording::Idle) return false;   // a recording keeps its tempo
   uint32_t spb = spbForBpm(b);
   for (const auto &tr : tracks) {
@@ -94,14 +94,21 @@ static bool setTempo(float b) {
 
 // ---- Screen (drawn over its own background: no full clears, which would
 // hold up SD streaming)
-// Vertical layout: tempo line at TOP_Y, then 8 track rows. TOP_Y centres the
-// whole block: 20 px above the tempo text and below track 8's row.
-static constexpr int ROW_H = 22;
-static constexpr int TOP_Y = 20;
-static constexpr int ROW_Y = TOP_Y + 26;
-// Each row: a 20 px button (only on the selected track) and the waveform.
-static constexpr int BUTTON_X = 4, BUTTON_SIZE = ROW_H - 2;
-static constexpr int WAVE_X = 30, WAVE_H = 16;     // OVERVIEW_COLS wide: to x = 315
+// Vertical layout: 9 equal 24 px slices (216 px, 12 px padding above and
+// below), one per track and the last for the tempo/clock line. A row's band
+// fills its slice; the text sits TEXT_DROP px below the centre of its slice.
+static constexpr int SLICES = NUM_TRACKS + 1, SLICE_H = 24, ROW_BAND = 24, TEXT_DROP = 10;
+static constexpr int LAYOUT_TOP = (240 - SLICES * SLICE_H) / 2;
+static constexpr int HEADER_SCALE = 1;                       // text size of the tempo/clock line
+static constexpr int TEXT_H = 8 * HEADER_SCALE;
+static constexpr int sliceTop(int k) { return LAYOUT_TOP + k * SLICE_H; }
+static constexpr int sliceCentredTop(int k, int h) { return sliceTop(k) + (SLICE_H - h) / 2; }
+static constexpr int TEXT_Y = sliceCentredTop(NUM_TRACKS, TEXT_H) + TEXT_DROP;
+// Each row: the waveform on the right half of the screen, then the button
+// (only on the selected track) at the right edge. The header text starts at TEXT_X.
+static constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 320 - 4 - BUTTON_SIZE;   // x = 296
+static constexpr int WAVE_X = 160, WAVE_W = BUTTON_X - 6 - WAVE_X, WAVE_H = 16;  // 130 px wide
+static constexpr int TEXT_X = 10;
 
 // Blends two RGB565 colours: a at weight w (0-255), b at 255 - w.
 static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
@@ -111,30 +118,8 @@ static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
   return (r << 11) | (g << 5) | bl;
 }
 
-// ---- Accent colour: clock and playheads. Cycles through the rainbow in
-// pastel shades once every 4 bars, starting from green; holds while stopped.
-static uint16_t accentColor = 0;
-
-static uint16_t hsvTo565(float h, float s, float v) {   // h in degrees
-  h = fmodf(h, 360.0f);
-  float c = v * s, x = c * (1 - fabsf(fmodf(h / 60.0f, 2) - 1)), m = v - c, r, g, b;
-  if (h < 60) { r = c; g = x; b = 0; }
-  else if (h < 120) { r = x; g = c; b = 0; }
-  else if (h < 180) { r = 0; g = c; b = x; }
-  else if (h < 240) { r = 0; g = x; b = c; }
-  else if (h < 300) { r = x; g = 0; b = c; }
-  else { r = c; g = 0; b = x; }
-  return ((int)((r + m) * 31 + 0.5f) << 11) | ((int)((g + m) * 63 + 0.5f) << 5) | (int)((b + m) * 31 + 0.5f);
-}
-
-static void updateAccent() {
-  noInterrupts();
-  double beats = transport.beat + (double)transport.sampleInBeat / transport.spb;
-  interrupts();
-  const double cycleBeats = 4 * BEATS_PER_BAR;
-  float hue = 105.0f + 360.0f * (float)(fmod(beats, cycleBeats) / cycleBeats);  // 120 = green
-  accentColor = hsvTo565(hue, 0.45f, 1.0f);
-}
+// ---- Accent colour: clock and playheads (CSS DarkTurquoise, 0/206/209).
+static constexpr uint16_t accentColor = 0x067A;
 
 // ---- Waveforms
 // Each track's whole loop, drawn one column at a time: the row background
@@ -172,7 +157,7 @@ struct WaveView {
 };
 static WaveView views[NUM_TRACKS];
 
-static int rowTop(int i) { return ROW_Y + i * ROW_H; }
+static int rowTop(int i) { return sliceCentredTop(i, ROW_BAND); }
 
 static bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }
 
@@ -180,16 +165,26 @@ static uint16_t rowBackground(int i) {
   if (recordingOn(i)) return BG_RECORDING;
   return i == selected ? BG_SELECTED : ILI9341_BLACK;
 }
-static int waveTop(int i) { return rowTop(i) + (ROW_H - 2 - WAVE_H) / 2; }
+static int waveTop(int i) { return rowTop(i) + (ROW_BAND - WAVE_H) / 2; }
 
-// A column holds a bar line if a bar boundary (other than the start) falls in it.
+// A screen column holds a bar line if a bar boundary (other than the start)
+// falls in it.
 static bool isBarColumn(uint32_t bars, int c) {
-  uint32_t b0 = ((uint64_t)c * bars + OVERVIEW_COLS - 1) / OVERVIEW_COLS;     // first boundary >= column start
-  return b0 > 0 && b0 < bars && (uint64_t)b0 * OVERVIEW_COLS < (uint64_t)(c + 1) * bars;
+  uint32_t b0 = ((uint64_t)c * bars + WAVE_W - 1) / WAVE_W;                 // first boundary >= column start
+  return b0 > 0 && b0 < bars && (uint64_t)b0 * WAVE_W < (uint64_t)(c + 1) * bars;
+}
+
+// Level shown in screen column c: the peak of the stored overview columns
+// (OVERVIEW_COLS of them) that it covers.
+static uint8_t columnLevel(const uint8_t *src, int c) {
+  int a = c * OVERVIEW_COLS / WAVE_W, b = max(a + 1, (c + 1) * OVERVIEW_COLS / WAVE_W);
+  uint8_t m = 0;
+  for (int k = a; k < b; k++) m = max(m, src[k]);
+  return m;
 }
 
 static void drawColumn(int i, int c) {
-  if (c < 0 || c >= OVERVIEW_COLS) return;
+  if (c < 0 || c >= WAVE_W) return;
   auto &t = board.tft();
   const Track &tr = tracks[i];
   const WaveView &v = views[i];
@@ -205,7 +200,7 @@ static void drawColumn(int i, int c) {
   bool in = v.live || (c >= v.rangeFirst && c <= v.rangeLast);
   uint16_t color = in ? (bar ? WAVE_IN_BAR : WAVE_IN) : (bar ? WAVE_OUT_BAR : WAVE_OUT);
   if (!v.live && tr.state == TrackState::Muted) color = blend565(color, ILI9341_BLACK, 128);   // muted: half brightness
-  int h = (v.live ? v.liveData[c] : tr.overview[c]) * (WAVE_H / 2) / 255;
+  int h = columnLevel(v.live ? v.liveData : tr.overview, c) * (WAVE_H / 2) / 255;
   t.drawFastVLine(x, mid - h, 2 * h + 1, color);
 }
 
@@ -235,10 +230,10 @@ static void drawWave(int i, bool recordingHere) {
     v.liveFilled = 0;
   } else if (v.visible) {
     uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
-    v.rangeFirst = rs * OVERVIEW_COLS / loopBeats;
-    v.rangeLast = max(v.rangeFirst, (int)(((rs + rb) * OVERVIEW_COLS + loopBeats - 1) / loopBeats) - 1);
+    v.rangeFirst = rs * WAVE_W / loopBeats;
+    v.rangeLast = max(v.rangeFirst, (int)(((rs + rb) * WAVE_W + loopBeats - 1) / loopBeats) - 1);
   }
-  for (int c = 0; c < OVERVIEW_COLS; c++) drawColumn(i, c);
+  for (int c = 0; c < WAVE_W; c++) drawColumn(i, c);
 }
 
 // Moves a view's playhead (or record head) to col with the given look,
@@ -262,11 +257,11 @@ static void updateLive(int i) {
   uint32_t bars, framesPerBar, recorded;
   if (!recordingWaveform(cols, bars, framesPerBar, recorded)) return;
   uint32_t total = bars * framesPerBar;
-  int filled = min(OVERVIEW_COLS, (int)(((uint64_t)recorded * OVERVIEW_COLS + total - 1) / total));
+  int filled = min(WAVE_W, (int)(((uint64_t)recorded * WAVE_W + total - 1) / total));
   noInterrupts();
   int32_t sofar = (int32_t)(transport.now - recording.startSample);
   interrupts();
-  int head = sofar < 0 ? -1 : min(OVERVIEW_COLS - 1, (int)((uint64_t)sofar * OVERVIEW_COLS / total));
+  int head = sofar < 0 ? -1 : min(WAVE_W - 1, (int)((uint64_t)sofar * WAVE_W / total));
   if (bars != v.liveBars) {                        // new scale: redraw everything
     v.liveBars = bars;
     v.liveFilled = filled;
@@ -274,16 +269,16 @@ static void updateLive(int i) {
     v.playCol = head;
     v.headHalf = 1;
     v.headColor = REC_HEAD;
-    for (int c = 0; c < OVERVIEW_COLS; c++) drawColumn(i, c);
+    for (int c = 0; c < WAVE_W; c++) drawColumn(i, c);
     return;
   }
+  uint8_t before[WAVE_W];
+  for (int c = 0; c < WAVE_W; c++) before[c] = columnLevel(v.liveData, c);
+  memcpy(v.liveData, cols, OVERVIEW_COLS);
   int oldFilled = v.liveFilled;
   v.liveFilled = filled;
-  for (int c = 0; c < OVERVIEW_COLS; c++) {
-    bool changed = cols[c] != v.liveData[c] || (c < filled) != (c < oldFilled);
-    v.liveData[c] = cols[c];
-    if (changed) drawColumn(i, c);
-  }
+  for (int c = 0; c < WAVE_W; c++)
+    if (columnLevel(v.liveData, c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c);
   movePlayhead(i, head, 1, REC_HEAD);
 }
 
@@ -298,7 +293,7 @@ static void updatePlayheads() {
     const Track &tr = tracks[i];
     WaveView &v = views[i];
     if (v.live) { updateLive(i); continue; }
-    // Unmuted: 3 px turquoise. Muted: none, but a thin black line on the
+    // Unmuted: 3 px in the accent colour. Muted: none, but a thin black line on the
     // selected track.
     bool muted = tr.state == TrackState::Muted;
     int col = -1;
@@ -306,7 +301,7 @@ static void updatePlayheads() {
       double inRange = fmod(pos - tr.rangeAnchorQ / 4.0, (double)tr.rangeBeats);
       if (inRange < 0) inRange += tr.rangeBeats;
       double loopBeat = tr.rangeStartBeat + inRange;
-      col = min(OVERVIEW_COLS - 1, (int)(loopBeat * OVERVIEW_COLS / (tr.loopBars * BEATS_PER_BAR)));
+      col = min(WAVE_W - 1, (int)(loopBeat * WAVE_W / (tr.loopBars * BEATS_PER_BAR)));
     }
     movePlayhead(i, col, muted ? 0 : 1, muted ? MUTED_HEAD : accentColor);
   }
@@ -377,43 +372,46 @@ static void drawButton(int i) {
   shownBg[i] = bg;
   auto &t = board.tft();
   int y = rowTop(i), cx = BUTTON_X + BUTTON_SIZE / 2, cy = y + BUTTON_SIZE / 2;
-  t.fillRect(0, y, WAVE_X, BUTTON_SIZE, bg);         // row background: left edge ...
-  t.fillRect(WAVE_X + OVERVIEW_COLS, y, 320 - WAVE_X - OVERVIEW_COLS, BUTTON_SIZE, bg);   // ... and right edge
+  t.fillRect(0, y, WAVE_X, BUTTON_SIZE, bg);         // row background left of the waveform ...
+  t.fillRect(WAVE_X + WAVE_W, y, 320 - WAVE_X - WAVE_W, BUTTON_SIZE, bg);   // ... and right of it
   if (icon != ICON_NONE) drawIcon(icon, cx, cy, BUTTON_ICON, bg);
 }
 
 extern "C" const unsigned char glcdfont[];     // ILI9341_t3n's built-in 5x7 font
 
-// Tempo, then the clock (Bar.Beat.Step) in the playhead turquoise. The tempo
-// starts exactly at the waveforms' left edge: the font's glyphs carry empty
-// columns on their left, so the text is shifted left by those of its first
-// character.
-static constexpr int HEADER_SCALE = 2, CLOCK_X = WAVE_X + 10 * 6 * HEADER_SCALE;
+// Tempo at TEXT_X, then the clock (Bar.Beat.Step) at the waveforms' left
+// edge, in the accent colour (grey 1.1.1 while stopped).
+
+// Prints text so its first lit pixel is exactly at x (the font's glyphs carry
+// empty columns on their left, so it's shifted left by those of its first
+// character), padded to `cols` characters so shorter text clears longer text.
+static void printAligned(int x, const char *text, int cols, uint16_t color) {
+  auto &t = board.tft();
+  int blank = 0;
+  while (blank < 5 && !glcdfont[(uint8_t)text[0] * 5 + blank]) blank++;
+  int left = x - blank * HEADER_SCALE, maxShift = 5 * HEADER_SCALE;
+  t.fillRect(x - maxShift, TEXT_Y, left - (x - maxShift), TEXT_H, ILI9341_BLACK);
+  t.setTextColor(color, ILI9341_BLACK);
+  t.setCursor(left, TEXT_Y);
+  t.printf("%-*s", cols, text);
+}
 
 static void drawHeader() {
-  auto &t = board.tft();
-  t.setTextSize(HEADER_SCALE);
-  char tempo[16];
-  snprintf(tempo, sizeof tempo, "%.1f BPM", bpm);
-  int blank = 0;
-  while (blank < 5 && !glcdfont[(uint8_t)tempo[0] * 5 + blank]) blank++;
-  int x = WAVE_X - blank * HEADER_SCALE;
-  t.fillRect(WAVE_X - 5 * HEADER_SCALE, TOP_Y, x - (WAVE_X - 5 * HEADER_SCALE), 8 * HEADER_SCALE, ILI9341_BLACK);
-  t.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-  t.setCursor(x, TOP_Y);
-  t.printf("%-*s", (CLOCK_X - x) / (6 * HEADER_SCALE), tempo);   // pad up to the clock
+  board.tft().setTextSize(HEADER_SCALE);
+  char text[24];
+  snprintf(text, sizeof text, "%.0f BPM", bpm);
+  int tempoCols = (WAVE_X - 5 * HEADER_SCALE - TEXT_X) / (6 * HEADER_SCALE);   // up to the clock's margin
+  printAligned(TEXT_X, text, tempoCols, ILI9341_WHITE);
   noInterrupts();
   int32_t beat = transport.beat;
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
+  bool running = transport.running;
   interrupts();
-  t.setCursor(CLOCK_X, TOP_Y);
-  if (transport.running) {
-    t.setTextColor(accentColor, ILI9341_BLACK);
-    t.printf("%3ld.%ld.%lu  ", beat / BEATS_PER_BAR + 1, beat % BEATS_PER_BAR + 1, step + 1);
-  } else {
-    t.setTextColor(ILI9341_DARKGREY, ILI9341_BLACK);
-    t.print("stopped  ");
-  }
+  if (running)
+    snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR + 1, beat % BEATS_PER_BAR + 1, step + 1);
+  else
+    snprintf(text, sizeof text, "1.1.1");          // where it starts from
+  printAligned(WAVE_X, text, (320 - WAVE_X) / (6 * HEADER_SCALE), running ? accentColor : ILI9341_DARKGREY);
 }
 
 static void drawTrack(int i) {
@@ -440,9 +438,8 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
   } else {
     if (pressed & m8::BTN_UP) selected = (selected + NUM_TRACKS - 1) % NUM_TRACKS;
     if (pressed & m8::BTN_DOWN) selected = (selected + 1) % NUM_TRACKS;
-    float step = shift ? 0.1f : 1.0f;
-    if (pressed & m8::BTN_LEFT) setTempo(bpm - step);
-    if (pressed & m8::BTN_RIGHT) setTempo(bpm + step);
+    if (pressed & m8::BTN_LEFT) setTempo(bpm - 1);
+    if (pressed & m8::BTN_RIGHT) setTempo(bpm + 1);
   }
 
   if (pressed & m8::BTN_EDIT) {
@@ -460,6 +457,9 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
     if (transport.running) transportStop();
     else transportStart();
   }
+  // Show the result right away rather than on the rows' next redraw: the new
+  // selection first, then the old one, so highlight and icon move together.
+  drawTrack(selected);
   if (prevSel != selected) drawTrack(prevSel);
 }
 
@@ -511,7 +511,7 @@ void setup() {
   if (!storageBegin(progress))
     fatal("SD card missing or full: the looper needs ~180 MB in /looper.");
   progress("");
-  bpm = loadTempo();
+  bpm = roundf(loadTempo());                       // older sessions may have saved fractions
   transport.spb = spbForBpm(bpm);
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   freezeTimer.priority(255);
@@ -560,7 +560,6 @@ void loop() {
   if (millis() - lastDraw >= 30) {
     lastDraw = millis();
     debugStage = "screen";
-    updateAccent();
     drawHeader();                                    // every pass: the clock shows steps
     updatePlayheads();
     drawTrack(nextRow);
