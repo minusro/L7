@@ -113,11 +113,12 @@ static constexpr int TEXT_Y = sliceCentredTop(NUM_TRACKS, TEXT_H);
 // first two are placeholders for future parameters. On the selected row the
 // current cell and the button get the selection highlight.
 //   cell 1: x 0-78   cell 2: x 80-158   waveform cell: x 160-294   button: x 296-319
+// The waveform fills its cell's whole width.
 struct Cell { int x, w; };
 static constexpr int CELLS = 3, WAVE_CELL = 2;
 static constexpr Cell CELL[CELLS] = {{0, 79}, {80, 79}, {160, 135}};
 static constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 296, BUTTON_W = 320 - BUTTON_X;
-static constexpr int WAVE_X = CELL[WAVE_CELL].x + 2, WAVE_W = 130, WAVE_H = 16;   // waveform: x 162-291
+static constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w, WAVE_H = 16;   // waveform: x 160-294
 // The status row below the tracks has the same cells; its third cell holds
 // the tempo (left-aligned with the waveforms, adjustable) and the clock
 // (right-aligned with them).
@@ -137,15 +138,18 @@ static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
 // (dim grey across the whole screen for the selected track, dark red while
 // recording), the waveform (white inside the loop range, grey outside; muted
 // clips at half brightness) with faint darker bar lines at the clip's bar
-// boundaries, and the playhead: 3 px in the accent colour on unmuted clips,
-// none on muted ones except a thin black line on the selected track. Full redraws only happen when
+// boundaries, and the playhead: 2 px grey on unmuted clips, a thin black line
+// on muted ones, only on the selected track. Full redraws only happen when
 // something changes; the playhead moves by redrawing just its columns.
 // While a track records it shows the recording growing (live view) with a
 // red record head, over the length it would become.
 // Outside the loop range: the same dark grey for playing and muted clips.
 static constexpr uint16_t WAVE_IN = ILI9341_WHITE, WAVE_OUT = 0x2104;        // white, ~33/33/33
 static constexpr uint16_t WAVE_IN_BAR = 0xBDF7, WAVE_OUT_BAR = 0x18C3;       // the same at ~75%
-static constexpr uint16_t BG_SELECTED = 0x2945, BG_RECORDING = 0x3800;       // dim grey, dark red
+static constexpr uint16_t BG_SELECTED = 0x1082, BG_RECORDING = 0x3800;       // grey ~16 (half WAVE_OUT), dark red
+// The selected row's other cells and its button: grey ~6 (8/4/8, the darkest
+// step above black RGB565 has; a neutral grey would be 8/8/8).
+static constexpr uint16_t BG_ROW = 0x0821;
 static constexpr uint16_t PLAYHEAD = 0x6B4D, REC_HEAD = ILI9341_RED;   // grey ~107, red
 static constexpr int HEAD_W = 2;                     // playheads: from the playing column, 2 px to the right
 static constexpr uint16_t MUTED_HEAD = ILI9341_BLACK;
@@ -175,12 +179,12 @@ static int rowTop(int i) { return sliceCentredTop(i, ROW_BAND); }
 static bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }
 
 // Background of a cell in track row i (cell -1: the button). The selected row
-// highlights its current cell and the button; a recording track's waveform
-// cell is dark red.
+// highlights its current cell; its other cells and the button get a darker
+// grey; a recording track's waveform cell is dark red.
 static uint16_t cellBackground(int i, int cell) {
   if (cell == WAVE_CELL && recordingOn(i)) return BG_RECORDING;
   if (i != selected) return ILI9341_BLACK;
-  return (cell == -1 || cell == selectedCell) ? BG_SELECTED : ILI9341_BLACK;
+  return (cell != -1 && cell == selectedCell) ? BG_SELECTED : BG_ROW;
 }
 static int waveTop(int i) { return rowTop(i) + (ROW_BAND - WAVE_H) / 2; }
 
@@ -251,11 +255,6 @@ static void drawWave(int i, bool recordingHere) {
     v.rangeFirst = rs * WAVE_W / loopBeats;
     v.rangeLast = max(v.rangeFirst, (int)(((rs + rb) * WAVE_W + loopBeats - 1) / loopBeats) - 1);
   }
-  // The waveform cell's margins around the waveform, then the waveform.
-  auto &t = board.tft();
-  const Cell &cell = CELL[WAVE_CELL];
-  t.fillRect(cell.x, rowTop(i), WAVE_X - cell.x, ROW_BAND, bg);
-  t.fillRect(WAVE_X + WAVE_W, rowTop(i), cell.x + cell.w - WAVE_X - WAVE_W, ROW_BAND, bg);
   for (int c = 0; c < WAVE_W; c++) drawColumn(i, c);
 }
 
@@ -331,17 +330,19 @@ static void updatePlayheads() {
 }
 
 // ---- Track button: only on the selected track, grey, on the row background.
-// No clip: record. Unmuted clip: stop. Muted clip: play.
+// No clip: record. Recording: play. Unmuted clip: unmute icon (its state). Muted clip: mute icon. The status row:
+// play / stop for the transport.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_MUTE, ICON_UNMUTE };
 
 static int buttonIcon(int i) {
   if (i != selected) return ICON_NONE;
   if (i == STATUS_ROW) return transport.running ? ICON_STOP : ICON_PLAY;   // the transport
+  if (recordingOn(i)) return ICON_PLAY;              // recording: the press ends it and plays the clip
   switch (tracks[i].state) {
     case TrackState::Empty:   return ICON_RECORD;
-    case TrackState::Playing: return ICON_STOP;
-    default:                  return ICON_PLAY;
+    case TrackState::Playing: return ICON_UNMUTE;
+    default:                  return ICON_MUTE;
   }
 }
 
@@ -349,6 +350,16 @@ static int buttonIcon(int i) {
 // Button icons: filled shapes in an ICON_SIZE px box, anti-aliased (4x4
 // samples per pixel, blended over the row background).
 static constexpr float ICON_SIZE = 10.5f;
+
+// Speaker for the mute icons, in the left half of the box: a small body and
+// a cone widening to the full height.
+static bool onSpeaker(float dx, float dy) {
+  float h = ICON_SIZE / 2;
+  const float bodyL = -h, coneL = -0.6f * h, coneR = -0.1f * h, bodyH = 0.36f * h;
+  if (dx < bodyL || dx > coneR) return false;
+  if (dx <= coneL) return fabsf(dy) <= bodyH;
+  return fabsf(dy) <= bodyH + (dx - coneL) / (coneR - coneL) * (h - bodyH);
+}
 
 // Is the point (dx, dy) from the icon's centre inside the icon?
 static bool onIcon(int icon, float dx, float dy) {
@@ -365,6 +376,19 @@ static bool onIcon(int icon, float dx, float dy) {
       };
       float d = min(min(edge(ax, ay, bx, by), edge(bx, by, cx, cy)), edge(cx, cy, ax, ay));
       return d >= 0;
+    }
+    case ICON_MUTE:                                // speaker with a cross
+    case ICON_UNMUTE: {                            // speaker with two sound waves
+      if (onSpeaker(dx, dy)) return true;
+      if (icon == ICON_MUTE) {
+        float ux = dx - 0.5f * h, uy = dy;         // the cross, centred right of the cone
+        const float arm = 0.48f * h, stroke = 0.55f;
+        if (fabsf(ux) > arm || fabsf(uy) > arm) return false;
+        return fabsf(ux - uy) <= stroke * 1.41f || fabsf(ux + uy) <= stroke * 1.41f;
+      }
+      float ux = dx + 0.45f * h, r = sqrtf(ux * ux + dy * dy);
+      if (dx < 0.05f * h || fabsf(dy) > ux * 0.9f) return false;   // a ~85 degree slice, right of the cone
+      return fabsf(r - 0.8f * h) <= 0.55f || fabsf(r - 1.25f * h) <= 0.55f;
     }
     default: return false;
   }
@@ -415,8 +439,9 @@ static void drawCells(int i) {
 extern "C" const unsigned char glcdfont[];     // ILI9341_t3n's built-in 5x7 font
 
 // Status row text, in its tempo cell: the tempo and the clock (Bar.Beat.Step)
-// STATUS_INSET px inside the waveforms' left and right edges; white,
-// the clock grey 1.1.1 while stopped. The font's glyphs carry empty columns
+// STATUS_INSET px inside the waveforms' left and right edges. The tempo is
+// white while its cell is selected, grey otherwise; the clock white while
+// running, a grey 1.1.1 while stopped. The font's glyphs carry empty columns
 // left and right, so text is shifted so its first/last lit pixel lands exactly
 // on the edge.
 static int glyphFirstColumn(char c) {
@@ -451,6 +476,7 @@ static void printToRight(int x, const char *text, int cols, uint16_t color, uint
   t.printf("%*s", cols, text);
 }
 
+static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int STATUS_INSET = 5;             // tempo/clock this far inside the waveforms' edges
 
 static void drawStatus() {
@@ -459,14 +485,15 @@ static void drawStatus() {
   uint16_t bg = cellBackground(STATUS_ROW, TEMPO_CELL);
   char text[24];
   snprintf(text, sizeof text, "%.1f BPM", bpm);
-  printFromLeft(WAVE_X + STATUS_INSET, CELL[TEMPO_CELL].x, text, 10, ILI9341_WHITE, bg);
+  bool editing = selected == STATUS_ROW && selectedCell == TEMPO_CELL;
+  printFromLeft(WAVE_X + STATUS_INSET, CELL[TEMPO_CELL].x, text, 10, editing ? ILI9341_WHITE : ILI9341_DARKGREY, bg);
   noInterrupts();
   int32_t beat = transport.beat;
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
   bool running = transport.running;
   interrupts();
   if (running)
-    snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR + 1, beat % BEATS_PER_BAR + 1, step + 1);
+    snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
   printToRight(WAVE_X + WAVE_W - 1 - STATUS_INSET, text, 10, running ? ILI9341_WHITE : ILI9341_DARKGREY, bg);
