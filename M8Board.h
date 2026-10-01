@@ -75,6 +75,13 @@ public:
   bool powerButtonHeld();            // live button level
   [[noreturn]] void powerOff();
 
+  // Optional FocalTech FT5x/FT6x touch panel @0x38 on the key bus. Most units
+  // have none. touchBegin() returns false if nothing answers.
+  struct Touch { bool down; int16_t x, y; uint16_t rawX, rawY; };
+  bool touchBegin();
+  uint8_t touchChipId() const { return _touchId; }
+  Touch touchRead();                 // x/y in screen pixels for the current rotation
+
 private:
   bool initMCP23008();
   bool initSX1508();
@@ -89,6 +96,7 @@ private:
   ILI9341_t3n *_tft = nullptr;
   uint8_t _keys = 0, _lastReported = 0;
   bool _first = true;
+  uint8_t _touchId = 0;
 };
 
 } // namespace m8

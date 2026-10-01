@@ -201,6 +201,43 @@ bool Board::initSX1508() {
   return ok;
 }
 
+// ---------------- Touch panel (FocalTech FT5x/FT6x) ----------------
+static constexpr uint8_t TOUCH_ADDR = 0x38;
+
+static int touchReadRegs(TwoWire &w, uint8_t reg, uint8_t *buf, uint8_t n) {
+  w.beginTransmission(TOUCH_ADDR);
+  w.write(reg);
+  if (w.endTransmission(false) != 0) return -1;
+  if (w.requestFrom(TOUCH_ADDR, n) != n) return -1;
+  for (uint8_t i = 0; i < n; i++) buf[i] = w.read();
+  return n;
+}
+
+bool Board::touchBegin() {
+  pinMode(_pins->touchInt, INPUT_PULLUP);
+  uint8_t id;
+  if (touchReadRegs(*_pins->keyBus, 0xA3, &id, 1) < 0) return false;   // chip ID
+  _touchId = id;
+  return true;
+}
+
+Board::Touch Board::touchRead() {
+  Touch t = {false, 0, 0, 0, 0};
+  uint8_t r[5];                                      // TD_STATUS, P1_XH, P1_XL, P1_YH, P1_YL
+  if (!_touchId || touchReadRegs(*_pins->keyBus, 0x02, r, 5) < 0) return t;
+  if ((r[0] & 0x0F) == 0) return t;
+  t.down = true;
+  t.rawX = ((r[1] & 0x0F) << 8) | r[2];              // panel-native portrait, 240 wide
+  t.rawY = ((r[3] & 0x0F) << 8) | r[4];              // 320 tall
+  // Map portrait panel coordinates onto the landscape screen (verified on a
+  // variant-B unit, rotation 1; rotation 3 is assumed to be the mirror image).
+  if (_pins->tftRotation == 1) { t.x = 319 - t.rawY; t.y = t.rawX; }
+  else                         { t.x = t.rawY; t.y = 239 - t.rawX; }
+  t.x = constrain(t.x, 0, 319);
+  t.y = constrain(t.y, 0, 239);
+  return t;
+}
+
 uint8_t Board::readExpander() {
   int v;
   if (_variant == VARIANT_A) {
