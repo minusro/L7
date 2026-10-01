@@ -1,147 +1,241 @@
-// m8_starter.ino — "hello world" custom firmware for the Dirtywave M8 Model:01
+// m8_looper.ino — 8-track stereo looper for the Dirtywave M8 Model:01
 //
-// Shows which board variant was detected, draws the 8 keys live, and plays a
-// note through the I2S audio path when a key is held. Use it to confirm the
-// pin map and key names on your unit before building anything bigger.
+// Engine milestone with a debug screen. engine.cpp runs the master clock,
+// varispeed playback, input monitoring and MIDI clock; storage.cpp streams
+// the tracks from SD and records new ones. Tracks are WAV files in /looper on
+// the SD card and survive power-off, along with the tempo.
 //
-// Build: Teensyduino, board "Teensy 4.0", USB type "Serial" (or "Serial + MIDI + Audio").
-// Libraries: ILI9341_t3n (KurtE), Audio (bundled with Teensyduino).
+// Behaviour:
+//   * the input (LINE IN) is always heard
+//   * recording is free length; the loop snaps to a power of two bars (or
+//     shrinks to the one below if you stopped less than a beat past it), and
+//     starts on the bar line you were nearest to
+//   * changing the tempo repitches the loops (50%-200% of each one's tempo)
+//   * each track can loop any range of whole bars of its recording
+//   * MIDI clock + start/stop go out on serial MIDI port 1
+//
+// Keys:
+//   UP/DOWN          select track          PLAY         start/stop
+//   LEFT/RIGHT       tempo -/+ 1 BPM       SHIFT+L/R    tempo -/+ 0.1 BPM
+//   EDIT             empty track: record / stop recording; full track: mute
+//   SHIFT+EDIT       clear the track
+//   OPT+LEFT/RIGHT   move the loop range   OPT+UP/DOWN  range longer/shorter
+//   power (hold)     switch off
+//
+// Build: Teensyduino, board "Teensy 4.0", USB type "Serial", CPU speed 600 MHz.
+// Libraries: ILI9341_t3n (KurtE), Audio, SD (bundled with Teensyduino).
 
 #include <Audio.h>
+#include <SD.h>
 #include "M8Board.h"
+#include "engine.h"
+#include "storage.h"
+
+using namespace looper;
 
 m8::Board board;
 
-// ---- Audio: Teensy Audio Library on SAI1 (MCLK 23, BCLK 21, LRCLK 20, TX 7, RX 8)
-// One sine voice (osc -> env) per key, summed by two 4-input mixers into a master mixer.
-AudioSynthWaveform  osc[8];
-AudioEffectEnvelope env[8];
-AudioMixer4         mixA, mixB, master;
-AudioOutputI2S      i2sOut;
-AudioConnection     v0(osc[0], env[0]), m0(env[0], 0, mixA, 0);
-AudioConnection     v1(osc[1], env[1]), m1(env[1], 0, mixA, 1);
-AudioConnection     v2(osc[2], env[2]), m2(env[2], 0, mixA, 2);
-AudioConnection     v3(osc[3], env[3]), m3(env[3], 0, mixA, 3);
-AudioConnection     v4(osc[4], env[4]), m4(env[4], 0, mixB, 0);
-AudioConnection     v5(osc[5], env[5]), m5(env[5], 0, mixB, 1);
-AudioConnection     v6(osc[6], env[6]), m6(env[6], 0, mixB, 2);
-AudioConnection     v7(osc[7], env[7]), m7(env[7], 0, mixB, 3);
-AudioConnection     ma(mixA, 0, master, 0), mb(mixB, 0, master, 1);
-AudioConnection     outL(master, 0, i2sOut, 0), outR(master, 0, i2sOut, 1);
-AudioControlSGTL5000 codec;      // SGTL5000 @0x0A on Wire, same as stock firmware
+AudioInputI2S        i2sIn;
+LooperEngine         engine;
+AudioOutputI2S       i2sOut;
+AudioConnection      c1(i2sIn, 0, engine, 0), c2(i2sIn, 1, engine, 1);
+AudioConnection      c3(engine, 0, i2sOut, 0), c4(engine, 1, i2sOut, 1);
+AudioControlSGTL5000 codec;
 
-struct KeyUi { uint8_t bit; const char *name; int16_t x, y; float hz; };
-// Laid out like the M8's physical key cluster. Index = voice number.
-// C major C4..C5, ascending left to right across the columns (bottom key before top).
-static const KeyUi KEYS[8] = {
-  {m8::BTN_LEFT,  "LEFT",   10, 130, 261.63f},  // C4
-  {m8::BTN_DOWN,  "DOWN",   70, 130, 293.66f},  // D4
-  {m8::BTN_UP,    "UP",     70,  70, 329.63f},  // E4
-  {m8::BTN_RIGHT, "RIGHT", 130, 130, 349.23f},  // F4
-  {m8::BTN_OPT,   "OPT",   200, 130, 392.00f},  // G4
-  {m8::BTN_SHIFT, "SHIFT", 200, 70,  440.00f},  // A4
-  {m8::BTN_EDIT,  "EDIT",  260, 130, 493.88f},  // B4
-  {m8::BTN_PLAY,  "PLAY",  260, 70,  523.25f},  // C5
-};
+static float bpm = 120.0f;
+static int selected = 0;
+static uint32_t tempoChangedMs = 0;
+static bool tempoDirty = false;
 
-static void drawKey(const KeyUi &k, bool down) {
-  auto &t = board.tft();
-  uint16_t bg = down ? ILI9341_ORANGE : ILI9341_DARKGREY;
-  t.fillRoundRect(k.x, k.y, 54, 50, 6, bg);
-  t.setTextColor(down ? ILI9341_BLACK : ILI9341_WHITE);
-  t.setTextSize(1);
-  t.setCursor(k.x + 6, k.y + 21);
-  t.print(k.name);
+// ---- Tempo: every loop must stay within 50%-200% of its recorded speed
+static bool setTempo(float b) {
+  b = constrain(b, MIN_BPM, MAX_BPM);
+  if (recording.mode != Recording::Idle) return false;   // a recording keeps its tempo
+  uint32_t spb = spbForBpm(b);
+  for (const auto &tr : tracks) {
+    if (tr.state == TrackState::Empty) continue;
+    double speed = (double)tr.spbNative / spb;
+    if (speed < MIN_SPEED || speed > MAX_SPEED) return false;
+  }
+  bpm = b;
+  transport.pendingSpb = spb;
+  tempoChangedMs = millis();
+  tempoDirty = true;
+  return true;
 }
 
-static void drawRaw(uint8_t keys) {
+// ---- Screen (text is drawn over its own background: no full clears, which
+// would hold up SD streaming)
+static constexpr int ROW_Y = 30, ROW_H = 22;
+
+static void drawHelp() {
   auto &t = board.tft();
-  t.fillRect(10, 200, 300, 30, ILI9341_BLACK);
-  t.setTextColor(ILI9341_GREEN);
+  t.fillScreen(ILI9341_BLACK);
+  t.setTextSize(1);
+  t.setTextColor(ILI9341_DARKGREY);
+  t.setCursor(4, 212); t.print("UP/DN track  L/R tempo  PLAY start/stop  EDIT rec/mute");
+  t.setCursor(4, 224); t.print("SHIFT+EDIT clear  OPT+L/R range pos  OPT+UP/DN range len");
+}
+
+static void drawHeader() {
+  auto &t = board.tft();
   t.setTextSize(2);
-  t.setCursor(10, 205);
-  t.printf("raw 0x%02X  ", keys);
-  for (int b = 7; b >= 0; b--) t.print((keys >> b) & 1);
+  t.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+  t.setCursor(4, 4);
+  t.printf("%6.1f BPM ", bpm);
+  int32_t beat = transport.beat;
+  if (transport.running) {
+    t.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
+    t.printf(" %3ld.%ld  ", beat / BEATS_PER_BAR + 1, beat % BEATS_PER_BAR + 1);
+  } else {
+    t.setTextColor(ILI9341_DARKGREY, ILI9341_BLACK);
+    t.print(" stopped ");
+  }
+}
+
+static void drawTrack(int i) {
+  auto &t = board.tft();
+  const Track &tr = tracks[i];
+  int y = ROW_Y + i * ROW_H;
+  bool isRec = recording.track == i && recording.mode != Recording::Idle;
+  const char *state;
+  uint16_t color;
+  if (isRec) {
+    switch (recording.mode) {
+      case Recording::WaitBar: state = "WAIT"; color = ILI9341_YELLOW; break;
+      case Recording::Running: state = "REC "; color = ILI9341_RED; break;
+      default:                 state = "SAVE"; color = ILI9341_ORANGE; break;
+    }
+  } else {
+    switch (tr.state) {
+      case TrackState::Empty:   state = "----"; color = ILI9341_DARKGREY; break;
+      case TrackState::Playing: state = "PLAY"; color = ILI9341_GREEN; break;
+      default:                  state = "MUTE"; color = ILI9341_BLUE; break;
+    }
+  }
+  t.fillRect(0, y, 4, ROW_H - 2, i == selected ? ILI9341_WHITE : ILI9341_BLACK);
+  t.setTextSize(1);
+  t.setCursor(8, y + 6);
+  t.setTextColor(color, ILI9341_BLACK);
+  t.printf("%d %s ", i + 1, state);
+  t.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+  char line[64];
+  if (isRec && recording.mode == Recording::Running) {
+    uint32_t frames = recording.written;
+    snprintf(line, sizeof line, "%5.1f beats   overruns %lu", (double)frames / transport.spb,
+             recording.overruns);
+  } else if (tr.state == TrackState::Empty) {
+    snprintf(line, sizeof line, "%s", "");
+  } else {
+    snprintf(line, sizeof line, "%2lu bars  range %lu-%lu  @%.1f  x%.2f  drops %lu",
+             tr.loopBars, tr.rangeStartBar + 1, tr.rangeStartBar + tr.rangeBars,
+             bpmForSpb(tr.spbNative), (double)tr.spbNative / transport.spb, tr.underruns);
+  }
+  t.printf("%-46s", line);
+}
+
+// ---- Keys
+static void onKeys(uint8_t keys, uint8_t pressed) {
+  bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
+  Track &tr = tracks[selected];
+  int prevSel = selected;
+
+  if (opt) {
+    if (pressed & m8::BTN_LEFT && tr.rangeStartBar > 0)
+      setRange(selected, tr.rangeStartBar - 1, tr.rangeBars);
+    if (pressed & m8::BTN_RIGHT && tr.rangeStartBar + tr.rangeBars < tr.loopBars)
+      setRange(selected, tr.rangeStartBar + 1, tr.rangeBars);
+    if (pressed & m8::BTN_UP) setRange(selected, tr.rangeStartBar, tr.rangeBars + 1);
+    if (pressed & m8::BTN_DOWN && tr.rangeBars > 1) setRange(selected, tr.rangeStartBar, tr.rangeBars - 1);
+  } else {
+    if (pressed & m8::BTN_UP) selected = (selected + NUM_TRACKS - 1) % NUM_TRACKS;
+    if (pressed & m8::BTN_DOWN) selected = (selected + 1) % NUM_TRACKS;
+    float step = shift ? 0.1f : 1.0f;
+    if (pressed & m8::BTN_LEFT) setTempo(bpm - step);
+    if (pressed & m8::BTN_RIGHT) setTempo(bpm + step);
+  }
+
+  if (pressed & m8::BTN_EDIT) {
+    bool recordingHere = recording.track == selected && recording.mode != Recording::Idle;
+    if (shift) {
+      clearTrack(selected);
+    } else if (tr.state == TrackState::Empty || recordingHere) {
+      recordPress(selected);
+    } else {
+      tr.state = tr.state == TrackState::Playing ? TrackState::Muted : TrackState::Playing;
+      saveTrackInfo(selected);
+    }
+  }
+  if (pressed & m8::BTN_PLAY) {
+    if (transport.running) transportStop();
+    else transportStart();
+  }
+  if (prevSel != selected) drawTrack(prevSel);
+}
+
+// ---- Power
+static void handlePowerButton() {
+  if (!board.powerButtonPressed()) return;
+  uint32_t start = millis();
+  while (board.powerButtonHeld()) {
+    if (millis() - start >= 1000) {
+      codec.volume(0.0f);
+      if (tempoDirty) saveTempo(bpm);
+      board.powerOff();
+    }
+  }
+  board.powerButtonPressed();
+}
+
+static void fatal(const char *msg) {
+  auto &t = board.tft();
+  t.setTextColor(ILI9341_RED, ILI9341_BLACK);
+  t.setTextSize(1);
+  t.setCursor(4, 100);
+  t.print(msg);
+  for (;;) handlePowerButton();
 }
 
 void setup() {
   Serial.begin(115200);
-  AudioMemory(32);
-  for (int i = 0; i < 8; i++) {
-    osc[i].begin(1.0f, KEYS[i].hz, WAVEFORM_SINE);
-    env[i].attack(5); env[i].release(150);
-  }
-  // Each voice ends up at 1/8 full scale, so all 8 keys together can't clip.
-  for (int ch = 0; ch < 4; ch++) { mixA.gain(ch, 0.25f); mixB.gain(ch, 0.25f); }
-  master.gain(0, 0.5f); master.gain(1, 0.5f);
-
-  bool keysOk = board.begin();
-
-  // Stock firmware retries enable() up to 6 times, 10 ms apart.
-  bool codecOk = false;
-  for (int i = 0; i < 6 && !(codecOk = codec.enable()); i++) delay(10);
+  AudioMemory(12);
+  board.begin();
+  board.powerButtonPressed();                        // the press that switched us on
+  for (int i = 0; i < 6 && !codec.enable(); i++) delay(10);
+  codec.inputSelect(AUDIO_INPUT_LINEIN);
+  codec.lineInLevel(5);
   codec.volume(0.6f);
 
-  auto &t = board.tft();
-  t.setTextColor(ILI9341_WHITE);
-  t.setTextSize(2);
-  t.setCursor(10, 10);
-  t.print("M8 looper test");
-  t.setTextSize(1);
-  t.setCursor(10, 36);
-  t.printf("board variant %c   keys %s", board.variant() == m8::VARIANT_A ? 'A' : 'B',
-           keysOk ? "OK" : "NOT FOUND");
-  t.setCursor(10, 48);
-  t.printf("codec SGTL5000 %s", codecOk ? "OK" : "NOT FOUND");
-  for (auto &k : KEYS) drawKey(k, false);
-  drawRaw(0);
-
-  Serial.printf("M8 starter: variant %c, key expander %s, codec %s\n",
-                board.variant() == m8::VARIANT_A ? 'A' : 'B', keysOk ? "ok" : "missing",
-                codecOk ? "ok" : "missing");
-}
-
-// Short press shows a prompt; keep holding ~1 s to power off, like the stock firmware.
-static void handlePowerButton() {
-  if (!board.powerButtonPressed()) return;
-  auto &t = board.tft();
-  t.fillRect(10, 185, 300, 10, ILI9341_BLACK);
-  t.setTextColor(ILI9341_RED);
-  t.setTextSize(1);
-  t.setCursor(10, 185);
-  t.print("POWER OFF? (KEEP HOLDING)");
-  uint32_t start = millis();
-  while (board.powerButtonHeld()) {
-    if (millis() - start >= 1000) {
-      for (auto &e : env) e.noteOff();
-      codec.volume(0.0f);
-      delay(200);
-      board.powerOff();
-    }
-  }
-  t.fillRect(10, 185, 300, 10, ILI9341_BLACK);
-  board.powerButtonPressed();  // drop a request latched while we were waiting
+  drawHelp();
+  if (!storageBegin()) fatal("No SD card: the looper keeps its tracks in /looper on the card.");
+  bpm = loadTempo();
+  transport.spb = spbForBpm(bpm);
+  midiBegin(board.pins().midiOut);
 }
 
 void loop() {
   handlePowerButton();
+  serviceStorage();
 
+  uint8_t keys;
   static uint8_t prev = 0;
-  uint8_t now;
-  if (!board.keysChanged(now)) return;
-
-  for (auto &k : KEYS) {
-    bool was = prev & k.bit, is = now & k.bit;
-    if (was != is) drawKey(k, is);
+  if (board.keysChanged(keys)) {
+    onKeys(keys, keys & ~prev);
+    prev = keys;
   }
-  drawRaw(now);
-  Serial.printf("keys 0x%02X\n", now);
 
-  // Polyphonic: every key gates its own voice.
-  for (int i = 0; i < 8; i++) {
-    bool was = prev & KEYS[i].bit, is = now & KEYS[i].bit;
-    if (is && !was) env[i].noteOn();
-    if (was && !is) env[i].noteOff();
+  if (tempoDirty && millis() - tempoChangedMs > 2000) {   // save once it settles
+    saveTempo(bpm);
+    tempoDirty = false;
   }
-  prev = now;
+
+  // Redraw a little at a time so SD streaming keeps going.
+  static uint32_t lastDraw = 0;
+  static int nextRow = -1;
+  if (millis() - lastDraw >= 30) {
+    lastDraw = millis();
+    if (nextRow < 0) drawHeader();
+    else drawTrack(nextRow);
+    if (++nextRow >= NUM_TRACKS) nextRow = -1;
+  }
 }

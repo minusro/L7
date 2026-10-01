@@ -47,6 +47,9 @@ struct Pins {
   uint8_t hpSense;            // analog input, INPUT_PULLDOWN (likely headphone detect)
   uint8_t hpEnable;           // driven HIGH at boot by stock fw (likely amp enable)
   uint8_t touchInt;           // optional FocalTech touch controller INT
+  // Serial MIDI port 1 output (31250 baud). Port 2 isn't listed: on variant B
+  // its RX is pin 15, the key expander's INT line.
+  HardwareSerial *midiOut;
 };
 
 extern const Pins PINS_A;

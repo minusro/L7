@@ -6,9 +6,9 @@ namespace m8 {
 static constexpr uint8_t EXPANDER_ADDR = 0x20;
 static constexpr uint8_t VARIANT_DETECT_PIN = 17;
 
-//                      CS  DC RST  BL  BL-Hz    rot  keyBus   INT  SDdet HPsense HPen  touchINT
-const Pins PINS_A = {   10,  2,  3,  6,   261.0f,  3, &Wire1,    5,    4,    26,   30,    9 };
-const Pins PINS_B = {   10,  6,  5,  4, 44100.0f,  1, &Wire,    15,   17,    22,    9,   16 };
+//                      CS  DC RST  BL  BL-Hz    rot  keyBus   INT  SDdet HPsense HPen  touchINT  MIDI out
+const Pins PINS_A = {   10,  2,  3,  6,   261.0f,  3, &Wire1,    5,    4,    26,   30,    9,  &Serial7 };
+const Pins PINS_B = {   10,  6,  5,  4, 44100.0f,  1, &Wire,    15,   17,    22,    9,   16,  &Serial1 };
 
 // ILI9341_t3n with access to its protected command helpers, so we can apply
 // the panel tuning the stock firmware uses on variant B.
