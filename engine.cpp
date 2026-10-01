@@ -40,16 +40,18 @@ static void midiTimerIsr() {
 }
 
 void midiBegin(HardwareSerial *port) {
+  if (!MIDI_OUT_ENABLED) return;
   midiPort = port;
-  midiPort->begin(31250);
   midiTimer.begin(midiTimerIsr, 200);
 }
 
 void midiSendNow(uint8_t status) {
+  if (!midiPort) return;
   if (msgHead - msgTail < 8) { msgQueue[msgHead % 8] = status; msgHead++; }
 }
 
 static void queueTick(uint32_t due) {
+  if (!midiPort) return;
   if (tickHead - tickTail < TICK_QUEUE) { tickDue[tickHead % TICK_QUEUE] = due; tickHead++; }
 }
 

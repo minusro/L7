@@ -47,8 +47,9 @@ struct Pins {
   uint8_t hpSense;            // analog input, INPUT_PULLDOWN (likely headphone detect)
   uint8_t hpEnable;           // driven HIGH at boot by stock fw (likely amp enable)
   uint8_t touchInt;           // optional FocalTech touch controller INT
-  // Serial MIDI port 1 output (31250 baud). Port 2 isn't listed: on variant B
-  // its RX is pin 15, the key expander's INT line.
+  // Serial port for MIDI out. Variant A: port 1 (Serial7). Variant B: port 2
+  // (Serial3, TX pin 14) — port 1's TX is pin 1, and driving it made the SD
+  // card reset (see HARDWARE.md). Use midiOutBegin(), not begin() directly.
   HardwareSerial *midiOut;
 };
 
@@ -71,6 +72,10 @@ public:
   bool keysChanged(uint8_t &now);   // true once per change
 
   void setBacklight(uint8_t level);  // 0..255
+
+  // Starts the MIDI out port at 31250 baud and returns it. On variant B this
+  // also gives pin 15 back to the key expander's INT (Serial3 claims it as RX).
+  HardwareSerial *midiOutBegin();
 
   // Power button = the Teensy 4 On/Off pin, handled by the SNVS block like the
   // stock firmware does. Without software the chip only powers off after a ~5 s hold.

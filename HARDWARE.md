@@ -40,7 +40,7 @@ build and is unreachable on Model:01, because the flag can only be 0 or 1.
 | Headphone/amp enable (OUTPUT, HIGH at init) | pin 30 | pin 9 | inferred |
 | **Charger** | no I²C charger; status pins 14 and 15 (INPUT_PULLUP); battery voltage on pin 22 (A8); pin 24 input | **TI BQ2589x** @0x6A on Wire; pin 2 INPUT (probably charger INT) | chips confirmed, pin roles inferred |
 | **Fuel gauge** | n/a | **ST STC3115/3117** @0x70 on Wire | confirmed (register map matches) |
-| Early boot line | n/a | pin 1 OUTPUT HIGH, then 30 ms delay | confirmed (purpose unknown) |
+| Early boot line | n/a | pin 1 OUTPUT HIGH, then 30 ms delay. **Keep it HIGH**: using it as Serial1 TX (MIDI out) made the SD card reset repeatedly (command timeouts on every SD command) until the card was re-initialised. Likely a power enable | setup confirmed; effect observed on hardware |
 | Optional touch panel | FocalTech FT5x/FT6x @0x38 on Wire1, chip ID 0x54, INT pin 9 | @0x38 on Wire, chip ID 0x06/0x36, INT pin 16 | confirmed probe; your unit probably has none |
 | Random seed | `randomSeed(analogRead(A13 = pin 27))` | same | confirmed |
 

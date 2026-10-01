@@ -42,6 +42,33 @@ AudioConnection      c1(i2sIn, 0, engine, 0), c2(i2sIn, 1, engine, 1);
 AudioConnection      c3(engine, 0, i2sOut, 0), c4(engine, 1, i2sOut, 1);
 AudioControlSGTL5000 codec;
 
+// ---- Freeze detector (debugging): loop() and the audio interrupt both count
+// their progress; a low-priority timer reports on Serial if either stalls for
+// 1.5 s, naming the step loop() was in. It can only print while interrupts
+// still run, so silence after a freeze means interrupts were off or it crashed
+// (then CrashReport prints at the next boot).
+static volatile uint32_t loopCount = 0;
+static IntervalTimer freezeTimer;
+
+static void freezeCheck() {
+  static uint32_t lastLoop = 0, lastNow = 0, loopStill = 0, audioStill = 0;
+  uint32_t lc = loopCount, now = transport.now;
+  if (lc == lastLoop) {
+    if (++loopStill == 15) Serial.printf("FREEZE: loop() stuck for 1.5 s in: %s\n", (const char *)debugStage);
+  } else {
+    if (loopStill >= 15) Serial.printf("loop() resumed after %lu ms\n", loopStill * 100);
+    loopStill = 0;
+    lastLoop = lc;
+  }
+  if (now == lastNow) {
+    if (++audioStill == 15) Serial.printf("FREEZE: audio interrupt stopped (loop in: %s)\n", (const char *)debugStage);
+  } else {
+    if (audioStill >= 15) Serial.printf("audio resumed after %lu ms\n", audioStill * 100);
+    audioStill = 0;
+    lastNow = now;
+  }
+}
+
 static float bpm = 120.0f;
 static int selected = 0;
 static uint32_t tempoChangedMs = 0;
@@ -198,6 +225,7 @@ static void fatal(const char *msg) {
 
 void setup() {
   Serial.begin(115200);
+  if (CrashReport) Serial.print(CrashReport);
   AudioMemory(12);
   board.begin();
   board.powerButtonPressed();                        // the press that switched us on
@@ -210,16 +238,23 @@ void setup() {
   if (!storageBegin()) fatal("No SD card: the looper keeps its tracks in /looper on the card.");
   bpm = loadTempo();
   transport.spb = spbForBpm(bpm);
-  midiBegin(board.pins().midiOut);
+  if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
+  freezeTimer.priority(255);
+  freezeTimer.begin(freezeCheck, 100000);
 }
 
 void loop() {
+  loopCount++;
+  debugStage = "power button";
   handlePowerButton();
+  debugStage = "storage";
   serviceStorage();
 
+  debugStage = "keys (I2C)";
   uint8_t keys;
   static uint8_t prev = 0;
   if (board.keysChanged(keys)) {
+    debugStage = "key action";
     onKeys(keys, keys & ~prev);
     prev = keys;
   }
@@ -234,6 +269,7 @@ void loop() {
   static int nextRow = -1;
   if (millis() - lastDraw >= 30) {
     lastDraw = millis();
+    debugStage = "screen";
     if (nextRow < 0) drawHeader();
     else drawTrack(nextRow);
     if (++nextRow >= NUM_TRACKS) nextRow = -1;

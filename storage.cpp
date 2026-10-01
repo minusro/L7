@@ -1,8 +1,10 @@
 // storage.cpp — see storage.h
 #include "storage.h"
+#include <inttypes.h>
 
 namespace looper {
 
+volatile const char *debugStage = "boot";
 static uint32_t chunk[CHUNK_FRAMES];
 static FsFile recFile;
 
@@ -37,6 +39,7 @@ void saveTrackInfo(int t) {
   trackPath(t, "txt", path, sizeof path);
   FsFile f = SD.sdfs.open(path, O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
+  debugStage = "save track info";
   f.printf("spb=%lu\nbars=%lu\nrecorded=%lu\nrangeStart=%lu\nrangeBars=%lu\nmuted=%d\n",
            tr.spbNative, tr.loopBars, tr.recordedFrames, tr.rangeStartBar, tr.rangeBars,
            tr.state == TrackState::Muted);
@@ -53,12 +56,12 @@ static bool loadTrackInfo(int t) {
   while (f.available()) {
     int n = f.fgets(line, sizeof line);
     if (n <= 0) break;
-    sscanf(line, "spb=%lu", &spb);
-    sscanf(line, "bars=%lu", &bars);
-    sscanf(line, "recorded=%lu", &rec);
-    sscanf(line, "rangeStart=%lu", &rs);
-    sscanf(line, "rangeBars=%lu", &rb);
-    sscanf(line, "muted=%lu", &muted);
+    sscanf(line, "spb=%" SCNu32, &spb);
+    sscanf(line, "bars=%" SCNu32, &bars);
+    sscanf(line, "recorded=%" SCNu32, &rec);
+    sscanf(line, "rangeStart=%" SCNu32, &rs);
+    sscanf(line, "rangeBars=%" SCNu32, &rb);
+    sscanf(line, "muted=%" SCNu32, &muted);
   }
   f.close();
   if (!spb || !bars || !rb || rs + rb > bars) return false;
@@ -95,7 +98,11 @@ void saveTempo(float bpm) {
 }
 
 bool storageBegin() {
-  if (!SD.begin(BUILTIN_SDCARD)) return false;
+  // DMA mode: every read/write is one self-contained transfer done by the SD
+  // controller. The default FIFO mode leaves a multi-sector transfer open
+  // between calls and has the CPU poll the FIFO; on the M8 it stalled for
+  // seconds at a time (1 s timeouts, retried) with the audio engine running.
+  if (!SD.sdfs.begin(SdioConfig(DMA_SDIO))) return false;
   SD.sdfs.mkdir("/looper");
   for (int t = 0; t < NUM_TRACKS; t++) {
     if (!loadTrackInfo(t)) {
@@ -106,6 +113,57 @@ bool storageBegin() {
   return true;
 }
 
+// Slow or failed SD transfers go to Serial with the card's error code.
+static void logSd(const char *op, uint32_t ms, int got, uint32_t want) {
+  SdCard *card = SD.sdfs.card();
+  Serial.printf("slow SD %s: %lu ms, %d/%lu bytes, card error 0x%02X data 0x%lX\n", op, ms, got, want,
+                card ? card->errorCode() : 0, card ? card->errorData() : 0);
+}
+
+// ---- Recovery from a card that stops responding
+// Seen on the M8: after a run of slow writes, every read failed with a
+// command timeout (CMD18, 1-2 s each) until the card was set up again. When a
+// transfer fails, reads return silence and writes wait, and serviceStorage()
+// re-initialises the card and reopens the files where they were.
+static bool sdFailed = false;
+
+static void reopenFiles() {
+  char path[32];
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    if (tracks[t].state == TrackState::Empty) continue;
+    trackPath(t, "wav", path, sizeof path);
+    tracks[t].file = SD.sdfs.open(path, O_RDONLY);
+  }
+  if (recording.mode == Recording::Running || recording.mode == Recording::Finishing) {
+    trackPath(recording.track, "wav", path, sizeof path);
+    recFile = SD.sdfs.open(path, O_RDWR);
+    recFile.seekSet(WAV_DATA_OFFSET + (uint64_t)recording.written * 4);
+  }
+}
+
+static void recoverSd() {
+  // After a failed attempt, wait a second before the next; after a successful
+  // one, recover again at once (a wait would lose recording input).
+  static uint32_t lastFailedTry = 0;
+  static bool lastTryFailed = false;
+  if (lastTryFailed && millis() - lastFailedTry < 1000) return;
+  debugStage = "SD recovery";
+  Serial.println("SD card stopped responding: re-initialising it");
+  // Drop the handles without closing them: closing would talk to the card.
+  for (auto &tr : tracks) tr.file = FsFile();
+  recFile = FsFile();
+  if (!SD.sdfs.begin(SdioConfig(DMA_SDIO))) {
+    Serial.println("SD re-init failed, retrying");
+    lastTryFailed = true;
+    lastFailedTry = millis();
+    return;
+  }
+  lastTryFailed = false;
+  reopenFiles();
+  sdFailed = false;
+  Serial.println("SD card back");
+}
+
 // ---- Streaming
 static int32_t posMod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; }
 
@@ -114,12 +172,23 @@ static void produce(Track &tr) {
   uint32_t free = RING_FRAMES - (tr.head - tr.tail);
   uint32_t rangeEnd = tr.rangeStartFrame() + tr.rangeFrames();
   uint32_t n = min(min(CHUNK_FRAMES, free), rangeEnd - tr.fileFrame);
-  if (tr.fileFrame >= tr.recordedFrames) {
-    memset(chunk, 0, n * 4);                     // padding after the recording
+  if (tr.fileFrame >= tr.recordedFrames || sdFailed) {
+    memset(chunk, 0, n * 4);                     // padding after the recording (or no card)
   } else {
     n = min(n, tr.recordedFrames - tr.fileFrame);
+    debugStage = "SD read (track stream)";
+    uint32_t t0 = millis();
     tr.file.seekSet(WAV_DATA_OFFSET + (uint64_t)tr.fileFrame * 4);
-    if (tr.file.read(chunk, n * 4) != (int)(n * 4)) memset(chunk, 0, n * 4);
+    int got = tr.file.read(chunk, n * 4);
+    uint32_t ms = millis() - t0;
+    if (got != (int)(n * 4)) {
+      memset(chunk, 0, n * 4);
+      // Only a card error means the card stopped responding; a short read
+      // without one is just the end of the file.
+      if (got < 0 || SD.sdfs.card()->errorCode()) sdFailed = true;
+    }
+    if (ms > 50 || got != (int)(n * 4))
+      logSd("read", ms, got, n * 4);
   }
   uint32_t head = tr.head;
   for (uint32_t i = 0; i < n; i++) tr.ring[(head + i) % RING_FRAMES] = chunk[i];
@@ -183,6 +252,7 @@ static void stopRecording() {
 static void finishRecording() {
   int t = recording.track;
   Track &tr = tracks[t];
+  debugStage = "finish recording (header, truncate, reopen)";
   writeWavHeader(recFile, recording.targetFrames);
   recFile.truncate(WAV_DATA_OFFSET + (uint64_t)recording.targetFrames * 4);
   recFile.close();
@@ -214,8 +284,10 @@ static void serviceRecorder() {
   int32_t avail = (int32_t)(now - next);
   if (recording.mode == Recording::Finishing)
     avail = min(avail, (int32_t)(recording.targetFrames - recording.written));
-  else if (recording.written + avail >= MAX_BARS * BEATS_PER_BAR * transport.spb)
+  else if ((int32_t)(now - recording.startSample) >= (int32_t)(MAX_BARS * BEATS_PER_BAR * transport.spb))
     stopRecording();                             // longest loop reached
+  // (Signed on purpose: a recording starts LATENCY_FRAMES in the future, so for
+  // a moment `now` is before startSample and avail is negative.)
   if (avail <= 0) {
     if (recording.mode == Recording::Finishing && recording.written >= recording.targetFrames)
       finishRecording();
@@ -224,9 +296,18 @@ static void serviceRecorder() {
   bool finalPart = recording.mode == Recording::Finishing &&
                    recording.written + avail >= recording.targetFrames;
   if (avail < (int32_t)CHUNK_FRAMES && !finalPart) return;
+  if (sdFailed) return;                          // keep it in the input history for now
   uint32_t n = min((uint32_t)avail, CHUNK_FRAMES);
   for (uint32_t i = 0; i < n; i++) chunk[i] = inputRing[(next + i) % INPUT_FRAMES];
-  recFile.write(chunk, n * 4);
+  debugStage = "SD write (recording)";
+  uint32_t t0 = millis();
+  int put = recFile.write(chunk, n * 4);
+  uint32_t ms = millis() - t0;
+  if (ms > 50 || put != (int)(n * 4)) logSd("write", ms, put, n * 4);
+  if (put != (int)(n * 4)) {                     // retried after recovery
+    sdFailed = true;
+    return;
+  }
   recording.written += n;
 }
 
@@ -236,10 +317,19 @@ bool recordPress(int t) {
       if (tracks[t].state != TrackState::Empty) return false;
       char path[32];
       trackPath(t, "wav", path, sizeof path);
+      debugStage = "start recording (create + preallocate file)";
       recFile = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
       if (!recFile) return false;
       uint32_t maxFrames = MAX_BARS * BEATS_PER_BAR * transport.spb;
-      recFile.preAllocate(WAV_DATA_OFFSET + (uint64_t)maxFrames * 4);
+      uint64_t maxBytes = WAV_DATA_OFFSET + (uint64_t)maxFrames * 4;
+      recFile.preAllocate(maxBytes);
+      // Give the file its full size now and save that, so that if the card has
+      // to be re-initialised mid-recording the file can be reopened and written
+      // at the right place. finishRecording() truncates it to the real length.
+      uint8_t zero = 0;
+      recFile.seekSet(maxBytes - 1);
+      recFile.write(&zero, 1);
+      recFile.sync();
       writeWavHeader(recFile, 0);
       recFile.seekSet(WAV_DATA_OFFSET);
       recording.track = t;
@@ -284,6 +374,7 @@ void clearTrack(int t) {
   tr.live = false;
   tr.armed = false;
   tr.state = TrackState::Empty;
+  debugStage = "clear track (delete files)";
   tr.file.close();
   char path[32];
   trackPath(t, "wav", path, sizeof path);
@@ -323,6 +414,7 @@ void transportStop() {
 }
 
 void serviceStorage() {
+  if (sdFailed) recoverSd();
   serviceRecorder();
   for (int t = 0; t < NUM_TRACKS; t++)
     if (tracks[t].needsRestart && transport.running) startTrack(t, transport.beat + 2);

@@ -22,4 +22,7 @@ float loadTempo();                   // saved tempo, or 120
 void saveTempo(float bpm);
 void saveTrackInfo(int t);
 
+// Debugging: the step loop() is in, for the freeze detector in the sketch.
+extern volatile const char *debugStage;
+
 }  // namespace looper

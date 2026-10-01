@@ -78,7 +78,7 @@ extern uint32_t inputRing[INPUT_FRAMES];  // stereo input, index = sample % INPU
 
 uint32_t spbForBpm(float bpm);
 float bpmForSpb(uint32_t spb);
-void midiBegin(HardwareSerial *port);
+void midiBegin(HardwareSerial *port);   // port already started (Board::midiOutBegin)
 void midiSendNow(uint8_t status);        // transport start/stop messages
 
 class LooperEngine : public AudioStream {
