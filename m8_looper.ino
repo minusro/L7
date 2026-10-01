@@ -94,22 +94,18 @@ static bool setTempo(float b) {
 
 // ---- Screen (text is drawn over its own background: no full clears, which
 // would hold up SD streaming)
-static constexpr int ROW_Y = 30, ROW_H = 22;
+// Vertical layout: tempo line at TOP_Y, then 8 track rows. TOP_Y centres the
+// whole block: 20 px above the tempo text and below track 8's selection bar.
+static constexpr int ROW_H = 22;
+static constexpr int TOP_Y = 20;
+static constexpr int ROW_Y = TOP_Y + 26;
 
-static void drawHelp() {
-  auto &t = board.tft();
-  t.fillScreen(ILI9341_BLACK);
-  t.setTextSize(1);
-  t.setTextColor(ILI9341_DARKGREY);
-  t.setCursor(4, 212); t.print("UP/DN track  L/R tempo  PLAY start/stop  EDIT rec/mute");
-  t.setCursor(4, 224); t.print("SHIFT+EDIT clear  OPT+L/R range pos  OPT+UP/DN range len");
-}
 
 static void drawHeader() {
   auto &t = board.tft();
   t.setTextSize(2);
   t.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-  t.setCursor(4, 4);
+  t.setCursor(4, TOP_Y);
   t.printf("%6.1f BPM ", bpm);
   int32_t beat = transport.beat;
   if (transport.running) {
@@ -170,12 +166,13 @@ static void drawTrack(int i) {
     char len[12];                                    // range length in bars
     if (rb < BEATS_PER_BAR) snprintf(len, sizeof len, "1/%lu", BEATS_PER_BAR / rb);
     else snprintf(len, sizeof len, "%lu", rb / BEATS_PER_BAR);
-    snprintf(line, sizeof line, "%2lu bars  at %lu.%lu len %-3s%s @%.1f x%.2f dr %lu",
-             tr.loopBars, rs / BEATS_PER_BAR + 1, rs % BEATS_PER_BAR + 1, len,
-             tr.rangePending ? "*" : " ", bpmForSpb(tr.spbNative),
-             (double)tr.spbNative / transport.spb, tr.underruns);
+    snprintf(line, sizeof line, "%2lu bars  at %lu.%lu len %s",
+             tr.loopBars, rs / BEATS_PER_BAR + 1, rs % BEATS_PER_BAR + 1, len);
   }
-  t.printf("%-46s", line);
+  // Pad to the screen edge (row text starts at x = 50: 45 columns of 6 px) to
+  // clear older, longer text. Wider padding wrapped onto the next line and put
+  // a black box over the selection bar.
+  t.printf("%-45s", line);
 }
 
 // ---- Keys
@@ -255,7 +252,8 @@ void setup() {
   codec.lineInLevel(5);
   codec.volume(0.6f);
 
-  drawHelp();
+  board.tft().fillScreen(ILI9341_BLACK);
+  board.tft().setTextWrap(false);
   auto progress = [](const char *msg) {
     auto &t = board.tft();
     t.setTextColor(ILI9341_YELLOW, ILI9341_BLACK);
