@@ -70,7 +70,12 @@ bool Board::begin(uint32_t spiHz) {
   M8Display *d = new M8Display(p.tftCS, p.tftDC, p.tftRST, 11, 13, 12);
   _tft = d;
   d->begin(spiHz);
-  if (_variant == VARIANT_B) applyVariantBPanelTuning();
+  if (_variant == VARIANT_B) {
+    applyVariantBPanelTuning();
+    // The variant-B panel shows a negative image unless inversion is on
+    // (observed on hardware; typical for IPS ILI9341 panels).
+    d->invertDisplay(true);
+  }
   d->setRotation(p.tftRotation);
   d->fillScreen(ILI9341_BLACK);
 
