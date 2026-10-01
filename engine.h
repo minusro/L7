@@ -21,10 +21,10 @@ struct Track {
   uint32_t loopBars = 0;           // power of two
   uint32_t recordedFrames = 0;     // audio in the file; the rest of the loop is silence
   uint32_t rangeStartBeat = 0, rangeBeats = 0;   // loop range; length is a power of two beats
-  // Transport beat at which the loop range is at its first beat (the range
-  // repeats every rangeBeats from there). Starts as the beat the recording
-  // began on; shifts when a range change keeps the playhead where it is.
-  int32_t rangeAnchorBeat = 0;
+  // Transport position, in quarter beats, at which the loop range is at its
+  // first beat (it repeats every rangeBeats from there). Starts on the beat
+  // the recording began; shifts when a range change keeps the playhead.
+  int32_t rangeAnchorQ = 0;
   float gain = 1.0f;
 
   uint32_t rangeStartFrame() const { return rangeStartBeat * spbNative; }
@@ -50,11 +50,11 @@ struct Track {
   uint32_t fileFrame = 0;          // loop frame that stream frame `head` comes from
 
   // Queued loop range (loop() only): the stream switches to it at stream
-  // frame switchS, which falls on transport beat switchBeat (a beat boundary). The old range
-  // keeps playing until then.
+  // frame switchS, which falls on transport quarter beat switchQ. The old
+  // range keeps playing until then.
   bool rangePending = false;
   uint32_t pendingStartBeat = 0, pendingBeats = 0, switchS = 0;
-  int32_t switchBeat = 0;
+  int32_t switchQ = 0;
 };
 
 struct Transport {

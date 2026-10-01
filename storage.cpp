@@ -25,17 +25,21 @@ static void trackPath(int t, char *buf, size_t n) { snprintf(buf, n, "/looper/tr
 
 static int32_t posMod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; }
 
+// Frames in q quarter beats (a beat's samples rarely divide by 4: rounded down
+// within each beat).
+static uint32_t quarterFrames(uint32_t q, uint32_t spb) { return (q / 4) * spb + (q % 4) * spb / 4; }
+
 // ---- WAV header with the track's settings
 // 16-bit stereo PCM; a JUNK chunk pads the header to 512 bytes so the audio is
 // sector-aligned, and carries the settings below at offset 44.
 struct TrackInfo {
   char magic[4];                                 // "M8LP"
   uint32_t version, used, spb, loopBars, recordedFrames, rangeStart, rangeLen, muted;
-  uint32_t rangePhase;                           // v3: position in the range at transport beat 0
+  uint32_t rangePhase;                           // position in the range at transport beat 0
 };
-// Version 3 adds rangePhase; version 2 has the range in beats; version 1 (range
-// in bars) is converted on load.
-static constexpr uint32_t INFO_OFFSET = 44, INFO_VERSION = 3;
+// Version 4: rangePhase in quarter beats. Version 3: rangePhase in beats.
+// Version 2: no rangePhase. Version 1: range in bars. Older ones are converted.
+static constexpr uint32_t INFO_OFFSET = 44, INFO_VERSION = 4;
 
 static void put16(uint8_t *p, uint16_t v) { p[0] = v; p[1] = v >> 8; }
 static void put32(uint8_t *p, uint32_t v) { put16(p, v); put16(p + 2, v >> 16); }
@@ -54,7 +58,7 @@ static bool writeHeader(int t) {
   memcpy(h + 36, "JUNK", 4);  put32(h + 40, WAV_DATA_OFFSET - 44 - 8);
   TrackInfo info = {{'M', '8', 'L', 'P'}, INFO_VERSION, used, tr.spbNative, tr.loopBars,
                     frames, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted,
-                    used ? (uint32_t)posMod(-tr.rangeAnchorBeat, tr.rangeBeats) : 0};
+                    used ? (uint32_t)posMod(-tr.rangeAnchorQ, 4 * tr.rangeBeats) : 0};
   memcpy(h + INFO_OFFSET, &info, sizeof info);
   memcpy(h + WAV_DATA_OFFSET - 8, "data", 4);
   put32(h + WAV_DATA_OFFSET - 4, frames * 4);
@@ -73,9 +77,10 @@ static void readHeader(int t) {
   if (!tr.file.seekSet(0) || tr.file.read(h, sizeof h) != (int)sizeof h) return;
   TrackInfo info;
   memcpy(&info, h + INFO_OFFSET, sizeof info);
-  if (memcmp(h, "RIFF", 4) || memcmp(info.magic, "M8LP", 4) || info.version < 1 || info.version > 3) return;
+  if (memcmp(h, "RIFF", 4) || memcmp(info.magic, "M8LP", 4) || info.version < 1 || info.version > 4) return;
   if (info.version == 1) { info.rangeStart *= BEATS_PER_BAR; info.rangeLen *= BEATS_PER_BAR; }
   if (info.version < 3) info.rangePhase = 0;
+  if (info.version < 4) info.rangePhase *= 4;
   uint32_t loopBeats = info.loopBars * BEATS_PER_BAR;
   if (!info.used || !info.spb || !info.loopBars || !info.rangeLen ||
       info.rangeStart + info.rangeLen > loopBeats || info.recordedFrames > MAX_REC_FRAMES)
@@ -86,7 +91,7 @@ static void readHeader(int t) {
   tr.recordedFrames = info.recordedFrames;
   tr.rangeStartBeat = info.rangeStart;
   tr.rangeBeats = info.rangeLen;
-  tr.rangeAnchorBeat = -(int32_t)(info.rangePhase % info.rangeLen);
+  tr.rangeAnchorQ = -(int32_t)(info.rangePhase % (4 * info.rangeLen));
   tr.state = info.muted ? TrackState::Muted : TrackState::Playing;
 }
 
@@ -217,19 +222,22 @@ static void recoverSd() {
 // ---- Streaming
 
 // The stream has reached the queued range's switch point. If the new range
-// contains the beat that would have played next, carry on from it (the range
+// contains the spot that would have played next, carry on from it (the range
 // is re-anchored around the playhead); otherwise start the new range in
 // phase with the existing anchor.
 static void applyQueuedRange(Track &tr) {
-  uint32_t playheadBeat = tr.fileFrame / tr.spbNative;     // a whole beat: switches fall on beats
   tr.rangeStartBeat = tr.pendingStartBeat;
   tr.rangeBeats = tr.pendingBeats;
   tr.rangePending = false;
-  if (playheadBeat >= tr.rangeStartBeat && playheadBeat < tr.rangeStartBeat + tr.rangeBeats) {
-    tr.rangeAnchorBeat = tr.switchBeat - (int32_t)(playheadBeat - tr.rangeStartBeat);
+  uint32_t start = tr.rangeStartFrame();
+  if (tr.fileFrame >= start && tr.fileFrame < start + tr.rangeFrames()) {
+    // Playhead position in the new range, in quarter beats (switches fall on
+    // quarter beats; round away the per-quarter rounding of frames).
+    int32_t posQ = (int32_t)(((uint64_t)(tr.fileFrame - start) * 4 + tr.spbNative / 2) / tr.spbNative);
+    tr.rangeAnchorQ = tr.switchQ - posQ;
   } else {
-    int32_t phase = posMod(tr.switchBeat - tr.rangeAnchorBeat, tr.rangeBeats);
-    tr.fileFrame = tr.rangeStartFrame() + phase * tr.spbNative;
+    int32_t phaseQ = posMod(tr.switchQ - tr.rangeAnchorQ, 4 * tr.rangeBeats);
+    tr.fileFrame = start + quarterFrames(phaseQ, tr.spbNative);
   }
   trackChanged(&tr - tracks);
 }
@@ -281,8 +289,8 @@ static void startTrack(int t, int32_t beat0, bool fillNow) {
     trackChanged(t);
   }
   if (tr.state == TrackState::Empty) return;
-  int32_t phase = posMod(beat0 - tr.rangeAnchorBeat, tr.rangeBeats);
-  tr.s0 = phase * tr.spbNative;
+  int32_t phaseQ = posMod(4 * beat0 - tr.rangeAnchorQ, 4 * tr.rangeBeats);
+  tr.s0 = quarterFrames(phaseQ, tr.spbNative);
   tr.tail = tr.s0;
   tr.head = tr.s0;
   tr.fileFrame = tr.rangeStartFrame() + tr.s0;
@@ -356,7 +364,7 @@ static void finishRecording() {
   tr.recordedFrames = recording.targetFrames;
   tr.rangeStartBeat = 0;
   tr.rangeBeats = tr.loopBars * BEATS_PER_BAR;
-  tr.rangeAnchorBeat = recording.startBeat;
+  tr.rangeAnchorQ = 4 * recording.startBeat;
   tr.state = TrackState::Playing;
   recording.mode = Recording::Idle;
   recording.track = -1;
@@ -479,14 +487,18 @@ bool setRange(int t, uint32_t startBeat, uint32_t beats) {
     if (tr.armed) startTrack(t, tr.startBeat, false);   // joining soon: refill for the new range
     return true;
   }
-  // Playing: queue it. The switch goes on the first beat that the stream
-  // hasn't buffered yet, so the old range plays right up to it with no gap.
-  int32_t b = transport.beat + 1;
-  while ((int32_t)(tr.s0 + (uint32_t)(b - tr.startBeat) * tr.spbNative - tr.head) < 0) b++;
+  // Playing: queue it. The switch goes on the first quarter beat that the
+  // stream hasn't buffered yet, so the old range plays right up to it with no
+  // gap. Stream frame of transport quarter q: s0 + frames since startBeat.
+  noInterrupts();
+  int32_t q = transport.beat * 4 + (int32_t)((uint64_t)transport.sampleInBeat * 4 / transport.spb) + 1;
+  interrupts();
+  auto streamAt = [&](int32_t qq) { return tr.s0 + quarterFrames(qq - 4 * tr.startBeat, tr.spbNative); };
+  while ((int32_t)(streamAt(q) - tr.head) < 0) q++;
   tr.pendingStartBeat = startBeat;
   tr.pendingBeats = beats;
-  tr.switchBeat = b;
-  tr.switchS = tr.s0 + (uint32_t)(b - tr.startBeat) * tr.spbNative;
+  tr.switchQ = q;
+  tr.switchS = streamAt(q);
   tr.rangePending = true;
   return true;
 }
