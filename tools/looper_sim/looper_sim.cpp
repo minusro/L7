@@ -243,10 +243,53 @@ int main(int argc, char **argv) {
   checkSync(0, "track 1 at 90 BPM");
   checkSync(2, "track 3 at 90 BPM");
 
-  printf("loop range of track 1: bars 2-3\n");
-  setRange(0, 1, 2);
-  runBeats(4);
-  checkSync(0, "track 1 range 2-3");
+  printf("loop range of track 1 changed to bars 2-3 while playing\n");
+  {
+    feedRamp = false;
+    engine.monitor = false;
+    for (auto &x : tracks) x.gain = 0;
+    Track &tr = tracks[0];
+    tr.gain = 1;
+    tr.underruns = 0;
+    uint32_t oldStart = tr.rangeStartBar, oldBars = tr.rangeBars;
+    int32_t asked = transport.beat;
+    setRange(0, 1, 2);
+    int32_t sw = tr.switchBeat;
+    char m[128];
+    snprintf(m, sizeof m, "queued for bar line beat %d (asked at beat %d), keeps playing meanwhile", sw, asked);
+    check(tr.rangePending && tr.live && sw % BEATS_PER_BAR == 0 && sw > asked && sw <= asked + 2 * BEATS_PER_BAR, m);
+    // Compare the first sample of each beat with old range before the switch, new range after.
+    int bad = 0, checked = 0, before = 0;
+    for (int b = 0; b < 16; b++) {
+      int32_t target = transport.beat + 1;
+      for (int guard = 0; guard < 2000; guard++) {
+        uint32_t sib = transport.sampleInBeat, spb = transport.spb;
+        if (transport.beat == target - 1 && sib + AUDIO_BLOCK_SAMPLES > spb) {
+          uint32_t offset = spb - sib;
+          block();
+          if (offset >= AUDIO_BLOCK_SAMPLES) break;
+          bool newRange = target >= sw;
+          uint32_t rs = newRange ? 1 : oldStart, rb = newRange ? 2 : oldBars;
+          int32_t ph = ((target - tr.anchorBeat) % (int32_t)(rb * BEATS_PER_BAR) + rb * BEATS_PER_BAR) % (rb * BEATS_PER_BAR);
+          uint32_t frame = rs * BEATS_PER_BAR * tr.spbNative + ph * tr.spbNative;
+          float expect = frame < tr.recordedFrames ? wavLeft(0, frame) * engine.masterGain : 0;
+          checked++;
+          if (!newRange) before++;
+          if (fabsf(outL.data[offset] - expect) > 2 && bad++ < 3)
+            printf("        beat %d (%s range): out %d, expected %.0f\n", target, newRange ? "new" : "old",
+                   outL.data[offset], expect);
+          break;
+        }
+        block();
+      }
+    }
+    snprintf(m, sizeof m, "%d beats on the old range then %d on the new, all on the right frame; %u dropouts",
+             before, checked - before, tr.underruns);
+    check(bad == 0 && before > 0 && checked - before > 4 && tr.underruns == 0, m);
+    check(!tr.rangePending && tr.rangeStartBar == 1 && tr.rangeBars == 2, "range applied and kept");
+    for (auto &x : tracks) x.gain = 1;
+    engine.monitor = true;
+  }
 
   printf("SD card stops responding while recording track 4 (others playing)\n");
   {

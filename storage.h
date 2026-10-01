@@ -18,7 +18,11 @@ void transportStop();
 // Returns false if the track already holds a loop.
 bool recordPress(int t);
 void clearTrack(int t);
+// Loop range in bars. While playing, the change is queued and takes over at
+// the next bar line the track hasn't buffered yet; trackRange() reports the
+// queued range if there is one.
 bool setRange(int t, uint32_t startBar, uint32_t bars);
+void trackRange(int t, uint32_t &startBar, uint32_t &bars);
 
 float loadTempo();                   // saved tempo, or 120
 void saveTempo(float bpm);           // creates/rewrites a file: only while stopped

@@ -164,8 +164,10 @@ static void drawTrack(int i) {
   } else if (tr.state == TrackState::Empty) {
     snprintf(line, sizeof line, "%s", "");
   } else {
-    snprintf(line, sizeof line, "%2lu bars  range %lu-%lu  @%.1f  x%.2f  drops %lu",
-             tr.loopBars, tr.rangeStartBar + 1, tr.rangeStartBar + tr.rangeBars,
+    uint32_t rs, rb;
+    trackRange(i, rs, rb);
+    snprintf(line, sizeof line, "%2lu bars  range %lu-%lu%s @%.1f  x%.2f  drops %lu",
+             tr.loopBars, rs + 1, rs + rb, tr.rangePending ? "*" : " ",
              bpmForSpb(tr.spbNative), (double)tr.spbNative / transport.spb, tr.underruns);
   }
   t.printf("%-46s", line);
@@ -178,12 +180,12 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
   int prevSel = selected;
 
   if (opt) {
-    if (pressed & m8::BTN_LEFT && tr.rangeStartBar > 0)
-      setRange(selected, tr.rangeStartBar - 1, tr.rangeBars);
-    if (pressed & m8::BTN_RIGHT && tr.rangeStartBar + tr.rangeBars < tr.loopBars)
-      setRange(selected, tr.rangeStartBar + 1, tr.rangeBars);
-    if (pressed & m8::BTN_UP) setRange(selected, tr.rangeStartBar, tr.rangeBars + 1);
-    if (pressed & m8::BTN_DOWN && tr.rangeBars > 1) setRange(selected, tr.rangeStartBar, tr.rangeBars - 1);
+    uint32_t rs, rb;
+    trackRange(selected, rs, rb);                    // includes a queued change
+    if (pressed & m8::BTN_LEFT && rs > 0) setRange(selected, rs - 1, rb);
+    if (pressed & m8::BTN_RIGHT && rs + rb < tr.loopBars) setRange(selected, rs + 1, rb);
+    if (pressed & m8::BTN_UP) setRange(selected, rs, rb + 1);
+    if (pressed & m8::BTN_DOWN && rb > 1) setRange(selected, rs, rb - 1);
   } else {
     if (pressed & m8::BTN_UP) selected = (selected + NUM_TRACKS - 1) % NUM_TRACKS;
     if (pressed & m8::BTN_DOWN) selected = (selected + 1) % NUM_TRACKS;

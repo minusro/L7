@@ -45,6 +45,13 @@ struct Track {
   // Producer side (loop() only)
   FsFile file;
   uint32_t fileFrame = 0;          // loop frame that stream frame `head` comes from
+
+  // Queued loop range (loop() only): the stream switches to it at stream
+  // frame switchS, which falls on bar line switchBeat. The old range keeps
+  // playing until then.
+  bool rangePending = false;
+  uint32_t pendingStartBar = 0, pendingBars = 0, switchS = 0;
+  int32_t switchBeat = 0;
 };
 
 struct Transport {

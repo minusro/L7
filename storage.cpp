@@ -23,6 +23,8 @@ static constexpr uint64_t TRACK_FILE_BYTES = WAV_DATA_OFFSET + (uint64_t)MAX_REC
 
 static void trackPath(int t, char *buf, size_t n) { snprintf(buf, n, "/looper/track%d.wav", t + 1); }
 
+static int32_t posMod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; }
+
 // ---- WAV header with the track's settings
 // 16-bit stereo PCM; a JUNK chunk pads the header to 512 bytes so the audio is
 // sector-aligned, and carries the settings below at offset 44.
@@ -205,13 +207,25 @@ static void recoverSd() {
 }
 
 // ---- Streaming
-static int32_t posMod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; }
+
+// The stream has reached the queued range's switch point: continue from the
+// new range, in phase with the bar counter at the switch's bar line.
+static void applyQueuedRange(Track &tr) {
+  tr.rangeStartBar = tr.pendingStartBar;
+  tr.rangeBars = tr.pendingBars;
+  tr.rangePending = false;
+  int32_t phase = posMod(tr.switchBeat - tr.anchorBeat, tr.rangeBars * BEATS_PER_BAR);
+  tr.fileFrame = tr.rangeStartFrame() + phase * tr.spbNative;
+  trackChanged(&tr - tracks);
+}
 
 // One SD read (or one block of padding silence) into the track's ring.
 static void produce(Track &tr) {
+  if (tr.rangePending && tr.head == tr.switchS) applyQueuedRange(tr);
   uint32_t free = RING_FRAMES - (tr.head - tr.tail);
   uint32_t rangeEnd = tr.rangeStartFrame() + tr.rangeFrames();
   uint32_t n = min(min(CHUNK_FRAMES, free), rangeEnd - tr.fileFrame);
+  if (tr.rangePending) n = min(n, tr.switchS - tr.head);      // stop exactly at the switch
   if (tr.fileFrame >= tr.recordedFrames || sdFailed) {
     memset(chunk, 0, n * 4);                     // padding after the recording (or no card)
   } else {
@@ -245,6 +259,12 @@ static void startTrack(int t, int32_t beat0, bool fillNow) {
   tr.live = false;
   tr.armed = false;
   tr.needsRestart = false;
+  if (tr.rangePending) {                         // restarting: take the queued range now
+    tr.rangeStartBar = tr.pendingStartBar;
+    tr.rangeBars = tr.pendingBars;
+    tr.rangePending = false;
+    trackChanged(t);
+  }
   if (tr.state == TrackState::Empty) return;
   int32_t phase = posMod(beat0 - tr.anchorBeat, tr.rangeBars * BEATS_PER_BAR);
   tr.s0 = phase * tr.spbNative;
@@ -425,15 +445,33 @@ void clearTrack(int t) {
   trackChanged(t);
 }
 
+void trackRange(int t, uint32_t &startBar, uint32_t &bars) {
+  const Track &tr = tracks[t];
+  startBar = tr.rangePending ? tr.pendingStartBar : tr.rangeStartBar;
+  bars = tr.rangePending ? tr.pendingBars : tr.rangeBars;
+}
+
 bool setRange(int t, uint32_t startBar, uint32_t bars) {
   Track &tr = tracks[t];
   if (tr.state == TrackState::Empty || bars < 1 || startBar + bars > tr.loopBars) return false;
-  tr.live = false;
-  tr.armed = false;
-  tr.rangeStartBar = startBar;
-  tr.rangeBars = bars;
-  trackChanged(t);
-  if (transport.running) startTrack(t, transport.beat + 2, false);
+  if (!tr.live) {                                // not playing: just change it
+    tr.rangePending = false;
+    tr.rangeStartBar = startBar;
+    tr.rangeBars = bars;
+    trackChanged(t);
+    if (tr.armed) startTrack(t, tr.startBeat, false);   // joining soon: refill for the new range
+    return true;
+  }
+  // Playing: queue it. The switch goes on the first bar line the stream hasn't
+  // buffered yet, so the old range plays right up to it with no gap.
+  int32_t b = transport.beat + 1;
+  b += posMod(-b, BEATS_PER_BAR);
+  while ((int32_t)(tr.s0 + (uint32_t)(b - tr.startBeat) * tr.spbNative - tr.head) < 0) b += BEATS_PER_BAR;
+  tr.pendingStartBar = startBar;
+  tr.pendingBars = bars;
+  tr.switchBeat = b;
+  tr.switchS = tr.s0 + (uint32_t)(b - tr.startBeat) * tr.spbNative;
+  tr.rangePending = true;
   return true;
 }
 
