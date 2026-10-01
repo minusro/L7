@@ -103,20 +103,53 @@ static constexpr int ROW_Y = TOP_Y + 26;
 static constexpr int BUTTON_X = 4, BUTTON_SIZE = ROW_H - 2;
 static constexpr int WAVE_X = 30, WAVE_H = 16;     // OVERVIEW_COLS wide: to x = 315
 
+// Blends two RGB565 colours: a at weight w (0-255), b at 255 - w.
+static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
+  int r = (((a >> 11) & 31) * w + ((b >> 11) & 31) * (255 - w)) / 255;
+  int g = (((a >> 5) & 63) * w + ((b >> 5) & 63) * (255 - w)) / 255;
+  int bl = ((a & 31) * w + (b & 31) * (255 - w)) / 255;
+  return (r << 11) | (g << 5) | bl;
+}
+
+// ---- Accent colour: clock and playheads. Cycles through the rainbow in
+// pastel shades once every 4 bars, starting from green; holds while stopped.
+static uint16_t accentColor = 0;
+
+static uint16_t hsvTo565(float h, float s, float v) {   // h in degrees
+  h = fmodf(h, 360.0f);
+  float c = v * s, x = c * (1 - fabsf(fmodf(h / 60.0f, 2) - 1)), m = v - c, r, g, b;
+  if (h < 60) { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else { r = c; g = 0; b = x; }
+  return ((int)((r + m) * 31 + 0.5f) << 11) | ((int)((g + m) * 63 + 0.5f) << 5) | (int)((b + m) * 31 + 0.5f);
+}
+
+static void updateAccent() {
+  noInterrupts();
+  double beats = transport.beat + (double)transport.sampleInBeat / transport.spb;
+  interrupts();
+  const double cycleBeats = 4 * BEATS_PER_BAR;
+  float hue = 105.0f + 360.0f * (float)(fmod(beats, cycleBeats) / cycleBeats);  // 120 = green
+  accentColor = hsvTo565(hue, 0.45f, 1.0f);
+}
+
 // ---- Waveforms
 // Each track's whole loop, drawn one column at a time: the row background
-// (dark grey for an unmuted clip, dark red while recording; it runs to the
-// left edge, under the button), the waveform (white inside the loop range,
-// grey outside) with faint darker bar lines at the clip's bar boundaries, and
-// the playhead: 3 px turquoise on unmuted clips, none on muted ones except a
-// thin black line on the selected track. Full redraws only happen when
+// (dim grey across the whole screen for the selected track, dark red while
+// recording), the waveform (white inside the loop range, grey outside; muted
+// clips at half brightness) with faint darker bar lines at the clip's bar
+// boundaries, and the playhead: 3 px in the accent colour on unmuted clips,
+// none on muted ones except a thin black line on the selected track. Full redraws only happen when
 // something changes; the playhead moves by redrawing just its columns.
 // While a track records it shows the recording growing (live view) with a
 // red record head, over the length it would become.
 static constexpr uint16_t WAVE_IN = ILI9341_WHITE, WAVE_OUT = 0x7BEF;        // white, grey
 static constexpr uint16_t WAVE_IN_BAR = 0xBDF7, WAVE_OUT_BAR = 0x5ACB;       // the same at ~75%
-static constexpr uint16_t BG_PLAYING = 0x2104, BG_RECORDING = 0x3800;        // dark grey, dark red
-static constexpr uint16_t PLAYHEAD = 0x471A, REC_HEAD = ILI9341_RED;         // turquoise, red
+static constexpr uint16_t BG_SELECTED = 0x2945, BG_RECORDING = 0x3800;       // dim grey, dark red
+static constexpr uint16_t REC_HEAD = ILI9341_RED;
 static constexpr uint16_t MUTED_HEAD = ILI9341_BLACK;
 static constexpr uint16_t BUTTON_ICON = ILI9341_WHITE;
 
@@ -127,7 +160,7 @@ struct WaveView {
   int rangeFirst = 0, rangeLast = -1;              // columns inside the loop range
   int playCol = -1;                                // playhead / record head; -1: none
   int headHalf = 1;                                // playhead is 2 * headHalf + 1 px wide
-  uint16_t headColor = PLAYHEAD;
+  uint16_t headColor = 0;
   // live view
   uint32_t liveBars = 0;
   int liveFilled = 0;                              // columns with recorded audio
@@ -145,7 +178,7 @@ static bool recordingOn(int i) { return recording.track == i && recording.mode !
 
 static uint16_t rowBackground(int i) {
   if (recordingOn(i)) return BG_RECORDING;
-  return tracks[i].state == TrackState::Playing ? BG_PLAYING : ILI9341_BLACK;
+  return i == selected ? BG_SELECTED : ILI9341_BLACK;
 }
 static int waveTop(int i) { return rowTop(i) + (ROW_H - 2 - WAVE_H) / 2; }
 
@@ -171,6 +204,7 @@ static void drawColumn(int i, int c) {
   bool bar = isBarColumn(v.live ? v.liveBars : tr.loopBars, c);
   bool in = v.live || (c >= v.rangeFirst && c <= v.rangeLast);
   uint16_t color = in ? (bar ? WAVE_IN_BAR : WAVE_IN) : (bar ? WAVE_OUT_BAR : WAVE_OUT);
+  if (!v.live && tr.state == TrackState::Muted) color = blend565(color, ILI9341_BLACK, 128);   // muted: half brightness
   int h = (v.live ? v.liveData[c] : tr.overview[c]) * (WAVE_H / 2) / 255;
   t.drawFastVLine(x, mid - h, 2 * h + 1, color);
 }
@@ -274,7 +308,7 @@ static void updatePlayheads() {
       double loopBeat = tr.rangeStartBeat + inRange;
       col = min(OVERVIEW_COLS - 1, (int)(loopBeat * OVERVIEW_COLS / (tr.loopBars * BEATS_PER_BAR)));
     }
-    movePlayhead(i, col, muted ? 0 : 1, muted ? MUTED_HEAD : PLAYHEAD);
+    movePlayhead(i, col, muted ? 0 : 1, muted ? MUTED_HEAD : accentColor);
   }
 }
 
@@ -292,28 +326,41 @@ static int buttonIcon(int i) {
   }
 }
 
-// Blends two RGB565 colours: a at weight w (0-255), b at 255 - w.
-static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
-  int r = (((a >> 11) & 31) * w + ((b >> 11) & 31) * (255 - w)) / 255;
-  int g = (((a >> 5) & 63) * w + ((b >> 5) & 63) * (255 - w)) / 255;
-  int bl = ((a & 31) * w + (b & 31) * (255 - w)) / 255;
-  return (r << 11) | (g << 5) | bl;
+
+// Button icons: filled shapes in an ICON_SIZE px box, anti-aliased (4x4
+// samples per pixel, blended over the row background).
+static constexpr float ICON_SIZE = 10.5f;
+
+// Is the point (dx, dy) from the icon's centre inside the icon?
+static bool onIcon(int icon, float dx, float dy) {
+  float h = ICON_SIZE / 2;
+  switch (icon) {
+    case ICON_RECORD: return dx * dx + dy * dy <= h * h;
+    case ICON_STOP:   return max(fabsf(dx), fabsf(dy)) <= h;
+    case ICON_PLAY: {
+      // Triangle pointing right: inside where it's on the inner side of all three edges.
+      const float ax = -0.8f * h, ay = -h, bx = -0.8f * h, by = h, cx = h, cy = 0;
+      auto edge = [&](float px, float py, float qx, float qy) {
+        float ex = qx - px, ey = qy - py;
+        return ((dx - px) * ey - (dy - py) * ex) / sqrtf(ex * ex + ey * ey);
+      };
+      float d = min(min(edge(ax, ay, bx, by), edge(bx, by, cx, cy)), edge(cx, cy, ax, ay));
+      return d >= 0;
+    }
+    default: return false;
+  }
 }
 
-// Anti-aliased filled circle centred on (cx, cy) in pixel-edge coordinates:
-// each pixel gets colour in proportion to how much of it the disc covers
-// (4x4 samples), blended over bg.
-static void fillCircleSmooth(float cx, float cy, float r, uint16_t color, uint16_t bg) {
+static void drawIcon(int icon, float cx, float cy, uint16_t color, uint16_t bg) {
   auto &t = board.tft();
-  for (int y = (int)(cy - r) - 1; y <= (int)(cy + r); y++) {
-    for (int x = (int)(cx - r) - 1; x <= (int)(cx + r); x++) {
-      int inside = 0;
+  int r = (int)(ICON_SIZE / 2) + 1;
+  for (int y = (int)cy - r; y <= (int)cy + r; y++) {
+    for (int x = (int)cx - r; x <= (int)cx + r; x++) {
+      int on = 0;
       for (int sy = 0; sy < 4; sy++)
-        for (int sx = 0; sx < 4; sx++) {
-          float dx = x + (sx + 0.5f) / 4 - cx, dy = y + (sy + 0.5f) / 4 - cy;
-          if (dx * dx + dy * dy <= r * r) inside++;
-        }
-      if (inside) t.drawPixel(x, y, blend565(color, bg, inside * 255 / 16));
+        for (int sx = 0; sx < 4; sx++)
+          if (onIcon(icon, x + (sx + 0.5f) / 4 - cx, y + (sy + 0.5f) / 4 - cy)) on++;
+      if (on) t.drawPixel(x, y, blend565(color, bg, on * 255 / 16));
     }
   }
 }
@@ -330,31 +377,42 @@ static void drawButton(int i) {
   shownBg[i] = bg;
   auto &t = board.tft();
   int y = rowTop(i), cx = BUTTON_X + BUTTON_SIZE / 2, cy = y + BUTTON_SIZE / 2;
-  t.fillRect(0, y, WAVE_X, BUTTON_SIZE, bg);         // row background from the left edge
-  switch (icon) {
-    case ICON_RECORD: fillCircleSmooth(cx, cy, 6.5f, BUTTON_ICON, bg); break;
-    case ICON_STOP:   t.fillRect(cx - 6, cy - 6, 12, 12, BUTTON_ICON); break;
-    case ICON_PLAY:   t.fillTriangle(cx - 5, cy - 7, cx - 5, cy + 7, cx + 7, cy, BUTTON_ICON); break;
-    default: break;
-  }
+  t.fillRect(0, y, WAVE_X, BUTTON_SIZE, bg);         // row background: left edge ...
+  t.fillRect(WAVE_X + OVERVIEW_COLS, y, 320 - WAVE_X - OVERVIEW_COLS, BUTTON_SIZE, bg);   // ... and right edge
+  if (icon != ICON_NONE) drawIcon(icon, cx, cy, BUTTON_ICON, bg);
 }
+
+extern "C" const unsigned char glcdfont[];     // ILI9341_t3n's built-in 5x7 font
+
+// Tempo, then the clock (Bar.Beat.Step) in the playhead turquoise. The tempo
+// starts exactly at the waveforms' left edge: the font's glyphs carry empty
+// columns on their left, so the text is shifted left by those of its first
+// character.
+static constexpr int HEADER_SCALE = 2, CLOCK_X = WAVE_X + 10 * 6 * HEADER_SCALE;
 
 static void drawHeader() {
   auto &t = board.tft();
-  t.setTextSize(2);
+  t.setTextSize(HEADER_SCALE);
+  char tempo[16];
+  snprintf(tempo, sizeof tempo, "%.1f BPM", bpm);
+  int blank = 0;
+  while (blank < 5 && !glcdfont[(uint8_t)tempo[0] * 5 + blank]) blank++;
+  int x = WAVE_X - blank * HEADER_SCALE;
+  t.fillRect(WAVE_X - 5 * HEADER_SCALE, TOP_Y, x - (WAVE_X - 5 * HEADER_SCALE), 8 * HEADER_SCALE, ILI9341_BLACK);
   t.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-  t.setCursor(WAVE_X, TOP_Y);                        // lined up with the waveforms
-  t.printf("%6.1f BPM ", bpm);
+  t.setCursor(x, TOP_Y);
+  t.printf("%-*s", (CLOCK_X - x) / (6 * HEADER_SCALE), tempo);   // pad up to the clock
   noInterrupts();
   int32_t beat = transport.beat;
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
   interrupts();
+  t.setCursor(CLOCK_X, TOP_Y);
   if (transport.running) {
-    t.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
-    t.printf(" %3ld.%ld.%lu ", beat / BEATS_PER_BAR + 1, beat % BEATS_PER_BAR + 1, step + 1);
+    t.setTextColor(accentColor, ILI9341_BLACK);
+    t.printf("%3ld.%ld.%lu  ", beat / BEATS_PER_BAR + 1, beat % BEATS_PER_BAR + 1, step + 1);
   } else {
     t.setTextColor(ILI9341_DARKGREY, ILI9341_BLACK);
-    t.print(" stopped ");
+    t.print("stopped  ");
   }
 }
 
@@ -502,6 +560,7 @@ void loop() {
   if (millis() - lastDraw >= 30) {
     lastDraw = millis();
     debugStage = "screen";
+    updateAccent();
     drawHeader();                                    // every pass: the clock shows steps
     updatePlayheads();
     drawTrack(nextRow);
