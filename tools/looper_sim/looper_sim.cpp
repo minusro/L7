@@ -19,7 +19,7 @@ uint32_t simMicros = 0;
 std::string simRoot;
 SDClass SD;
 SerialStub Serial;
-int simFailIo = 0, simReinits = 0;
+int simFailIo = 0, simReinits = 0, simFsChanges = 0;
 void (*IntervalTimer::fn)() = nullptr;
 HardwareSerial midi;
 
@@ -188,8 +188,9 @@ static int fuzz(int seconds, unsigned seed) {
 int main(int argc, char **argv) {
   simRoot = "/tmp/looper_sim_sd";
   system(("rm -rf " + simRoot + " && mkdir -p " + simRoot).c_str());
-  storageBegin();
+  storageBegin([](const char *m) { if (*m) printf("  (%s)\n", m); });
   transport.spb = spbForBpm(120);
+  int fsChangesAtStart = simFsChanges;
   midiBegin(&midi);
 
   recordTrack(0, 4 * 4 + 0.5, 4, "track 1: record 4 bars + half a beat from stopped (expect 4 bars)");
@@ -251,6 +252,37 @@ int main(int argc, char **argv) {
   char msg[96];
   snprintf(msg, sizeof msg, "%u ticks over %d beats (24 per beat)", midi.ticks - t0, beats);
   check(abs((int)(midi.ticks - t0) - beats * 24) <= 24, msg);
+  }
+
+  {
+    char m[96];
+    snprintf(m, sizeof m, "no files created, resized or deleted while playing (%d)", simFsChanges - fsChangesAtStart);
+    check(simFsChanges == fsChangesAtStart, m);
+  }
+
+  printf("power cycle: tracks come back from their WAV headers\n");
+  {
+    transportStop();
+    flushHeaders();
+    Track saved[NUM_TRACKS];
+    for (int t = 0; t < NUM_TRACKS; t++) {
+      saved[t].state = tracks[t].state; saved[t].loopBars = tracks[t].loopBars;
+      saved[t].recordedFrames = tracks[t].recordedFrames; saved[t].rangeStartBar = tracks[t].rangeStartBar;
+      saved[t].rangeBars = tracks[t].rangeBars; saved[t].spbNative = tracks[t].spbNative;
+      tracks[t].state = TrackState::Empty; tracks[t].file = FsFile();
+    }
+    int before = simFsChanges;
+    storageBegin([](const char *) {});
+    bool same = true;
+    for (int t = 0; t < NUM_TRACKS; t++) {
+      const Track &a = saved[t], &b = tracks[t];
+      if (a.state != b.state) same = false;
+      if (a.state != TrackState::Empty &&
+          (a.loopBars != b.loopBars || a.recordedFrames != b.recordedFrames || a.rangeStartBar != b.rangeStartBar ||
+           a.rangeBars != b.rangeBars || a.spbNative != b.spbNative)) same = false;
+    }
+    check(same, "every track's state, length, range and tempo restored");
+    check(simFsChanges - before == 8, "second boot only removes the 8 old-style settings files, creates nothing");
   }
 
   printf("random sessions\n");

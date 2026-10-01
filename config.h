@@ -7,6 +7,9 @@ namespace looper {
 constexpr int NUM_TRACKS = 8;
 constexpr int BEATS_PER_BAR = 4;                   // fixed 4/4
 constexpr uint32_t MAX_BARS = 32;                  // longest recording
+// Every track file is created once at this size: 32 bars at 60 BPM (~22.6 MB).
+// Below 60 BPM a recording stops at this length instead of 32 bars.
+constexpr uint32_t MAX_REC_FRAMES = 128u * 44118u;
 
 // Streaming buffers (stereo frames, packed as uint32: left low, right high).
 // 48 KB per track covers ~280 ms of SD stall at 1x speed, ~140 ms at 2x.

@@ -18,6 +18,7 @@
 extern std::string simRoot;
 extern int simFailIo;      // > 0: that many reads/writes fail (card stopped responding)
 extern int simReinits;
+extern int simFsChanges;   // file creations/truncations/deletions (counted by the test)
 
 class FsFile {
 public:
@@ -30,6 +31,7 @@ public:
   bool open(const char *path, int flags) {
     close();
     std::string p = simRoot + path;
+    if (flags & (O_TRUNC | O_CREAT)) simFsChanges++;
     if (flags & O_TRUNC) { FILE *t = fopen(p.c_str(), "wb"); if (t) fclose(t); }
     if (flags & O_CREAT) { FILE *t = fopen(p.c_str(), "ab"); if (t) fclose(t); }
     f_ = fopen(p.c_str(), (flags & O_RDONLY) ? "rb" : "r+b");
@@ -63,7 +65,7 @@ public:
   SdCard *card() { static SdCard c; return &c; }
   FsFile open(const char *path, int flags) { FsFile f; f.open(path, flags); return f; }
   bool mkdir(const char *path) { return ::mkdir((simRoot + path).c_str(), 0755) == 0; }
-  bool remove(const char *path) { return ::remove((simRoot + path).c_str()) == 0; }
+  bool remove(const char *path) { simFsChanges++; return ::remove((simRoot + path).c_str()) == 0; }
 };
 
 class SDClass {

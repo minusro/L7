@@ -6,7 +6,9 @@
 
 namespace looper {
 
-bool storageBegin();                 // mount SD, load saved tracks; false = no card
+// Mount SD, load saved tracks; creates the full-size track files the first
+// time (progress messages go to `progress`). false = no card / no space.
+bool storageBegin(void (*progress)(const char *));
 void serviceStorage();               // call as often as possible from loop()
 
 void transportStart();               // from bar 1, all tracks in sync
@@ -19,8 +21,9 @@ void clearTrack(int t);
 bool setRange(int t, uint32_t startBar, uint32_t bars);
 
 float loadTempo();                   // saved tempo, or 120
-void saveTempo(float bpm);
-void saveTrackInfo(int t);
+void saveTempo(float bpm);           // creates/rewrites a file: only while stopped
+void trackChanged(int t);            // settings changed: header saved when buffers allow
+void flushHeaders();                 // save all pending headers now (power off)
 
 // Debugging: the step loop() is in, for the freeze detector in the sketch.
 extern volatile const char *debugStage;

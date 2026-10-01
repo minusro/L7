@@ -190,7 +190,7 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
       recordPress(selected);
     } else {
       tr.state = tr.state == TrackState::Playing ? TrackState::Muted : TrackState::Playing;
-      saveTrackInfo(selected);
+      trackChanged(selected);
     }
   }
   if (pressed & m8::BTN_PLAY) {
@@ -207,6 +207,7 @@ static void handlePowerButton() {
   while (board.powerButtonHeld()) {
     if (millis() - start >= 1000) {
       codec.volume(0.0f);
+      flushHeaders();
       if (tempoDirty) saveTempo(bpm);
       board.powerOff();
     }
@@ -235,7 +236,17 @@ void setup() {
   codec.volume(0.6f);
 
   drawHelp();
-  if (!storageBegin()) fatal("No SD card: the looper keeps its tracks in /looper on the card.");
+  auto progress = [](const char *msg) {
+    auto &t = board.tft();
+    t.setTextColor(ILI9341_YELLOW, ILI9341_BLACK);
+    t.setTextSize(1);
+    t.setCursor(4, 100);
+    t.printf("%-50s", msg);
+    Serial.println(msg);
+  };
+  if (!storageBegin(progress))
+    fatal("SD card missing or full: the looper needs ~180 MB in /looper.");
+  progress("");
   bpm = loadTempo();
   transport.spb = spbForBpm(bpm);
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
@@ -259,7 +270,8 @@ void loop() {
     prev = keys;
   }
 
-  if (tempoDirty && millis() - tempoChangedMs > 2000) {   // save once it settles
+  // Saving creates/rewrites a file, which can stall the card: only while stopped.
+  if (tempoDirty && !transport.running && millis() - tempoChangedMs > 2000) {
     saveTempo(bpm);
     tempoDirty = false;
   }
