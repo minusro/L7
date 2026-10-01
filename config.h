@@ -35,7 +35,7 @@ constexpr bool MIDI_OUT_ENABLED = true;
 
 // Waveform overview per track: OVERVIEW_COLS peak values over the whole loop,
 // stored in the WAV header. Peaks are gathered per PEAK_BIN_FRAMES while recording.
-constexpr int OVERVIEW_COLS = 112;
+constexpr int OVERVIEW_COLS = 286;                 // one per pixel: x = 30..315
 constexpr uint32_t PEAK_BIN_FRAMES = 4096;
 
 // WAV files keep their audio at a 512-byte offset so SD reads stay aligned.

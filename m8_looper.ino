@@ -92,34 +92,36 @@ static bool setTempo(float b) {
   return true;
 }
 
-// ---- Screen (text is drawn over its own background: no full clears, which
-// would hold up SD streaming)
+// ---- Screen (drawn over its own background: no full clears, which would
+// hold up SD streaming)
 // Vertical layout: tempo line at TOP_Y, then 8 track rows. TOP_Y centres the
-// whole block: 20 px above the tempo text and below track 8's selection bar.
+// whole block: 20 px above the tempo text and below track 8's row.
 static constexpr int ROW_H = 22;
 static constexpr int TOP_Y = 20;
 static constexpr int ROW_Y = TOP_Y + 26;
-// Row text runs from x = 50 to 200 (25 columns); the waveform sits right of it.
-static constexpr int TEXT_COLS = 25;
-static constexpr int WAVE_X = 204, WAVE_H = 16;
+// Each row: a 20 px button (only on the selected track) and the waveform.
+static constexpr int BUTTON_X = 4, BUTTON_SIZE = ROW_H - 2;
+static constexpr int WAVE_X = 30, WAVE_H = 16;     // OVERVIEW_COLS wide: to x = 315
 
 // ---- Waveforms
-// Each track's whole loop, drawn one column at a time, layers bottom to top:
-// the waveform (white inside the loop range, grey outside), darker bar lines
-// at the clip's bar boundaries, yellow [ ] brackets around the loop range, and
-// a green playhead. Full redraws only happen when something changes; the
-// playhead moves by redrawing just the two columns involved.
-// While a track records, it shows the recording growing instead (live view):
-// white waveform over the length it would become, and a red record head.
+// Each track's whole loop, drawn one column at a time: the background (dark
+// grey while the clip is heard, dark red while recording), the waveform
+// (white inside the loop range, grey outside) with faint darker bar lines at
+// the clip's bar boundaries, and a 3 px playhead. Full redraws only happen
+// when something changes; the playhead moves by redrawing just its columns.
+// While a track records it shows the recording growing (live view) with a
+// red record head, over the length it would become.
 static constexpr uint16_t WAVE_IN = ILI9341_WHITE, WAVE_OUT = 0x7BEF;        // white, grey
-static constexpr uint16_t WAVE_IN_BAR = 0x8410, WAVE_OUT_BAR = 0x39E7;       // the same, half as bright
-static constexpr uint16_t BRACKET = ILI9341_YELLOW, PLAYHEAD = ILI9341_GREEN, REC_HEAD = ILI9341_RED;
-static constexpr int NO_RANGE = -10;                 // rangeFirst/Last when there are no brackets
+static constexpr uint16_t WAVE_IN_BAR = 0xBDF7, WAVE_OUT_BAR = 0x5ACB;       // the same at ~75%
+static constexpr uint16_t BG_PLAYING = 0x2104, BG_RECORDING = 0x3800;        // dark grey, dark red
+static constexpr uint16_t PLAYHEAD = ILI9341_GREEN, REC_HEAD = ILI9341_RED;
+static constexpr int HEAD_HALF = 1;                  // playhead: 2 * HEAD_HALF + 1 px wide
 
 struct WaveView {
   bool visible = false;                            // something is shown (not an empty track)
   bool live = false;                               // recording in progress: live view
-  int rangeFirst = NO_RANGE, rangeLast = NO_RANGE; // columns inside the loop range
+  uint16_t bg = ILI9341_BLACK;
+  int rangeFirst = 0, rangeLast = -1;              // columns inside the loop range
   int playCol = -1;                                // playhead / record head; -1: none
   // live view
   uint32_t liveBars = 0;
@@ -132,7 +134,8 @@ struct WaveView {
 };
 static WaveView views[NUM_TRACKS];
 
-static int waveTop(int i) { return ROW_Y + i * ROW_H + (ROW_H - 2 - WAVE_H) / 2; }
+static int rowTop(int i) { return ROW_Y + i * ROW_H; }
+static int waveTop(int i) { return rowTop(i) + (ROW_H - 2 - WAVE_H) / 2; }
 
 // A column holds a bar line if a bar boundary (other than the start) falls in it.
 static bool isBarColumn(uint32_t bars, int c) {
@@ -141,26 +144,23 @@ static bool isBarColumn(uint32_t bars, int c) {
 }
 
 static void drawColumn(int i, int c) {
+  if (c < 0 || c >= OVERVIEW_COLS) return;
   auto &t = board.tft();
   const Track &tr = tracks[i];
   const WaveView &v = views[i];
-  int x = WAVE_X + c, top = waveTop(i), mid = top + WAVE_H / 2, bottom = top + WAVE_H;
-  t.drawFastVLine(x, top, WAVE_H + 1, ILI9341_BLACK);
+  int x = WAVE_X + c, top = waveTop(i), mid = top + WAVE_H / 2;
+  t.drawFastVLine(x, top, WAVE_H + 1, v.bg);
   if (!v.visible) return;
+  if (v.playCol >= 0 && abs(c - v.playCol) <= HEAD_HALF) {
+    t.drawFastVLine(x, top, WAVE_H + 1, v.live ? REC_HEAD : PLAYHEAD);
+    return;
+  }
+  if (v.live && c >= v.liveFilled) return;
   bool bar = isBarColumn(v.live ? v.liveBars : tr.loopBars, c);
-  if (!v.live || c < v.liveFilled) {
-    bool in = v.live || (c >= v.rangeFirst && c <= v.rangeLast);
-    uint16_t color = in ? (bar ? WAVE_IN_BAR : WAVE_IN) : (bar ? WAVE_OUT_BAR : WAVE_OUT);
-    int h = (v.live ? v.liveData[c] : tr.overview[c]) * (WAVE_H / 2) / 255;
-    t.drawFastVLine(x, mid - h, 2 * h + 1, color);   // (a see-through black bar line only darkens the waveform)
-  }
-  // Brackets: [ at the first column of the range, ] at the last.
-  if (c == v.rangeFirst || c == v.rangeLast) t.drawFastVLine(x, top, WAVE_H + 1, BRACKET);
-  if (c == v.rangeFirst + 1 || c == v.rangeLast - 1 || c == v.rangeFirst || c == v.rangeLast) {
-    t.drawPixel(x, top, BRACKET);
-    t.drawPixel(x, bottom, BRACKET);
-  }
-  if (c == v.playCol) t.drawFastVLine(x, top, WAVE_H + 1, v.live ? REC_HEAD : PLAYHEAD);
+  bool in = v.live || (c >= v.rangeFirst && c <= v.rangeLast);
+  uint16_t color = in ? (bar ? WAVE_IN_BAR : WAVE_IN) : (bar ? WAVE_OUT_BAR : WAVE_OUT);
+  int h = (v.live ? v.liveData[c] : tr.overview[c]) * (WAVE_H / 2) / 255;
+  t.drawFastVLine(x, mid - h, 2 * h + 1, color);
 }
 
 static void drawWave(int i, bool recordingHere) {
@@ -168,8 +168,10 @@ static void drawWave(int i, bool recordingHere) {
   WaveView &v = views[i];
   uint32_t rs = 0, rb = 0;
   if (tr.state != TrackState::Empty) trackRange(i, rs, rb);
+  uint16_t bg = recordingHere ? BG_RECORDING
+              : (tr.state == TrackState::Playing && transport.running) ? BG_PLAYING : ILI9341_BLACK;
   if (v.drawn && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
-      v.rec == recordingHere && v.rs == rs && v.rb == rb)
+      v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg)
     return;
   v.drawn = true;
   v.version = tr.overviewVersion;
@@ -177,10 +179,12 @@ static void drawWave(int i, bool recordingHere) {
   v.rec = recordingHere;
   v.rs = rs;
   v.rb = rb;
+  v.bg = bg;
   v.live = recordingHere;
   v.visible = recordingHere || tr.state != TrackState::Empty;
-  v.playCol = -1;
-  v.rangeFirst = v.rangeLast = NO_RANGE;
+  if (!v.visible || v.live) v.playCol = -1;
+  v.rangeFirst = 0;
+  v.rangeLast = -1;
   if (v.live) {
     v.liveBars = 0;                                // updatePlayheads() fills it in
     v.liveFilled = 0;
@@ -192,15 +196,15 @@ static void drawWave(int i, bool recordingHere) {
   for (int c = 0; c < OVERVIEW_COLS; c++) drawColumn(i, c);
 }
 
-// Moves a view's playhead (or record head) to col, redrawing only the two
-// columns involved.
+// Moves a view's playhead (or record head) to col, redrawing only the
+// columns it leaves and covers.
 static void movePlayhead(int i, int col) {
   WaveView &v = views[i];
   if (col == v.playCol) return;
   int old = v.playCol;
   v.playCol = col;
-  if (old >= 0) drawColumn(i, old);
-  if (col >= 0) drawColumn(i, col);
+  if (old >= 0) for (int c = old - HEAD_HALF; c <= old + HEAD_HALF; c++) drawColumn(i, c);
+  if (col >= 0) for (int c = col - HEAD_HALF; c <= col + HEAD_HALF; c++) drawColumn(i, c);
 }
 
 // Live view of the recording: new columns as audio is written, a full
@@ -256,6 +260,38 @@ static void updatePlayheads() {
   }
 }
 
+// ---- Track button: only on the selected track. Shows what EDIT does:
+// record (empty), stop (playing, or recording), play (muted).
+// (int, not an enum class: the Arduino IDE declares functions above any types.)
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY };
+
+static int buttonIcon(int i) {
+  if (i != selected) return ICON_NONE;
+  if (recording.track == i && recording.mode != Recording::Idle) return ICON_STOP;
+  switch (tracks[i].state) {
+    case TrackState::Empty:   return ICON_RECORD;
+    case TrackState::Playing: return ICON_STOP;
+    default:                  return ICON_PLAY;
+  }
+}
+
+static void drawButton(int i) {
+  static int shown[NUM_TRACKS];
+  static bool drawn[NUM_TRACKS];
+  int icon = buttonIcon(i);
+  if (drawn[i] && shown[i] == icon) return;
+  drawn[i] = true;
+  shown[i] = icon;
+  auto &t = board.tft();
+  int y = rowTop(i), cx = BUTTON_X + BUTTON_SIZE / 2, cy = y + BUTTON_SIZE / 2;
+  t.fillRect(BUTTON_X, y, BUTTON_SIZE, BUTTON_SIZE, ILI9341_BLACK);
+  switch (icon) {
+    case ICON_RECORD: t.fillCircle(cx, cy, 6, ILI9341_RED); break;
+    case ICON_STOP:   t.fillRect(cx - 6, cy - 6, 12, 12, ILI9341_WHITE); break;
+    case ICON_PLAY:   t.fillTriangle(cx - 5, cy - 7, cx - 5, cy + 7, cx + 7, cy, ILI9341_GREEN); break;
+    default: break;
+  }
+}
 
 static void drawHeader() {
   auto &t = board.tft();
@@ -277,62 +313,8 @@ static void drawHeader() {
 }
 
 static void drawTrack(int i) {
-  auto &t = board.tft();
-  const Track &tr = tracks[i];
-  int y = ROW_Y + i * ROW_H;
-  bool isRec = recording.track == i && recording.mode != Recording::Idle;
-  const char *state;
-  uint16_t color;
-  if (isRec) {
-    switch (recording.mode) {
-      case Recording::WaitBar: state = "WAIT"; color = ILI9341_YELLOW; break;
-      case Recording::Running: state = "REC "; color = ILI9341_RED; break;
-      default:                                       // stopped: still recording up to the length?
-        if ((int32_t)(transport.now - recording.startSample) < (int32_t)recording.targetFrames) {
-          state = "REC>"; color = ILI9341_RED;
-        } else {
-          state = "SAVE"; color = ILI9341_ORANGE;
-        }
-        break;
-    }
-  } else {
-    switch (tr.state) {
-      case TrackState::Empty:   state = "----"; color = ILI9341_DARKGREY; break;
-      case TrackState::Playing: state = "PLAY"; color = ILI9341_GREEN; break;
-      default:                  state = "MUTE"; color = ILI9341_BLUE; break;
-    }
-  }
-  t.fillRect(0, y, 4, ROW_H - 2, i == selected ? ILI9341_WHITE : ILI9341_BLACK);
-  t.setTextSize(1);
-  t.setCursor(8, y + 6);
-  t.setTextColor(color, ILI9341_BLACK);
-  t.printf("%d %s ", i + 1, state);
-  t.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
-  char line[64];
-  if (isRec && recording.mode == Recording::Running) {
-    uint32_t frames = recording.written;
-    snprintf(line, sizeof line, "%5.1f beats  ovr %lu", (double)frames / transport.spb,
-             recording.overruns);
-  } else if (isRec && recording.mode == Recording::Finishing) {
-    int32_t left = (int32_t)(recording.targetFrames - (transport.now - recording.startSample));
-    snprintf(line, sizeof line, "-> %lu bars, %4.1f to go", recording.loopBars,
-             left > 0 ? (double)left / transport.spb : 0.0);
-  } else if (tr.state == TrackState::Empty) {
-    snprintf(line, sizeof line, "%s", "");
-  } else {
-    uint32_t rs, rb;
-    trackRange(i, rs, rb);
-    char len[12];                                    // range length in bars
-    if (rb < BEATS_PER_BAR) snprintf(len, sizeof len, "1/%lu", BEATS_PER_BAR / rb);
-    else snprintf(len, sizeof len, "%lu", rb / BEATS_PER_BAR);
-    snprintf(line, sizeof line, "%2lu bars  at %lu.%lu len %s",
-             tr.loopBars, rs / BEATS_PER_BAR + 1, rs % BEATS_PER_BAR + 1, len);
-  }
-  // Pad to the waveform (text starts at x = 50) to clear older, longer text;
-  // with wrapping off, anything longer is cut instead of landing elsewhere.
-  line[TEXT_COLS] = 0;
-  t.printf("%-*s", TEXT_COLS, line);
-  drawWave(i, isRec);
+  drawButton(i);
+  drawWave(i, recording.track == i && recording.mode != Recording::Idle);
 }
 
 // ---- Keys
