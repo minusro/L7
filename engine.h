@@ -14,6 +14,9 @@ namespace looper {
 
 enum class TrackState : uint8_t { Empty, Playing, Muted };
 
+// 2nd-order filter section (transposed direct form II).
+struct Biquad { float b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0; };
+
 struct Track {
   // Description of the loop (set by loop() while not live)
   volatile TrackState state = TrackState::Empty;
@@ -26,6 +29,12 @@ struct Track {
   // the recording began; shifts when a range change keeps the playhead.
   int32_t rangeAnchorQ = 0;
   float gain = 1.0f;
+  // Filters (loop() sets them with setTrackFilter): highpass then lowpass,
+  // 12 dB/octave each, on both channels.
+  uint8_t filterBase = 0, filterWidth = FILTER_MAX;
+  Biquad hp, lp;
+  bool hpOn = false, lpOn = false;
+  float filterZ[2][2][2] = {};     // [hp/lp][left/right][state]; interrupt only, or loop() while not live
   // Waveform overview (loop() only): peak level per column across the loop,
   // 0-255 on a square-root scale. overviewVersion changes whenever it does.
   uint8_t overview[OVERVIEW_COLS] = {};
@@ -92,6 +101,10 @@ extern uint32_t inputRing[INPUT_FRAMES];  // stereo input, index = sample % INPU
 
 uint32_t spbForBpm(float bpm);
 float bpmForSpb(uint32_t spb);
+float filterStepHz(int step);
+void setTrackFilter(int t, int base, int width);            // steps, clamped to 0..FILTER_MAX
+float filterResponseDb(int base, int width, float hz);      // magnitude of the pair (analog approximation)
+
 void midiBegin(HardwareSerial *port);   // port already started (Board::midiOutBegin)
 void midiSendNow(uint8_t status);        // transport start/stop messages
 

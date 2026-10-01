@@ -38,6 +38,13 @@ constexpr bool MIDI_OUT_ENABLED = true;
 constexpr int OVERVIEW_COLS = 286;                 // one per pixel: x = 30..315
 constexpr uint32_t PEAK_BIN_FRAMES = 4096;
 
+// Per-track filters: a highpass at step `base`, then a lowpass at step
+// base + width. Step k is FILTER_MIN_HZ * 2^(k * FILTER_OCTAVES / FILTER_MAX):
+// 20 Hz to ~20 kHz in third-octave steps. The highpass is off at step 0, the
+// lowpass at FILTER_MAX and above.
+constexpr int FILTER_MAX = 32;
+constexpr float FILTER_MIN_HZ = 20.0f, FILTER_OCTAVES = 10.0f;
+
 // WAV files keep their audio at a 512-byte offset so SD reads stay aligned.
 constexpr uint32_t WAV_DATA_OFFSET = 512;
 

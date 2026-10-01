@@ -23,6 +23,57 @@ static struct RingInit {
 uint32_t spbForBpm(float bpm) { return (uint32_t)(AUDIO_SAMPLE_RATE_EXACT * 60.0f / bpm + 0.5f); }
 float bpmForSpb(uint32_t spb) { return AUDIO_SAMPLE_RATE_EXACT * 60.0f / spb; }
 
+// ---- Filters
+float filterStepHz(int step) { return FILTER_MIN_HZ * powf(2.0f, step * FILTER_OCTAVES / FILTER_MAX); }
+
+// Butterworth (Q = 1/sqrt 2) sections from the RBJ cookbook.
+static Biquad butterworth(float hz, bool highpass) {
+  float w0 = 2 * (float)M_PI * hz / AUDIO_SAMPLE_RATE_EXACT;
+  float c = cosf(w0), alpha = sinf(w0) / (2 * 0.70710678f), a0 = 1 + alpha;
+  Biquad q;
+  float k = highpass ? (1 + c) / 2 : (1 - c) / 2;
+  q.b0 = k / a0;
+  q.b1 = (highpass ? -2 * k : 2 * k) / a0;
+  q.b2 = k / a0;
+  q.a1 = -2 * c / a0;
+  q.a2 = (1 - alpha) / a0;
+  return q;
+}
+
+void setTrackFilter(int t, int base, int width) {
+  Track &tr = tracks[t];
+  base = constrain(base, 0, FILTER_MAX);
+  width = constrain(width, 0, FILTER_MAX);
+  int top = base + width;
+  Biquad hp = butterworth(filterStepHz(base), true);
+  Biquad lp = butterworth(filterStepHz(min(top, FILTER_MAX - 1)), false);
+  noInterrupts();
+  tr.filterBase = base;
+  tr.filterWidth = width;
+  bool wasHp = tr.hpOn, wasLp = tr.lpOn;
+  tr.hp = hp;
+  tr.lp = lp;
+  tr.hpOn = base > 0;
+  tr.lpOn = top < FILTER_MAX;
+  if (tr.hpOn && !wasHp) memset(tr.filterZ[0], 0, sizeof tr.filterZ[0]);   // start clean
+  if (tr.lpOn && !wasLp) memset(tr.filterZ[1], 0, sizeof tr.filterZ[1]);
+  interrupts();
+}
+
+float filterResponseDb(int base, int width, float hz) {
+  float db = 0;
+  if (base > 0) db -= 10 * log10f(1 + powf(filterStepHz(base) / hz, 4));
+  if (base + width < FILTER_MAX) db -= 10 * log10f(1 + powf(hz / filterStepHz(base + width), 4));
+  return db;
+}
+
+static inline float runBiquad(const Biquad &q, float *z, float x) {
+  float y = q.b0 * x + z[0];
+  z[0] = q.b1 * x - q.a1 * y + z[1];
+  z[1] = q.b2 * x - q.a2 * y;
+  return y;
+}
+
 // ---- MIDI clock
 // The audio interrupt knows exactly which sample each clock tick falls on, but
 // runs once per 128-sample block. It queues each tick with the time it should
@@ -150,8 +201,11 @@ void LooperEngine::update() {
         float f = (float)tr.frac;
         float al = (int16_t)(a & 0xFFFF), ar = (int16_t)(a >> 16);
         float bl = (int16_t)(b & 0xFFFF), br = (int16_t)(b >> 16);
-        mixL += (al + (bl - al) * f) * gain[t];
-        mixR += (ar + (br - ar) * f) * gain[t];
+        float sl = al + (bl - al) * f, sr = ar + (br - ar) * f;
+        if (tr.hpOn) { sl = runBiquad(tr.hp, tr.filterZ[0][0], sl); sr = runBiquad(tr.hp, tr.filterZ[0][1], sr); }
+        if (tr.lpOn) { sl = runBiquad(tr.lp, tr.filterZ[1][0], sl); sr = runBiquad(tr.lp, tr.filterZ[1][1], sr); }
+        mixL += sl * gain[t];
+        mixR += sr * gain[t];
         double fr = tr.frac + speed[t];
         while (fr >= 1.0) { fr -= 1.0; tail++; }
         tr.frac = fr;

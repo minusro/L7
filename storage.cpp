@@ -37,14 +37,16 @@ struct TrackInfo {
   uint32_t version, used, spb, loopBars, recordedFrames, rangeStart, rangeLen, muted;
   uint32_t rangePhase;                           // position in the range at transport beat 0
 };
+// Version 7: the filter's base and width steps (2 bytes) after the overview.
 // Version 6: waveform overview of OVERVIEW_COLS (286) bytes right after TrackInfo.
 // Version 5: the same with 112 columns.
 // Version 4: rangePhase in quarter beats. Version 3: rangePhase in beats.
 // Version 2: no rangePhase. Version 1: range in bars. Older ones are converted
 // (their overview is worked out at boot).
-static constexpr uint32_t INFO_OFFSET = 44, INFO_VERSION = 6;
+static constexpr uint32_t INFO_OFFSET = 44, INFO_VERSION = 7;
 static constexpr uint32_t OVERVIEW_OFFSET = INFO_OFFSET + sizeof(TrackInfo);
-static_assert(OVERVIEW_OFFSET + OVERVIEW_COLS <= WAV_DATA_OFFSET - 8, "overview must fit in the header");
+static constexpr uint32_t FILTER_OFFSET = OVERVIEW_OFFSET + OVERVIEW_COLS;
+static_assert(FILTER_OFFSET + 2 <= WAV_DATA_OFFSET - 8, "overview and filter must fit in the header");
 static uint8_t needsOverview = 0;                // bit t: header predates overviews
 
 // ---- Waveform overview
@@ -117,6 +119,8 @@ static bool writeHeader(int t) {
                     used ? (uint32_t)posMod(-tr.rangeAnchorQ, 4 * tr.rangeBeats) : 0};
   memcpy(h + INFO_OFFSET, &info, sizeof info);
   if (used) memcpy(h + OVERVIEW_OFFSET, tr.overview, OVERVIEW_COLS);
+  h[FILTER_OFFSET] = tr.filterBase;
+  h[FILTER_OFFSET + 1] = tr.filterWidth;
   memcpy(h + WAV_DATA_OFFSET - 8, "data", 4);
   put32(h + WAV_DATA_OFFSET - 4, frames * 4);
   debugStage = "SD write (track header)";
@@ -134,7 +138,7 @@ static void readHeader(int t) {
   if (!tr.file.seekSet(0) || tr.file.read(h, sizeof h) != (int)sizeof h) return;
   TrackInfo info;
   memcpy(&info, h + INFO_OFFSET, sizeof info);
-  if (memcmp(h, "RIFF", 4) || memcmp(info.magic, "M8LP", 4) || info.version < 1 || info.version > 6) return;
+  if (memcmp(h, "RIFF", 4) || memcmp(info.magic, "M8LP", 4) || info.version < 1 || info.version > 7) return;
   if (info.version == 1) { info.rangeStart *= BEATS_PER_BAR; info.rangeLen *= BEATS_PER_BAR; }
   if (info.version < 3) info.rangePhase = 0;
   if (info.version < 4) info.rangePhase *= 4;
@@ -150,6 +154,7 @@ static void readHeader(int t) {
   tr.rangeBeats = info.rangeLen;
   tr.rangeAnchorQ = -(int32_t)(info.rangePhase % (4 * info.rangeLen));
   tr.state = info.muted ? TrackState::Muted : TrackState::Playing;
+  if (info.version >= 7) setTrackFilter(t, h[FILTER_OFFSET], h[FILTER_OFFSET + 1]);
   if (info.version >= 6) memcpy(tr.overview, h + OVERVIEW_OFFSET, OVERVIEW_COLS);
   else needsOverview |= 1 << t;
   tr.overviewVersion++;
@@ -371,6 +376,7 @@ static void startTrack(int t, int32_t beat0, bool fillNow) {
     trackChanged(t);
   }
   if (tr.state == TrackState::Empty) return;
+  memset(tr.filterZ, 0, sizeof tr.filterZ);      // not live: the interrupt isn't using them
   int32_t phaseQ = posMod(4 * beat0 - tr.rangeAnchorQ, 4 * tr.rangeBeats);
   tr.s0 = quarterFrames(phaseQ, tr.spbNative);
   tr.tail = tr.s0;
@@ -558,6 +564,7 @@ void clearTrack(int t) {
   tr.live = false;
   tr.armed = false;
   tr.state = TrackState::Empty;
+  setTrackFilter(t, 0, FILTER_MAX);                // flat again
   memset(tr.overview, 0, sizeof tr.overview);
   tr.overviewVersion++;
   trackChanged(t);

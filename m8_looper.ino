@@ -20,6 +20,7 @@
 //   OPT + arrows     change the current cell:
 //                      waveform: LEFT/RIGHT move the loop range by a beat,
 //                                UP/DOWN double/halve it (1/4 bar to the whole loop)
+//                      filter: LEFT/RIGHT -/+ width, UP/DOWN +/- base
 //                      tempo: LEFT/RIGHT -/+ 0.1 BPM, UP/DOWN +/- 1 BPM
 //   EDIT             empty track: record / stop recording; full track: mute/unmute
 //   SHIFT+EDIT       clear the track
@@ -111,12 +112,12 @@ static constexpr int sliceCentredTop(int k, int h) { return sliceTop(k) + (SLICE
 static constexpr int TEXT_Y = sliceCentredTop(NUM_TRACKS, TEXT_H);
 // Each track row: three cells, then the button (icon only on the selected
 // track), separated by 1 px gaps. The third cell holds the waveform; the
-// first two are placeholders for future parameters. On the selected row the
+// first the filter (its response curve); the second is a placeholder. On the selected row the
 // current cell and the button get the selection highlight.
 //   cell 1: x 0-78   cell 2: x 80-158   waveform cell: x 160-294   button: x 296-319
 // The waveform fills its cell's whole width.
 struct Cell { int x, w; };
-static constexpr int CELLS = 3, WAVE_CELL = 2;
+static constexpr int CELLS = 3, FILTER_CELL = 0, WAVE_CELL = 2;
 static constexpr Cell CELL[CELLS] = {{0, 79}, {80, 79}, {160, 135}};
 static constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 296, BUTTON_W = 320 - BUTTON_X;
 static constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w, WAVE_H = 16;   // waveform: x 160-294
@@ -458,19 +459,61 @@ static void drawCells(int i) {
   shown[i] = k;
   auto &t = board.tft();
   int y = rowTop(i), y0 = bgTop(i), h = bgHeight(i);
-  t.fillRect(CELL[0].x, y0, CELL[0].w, h, k.bg0);
+  if (i == STATUS_ROW) t.fillRect(CELL[0].x, y0, CELL[0].w, h, k.bg0);   // tracks: drawFilter()'s job
   t.fillRect(CELL[1].x, y0, CELL[1].w, h, k.bg1);
   if (i == STATUS_ROW) t.fillRect(CELL[2].x, y0, CELL[2].w, h, k.bg2);
   for (int c = 0; c < CELLS; c++)                    // 1 px gaps after each cell
     t.drawFastVLine(CELL[c].x + CELL[c].w, y0, h, ILI9341_BLACK);
   t.fillRect(BUTTON_X, y0, BUTTON_W, h, k.bgButton);
   if (i == DIVIDER_ROW) {                            // broken at the gaps (the waveform: drawColumn)
-    if (k.bg0 == ILI9341_BLACK) t.drawFastHLine(CELL[0].x, dividerY(), CELL[0].w, DIVIDER);
     if (k.bg1 == ILI9341_BLACK) t.drawFastHLine(CELL[1].x, dividerY(), CELL[1].w, DIVIDER);
     if (k.bgButton == ILI9341_BLACK) t.drawFastHLine(BUTTON_X, dividerY(), BUTTON_W, DIVIDER);
   }
   if (k.icon != ICON_NONE)
     drawIcon(k.icon, BUTTON_X + BUTTON_W / 2, y + ROW_BAND / 2, k.iconColor, k.bgButton);
+}
+
+// ---- Filter cell: the response of the track's highpass + lowpass pair over
+// 20 Hz - 20 kHz (log), 0 dB at the top to -CURVE_DB at the bottom; a line
+// with a faint fill under it. Bright while the clip plays, half when muted,
+// dark grey on an empty track. Each column is drawn whole (background,
+// fill, line), so a change doesn't flash.
+static constexpr int CURVE_H = 18;
+static constexpr float CURVE_DB = 30;
+
+static void drawFilter(int i) {
+  struct Key { uint8_t base, width; uint16_t bg, line; };
+  static Key shown[NUM_TRACKS];
+  static bool drawn[NUM_TRACKS];
+  const Track &tr = tracks[i];
+  Key k;
+  memset(&k, 0, sizeof k);                         // padding too: compared with memcmp
+  k.base = tr.filterBase;
+  k.width = tr.filterWidth;
+  k.bg = cellBackground(i, FILTER_CELL);
+  k.line = tr.state == TrackState::Playing ? WAVE_IN
+         : tr.state == TrackState::Muted ? blend565(WAVE_IN, ILI9341_BLACK, 128) : WAVE_OUT;
+  if (drawn[i] && !memcmp(&k, &shown[i], sizeof k)) return;
+  drawn[i] = true;
+  shown[i] = k;
+  auto &t = board.tft();
+  const Cell &cell = CELL[FILTER_CELL];
+  int top = rowTop(i) + (ROW_BAND - CURVE_H) / 2, bottom = top + CURVE_H - 1;
+  uint16_t fill = blend565(k.line, k.bg, 48);
+  int prevY = -1;
+  for (int c = 0; c < cell.w; c++) {
+    int x = cell.x + c;
+    float hz = FILTER_MIN_HZ * powf(2.0f, FILTER_OCTAVES * (c + 0.5f) / cell.w);
+    float db = filterResponseDb(k.base, k.width, hz);
+    int y = top + (int)lroundf(min(-db, CURVE_DB) / CURVE_DB * (CURVE_H - 1));
+    if (prevY < 0) prevY = y;
+    t.drawFastVLine(x, bgTop(i), bgHeight(i), k.bg);
+    if (i == DIVIDER_ROW && k.bg == ILI9341_BLACK) t.drawPixel(x, dividerY(), DIVIDER);
+    if (y < bottom) t.drawFastVLine(x, y + 1, bottom - y, fill);
+    int a = min(prevY, y), b = max(prevY, y);      // joins steep slopes
+    if (y < bottom || prevY < bottom) t.drawFastVLine(x, a, min(b, bottom) - a + 1, k.line);
+    prevY = y;
+  }
 }
 
 extern "C" const unsigned char glcdfont[];     // ILI9341_t3n's built-in 5x7 font
@@ -539,8 +582,12 @@ static void drawStatus() {
 static void drawTrack(int i) {
   if (i < 0 || i >= ROWS) return;
   drawCells(i);
-  if (i == STATUS_ROW) drawStatus();
-  else drawWave(i, recordingOn(i));
+  if (i == STATUS_ROW) {
+    drawStatus();
+    return;
+  }
+  drawFilter(i);
+  drawWave(i, recordingOn(i));
 }
 
 // ---- Keys
@@ -569,8 +616,22 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
       if (pressed & m8::BTN_RIGHT && rs + 1 + rb <= loopBeats) setRange(selected, rs + 1, rb);
       if (pressed & m8::BTN_UP && rb * 2 <= loopBeats) setRange(selected, min(rs, loopBeats - rb * 2), rb * 2);
       if (pressed & m8::BTN_DOWN && rb > 1) setRange(selected, rs, rb / 2);
+    } else if (selectedCell == FILTER_CELL) {
+      // Filter: LEFT/RIGHT narrow/widen, UP/DOWN raise/lower the base.
+      const Track &tr = tracks[selected];
+      int base = tr.filterBase, width = tr.filterWidth;
+      if (pressed & m8::BTN_LEFT) width--;
+      if (pressed & m8::BTN_RIGHT) width++;
+      if (pressed & m8::BTN_UP) base++;
+      if (pressed & m8::BTN_DOWN) base--;
+      base = constrain(base, 0, FILTER_MAX);
+      width = constrain(width, 0, FILTER_MAX);
+      if (base != tr.filterBase || width != tr.filterWidth) {
+        setTrackFilter(selected, base, width);
+        trackChanged(selected);
+      }
     }
-    // cells 1 and 2: no parameters yet
+    // the second cell: no parameters yet
   } else {
     if (pressed & m8::BTN_UP) selected = (selected + ROWS - 1) % ROWS;
     if (pressed & m8::BTN_DOWN) selected = (selected + 1) % ROWS;
