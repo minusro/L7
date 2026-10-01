@@ -604,6 +604,23 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
   if (prevSel != selected) drawTrack(prevSel);
 }
 
+// After a recording finishes on the selected track, move on: to the next
+// empty track (in order, wrapping), else the next muted one, else stay.
+static void selectAfterRecording(int t) {
+  if (selected != t) return;                       // the user has moved on already
+  for (TrackState want : {TrackState::Empty, TrackState::Muted}) {
+    for (int k = 1; k < NUM_TRACKS; k++) {
+      int i = (t + k) % NUM_TRACKS;
+      if (tracks[i].state == want) {
+        selected = i;
+        drawTrack(i);
+        drawTrack(t);
+        return;
+      }
+    }
+  }
+}
+
 // ---- Power
 static void handlePowerButton() {
   if (!board.powerButtonPressed()) return;
@@ -693,6 +710,15 @@ void loop() {
         lastDrops[t] = d;
       }
     }
+  }
+
+  // A recording that ended with a clip (not cancelled): select the next track.
+  static int recTrack = -1;
+  if (recording.mode != Recording::Idle) {
+    recTrack = recording.track;
+  } else if (recTrack >= 0) {
+    if (tracks[recTrack].state != TrackState::Empty) selectAfterRecording(recTrack);
+    recTrack = -1;
   }
 
   // Redraw a little at a time so SD streaming keeps going.
