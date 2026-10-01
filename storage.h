@@ -20,8 +20,8 @@ bool recordPress(int t);
 void clearTrack(int t);
 // Loop range in beats; the length must be a power of two (1 beat = 1/4 bar
 // up to the whole loop). While playing, the change is queued and takes over at
-// the next boundary of the new range (bar line for a bar or more) that the
-// track hasn't buffered yet; trackRange() reports the queued range if any.
+// the next beat the track hasn't buffered yet (usually the next or the one
+// after); trackRange() reports the queued range if any.
 bool setRange(int t, uint32_t startBeat, uint32_t beats);
 void trackRange(int t, uint32_t &startBeat, uint32_t &beats);
 

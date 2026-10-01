@@ -50,7 +50,7 @@ struct Track {
   uint32_t fileFrame = 0;          // loop frame that stream frame `head` comes from
 
   // Queued loop range (loop() only): the stream switches to it at stream
-  // frame switchS, which falls on transport beat switchBeat. The old range
+  // frame switchS, which falls on transport beat switchBeat (a beat boundary). The old range
   // keeps playing until then.
   bool rangePending = false;
   uint32_t pendingStartBeat = 0, pendingBeats = 0, switchS = 0;

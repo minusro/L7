@@ -479,13 +479,10 @@ bool setRange(int t, uint32_t startBeat, uint32_t beats) {
     if (tr.armed) startTrack(t, tr.startBeat, false);   // joining soon: refill for the new range
     return true;
   }
-  // Playing: queue it. The switch goes on the first boundary of the new range
-  // (or bar line, for a bar or longer) that the stream hasn't buffered yet,
-  // so the old range plays right up to it with no gap.
-  int32_t grid = min(beats, (uint32_t)BEATS_PER_BAR);
+  // Playing: queue it. The switch goes on the first beat that the stream
+  // hasn't buffered yet, so the old range plays right up to it with no gap.
   int32_t b = transport.beat + 1;
-  b += posMod(-b, grid);
-  while ((int32_t)(tr.s0 + (uint32_t)(b - tr.startBeat) * tr.spbNative - tr.head) < 0) b += grid;
+  while ((int32_t)(tr.s0 + (uint32_t)(b - tr.startBeat) * tr.spbNative - tr.head) < 0) b++;
   tr.pendingStartBeat = startBeat;
   tr.pendingBeats = beats;
   tr.switchBeat = b;
