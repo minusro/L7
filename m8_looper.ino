@@ -131,7 +131,13 @@ static void drawTrack(int i) {
     switch (recording.mode) {
       case Recording::WaitBar: state = "WAIT"; color = ILI9341_YELLOW; break;
       case Recording::Running: state = "REC "; color = ILI9341_RED; break;
-      default:                 state = "SAVE"; color = ILI9341_ORANGE; break;
+      default:                                       // stopped: still recording up to the length?
+        if ((int32_t)(transport.now - recording.startSample) < (int32_t)recording.targetFrames) {
+          state = "REC>"; color = ILI9341_RED;
+        } else {
+          state = "SAVE"; color = ILI9341_ORANGE;
+        }
+        break;
     }
   } else {
     switch (tr.state) {
@@ -151,6 +157,10 @@ static void drawTrack(int i) {
     uint32_t frames = recording.written;
     snprintf(line, sizeof line, "%5.1f beats   overruns %lu", (double)frames / transport.spb,
              recording.overruns);
+  } else if (isRec && recording.mode == Recording::Finishing) {
+    int32_t left = (int32_t)(recording.targetFrames - (transport.now - recording.startSample));
+    snprintf(line, sizeof line, "-> %lu bars, %4.1f beats to go", recording.loopBars,
+             left > 0 ? (double)left / transport.spb : 0.0);
   } else if (tr.state == TrackState::Empty) {
     snprintf(line, sizeof line, "%s", "");
   } else {

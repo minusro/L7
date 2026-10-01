@@ -50,7 +50,9 @@ public:
   size_t write(const void *buf, size_t n) {
     if (simSdLatency) simSdLatency(n, true);
     if (simFailIo > 0) { simFailIo--; return (size_t)-1; }
-    return fwrite(buf, 1, n, f_);
+    size_t r = fwrite(buf, 1, n, f_);
+    fflush(f_);    // SdFat shares one cache between handles: writes are visible to all readers
+    return r;
   }
   bool seekSet(uint64_t pos) { return fseek(f_, (long)pos, SEEK_SET) == 0; }
   uint64_t fileSize() { long c = ftell(f_); fseek(f_, 0, SEEK_END); long s = ftell(f_); fseek(f_, c, SEEK_SET); return s; }

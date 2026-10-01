@@ -54,7 +54,10 @@ static bool writeHeader(int t) {
   put32(h + WAV_DATA_OFFSET - 4, frames * 4);
   debugStage = "SD write (track header)";
   Track &w = tracks[t];
-  return w.file.seekSet(0) && w.file.write(h, sizeof h) == (int)sizeof h;
+  bool ok = w.file.seekSet(0) && w.file.write(h, sizeof h) == (int)sizeof h;
+  // Also pushes out the end of a recording still held in SdFat's sector cache,
+  // so it survives power-off (the file's size doesn't change: no FS update).
+  return w.file.sync() && ok;
 }
 
 static void readHeader(int t) {
@@ -282,12 +285,15 @@ static bool streamsTopped() {
 }
 
 // ---- Recording
-static uint32_t snapBars(double beats) {
-  if (beats < BEATS_PER_BAR) return 1;
+// Loop length in bars for a recording stopped after `beats` beats: the power
+// of two P just below, if the stop came at most SNAP_THRESHOLD_BEATS past it;
+// otherwise the next one, 2P (the recording then carries on until it gets
+// there). Under one bar it carries on to one bar.
+static uint32_t targetBars(double beats) {
   uint32_t p = 1;
   while (p * 2 * BEATS_PER_BAR <= beats && p * 2 <= MAX_BARS) p *= 2;
-  if (beats - p * BEATS_PER_BAR < 1.0 || p == MAX_BARS) return p;  // less than a beat over: shrink
-  return p * 2;                                                     // otherwise round up
+  if (beats <= p * BEATS_PER_BAR + SNAP_THRESHOLD_BEATS || p == MAX_BARS) return p;
+  return p * 2;
 }
 
 static uint32_t maxRecordingFrames() {
@@ -300,8 +306,10 @@ static void stopRecording() {
   uint32_t spb = transport.spb;
   interrupts();
   uint32_t length = min(stopSample - recording.startSample, maxRecordingFrames());
-  recording.loopBars = snapBars((double)length / spb);
-  recording.targetFrames = min(length, recording.loopBars * BEATS_PER_BAR * spb);
+  recording.loopBars = targetBars((double)length / spb);
+  // Shorter than `length`: the end is trimmed. Longer: recording continues
+  // until it is reached (serviceRecorder keeps writing the input until then).
+  recording.targetFrames = min(recording.loopBars * BEATS_PER_BAR * spb, maxRecordingFrames());
   recording.mode = Recording::Finishing;
 }
 
@@ -442,6 +450,12 @@ void transportStart() {
 void transportStop() {
   if (recording.mode == Recording::WaitBar) recordPress(recording.track);   // cancel
   if (recording.mode == Recording::Running) stopRecording();
+  if (recording.mode == Recording::Finishing) {
+    // Stopped while carrying on to the loop length: keep what's recorded so
+    // far; the rest of the loop plays as silence.
+    uint32_t sofar = transport.now + LATENCY_FRAMES - recording.startSample;
+    recording.targetFrames = min(recording.targetFrames, max(sofar, recording.written));
+  }
   transport.running = false;
   for (auto &tr : tracks) { tr.live = false; tr.armed = false; }
   midiSendNow(0xFC);                             // MIDI Stop

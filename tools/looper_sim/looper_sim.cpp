@@ -104,8 +104,10 @@ static int16_t wavLeft(int t, uint32_t frame) {
   return s[0];
 }
 
-// Records track t for `beats` beats (from the moment of the call) and checks
-// the snapped length and that frame 0 holds the input from the bar line + latency.
+// Records track t, pressing stop after `beats` beats, and checks the loop
+// length, that frame 0 holds the input from the bar line + latency, and that
+// the audio is continuous up to its last frame (also when recording carried
+// on past the stop press to reach the loop length).
 static void recordTrack(int t, double beats, uint32_t expectBars, const char *label) {
   printf("%s\n", label);
   feedRamp = true;
@@ -126,6 +128,11 @@ static void recordTrack(int t, double beats, uint32_t expectBars, const char *la
   check(first == expect, msg);
   int16_t later = wavLeft(t, 5000);
   check(later == rampAt(start + 5000), "frame 5000 continues the input with no gaps");
+  uint32_t loopFrames = tr.loopBars * BEATS_PER_BAR * tr.spbNative;
+  uint32_t last = tr.recordedFrames - 1;
+  snprintf(msg, sizeof msg, "whole loop is recorded audio (%u of %u frames), last frame continuous",
+           tr.recordedFrames, loopFrames);
+  check(tr.recordedFrames == loopFrames && wavLeft(t, last) == rampAt(start + last), msg);
 }
 
 // Checks the output at the next few beats against the track's recording.
@@ -176,6 +183,7 @@ static void onAlarm(int) { printf("  FAIL hang: no progress for 10 s after '%s'\
 static int fuzz(int seconds, unsigned seed) {
   srand(seed);
   signal(SIGALRM, onAlarm);
+  for (auto &tr : tracks) tr.underruns = 0;
   uint64_t blocks = (uint64_t)(seconds * AUDIO_SAMPLE_RATE_EXACT / AUDIO_BLOCK_SAMPLES);
   double worstMs = 0;
   const char *worstAfter = "";
@@ -221,9 +229,9 @@ int main(int argc, char **argv) {
   int fsChangesAtStart = simFsChanges;
   midiBegin(&midi);
 
-  recordTrack(0, 4 * 4 + 0.5, 4, "track 1: record 4 bars + half a beat from stopped (expect 4 bars)");
-  recordTrack(1, 2 * 4 + 2, 4, "track 2: record 2 bars + 2 beats (expect 4 bars)");
-  recordTrack(2, 3, 1, "track 3: record 3 beats (expect 1 bar)");
+  recordTrack(0, 4 * 4 + 1.5, 4, "track 1: stop 4 bars + 1.5 beats in, from stopped (trims to 4 bars)");
+  recordTrack(1, 2 * 4 + 3, 4, "track 2: stop 2 bars + 3 beats in (carries on to 4 bars)");
+  recordTrack(2, 3, 1, "track 3: stop 3 beats in (carries on to 1 bar)");
 
   runBeats(4);
   checkSync(0, "track 1 at 120 BPM");
@@ -259,7 +267,15 @@ int main(int argc, char **argv) {
     check(simReinits > reinitsBefore && tr.loopBars == 2 && recording.overruns == 0, m);
     bool continuous = true;
     for (uint32_t f = 0; f < tr.recordedFrames; f += 997)
-      if (wavLeft(3, f) != rampAt(start + f)) { continuous = false; printf("        frame %u wrong\n", f); break; }
+      if (wavLeft(3, f) != rampAt(start + f)) {
+        continuous = false;
+        printf("        frame %u wrong (recorded %u, written %u)\n", f, tr.recordedFrames, recording.written);
+        for (uint32_t g = f - 6; g < f + 4 && g < tr.recordedFrames; g++)
+          printf("          frame %u: file %d, input history %d, expected %d\n", g, wavLeft(3, g),
+                 (int16_t)(inputRing[(start + g) % INPUT_FRAMES] & 0xFFFF), rampAt(start + g));
+        printf("          start %u, now %u\n", start, transport.now);
+        break;
+      }
     check(continuous, "recording has no gap across the failure");
     runBeats(4);
     for (auto &x : tracks) x.underruns = 0;
