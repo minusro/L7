@@ -23,7 +23,8 @@
 //                      tempo: LEFT/RIGHT -/+ 0.1 BPM, UP/DOWN +/- 1 BPM
 //   EDIT             empty track: record / stop recording; full track: mute/unmute
 //   SHIFT+EDIT       clear the track
-//   PLAY             start/stop (also EDIT on the status row)
+//   PLAY             start from 1.1.1 / stop (also EDIT on the status row)
+//   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
 //   power (hold)     switch off
 //
 // Build: Teensyduino, board "Teensy 4.0", USB type "Serial", CPU speed 600 MHz.
@@ -136,7 +137,7 @@ static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
 // ---- Waveforms
 // Each track's whole loop, drawn one column at a time: the row background
 // (dim grey across the whole screen for the selected track, dark red while
-// recording), the waveform (white inside the loop range, grey outside; muted
+// recording), the waveform (80% white inside the loop range, grey outside; muted
 // clips at half brightness) with faint darker bar lines at the clip's bar
 // boundaries, and the playhead: 2 px grey on unmuted clips, a thin black line
 // on muted ones, only on the selected track. Full redraws only happen when
@@ -144,16 +145,17 @@ static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
 // While a track records it shows the recording growing (live view) with a
 // red record head, over the length it would become.
 // Outside the loop range: the same dark grey for playing and muted clips.
-static constexpr uint16_t WAVE_IN = ILI9341_WHITE, WAVE_OUT = 0x2104;        // white, ~33/33/33
-static constexpr uint16_t WAVE_IN_BAR = 0xBDF7, WAVE_OUT_BAR = 0x18C3;       // the same at ~75%
+static constexpr uint16_t WAVE_IN = 0xCE79, WAVE_OUT = 0x2104;               // 80% white (~206), ~33/33/33
+static constexpr uint16_t WAVE_IN_BAR = 0x9CD3, WAVE_OUT_BAR = 0x18C3;       // the same at ~75%
 static constexpr uint16_t BG_SELECTED = 0x1082, BG_RECORDING = 0x3800;       // grey ~16 (half WAVE_OUT), dark red
-// The selected row's other cells and its button: grey ~6 (8/4/8, the darkest
-// step above black RGB565 has; a neutral grey would be 8/8/8).
-static constexpr uint16_t BG_ROW = 0x0821;
+// The selected row's other cells and its button: grey ~8.
+static constexpr uint16_t BG_ROW = 0x0841;
 static constexpr uint16_t PLAYHEAD = 0x6B4D, REC_HEAD = ILI9341_RED;   // grey ~107, red
 static constexpr int HEAD_W = 2;                     // playheads: from the playing column, 2 px to the right
 static constexpr uint16_t MUTED_HEAD = ILI9341_BLACK;
 static constexpr uint16_t BUTTON_ICON = ILI9341_WHITE;
+static constexpr uint16_t DIVIDER = 0x1082;          // under the last track row: grey ~16
+static constexpr uint16_t EMPTY_ICON = 0x1082;       // grey ~16: half WAVE_OUT
 
 struct WaveView {
   bool visible = false;                            // something is shown (not an empty track)
@@ -175,6 +177,14 @@ struct WaveView {
 static WaveView views[NUM_TRACKS];
 
 static int rowTop(int i) { return sliceCentredTop(i, ROW_BAND); }
+// A row's backgrounds: its band, the first and last rows also out to the
+// screen's top and bottom edges.
+static int bgTop(int i) { return i == 0 ? 0 : rowTop(i); }
+static int bgHeight(int i) { return (i == ROWS - 1 ? 240 : rowTop(i) + ROW_BAND) - bgTop(i); }
+// The divider above the status row: the last track row's bottom line, drawn
+// over its unhighlighted cells (a highlight covers it).
+static constexpr int DIVIDER_ROW = NUM_TRACKS - 1;
+static int dividerY() { return rowTop(DIVIDER_ROW) + ROW_BAND - 1; }
 
 static bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }
 
@@ -210,7 +220,8 @@ static void drawColumn(int i, int c) {
   const Track &tr = tracks[i];
   const WaveView &v = views[i];
   int x = WAVE_X + c, top = waveTop(i), mid = top + WAVE_H / 2;
-  t.drawFastVLine(x, rowTop(i), BUTTON_SIZE, v.bg);   // background: the row's full height
+  t.drawFastVLine(x, bgTop(i), bgHeight(i), v.bg);   // background: the row's full height
+  if (i == DIVIDER_ROW && v.bg == ILI9341_BLACK) t.drawPixel(x, dividerY(), DIVIDER);
   if (!v.visible) return;
   if (v.playCol >= 0 && c >= v.playCol && c < v.playCol + v.headW) {
     t.drawFastVLine(x, rowTop(i), ROW_BAND, v.headColor);   // the row's full height
@@ -329,20 +340,51 @@ static void updatePlayheads() {
   }
 }
 
-// ---- Track button: only on the selected track, grey, on the row background.
-// No clip: record. Recording: play. Unmuted clip: unmute icon (its state). Muted clip: mute icon. The status row:
-// play / stop for the transport.
+// ---- Row buttons
+// Tracks with a clip show a toggle on every row: a filled play triangle while
+// the clip plays, an outline when muted; white on the selected row, dark grey
+// on the others. Unselected empty tracks show the outline even darker; the
+// selected one shows record (red), then play while recording
+// (the press ends the recording and plays the clip). Both flash while waiting
+// for the recording to start (next bar) or to finish (its full length).
+// The status row shows the transport: play while running, stop while
+// stopped; grey, white when the row is selected (A then starts from 1.1.1).
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_MUTE, ICON_UNMUTE };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_TOGGLE_OFF, ICON_TOGGLE_ON, ICON_EMPTY };
+
+// Flashing icons blink four times per beat, twice above 100 BPM.
+static bool flashOn() {
+  noInterrupts();
+  bool running = transport.running;
+  uint32_t sampleInBeat = transport.sampleInBeat, spb = transport.spb;
+  interrupts();
+  if (!running) return true;
+  uint32_t phases = bpmForSpb(spb) > 100 ? 4 : 8;   // on/off halves per beat
+  return ((uint64_t)sampleInBeat * phases / spb) % 2 == 0;
+}
 
 static int buttonIcon(int i) {
-  if (i != selected) return ICON_NONE;
-  if (i == STATUS_ROW) return transport.running ? ICON_STOP : ICON_PLAY;   // the transport
-  if (recordingOn(i)) return ICON_PLAY;              // recording: the press ends it and plays the clip
-  switch (tracks[i].state) {
-    case TrackState::Empty:   return ICON_RECORD;
-    case TrackState::Playing: return ICON_UNMUTE;
-    default:                  return ICON_MUTE;
+  if (i == STATUS_ROW) return transport.running ? ICON_PLAY : ICON_STOP;   // the transport's state
+  if (i == selected) {
+    if (recordingOn(i)) {
+      Recording::Mode mode = recording.mode;
+      if (mode == Recording::Running) return ICON_PLAY;
+      if (!flashOn()) return ICON_NONE;
+      return mode == Recording::WaitBar ? ICON_RECORD : ICON_PLAY;
+    }
+    if (tracks[i].state == TrackState::Empty) return ICON_RECORD;
+  }
+  if (tracks[i].state == TrackState::Empty) return ICON_EMPTY;
+  return tracks[i].state == TrackState::Playing ? ICON_TOGGLE_ON : ICON_TOGGLE_OFF;
+}
+
+static uint16_t iconColor(int i, int icon) {
+  switch (icon) {
+    case ICON_RECORD:     return ILI9341_RED;
+    case ICON_EMPTY:      return EMPTY_ICON;
+    case ICON_TOGGLE_ON:
+    case ICON_TOGGLE_OFF: return i == selected ? BUTTON_ICON : WAVE_OUT;
+    default:              return i == selected ? BUTTON_ICON : ILI9341_DARKGREY;   // play/stop: as the clock
   }
 }
 
@@ -350,45 +392,34 @@ static int buttonIcon(int i) {
 // Button icons: filled shapes in an ICON_SIZE px box, anti-aliased (4x4
 // samples per pixel, blended over the row background).
 static constexpr float ICON_SIZE = 10.5f;
+static constexpr int ICON_REACH = 7;               // drawn pixels: centre +- this
 
-// Speaker for the mute icons, in the left half of the box: a small body and
-// a cone widening to the full height.
-static bool onSpeaker(float dx, float dy) {
-  float h = ICON_SIZE / 2;
-  const float bodyL = -h, coneL = -0.6f * h, coneR = -0.1f * h, bodyH = 0.36f * h;
-  if (dx < bodyL || dx > coneR) return false;
-  if (dx <= coneL) return fabsf(dy) <= bodyH;
-  return fabsf(dy) <= bodyH + (dx - coneL) / (coneR - coneL) * (h - bodyH);
+// Toggle: an 8 px tall play triangle, filled (on) or a 1 px outline (off).
+static constexpr float TOGGLE_HALF = 4, TOGGLE_STROKE = 1;
+
+// Distance from (dx, dy) inside a right-pointing play triangle of half-height
+// h (negative outside).
+static float playTriangle(float dx, float dy, float h) {
+  const float ax = -0.75f * h, ay = -h, bx = -0.75f * h, by = h, cx = h, cy = 0;
+  auto edge = [&](float px, float py, float qx, float qy) {
+    float ex = qx - px, ey = qy - py;
+    return ((dx - px) * ey - (dy - py) * ex) / sqrtf(ex * ex + ey * ey);
+  };
+  return min(min(edge(ax, ay, bx, by), edge(bx, by, cx, cy)), edge(cx, cy, ax, ay));
 }
 
 // Is the point (dx, dy) from the icon's centre inside the icon?
 static bool onIcon(int icon, float dx, float dy) {
   float h = ICON_SIZE / 2;
   switch (icon) {
-    case ICON_RECORD: return dx * dx + dy * dy <= h * h;
+    case ICON_RECORD: return dx * dx + dy * dy <= 0.5625f * h * h;   // 75% of the box
     case ICON_STOP:   return max(fabsf(dx), fabsf(dy)) <= h;
-    case ICON_PLAY: {
-      // Triangle pointing right: inside where it's on the inner side of all three edges.
-      const float ax = -0.8f * h, ay = -h, bx = -0.8f * h, by = h, cx = h, cy = 0;
-      auto edge = [&](float px, float py, float qx, float qy) {
-        float ex = qx - px, ey = qy - py;
-        return ((dx - px) * ey - (dy - py) * ex) / sqrtf(ex * ex + ey * ey);
-      };
-      float d = min(min(edge(ax, ay, bx, by), edge(bx, by, cx, cy)), edge(cx, cy, ax, ay));
-      return d >= 0;
-    }
-    case ICON_MUTE:                                // speaker with a cross
-    case ICON_UNMUTE: {                            // speaker with two sound waves
-      if (onSpeaker(dx, dy)) return true;
-      if (icon == ICON_MUTE) {
-        float ux = dx - 0.5f * h, uy = dy;         // the cross, centred right of the cone
-        const float arm = 0.48f * h, stroke = 0.55f;
-        if (fabsf(ux) > arm || fabsf(uy) > arm) return false;
-        return fabsf(ux - uy) <= stroke * 1.41f || fabsf(ux + uy) <= stroke * 1.41f;
-      }
-      float ux = dx + 0.45f * h, r = sqrtf(ux * ux + dy * dy);
-      if (dx < 0.05f * h || fabsf(dy) > ux * 0.9f) return false;   // a ~85 degree slice, right of the cone
-      return fabsf(r - 0.8f * h) <= 0.55f || fabsf(r - 1.25f * h) <= 0.55f;
+    case ICON_PLAY:   return playTriangle(dx, dy, h) >= 0;
+    case ICON_TOGGLE_OFF:
+    case ICON_EMPTY:                               // the same outline, darker
+    case ICON_TOGGLE_ON: {
+      float d = playTriangle(dx, dy, TOGGLE_HALF);
+      return d >= 0 && (icon == ICON_TOGGLE_ON || d < TOGGLE_STROKE);
     }
     default: return false;
   }
@@ -396,7 +427,7 @@ static bool onIcon(int icon, float dx, float dy) {
 
 static void drawIcon(int icon, float cx, float cy, uint16_t color, uint16_t bg) {
   auto &t = board.tft();
-  int r = (int)(ICON_SIZE / 2) + 1;
+  const int r = ICON_REACH;
   for (int y = (int)cy - r; y <= (int)cy + r; y++) {
     for (int x = (int)cx - r; x <= (int)cx + r; x++) {
       int on = 0;
@@ -411,7 +442,7 @@ static void drawIcon(int icon, float cx, float cy, uint16_t color, uint16_t bg) 
 // The row's cells other than the waveform (which drawWave() handles): the two
 // placeholder cells, the gaps and the button. Redrawn only when they change.
 static void drawCells(int i) {
-  struct Key { int icon; uint16_t bg0, bg1, bg2, bgButton; };
+  struct Key { int icon; uint16_t bg0, bg1, bg2, bgButton, iconColor; };
   static Key shown[ROWS];
   static bool drawn[ROWS];
   Key k;
@@ -421,19 +452,25 @@ static void drawCells(int i) {
   k.bg1 = cellBackground(i, 1);
   k.bg2 = i == STATUS_ROW ? cellBackground(i, TEMPO_CELL) : 0;   // tracks: drawWave()'s job
   k.bgButton = cellBackground(i, -1);
+  k.iconColor = iconColor(i, k.icon);
   if (drawn[i] && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = true;
   shown[i] = k;
   auto &t = board.tft();
-  int y = rowTop(i);
-  t.fillRect(CELL[0].x, y, CELL[0].w, ROW_BAND, k.bg0);
-  t.fillRect(CELL[1].x, y, CELL[1].w, ROW_BAND, k.bg1);
-  if (i == STATUS_ROW) t.fillRect(CELL[2].x, y, CELL[2].w, ROW_BAND, k.bg2);
+  int y = rowTop(i), y0 = bgTop(i), h = bgHeight(i);
+  t.fillRect(CELL[0].x, y0, CELL[0].w, h, k.bg0);
+  t.fillRect(CELL[1].x, y0, CELL[1].w, h, k.bg1);
+  if (i == STATUS_ROW) t.fillRect(CELL[2].x, y0, CELL[2].w, h, k.bg2);
   for (int c = 0; c < CELLS; c++)                    // 1 px gaps after each cell
-    t.drawFastVLine(CELL[c].x + CELL[c].w, y, ROW_BAND, ILI9341_BLACK);
-  t.fillRect(BUTTON_X, y, BUTTON_W, ROW_BAND, k.bgButton);
+    t.drawFastVLine(CELL[c].x + CELL[c].w, y0, h, ILI9341_BLACK);
+  t.fillRect(BUTTON_X, y0, BUTTON_W, h, k.bgButton);
+  if (i == DIVIDER_ROW) {                            // broken at the gaps (the waveform: drawColumn)
+    if (k.bg0 == ILI9341_BLACK) t.drawFastHLine(CELL[0].x, dividerY(), CELL[0].w, DIVIDER);
+    if (k.bg1 == ILI9341_BLACK) t.drawFastHLine(CELL[1].x, dividerY(), CELL[1].w, DIVIDER);
+    if (k.bgButton == ILI9341_BLACK) t.drawFastHLine(BUTTON_X, dividerY(), BUTTON_W, DIVIDER);
+  }
   if (k.icon != ICON_NONE)
-    drawIcon(k.icon, BUTTON_X + BUTTON_W / 2, y + ROW_BAND / 2, BUTTON_ICON, k.bgButton);
+    drawIcon(k.icon, BUTTON_X + BUTTON_W / 2, y + ROW_BAND / 2, k.iconColor, k.bgButton);
 }
 
 extern "C" const unsigned char glcdfont[];     // ILI9341_t3n's built-in 5x7 font
@@ -541,8 +578,11 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
     if (pressed & m8::BTN_RIGHT && selectedCell < CELLS - 1) selectedCell++;
   }
 
-  bool toggleTransport = pressed & m8::BTN_PLAY;
-  if (pressed & m8::BTN_EDIT && onStatus) toggleTransport = !toggleTransport;   // A on the status row
+  // START (or A on the status row): start from 1.1.1 / stop. With SHIFT:
+  // start from 1.1.1 on every press, running or not.
+  bool transportKey = (pressed & m8::BTN_PLAY) || (pressed & m8::BTN_EDIT && onStatus);
+  bool toggleTransport = transportKey && !shift;
+  if (transportKey && shift) transportRestart();
   if (pressed & m8::BTN_EDIT && !onStatus) {
     Track &tr = tracks[selected];
     if (shift) {
@@ -662,6 +702,8 @@ void loop() {
     lastDraw = millis();
     debugStage = "screen";
     drawStatus();                                    // every pass: the clock shows steps
+    if (selected != STATUS_ROW) drawCells(selected);   // every pass: its icon may flash
+    drawCells(STATUS_ROW);                           // the transport may have started/stopped
     updatePlayheads();
     drawTrack(nextRow);
     if (++nextRow >= ROWS) nextRow = 0;

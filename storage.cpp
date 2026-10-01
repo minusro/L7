@@ -622,6 +622,11 @@ void transportStop() {
   midiSendNow(0xFC);                             // MIDI Stop
 }
 
+void transportRestart() {
+  transportStop();                               // ends a recording as stopping would
+  transportStart();
+}
+
 void flushHeaders() {
   while (headerDirty) {
     int t = __builtin_ctz(headerDirty);
