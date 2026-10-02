@@ -573,6 +573,8 @@ static void drawTrack(int i) {
 }
 
 // ---- Keys
+static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 100;   // held arrows
+
 static void onKeys(uint8_t keys, uint8_t pressed) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   bool onStatus = selected == STATUS_ROW;
@@ -744,12 +746,27 @@ void loop() {
   serviceStorage();
 
   debugStage = "keys (I2C)";
+  // Arrows repeat while held: the press acts at once, then again after
+  // REPEAT_DELAY_MS and every REPEAT_PERIOD_MS (the most recently pressed one).
   uint8_t keys;
-  static uint8_t prev = 0;
+  static uint8_t prev = 0, repeatKey = 0;
+  static uint32_t repeatAt = 0;
+  const uint8_t ARROWS = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   if (board.keysChanged(keys)) {
     debugStage = "key action";
-    onKeys(keys, keys & ~prev);
+    uint8_t pressed = keys & ~prev;
+    if (pressed & ARROWS) {
+      repeatKey = pressed & ARROWS & -(pressed & ARROWS);   // one of them, if several
+      repeatAt = millis() + REPEAT_DELAY_MS;
+    } else if (!(keys & repeatKey)) {
+      repeatKey = 0;                                 // released
+    }
+    onKeys(keys, pressed);
     prev = keys;
+  } else if (repeatKey && (int32_t)(millis() - repeatAt) >= 0) {
+    debugStage = "key repeat";
+    repeatAt = millis() + REPEAT_PERIOD_MS;          // after a slow pass: no burst of catch-up repeats
+    onKeys(prev, repeatKey);
   }
 
   // Saving creates/rewrites a file, which can stall the card: only while stopped.
