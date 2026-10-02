@@ -23,6 +23,7 @@
 //   * tracks joining mid-play fill their buffer through the normal streaming
 //     instead of a blocking burst of reads
 #include "storage.h"
+#include <utility>
 #include <inttypes.h>
 
 namespace looper {
@@ -81,6 +82,12 @@ static uint32_t sampleTotal = 0, lastOrder = 0;
 static uint32_t nextSample = 1;                  // number for the next new file
 static uint16_t pool[POOL_SIZE];                 // empty sample files, lowest number first
 static int poolCount = 0;
+// pool[0] opened ahead (while stopped), so starting a recording while playing
+// costs no SD access.
+static FsFile poolNext;
+static uint16_t poolNextSample = 0;
+static void openPoolNext();
+static bool takeRecordingSample(int t);
 static uint16_t untrimmed[64];                   // finished samples still at full size
 static int untrimmedCount = 0;
 
@@ -591,6 +598,7 @@ bool storageBegin(void (*progress)(const char *)) {
     progress(msg);
     if (!createPoolFile()) break;
   }
+  openPoolNext();
   return ok && poolCount > 0;
 }
 
@@ -858,8 +866,46 @@ static void finishRecording() {
   if (queuedTrack >= 0) {                        // the next one takes over where this one ends
     int q = queuedTrack;
     queuedTrack = -1;
-    startRecording(q, end, endBeat, INPUT_FRAMES - 2 * CHUNK_FRAMES);   // room left to catch up
+    if (tracks[q].sample || takeRecordingSample(q))
+      startRecording(q, end, endBeat, INPUT_FRAMES - 2 * CHUNK_FRAMES);   // room left to catch up
   }
+}
+
+// Parts of the recording lost when the input history overflowed (the card
+// fell too far behind). Skipped at first; saved as silence once the card has
+// time, and before the recording is finished, so they never play back as
+// whatever the file held before.
+struct Gap { uint32_t from, to; };
+static Gap gaps[8];
+static int gapCount = 0;
+
+static bool writeRecordingChunk(uint32_t at, uint32_t n) {
+  debugStage = "SD write (recording)";
+  FsFile &f = tracks[recording.track].file;
+  uint32_t t0 = millis();
+  // Seek every time: header writes can move the shared file position.
+  bool ok = f.seekSet(WAV_DATA_OFFSET + (uint64_t)at * 4);
+  int put = ok ? f.write(chunk, n * 4) : -1;
+  uint32_t ms = millis() - t0;
+  if (ms > SLOW_SD_MS || put != (int)(n * 4)) logSd("write", ms, put, n * 4);
+  if (put != (int)(n * 4)) sdFailed = true;      // retried after recovery
+  return !sdFailed;
+}
+
+static void silenceGap() {
+  Gap &g = gaps[0];
+  uint32_t to = recording.mode == Recording::Finishing ? min(g.to, recording.targetFrames) : g.to;   // trimmed
+  if (g.from >= to) {
+    memmove(gaps, gaps + 1, --gapCount * sizeof gaps[0]);
+    return;
+  }
+  g.to = to;
+  uint32_t n = min(g.to - g.from, CHUNK_FRAMES);
+  memset(chunk, 0, n * 4);
+  if (!writeRecordingChunk(g.from, n)) return;
+  g.from += n;
+  if (g.from == g.to) memmove(gaps, gaps + 1, --gapCount * sizeof gaps[0]);
+  writePending = false;
 }
 
 static void serviceRecorder() {
@@ -868,7 +914,16 @@ static void serviceRecorder() {
   uint32_t next = recording.startSample + recording.written;   // next input sample to save
   if ((int32_t)(now - next) > (int32_t)(INPUT_FRAMES - CHUNK_FRAMES)) {
     recording.overruns++;                        // SD fell too far behind: skip ahead
-    recording.written += (now - next) - INPUT_FRAMES / 2;
+    uint32_t lost = (now - next) - INPUT_FRAMES / 2;
+    Serial.printf("recording fell behind (%s): %u ms of input lost, saved as silence\n", (const char *)debugStage,
+                  (unsigned)(lost / 44));
+    if (gapCount == 8) gaps[7].to = recording.written + lost;   // rarely: merged with the last one
+    else gaps[gapCount++] = {recording.written, recording.written + lost};
+    if (recording.mode == Recording::Running) {  // the ring's copy of the loop's beginning too
+      Track &tr = tracks[recording.track];
+      for (uint32_t f = recording.written; f < recording.written + lost && f < RING_FRAMES; f++) tr.ring[f] = 0;
+    }
+    recording.written += lost;
     next = recording.startSample + recording.written;
   }
   int32_t avail = (int32_t)(now - next);
@@ -878,14 +933,15 @@ static void serviceRecorder() {
     stopRecording();                             // longest loop reached
   // (Signed on purpose: a recording starts LATENCY_FRAMES in the future, so for
   // a moment `now` is before startSample and avail is negative.)
-  if (avail <= 0) {
-    if (recording.mode == Recording::Finishing && recording.written >= recording.targetFrames)
-      finishRecording();
-    return;
-  }
+  bool done = recording.mode == Recording::Finishing && recording.written >= recording.targetFrames;
   bool finalPart = recording.mode == Recording::Finishing &&
                    recording.written + avail >= recording.targetFrames;
-  if (avail < (int32_t)CHUNK_FRAMES && !finalPart) return;
+  if (avail <= 0 || (avail < (int32_t)CHUNK_FRAMES && !finalPart)) {
+    // Nothing (much) to save: time for the gaps, then it can finish.
+    if (gapCount && !sdFailed && (done || streamsTopped())) silenceGap();
+    else if (done && !gapCount) finishRecording();
+    return;
+  }
   if (sdFailed) return;                          // keep it in the input history for now
   // Write only once the playback buffers are topped up, unless the input
   // history (~740 ms) is within two chunks of overflowing.
@@ -895,18 +951,7 @@ static void serviceRecorder() {
   }
   uint32_t n = min((uint32_t)avail, CHUNK_FRAMES);
   for (uint32_t i = 0; i < n; i++) chunk[i] = inputRing[(next + i) % INPUT_FRAMES];
-  debugStage = "SD write (recording)";
-  FsFile &f = tracks[recording.track].file;
-  uint32_t t0 = millis();
-  // Seek every time: header writes can move the shared file position.
-  bool ok = f.seekSet(WAV_DATA_OFFSET + (uint64_t)recording.written * 4);
-  int put = ok ? f.write(chunk, n * 4) : -1;
-  uint32_t ms = millis() - t0;
-  if (ms > SLOW_SD_MS || put != (int)(n * 4)) logSd("write", ms, put, n * 4);
-  if (put != (int)(n * 4)) {                     // retried after recovery
-    sdFailed = true;
-    return;
-  }
+  if (!writeRecordingChunk(recording.written, n)) return;
   addPeaks(chunk, n, recording.written, recPeaks);
   // The loop's beginning also goes into the track's ring (stream frame = loop
   // frame), so playback can start the moment the recording ends, without
@@ -919,28 +964,43 @@ static void serviceRecorder() {
   writePending = false;
 }
 
+static void openPoolNext() {
+  if (!poolCount || (poolNext && poolNextSample == pool[0])) return;
+  poolNext.close();
+  char path[40];
+  samplePath(pool[0], path, sizeof path);
+  debugStage = "SD open (sample file)";
+  poolNext = SD.sdfs.open(path, O_RDWR);
+  poolNextSample = poolNext ? pool[0] : 0;
+}
+
 // A recording goes into the lowest-numbered empty sample file (made now if
 // none is ready).
 static bool takeRecordingSample(int t) {
   if (!poolCount && !createPoolFile()) return false;
-  char path[40];
-  samplePath(pool[0], path, sizeof path);
+  openPoolNext();                                // already open, unless the pool just changed
+  if (!poolNext) return false;
   Track &tr = tracks[t];
-  tr.file = SD.sdfs.open(path, O_RDWR);
-  if (!tr.file) return false;
+  tr.file = std::move(poolNext);                 // (SdFat copies: the copy left behind is let go)
+  poolNext.close();
+  poolNextSample = 0;
   tr.sample = pool[0];
   memmove(pool, pool + 1, --poolCount * sizeof pool[0]);
   return true;
 }
 
-// A recording cancelled before it started: its file goes back to the pool.
+// A recording cancelled before it started: its file goes back to the pool,
+// still open.
 static void returnRecordingSample(int t) {
   Track &tr = tracks[t];
-  tr.file.close();
   if (tr.sample && poolCount < POOL_SIZE) {
     memmove(pool + 1, pool, poolCount++ * sizeof pool[0]);
     pool[0] = tr.sample;
+    poolNext.close();
+    poolNext = std::move(tr.file);
+    poolNextSample = poolNext ? tr.sample : 0;
   }
+  tr.file.close();
   tr.sample = 0;
 }
 
@@ -952,6 +1012,7 @@ int recordQueued() { return queuedTrack; }
 static void startRecording(int t, uint32_t from, int32_t beat, int32_t maxBehind) {
   recording.track = t;
   recording.written = 0;
+  gapCount = 0;
   recording.overruns = 0;
   memset(recPeaks, 0, sizeof recPeaks);
   noInterrupts();
@@ -978,7 +1039,9 @@ bool recordPress(int t) {
     } else {
       if (queuedTrack >= 0) returnRecordingSample(queuedTrack);   // only one queued
       queuedTrack = -1;
-      if (!takeRecordingSample(t)) return false;
+      // No recording space ready: it's made once this recording is saved
+      // (making it stalls the card for a while).
+      if (poolCount && !takeRecordingSample(t)) return false;
       if (recording.mode == Recording::Running) stopRecording();
       queuedTrack = t;
       return true;
@@ -1145,6 +1208,7 @@ static void serviceFiles() {
   if (transport.running || recording.mode != Recording::Idle || sdFailed) return;
   if (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);
   else if (poolCount < POOL_SIZE) createPoolFile();
+  else openPoolNext();
 }
 
 void serviceStorage() {

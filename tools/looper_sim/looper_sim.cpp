@@ -487,6 +487,9 @@ int main(int argc, char **argv) {
   printf("record on track 8 while track 7 records: 7 stops, 8 records next\n");
   {
     int changes = simFsChanges;
+    transportStop();                               // recording space ready
+    for (int i = 0; i < 20; i++) serviceStorage();
+    transportStart();
     feedRamp = true;
     recordPress(6);
     for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
@@ -742,6 +745,56 @@ int main(int argc, char **argv) {
     simSdLatency = nullptr;
     transport.pendingSpb = spbForBpm(120);
     runBeats(2);
+  }
+
+  printf("card stalls for 1.5 s while track 7 records: the lost part saved as silence\n");
+  {
+    transportStop();                               // recording space ready
+    for (int i = 0; i < 20; i++) serviceStorage();
+    transportStart();
+    feedRamp = true;
+    clearTrack(6);
+    recordPress(6);
+    // The file's old contents: junk that must not be left in the recording.
+    char path[96];
+    snprintf(path, sizeof path, "%s/looper/samples/%04u.wav", simRoot.c_str(), (unsigned)tracks[6].sample);
+    if (FILE *f = fopen(path, "r+b")) {
+      std::vector<int16_t> junk(2 * 44100 * 8, 0x5555);
+      fseek(f, WAV_DATA_OFFSET, SEEK_SET);
+      fwrite(junk.data(), 2, junk.size(), f);
+      fclose(f);
+    }
+    for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+    uint32_t start = recording.startSample;
+    runBeats(2);
+    static int stalls;
+    stalls = 1;
+    simSdLatency = [](size_t, bool write) {
+      if (!write || !stalls) return;
+      stalls--;
+      pendingUs += 1500000;
+      const double blockUs = AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT;
+      while (pendingUs >= blockUs) { pendingUs -= blockUs; audioBlock(); }
+    };
+    runBeats(6);
+    simSdLatency = nullptr;
+    uint32_t overruns = recording.overruns;
+    recordPress(6);
+    runUntilIdle();
+    const Track &tr = tracks[6];
+    uint32_t silent = 0, junk = 0, audio = 0;
+    for (uint32_t f = 0; f < tr.recordedFrames; f++) {
+      int16_t v = wavLeft(6, f);
+      if (v == rampAt(start + f)) audio++;
+      else if (v == 0) silent++;
+      else junk++;
+    }
+    char m[128];
+    snprintf(m, sizeof m, "%u overrun(s): %u frames silent, %u junk, %u recorded", overruns, silent, junk, audio);
+    check(overruns > 0 && silent > 10000 && junk == 0, m);
+    runBeats(4);
+    clearTrack(6);
+    for (auto &x : tracks) x.underruns = 0;
   }
 
   printf("slow card (measurement): 6 tracks playing, track 7 recorded, then track 8 queued after it\n");
