@@ -7,9 +7,9 @@
 //     while it's being edited), the clock (bar.beat.step) on the right
 //     (white while running, a dim 1.1.1 while stopped);
 //   second cell: the scene, an inverted "SCN" tag and its position "3/7"
-//     (0* and N+1* with a star, dim). The position flashes with the beat
-//     (white, then dim) while another scene is selected but not there yet:
-//     SHIFT still held on it, or the change waiting for its switch point.
+//     (0* and N+1* with a star, grey). The position flashes with the beat
+//     (the accent colour, then grey) while another scene is selected but not
+//     there yet: SHIFT still held on it, or the change waiting for its switch point.
 // Text and tags are redrawn whole each pass (their boxes clear what was
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
@@ -80,7 +80,7 @@ void drawStatus() {
     noInterrupts();
     bool firstHalf = transport.sampleInBeat < transport.spb / 2;
     interrupts();
-    ink = firstHalf ? INK : DIM;
+    ink = firstHalf ? ACCENT : DIM;
   }
   int x = cell.x + INSET + tagWidth("SCN") + PX;
   drawText(x, textY, text, ink, BG, cell.x + cell.w - INSET - x);

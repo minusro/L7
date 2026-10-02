@@ -10,15 +10,19 @@ constexpr uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
                     (((a & 31) * w + (b & 31) * (255 - w)) / 255));
 }
 
-// The palette: white on black, one dim level. Patterns (every other block)
-// stand in for in-between shades.
-constexpr uint16_t BG = 0x0000;              // black
-constexpr uint16_t INK = 0xFFFF;             // white: what's active, selected, playing
-constexpr uint16_t DIM = 0x630C;             // grey ~99: inactive, muted, outside the loop range
-constexpr uint16_t REC = 0xF800;             // red: the record icon on the status button (A records)
+// RGB565 from 8-bit red, green, blue.
+constexpr uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) { return (uint16_t)((r >> 3) << 11 | (g >> 2) << 5 | b >> 3); }
+
+// The palette: black, two greys, white, and one accent colour.
+constexpr uint16_t BG = rgb565(0, 0, 0);            // black: the background
+constexpr uint16_t DARK = rgb565(64, 64, 64);       // 25% grey: in the background (outside the loop range,
+                                                    //   the row's other frames, fills, unlit arcs)
+constexpr uint16_t DIM = rgb565(128, 128, 128);     // 50% grey: inactive (muted clips, idle icons and text)
+constexpr uint16_t INK = rgb565(255, 255, 255);     // white: what's active, selected, playing
+constexpr uint16_t ACCENT = rgb565(255, 176, 0);    // amber: recording, and a scene change on its way
 
 // ---- Roles
-constexpr uint16_t DIVIDER = DIM;            // line above the status row
+constexpr uint16_t DIVIDER = DARK;           // line above the status row
 constexpr uint16_t PLAYHEAD = INK;           // playing clips (drawn inverted over the waveform)
 constexpr uint16_t MUTED_HEAD = DIM;         // the selected muted clip
 

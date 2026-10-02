@@ -3,8 +3,8 @@
 
 // ---- Filter cell: the response of the track's highpass + lowpass pair over
 // 20 Hz - 20 kHz (log), 0 dB at the top to -CURVE_DB at the bottom, in
-// blocks: a line one block thick (white while the clip plays, dim when
-// muted) with a dim checker pattern under it. Nothing on an empty track.
+// blocks: a line one block thick (white while the clip plays, grey when
+// muted) filled dark grey under it. Nothing on an empty track.
 // The cell is built in a buffer and sent at once (no flash).
 static constexpr int CELL_COLS = CELL[FILTER_CELL].w / PX;      // 39, the frame's included
 static constexpr int GRAPH_COLS = CELL_COLS - 2;
@@ -53,8 +53,7 @@ void drawFilter(int i) {
       if (c < GRAPH_COLS - 1) { lo = min(lo, (y[c] + y[c + 1]) / 2); hi = max(hi, (y[c] + y[c + 1]) / 2); }
       int r0 = (int)lroundf(lo), r1 = (int)lroundf(hi);
       for (int r = max(r0, TOP_ROW); r <= min(r1, BOTTOM_ROW); r++) blocks[r][c + 1] = k.line;
-      for (int r = max(r1 + 1, TOP_ROW); r <= BOTTOM_ROW; r++)   // under it: every other block
-        if ((c + r) % 2 == 0) blocks[r][c + 1] = DIM;
+      for (int r = max(r1 + 1, TOP_ROW); r <= BOTTOM_ROW; r++) blocks[r][c + 1] = DARK;   // under it
     }
   }
   static uint16_t px[ROW_BAND * CELL[FILTER_CELL].w];

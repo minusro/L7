@@ -6,7 +6,7 @@
 
 // ---- Screen (drawn over its own background: no full clears, which would
 // hold up SD streaming)
-// The look: white on black with one dim level, everything on a grid of
+// The look: white on black with two greys and an accent colour (colors.h), everything on a grid of
 // PX x PX pixel blocks (a 160 x 120 screen of chunky pixels), a blocky
 // pixel font, and the selection shown by frames and inverted boxes.
 constexpr int PX = 2;
@@ -47,18 +47,18 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
 inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !recordingOn(i); }
 
 // Background of a cell in row i (cell -1: the button): black, but inverted
-// (white) for the selected row's button, the status row's button, and the
-// waveform cell of a recording track.
+// for the selected row's button and the status row's (white), and the
+// waveform cell of a recording track (the accent).
 inline uint16_t cellBackground(int i, int cell) {
-  if (cell == WAVE_CELL && recordingOn(i)) return INK;
+  if (cell == WAVE_CELL && recordingOn(i)) return ACCENT;
   if (cell == -1 && (i == STATUS_ROW || i == selected)) return INK;
   return BG;
 }
-// Its frame: white round the selected cell, dim round the selected row's
-// others, none elsewhere (BG).
+// Its frame: white round the selected cell, dark grey round the selected
+// row's others, none elsewhere (BG).
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected) return BG;
-  return cell == selectedCell ? INK : DIM;
+  return cell == selectedCell ? INK : DARK;
 }
 // Does the frame (one block wide, corners cut) cover pixel (x, y) of a cell
 // w x h px? Corner blocks are left out, for rounded corners.

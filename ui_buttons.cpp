@@ -13,7 +13,7 @@
 // selected row: record (red) on an empty track; finish recording (play);
 // cancel a recording still waiting for its bar (X); mute (stop) or unmute
 // (play); with SHIFT held, cut the clip (scissors) or, on an empty track,
-// paste (a clipboard; a checker pattern while the clipboard is empty). With B
+// paste (a clipboard; dark grey while the clipboard is empty). With B
 // held: open the panel (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the panel is open: a house (A closes it). On the status row itself:
@@ -83,10 +83,10 @@ static int buttonIcon(int i) {
 
 // Icons: bitmaps of blocks ('#'), centred in the button. On an inverted
 // button (the selected track's, the status row's) they're black; elsewhere
-// white for a recording, dim for the others. The status row's record icon is
-// red. An action with nothing to act on (paste, clipboard empty) shows as a
-// checker pattern; while A is held the status button turns back to white on
-// black.
+// the accent colour for a recording, grey for the others. When A records, the
+// status button is in the accent colour. An action with nothing to act on
+// (paste, clipboard empty) is dark grey; while A is held the status button
+// turns back to black.
 struct Icon { int w, h; const char *rows[9]; };
 PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // ICON_NONE
@@ -110,16 +110,18 @@ static bool unavailable(int i, int icon) {
   return i == STATUS_ROW && ((icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()));
 }
 
-static uint16_t buttonBackground(int i) {
-  if (i == STATUS_ROW && heldAction >= 0) return BG;   // A held: back to white on black
+static uint16_t buttonBackground(int i, int icon) {
+  if (i == STATUS_ROW && heldAction >= 0) return BG;   // A held: back to black
+  if (i == STATUS_ROW && icon == ICON_RECORD) return ACCENT;   // A records
   return cellBackground(i, -1);
 }
 
 static uint16_t iconColor(int i, int icon) {
-  uint16_t bg = buttonBackground(i);
-  if (i == STATUS_ROW && icon == ICON_RECORD && bg == INK) return REC;   // A records
-  if (bg == INK) return BG;
-  return i == STATUS_ROW || recordingOn(i) || recordQueued() == i ? INK : DIM;
+  uint16_t bg = buttonBackground(i, icon);
+  if (unavailable(i, icon)) return DARK;
+  if (bg != BG) return BG;
+  if (recordingOn(i) || recordQueued() == i) return ACCENT;
+  return i == STATUS_ROW ? INK : DIM;
 }
 
 // The button, built whole in a buffer and sent at once.
@@ -131,7 +133,6 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {
       for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * BUTTON_W + c * PX + dx] = color;
   };
   const int cols = BUTTON_W / PX, rows = ROW_BAND / PX;
-  bool checker = unavailable(i, icon);
   if (icon == ICON_TAP) {
     const char *text = "TAP";
     int c0 = (cols - textWidth(text) / PX) / 2, r0 = (rows - FONT_H / PX) / 2;
@@ -147,7 +148,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {
     int c0 = (cols - ic.w) / 2, r0 = (rows - ic.h) / 2;
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
-        if (ic.rows[r][c] == '#' && (!checker || (r + c) % 2 == 0)) block(c0 + c, r0 + r);
+        if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);
   }
   auto &t = board.tft();
   int top = rowTop(i);
@@ -160,15 +161,14 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {
 // The row's gaps and button (the cells: drawWave(), drawFilter(), drawMix(),
 // drawStatus()). Redrawn only when they change.
 void drawCells(int i) {
-  struct Key { int icon; uint16_t bg, iconColor; bool checker; };
+  struct Key { int icon; uint16_t bg, iconColor; };
   static Key shown[ROWS];
   static uint32_t drawn[ROWS];                     // uiGeneration when last drawn whole
   Key k;
   memset(&k, 0, sizeof k);                         // padding too: compared with memcmp
   k.icon = buttonIcon(i);
-  k.bg = buttonBackground(i);
+  k.bg = buttonBackground(i, k.icon);
   k.iconColor = iconColor(i, k.icon);
-  k.checker = unavailable(i, k.icon);
   bool first = drawn[i] != uiGeneration;
   if (!first && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;

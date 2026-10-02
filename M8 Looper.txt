@@ -69,7 +69,7 @@ no dropouts or overruns
 - de-clicking at loop edges and other transitions, including recording pre-roll V
 - optimize ram usage V
 
-- 80s lcd ui experiment
+- 80s lcd ui experiment V
 - switch tempo and clock labels, add play icon between
 
 - [ Projects ]

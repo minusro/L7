@@ -10,13 +10,13 @@
 //   2 - 10  the waveform: a line along row 6, the peaks reaching up to 4
 //           blocks above and below it
 //   11      bar ticks
-// The waveform is white inside the loop range and dim outside; on a muted
-// clip the range is dim and the rest a dim checker pattern. The bracket, the
-// start position (a dotted line) and the bar ticks only show on the selected
-// track. The playhead inverts its column (white on black, black on white);
-// on a muted clip, only when selected, it's a dim line. A recording track's
-// cell is inverted, its waveform growing in black (live view), the record
-// head inverting its column too.
+// The waveform is white inside the loop range and dark grey outside; on a
+// muted clip the range is 50% grey and the rest dotted dark grey. The bracket,
+// the start position (a dotted line) and the bar ticks (dark grey) only show
+// on the selected track. The playhead inverts its column (white on black,
+// black on white); on a muted clip, only when selected, it's a grey line. A
+// recording track's cell is in the accent colour, its waveform growing in
+// black (live view), the record head inverting its column too.
 // Full redraws only happen when something changes; the playhead moves by
 // redrawing just its columns.
 
@@ -68,8 +68,8 @@ static void drawColumn(int i, int bc) {
   const WaveView &v = views[i];
   uint16_t col[BAND_ROWS];
   for (auto &c : col) c = v.bg;
-  if (v.frame != BG) {                             // the frame, its corners cut (black on an inverted cell)
-    uint16_t frame = v.bg == INK ? BG : v.frame;
+  if (v.frame != BG) {                             // the frame, its corners cut (black on a coloured cell)
+    uint16_t frame = v.bg != BG ? BG : v.frame;
     if (bc == 0 || bc == BLOCK_COLS - 1) for (int r = 1; r < BAND_ROWS - 1; r++) col[r] = frame;
     else col[0] = col[BAND_ROWS - 1] = frame;
   } else if (i == DIVIDER_ROW) {
@@ -81,7 +81,7 @@ static void drawColumn(int i, int bc) {
     bool muted = !v.live && tr.state == TrackState::Muted;
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
     if (!v.live || c < v.liveFilled) {
-      uint16_t ink = v.live ? BG : (in && !muted) ? INK : DIM;   // (live: on the inverted cell)
+      uint16_t ink = v.live ? BG : !in ? DARK : muted ? DIM : INK;   // (live: on the coloured cell)
       int h = (columnLevel(v.live ? v.liveData : tr.overview, c) * WAVE_REACH + 127) / 255;
       for (int r = MID_ROW - h; r <= MID_ROW + h; r++)
         if (in || !muted || (c + r) % 2 == 0) col[r] = ink;   // muted, outside: every other block
@@ -90,13 +90,14 @@ static void drawColumn(int i, int bc) {
       uint16_t mark = muted ? DIM : INK;
       if (in) col[1] = mark;                                      // the bracket
       if (c == v.beginCol || c == v.endCol) col[2] = mark;        // its ends
-      if (isBarColumn(tr.loopBars, c)) col[TICK_ROW] = DIM;
+      if (isBarColumn(tr.loopBars, c)) col[TICK_ROW] = DARK;
       if (c == v.markCol)                                         // the start position: dotted, inverting
         for (int r = MID_ROW - WAVE_REACH; r < TICK_ROW; r += 2) col[r] = col[r] == v.bg ? mark : v.bg;
     }
     if (c == v.playCol) {                                         // on top: the playhead
       for (int r = 1; r < BAND_ROWS - 1; r++)
-        col[r] = v.headColor != PLAYHEAD ? v.headColor : col[r] == BG ? INK : BG;
+        col[r] = v.headColor != PLAYHEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
+               : col[r] == v.bg ? (v.bg == BG ? INK : BG) : v.bg;
     }
   }
   static uint16_t px[ROW_BAND * PX];

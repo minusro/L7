@@ -7,8 +7,8 @@
 // MIX_FLOOR_DB..MIX_TOP_DB: the volume, plus what the balance moves onto that
 // side (up to the mono sum, +6 dB) or takes away from it. The meter (the
 // channel's actual output, with peak hold falling at METER_FALL_DB_PER_S)
-// lights them white on the same scale. Arcs above both: dotted (every other
-// block, dim); up to the level: dim. An arc is only redrawn when its look changes.
+// lights them white on the same scale. Arcs above both: dark grey; up to the
+// level: 50% grey. An arc is only redrawn when its look changes.
 static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = ROW_BAND / PX;   // 39 x 13
 static constexpr int MIX_ARCS = 4;
 static constexpr float MIX_R0 = 4, MIX_DR = 3.5f, MIX_HALF_H = 5, MIX_SLOPE = 1.2f;   // in blocks
@@ -37,14 +37,14 @@ static int arcsForDb(float db) {
 }
 static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
 
-// An arc's look: 0 off (checker), 1 up to the level (dim), 2 the meter (white).
+// An arc's look: off (dark grey), up to the level (50% grey), the meter (white).
 enum : uint8_t { ARC_OFF, ARC_LEVEL, ARC_METER, ARC_NONE };
 
 static uint16_t blockColor(uint8_t look, int r, int c) {
   switch (look) {
     case ARC_METER: return INK;
     case ARC_LEVEL: return DIM;
-    case ARC_OFF:   return (r + c) % 2 ? DIM : BG;   // (blocks along an arc alternate)
+    case ARC_OFF:   return DARK;
     default:        return BG;
   }
 }
