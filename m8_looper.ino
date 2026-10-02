@@ -3,18 +3,23 @@
 // engine.cpp runs the master clock, varispeed playback, filters, mixing,
 // input monitoring and MIDI clock; storage.cpp streams the tracks from SD and
 // records new ones. app.* holds the shared state (board, tempo, selection),
-// ui*.* draws the screen and input.* handles the keys; this file sets things
-// up and runs the main loop. Tracks are WAV files in /looper on
-// the SD card and survive power-off, along with the tempo.
+// ui*.* draws the screen and input.* handles the keys; scenes.* keeps the
+// scene list; this file sets things up and runs the main loop. Recordings are
+// WAV samples in /looper on the SD card and survive power-off, along with
+// each track's settings, the scenes and the tempo. More in docs/.
 //
 // Behaviour:
 //   * the input (LINE IN) is always heard
-//   * recording is free length; the loop snaps to a power of two bars (or
-//     shrinks to the one below if you stopped less than a beat past it), and
-//     starts on the bar line you were nearest to
-//   * changing the tempo repitches the loops (50%-200% of each one's tempo)
-//   * each track can loop any range of whole bars of its recording
-//   * MIDI clock + start/stop go out on serial MIDI port 1
+//   * recording is free length in whole bars (up to 32): stopped within a beat
+//     after a bar line it ends there, otherwise at the end of that bar; it
+//     starts on the bar line just passed (pressed within ~250 ms of it) or
+//     the next one
+//   * changing the tempo repitches the loops (50-200 BPM, and 50%-200% of
+//     each one's own tempo)
+//   * each track loops a range of its recording: any start beat, 1 beat up to
+//     the whole loop, possibly across the loop's end
+//   * scenes: snapshots of all tracks and the tempo, switched without gaps
+//   * MIDI clock + start/stop go out on serial MIDI port 2
 //
 // Keys:
 //   UP/DOWN          select a row: tracks 1-8, then the status row
@@ -22,8 +27,12 @@
 //   OPT twice        reset the current cell (waveform: whole loop; filter: open;
 //                      volume: unity, balance centred)
 //   OPT + arrows     change the current cell:
-//                      waveform: LEFT/RIGHT move the loop range by a beat,
-//                                UP/DOWN double/halve it (1/4 bar to the whole loop)
+//                      waveform: LEFT/RIGHT move the loop range's start (a beat;
+//                                  clips over 4 bars half a bar, over 16 a bar);
+//                                  twice: by its own length, stopping at the clip edge
+//                                UP/DOWN lengthen/shorten it (1/4, 1/2, 3/4, 1, 1 1/2,
+//                                  2, 3, 4, 5 ... bars); twice: powers of two (3 x 2^n
+//                                  doubles/halves)
 //                      filter: LEFT/RIGHT move the band, UP/DOWN widen/narrow it
 //                      volume: LEFT/RIGHT balance, UP/DOWN volume
 //                      tempo: LEFT/RIGHT -/+ 0.1 BPM, UP/DOWN +/- 1 BPM

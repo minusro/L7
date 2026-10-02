@@ -27,7 +27,7 @@ static void resetCell() {
 // TAP_TIMEOUT_MS start a new count. Every 4th tap after the first (the 5th,
 // 9th, 13th ...) lands on a bar line: a stopped transport starts there from
 // 1.1.1; a running one snaps to the nearest bar start.
-static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // a little over a beat at the slowest tempo (30 BPM)
+static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // well over a beat at the slowest tempo (50 BPM: 1.2 s)
 static constexpr int TAP_AVERAGE = 4;
 
 static void tapTempo() {

@@ -30,7 +30,7 @@ bool setTrackUnit(int t, const TrackUnit &u);
 // transport beat (-1: stopped, at once).
 int32_t beginSceneChange(bool quick = false);
 void endSceneChange();
-bool sceneChangeWaiting();             // a scene change hasn't reached its bar line yet
+bool sceneChangeWaiting();             // a scene change hasn't reached its switch point yet
 // A write may go to the card now (stopped, or the playback buffers are full);
 // false also asks for the buffers to be topped up first.
 bool storageMayWrite();
