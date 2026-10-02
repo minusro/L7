@@ -5,7 +5,7 @@ m8::Board board;
 
 float bpm = 120.0f;
 int selected = 0;                           // row: a track, or STATUS_ROW
-int selectedCell = 2;                       // cell in a track row (2 = waveform)
+int selectedCell = 0;                       // cell in the row (0: the waveform, ui.h WAVE_CELL)
 static uint32_t tempoChangedMs = 0;
 static bool tempoDirty = false;
 

@@ -18,7 +18,7 @@
 //
 // Keys:
 //   UP/DOWN          select a row: tracks 1-8, then the status row
-//   LEFT/RIGHT       select a cell (third cell: waveform; on the status row, tempo)
+//   LEFT/RIGHT       select a cell: waveform, filter, volume (on the status row the first is the tempo)
 //   OPT twice        reset the current cell (waveform: whole loop; filter: open;
 //                      volume: unity, balance centred)
 //   OPT + arrows     change the current cell:

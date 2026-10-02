@@ -110,7 +110,7 @@ void drawCells(int i) {
   k.icon = buttonIcon(i);
   k.bg0 = cellBackground(i, 0);
   k.bg1 = cellBackground(i, 1);
-  k.bg2 = i == STATUS_ROW ? cellBackground(i, TEMPO_CELL) : 0;   // tracks: drawWave()'s job
+  k.bg2 = cellBackground(i, 2);                    // (a track's cells: drawWave(), drawFilter(), drawMix())
   k.bgButton = cellBackground(i, -1);
   k.iconColor = iconColor(i, k.icon);
   bool first = !drawn[i];

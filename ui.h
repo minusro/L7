@@ -17,20 +17,20 @@ constexpr int sliceTop(int k) { return LAYOUT_TOP + k * SLICE_H; }
 constexpr int sliceCentredTop(int k, int h) { return sliceTop(k) + (SLICE_H - h) / 2; }
 constexpr int TEXT_Y = sliceCentredTop(NUM_TRACKS, TEXT_H);
 // Each track row: three cells, then the button (icon only on the selected
-// track), separated by 1 px gaps. The third cell holds the waveform; the
-// first the filter (its response curve), the second volume and balance. On the selected row the
+// track), separated by 1 px gaps: the waveform, the filter (its response
+// curve), then volume and balance. On the selected row the
 // current cell and the button get the selection highlight.
-//   cell 1: x 0-78   cell 2: x 80-158   waveform cell: x 160-294   button: x 296-319
+//   waveform cell: x 0-134   filter: x 136-214   volume: x 216-294   button: x 296-319
 // The waveform fills its cell's whole width.
 struct Cell { int x, w; };
-constexpr int CELLS = 3, FILTER_CELL = 0, MIX_CELL = 1, WAVE_CELL = 2;
-constexpr Cell CELL[CELLS] = {{0, 79}, {80, 79}, {160, 135}};
+constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left to right
+constexpr Cell CELL[CELLS] = {{0, 135}, {136, 79}, {216, 79}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 296, BUTTON_W = 320 - BUTTON_X;
-constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w, WAVE_H = 16;   // waveform: x 160-294
-// The status row below the tracks has the same cells; its third cell holds
-// the tempo (left-aligned with the waveforms, adjustable) and the clock
-// (right-aligned with them).
-constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, TEMPO_CELL = 2;
+constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w, WAVE_H = 16;   // waveform: x 0-134
+// The status row below the tracks has the same cells; its first, under the
+// waveforms, holds the tempo (left-aligned with the waveforms, adjustable)
+// and the clock (right-aligned with them).
+constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, TEMPO_CELL = WAVE_CELL;
 
 inline int rowTop(int i) { return sliceCentredTop(i, ROW_BAND); }
 // A row's backgrounds: its band, the first and last rows also out to the
