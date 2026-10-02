@@ -34,7 +34,8 @@ static uint8_t headerDirty = 0;                  // bit t: track t's unit file n
 // A write is waiting for the playback buffers to be topped up (see serviceStreams).
 static bool writePending = false;
 static constexpr uint64_t SAMPLE_FILE_BYTES = WAV_DATA_OFFSET + (uint64_t)MAX_REC_FRAMES * 4;
-static constexpr int POOL_SIZE = 4;              // empty sample files kept ready for recordings
+static constexpr int POOL_SIZE = 16;             // empty sample files kept ready for recordings (~360 MB):
+                                                 // making one takes ~0.7 s, so never while playing if it can be helped
 static constexpr uint32_t MAX_SAMPLES = 9999;
 
 static void samplePath(uint32_t n, char *buf, size_t size) { snprintf(buf, size, "/looper/samples/%04u.wav", (unsigned)n); }
@@ -900,7 +901,7 @@ static void silenceGap() {
     return;
   }
   g.to = to;
-  uint32_t n = min(g.to - g.from, CHUNK_FRAMES);
+  uint32_t n = min(g.to - g.from, CHUNK_FRAMES - (WAV_DATA_OFFSET / 4 + g.from) % CHUNK_FRAMES);
   memset(chunk, 0, n * 4);
   if (!writeRecordingChunk(g.from, n)) return;
   g.from += n;
@@ -936,7 +937,11 @@ static void serviceRecorder() {
   bool done = recording.mode == Recording::Finishing && recording.written >= recording.targetFrames;
   bool finalPart = recording.mode == Recording::Finishing &&
                    recording.written + avail >= recording.targetFrames;
-  if (avail <= 0 || (avail < (int32_t)CHUNK_FRAMES && !finalPart)) {
+  // Writes end on CHUNK_FRAMES boundaries of the file (the audio starts 512
+  // bytes in, so the first one is shorter): each covers whole flash pages of
+  // the card, which keeps its slow writes rarer.
+  uint32_t toBoundary = CHUNK_FRAMES - (WAV_DATA_OFFSET / 4 + recording.written) % CHUNK_FRAMES;
+  if (avail <= 0 || (avail < (int32_t)toBoundary && !finalPart)) {
     // Nothing (much) to save: time for the gaps, then it can finish.
     if (gapCount && !sdFailed && (done || streamsTopped())) silenceGap();
     else if (done && !gapCount) finishRecording();
@@ -949,7 +954,7 @@ static void serviceRecorder() {
     writePending = true;
     return;
   }
-  uint32_t n = min((uint32_t)avail, CHUNK_FRAMES);
+  uint32_t n = min((uint32_t)avail, toBoundary);
   for (uint32_t i = 0; i < n; i++) chunk[i] = inputRing[(next + i) % INPUT_FRAMES];
   if (!writeRecordingChunk(recording.written, n)) return;
   addPeaks(chunk, n, recording.written, recPeaks);

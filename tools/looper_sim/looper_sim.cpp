@@ -42,12 +42,31 @@ static void check(bool ok, const char *what) {
 static double pendingUs = 0;
 static void audioBlock();
 
+#include <deque>
+static bool traceOn = false;
+static std::deque<std::string> traceLines;
+static int simTopped() {
+  for (const auto &tr : tracks)
+    if ((tr.live || tr.armed) && RING_FRAMES - (tr.head - tr.tail) >= CHUNK_FRAMES / 2) return 0;
+  return 1;
+}
+
 // Card timing calibrated on the M8's card logs: reads ~4 ms per 16 KB; of the
 // 16 KB writes ~97% are quick (~10 ms), ~2% take ~90 ms and ~1% ~250 ms.
 static void realisticSd(size_t bytes, bool write) {
   double ms;
   if (!write) ms = 2.0 + bytes / 10000.0;
   else { int r = rand() % 100; ms = r < 97 ? 10 : r < 99 ? 90 : 250; }
+  if (traceOn) {
+    uint32_t minFill = RING_FRAMES;
+    for (auto &tr : tracks) if (tr.live || tr.armed) minFill = std::min(minFill, tr.head - tr.tail);
+    char line[160];
+    snprintf(line, sizeof line, "%8.1f ms  %s %5zu B %5.1f ms  min ring %5u  rec backlog %6d  topped %d  [%s]",
+             inputIndex / 44.1, write ? "W" : "R", bytes, ms, minFill,
+             recording.mode ? (int)(inputIndex - recording.startSample - recording.written) : 0, simTopped(), (const char *)debugStage);
+    traceLines.push_back(line);
+    if (traceLines.size() > 30) traceLines.pop_front();
+  }
   pendingUs += ms * 1000;
   const double blockUs = AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT;
   while (pendingUs >= blockUs) { pendingUs -= blockUs; audioBlock(); }
@@ -66,6 +85,10 @@ static bool simSetTempo(float b) { transport.pendingSpb = spbForBpm(b); return t
 
 #include <map>
 static std::map<std::string, uint32_t> dropStages;   // what loop() was doing when tracks ran dry
+static std::map<std::string, uint32_t> dropPhases;   // where the recording was (measurement below)
+static uint32_t snags = 0;                            // separate dropouts (blocks with drops after one without)
+static uint32_t finishedAt = 0, lastMode = 0;
+static bool lastDropped = false;
 
 static void audioBlock() {
   uint32_t before = 0;
@@ -85,6 +108,23 @@ static void audioBlock() {
   uint32_t after = 0;
   for (auto &tr : tracks) after += tr.underruns;
   if (after > before) dropStages[(const char *)debugStage] += after - before;
+  if (lastMode != Recording::Idle && recording.mode == Recording::Idle) finishedAt = inputIndex;
+  lastMode = recording.mode;
+  if (after > before) {
+    static const char *names[] = {"idle", "waiting for the bar", "recording", "finishing"};
+    const char *ph = names[recording.mode];
+    if (recording.mode == Recording::Idle && finishedAt && inputIndex - finishedAt < 2 * 44100) ph = "idle, < 2 s after finishing";
+    if (recording.mode == Recording::Running && (int32_t)(inputIndex - recording.startSample) < 44100) ph = "recording, first second";
+    dropPhases[ph] += after - before;
+    if (!lastDropped) {
+      snags++;
+      if (traceOn && snags <= 3) {
+        printf("---- snag %u at %.1f ms (%s)\n", snags, inputIndex / 44.1, ph);
+        for (auto &l : traceLines) printf("%s\n", l.c_str());
+      }
+    }
+  }
+  lastDropped = after > before;
 }
 
 static void runBeats(double beats) {
@@ -834,6 +874,45 @@ int main(int argc, char **argv) {
     simSdLatency = nullptr;
     clearTrack(6);
     clearTrack(7);
+  }
+
+  printf("slow card (measurement): where dropouts fall around a recording, by tracks playing (all at their own tempo)\n");
+  {
+    simSdLatency = realisticSd;
+    traceOn = getenv("LOOPER_TRACE") != nullptr;   // the card's operations before the first snags
+    for (int t = 0; t < 8; t++) clearTrack(t);      // all recorded at the tempo they play at
+    for (int playing : {4, 6, 7}) {
+      srand(21);
+      for (int t = 0; t < 8; t++) tracks[t].gain = 1;
+      for (int t = 0; t < 7; t++) {
+        if (t < playing && tracks[t].state == TrackState::Empty) { recordPress(t); runBeats(16.2); recordPress(t); runUntilIdle(); }
+        if (t >= playing && tracks[t].state != TrackState::Empty) clearTrack(t);
+      }
+      clearTrack(7);
+      transportStop();
+      for (int i = 0; i < 40; i++) serviceStorage();
+      transportStart();
+      runBeats(8);
+      for (auto &tr : tracks) tr.underruns = 0;
+      dropPhases.clear();
+      dropStages.clear();
+      snags = 0;
+      for (int cycle = 0; cycle < 4; cycle++) {
+        runBeats(3);
+        recordPress(7);
+        runBeats(10.3);
+        recordPress(7);
+        runUntilIdle();
+        runBeats(8);
+        clearTrack(7);
+      }
+      uint32_t drops = 0;
+      for (auto &tr : tracks) drops += tr.underruns;
+      printf("  info  %d tracks playing, 4 recordings: %u snags, %u dropped samples\n", playing, snags, drops);
+      for (auto &kv : dropPhases) printf("        %s: %u\n", kv.first.c_str(), kv.second);
+      for (auto &kv : dropStages) printf("        during '%s': %u\n", kv.first.c_str(), kv.second);
+    }
+    simSdLatency = nullptr;
   }
 
   printf("random sessions\n");
