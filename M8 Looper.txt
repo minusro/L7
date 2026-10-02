@@ -54,6 +54,6 @@ no dropouts or overruns
 - switch tempo and clock labels, add play icon between
 - simple splash screen
 - 80s lcd ui experiment
-- de-clicking
+- de-clicking at loop edges?
 - crossfading between two scenes
 - animated splash screen ?

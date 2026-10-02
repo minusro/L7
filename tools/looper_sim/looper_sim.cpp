@@ -493,16 +493,39 @@ int main(int argc, char **argv) {
     runBeats(5.5);
     check(recordPress(7) && recording.track == 6 && recording.mode == Recording::Finishing && recordQueued() == 7,
           "track 7 finishing, track 8 queued");
+    check(tracks[7].sample != 0, "track 8's sample file taken when queued");
     int32_t end = recording.startBeat + (int32_t)(recording.loopBars * BEATS_PER_BAR);
+    uint32_t endSample = recording.startSample + recording.loopBars * BEATS_PER_BAR * transport.spb;
     for (int i = 0; i < 20000 && recording.track != 7; i++) block();
-    char m[96];
-    snprintf(m, sizeof m, "track 8 records from the bar track 7 ends on (beat %d, expected %d)", recording.startBeat, end);
-    check(recording.track == 7 && recording.startBeat == end && recordQueued() < 0, m);
+    char m[128];
+    snprintf(m, sizeof m, "track 8 records from where track 7 ends (beat %d, expected %d), recording at once",
+             recording.startBeat, end);
+    check(recording.track == 7 && recording.mode == Recording::Running && recording.startBeat == end &&
+          recording.startSample == endSample && recordQueued() < 0, m);
     check(tracks[6].state == TrackState::Playing && tracks[6].loopBars == 2, "track 7 holds its 2 bars");
     runBeats(3.5);
+    uint32_t start = recording.startSample;
     recordPress(7);
     runUntilIdle();
     check(tracks[7].state == TrackState::Playing && tracks[7].loopBars == 1, "track 8 holds its 1 bar");
+    check(wavLeft(7, 0) == rampAt(start) && wavLeft(7, 1000) == rampAt(start + 1000),
+          "track 8's first frames are the input right after track 7's last");
+    // Stopped just past a bar line (trimmed back to it): the next one still
+    // starts there, catching up from the input history.
+    clearTrack(6);
+    clearTrack(7);
+    recordPress(6);
+    for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+    runBeats(4.6);
+    recordPress(7);
+    int32_t bar = recording.startBeat + 4;
+    for (int i = 0; i < 20000 && recording.track != 7; i++) block();
+    snprintf(m, sizeof m, "trimmed: track 8 records from track 7's end (beat %d, expected %d)", recording.startBeat, bar);
+    check(recording.track == 7 && recording.mode == Recording::Running && recording.startBeat == bar &&
+          tracks[6].loopBars == 1, m);
+    runBeats(3.5);
+    recordPress(7);
+    runUntilIdle();
     recordPress(0);                                // track 1 holds a clip: refused, nothing queued
     check(recording.mode == Recording::Idle && recordQueued() < 0, "nothing recorded or queued on tracks with clips");
     clearTrack(6);
@@ -512,7 +535,7 @@ int main(int argc, char **argv) {
     runBeats(2);
     recordPress(7);
     recordPress(7);
-    check(recordQueued() < 0, "pressed again: no longer queued");
+    check(recordQueued() < 0 && tracks[7].sample == 0, "pressed again: no longer queued, its file given back");
     runUntilIdle();
     check(recording.mode == Recording::Idle && tracks[7].state == TrackState::Empty, "track 8 not recorded");
     clearTrack(6);
@@ -719,6 +742,45 @@ int main(int argc, char **argv) {
     simSdLatency = nullptr;
     transport.pendingSpb = spbForBpm(120);
     runBeats(2);
+  }
+
+  printf("slow card (measurement): 6 tracks playing, track 7 recorded, then track 8 queued after it\n");
+  {
+    simSdLatency = realisticSd;
+    srand(11);
+    for (int queued = 0; queued < 2; queued++) {
+      runBeats(4);
+      for (auto &tr : tracks) tr.underruns = 0;
+      dropStages.clear();
+      for (int cycle = 0; cycle < 6; cycle++) {
+        clearTrack(6);
+        clearTrack(7);
+        transportStop();                           // recording space refilled
+        for (int i = 0; i < 20; i++) serviceStorage();
+        transportStart();
+        runBeats(2);
+        recordPress(6);
+        runBeats(8 + cycle);
+        if (queued) {
+          recordPress(7);
+        } else {
+          recordPress(6);
+          runUntilIdle();
+          recordPress(7);
+        }
+        runBeats(9);
+        recordPress(7);
+        runUntilIdle();
+        runBeats(8);
+      }
+      uint32_t drops = 0;
+      for (auto &tr : tracks) drops += tr.underruns;
+      printf("  info  %s: %u dropped samples\n", queued ? "queued" : "one after the other", drops);
+      for (auto &kv : dropStages) printf("        during '%s': %u\n", kv.first.c_str(), kv.second);
+    }
+    simSdLatency = nullptr;
+    clearTrack(6);
+    clearTrack(7);
   }
 
   printf("random sessions\n");

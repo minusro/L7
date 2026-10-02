@@ -48,6 +48,17 @@ static uint32_t quarterFrames(uint32_t q, uint32_t spb) { return (q / 4) * spb +
 
 static bool streamsTopped();
 static void startTrack(int t, int32_t beat0, bool fillNow);
+static void startRecording(int t, uint32_t from, int32_t beat, int32_t maxBehind);
+
+// A track to record next: pressed while another one was recording. Its
+// sample file is opened right away (no SD work as it starts); it starts where
+// that one ends, with no gap between them.
+static int queuedTrack = -1;
+
+// Recording, waiting to, or queued: its sample is spoken for.
+static bool recordingTrack(int t) {
+  return (recording.mode != Recording::Idle && recording.track == t) || queuedTrack == t;
+}
 
 // ---- Samples
 // Header: RIFF/WAVE/fmt, then a JUNK chunk padding it to 512 bytes so the
@@ -433,7 +444,7 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
 bool clipboardFull() { return clipboard.sample != 0; }
 
 bool cutTrack(int t) {
-  if (tracks[t].state == TrackState::Empty || (recording.mode != Recording::Idle && recording.track == t)) return false;
+  if (tracks[t].state == TrackState::Empty || recordingTrack(t)) return false;
   clipboard = unitOf(t);
   clearTrack(t);
   return true;
@@ -441,7 +452,7 @@ bool cutTrack(int t) {
 
 bool pasteTrack(int t) {
   Track &tr = tracks[t];
-  if (!clipboard.sample || tr.state != TrackState::Empty || (recording.mode != Recording::Idle && recording.track == t))
+  if (!clipboard.sample || tr.state != TrackState::Empty || recordingTrack(t))
     return false;
   if (!loadSample(t, clipboard.sample)) return false;
   applyUnit(t, clipboard);                       // its alignment too: in step with the track it came from
@@ -453,7 +464,7 @@ bool pasteTrack(int t) {
 // ---- Choosing a track's sample
 bool stepSample(int t, int dir) {
   Track &tr = tracks[t];
-  if (sampleTotal < 2 || (recording.mode != Recording::Idle && recording.track == t)) return false;
+  if (sampleTotal < 2 || recordingTrack(t)) return false;
   bool empty = tr.state == TrackState::Empty;
   // In recording order from the track's sample, wrapping around; an empty
   // track starts from the oldest (going forward) or newest (going back).
@@ -814,10 +825,6 @@ static void stopRecording() {
   armRecordedLoop(recording.targetFrames > length);
 }
 
-// A track to record next: pressed while another one was recording. It starts
-// as that one finishes (on the bar line it ends on, from the input history).
-static int queuedTrack = -1;
-
 static void finishRecording() {
   int t = recording.track;
   Track &tr = tracks[t];
@@ -842,14 +849,16 @@ static void finishRecording() {
   writeSampleHeader(tr.file, tr.recordedFrames, tr.spbNative, tr.loopBars, tr.overview, lastOrder + 1);
   noteSample(tr.sample, lastOrder + 1);
   if (untrimmedCount < 64) untrimmed[untrimmedCount++] = tr.sample;
+  uint32_t end = recording.startSample + recording.targetFrames;
+  int32_t endBeat = recording.startBeat + (int32_t)(recording.loopBars * BEATS_PER_BAR);
   recording.mode = Recording::Idle;
   recording.track = -1;
   trackChanged(t);                               // unit saved when the buffers allow
   if (transport.running && !tr.live && !tr.armed) startTrack(t, transport.beat + 2, false);
-  if (queuedTrack >= 0) {
+  if (queuedTrack >= 0) {                        // the next one takes over where this one ends
     int q = queuedTrack;
     queuedTrack = -1;
-    if (transport.running) recordPress(q);
+    startRecording(q, end, endBeat, INPUT_FRAMES - 2 * CHUNK_FRAMES);   // room left to catch up
   }
 }
 
@@ -937,9 +946,29 @@ static void returnRecordingSample(int t) {
 
 int recordQueued() { return queuedTrack; }
 
+// Starts track t's recording (its sample file taken) at input sample `from`,
+// bar line `beat`, if that is at most maxBehind samples ago (from the input
+// history); otherwise at the next bar line (maxBehind < 0: always).
+static void startRecording(int t, uint32_t from, int32_t beat, int32_t maxBehind) {
+  recording.track = t;
+  recording.written = 0;
+  recording.overruns = 0;
+  memset(recPeaks, 0, sizeof recPeaks);
+  noInterrupts();
+  if (maxBehind >= 0 && (int32_t)(transport.now - from) <= maxBehind) {
+    recording.startSample = from;
+    recording.startBeat = beat;
+    recording.mode = Recording::Running;
+  } else {
+    recording.mode = Recording::WaitBar;
+  }
+  interrupts();
+}
+
 bool recordPress(int t) {
   if (t == queuedTrack) {                        // pressed again: no longer queued
     queuedTrack = -1;
+    returnRecordingSample(t);
     return true;
   }
   if (recording.mode != Recording::Idle && t != recording.track) {
@@ -947,6 +976,9 @@ bool recordPress(int t) {
     if (recording.mode == Recording::WaitBar) {  // not started yet: wait on this one instead
       recordPress(recording.track);
     } else {
+      if (queuedTrack >= 0) returnRecordingSample(queuedTrack);   // only one queued
+      queuedTrack = -1;
+      if (!takeRecordingSample(t)) return false;
       if (recording.mode == Recording::Running) stopRecording();
       queuedTrack = t;
       return true;
@@ -955,27 +987,18 @@ bool recordPress(int t) {
   switch (recording.mode) {
     case Recording::Idle: {
       if (tracks[t].state != TrackState::Empty || !takeRecordingSample(t)) return false;
-      recording.track = t;
-      recording.written = 0;
-      recording.overruns = 0;
-      memset(recPeaks, 0, sizeof recPeaks);
       if (!transport.running) {
-        recording.mode = Recording::WaitBar;     // starts with the transport, on bar 1
+        startRecording(t, 0, 0, -1);             // starts with the transport, on bar 1
         transportStart();
         return true;
       }
       // Pressed shortly after a bar line: start at that bar line (from the
       // input history). Otherwise wait for the next one.
       noInterrupts();
-      uint32_t sinceBar = transport.now - transport.lastBarSample;
-      if (sinceBar <= PREROLL_FRAMES) {
-        recording.startSample = transport.lastBarSample + LATENCY_FRAMES;
-        recording.startBeat = transport.lastBarBeat;
-        recording.mode = Recording::Running;
-      } else {
-        recording.mode = Recording::WaitBar;
-      }
+      uint32_t lastBar = transport.lastBarSample;
+      int32_t lastBeat = transport.lastBarBeat;
       interrupts();
+      startRecording(t, lastBar + LATENCY_FRAMES, lastBeat, PREROLL_FRAMES + LATENCY_FRAMES);
       return true;
     }
     case Recording::WaitBar:                     // cancel before it started
@@ -992,7 +1015,7 @@ bool recordPress(int t) {
 }
 
 void clearTrack(int t) {
-  if (recording.track == t && recording.mode != Recording::Idle) return;
+  if (recordingTrack(t)) return;
   Track &tr = tracks[t];
   tr.live = false;
   tr.armed = false;
@@ -1071,6 +1094,7 @@ void transportStart() {
 }
 
 void transportStop() {
+  if (queuedTrack >= 0) returnRecordingSample(queuedTrack);
   queuedTrack = -1;
   if (recording.mode == Recording::WaitBar) recordPress(recording.track);   // cancel
   if (recording.mode == Recording::Running) stopRecording();
