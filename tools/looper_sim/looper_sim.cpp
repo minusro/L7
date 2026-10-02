@@ -19,7 +19,7 @@ uint32_t simMicros = 0;
 std::string simRoot;
 SDClass SD;
 SerialStub Serial;
-int simFailIo = 0, simReinits = 0, simFsChanges = 0;
+int simFailIo = 0, simReinits = 0, simFsChanges = 0, simFileCreates = 0;
 void (*simSdLatency)(size_t, bool) = nullptr;
 void (*IntervalTimer::fn)() = nullptr;
 HardwareSerial midi;
@@ -91,10 +91,10 @@ static void runUntilIdle() {
   for (int i = 0; i < 100000 && recording.mode != Recording::Idle; i++) block();
 }
 
-// Reads frame `frame` of track t's WAV (left channel).
+// Reads frame `frame` of track t's sample (left channel).
 static int16_t wavLeft(int t, uint32_t frame) {
-  char path[64];
-  snprintf(path, sizeof path, "%s/looper/track%d.wav", simRoot.c_str(), t + 1);
+  char path[96];
+  snprintf(path, sizeof path, "%s/looper/samples/%04u.wav", simRoot.c_str(), (unsigned)tracks[t].sample);
   FILE *f = fopen(path, "rb");
   if (!f) return INT16_MIN;
   int16_t s[2] = {INT16_MIN, 0};
@@ -258,8 +258,42 @@ static int fuzz(int seconds, unsigned seed) {
 
 int main(int argc, char **argv) {
   simRoot = "/tmp/looper_sim_sd";
-  system(("rm -rf " + simRoot + " && mkdir -p " + simRoot).c_str());
+  system(("rm -rf " + simRoot + " && mkdir -p " + simRoot + "/looper").c_str());
+  // A card from an older version: track 5 holds a 1-bar loop in its own
+  // track5.wav, settings in the header (version 9).
+  const uint32_t legacyFrames = 4 * 22059;
+  {
+    uint8_t h[WAV_DATA_OFFSET] = {};
+    memcpy(h, "RIFF", 4);
+    struct { char magic[4]; uint32_t version, used, spb, loopBars, frames, rangeStart, rangeLen, muted, phase; } info =
+        {{'M', '8', 'L', 'P'}, 9, 1, 22059, 1, legacyFrames, 0, 2, 1, 0};
+    memcpy(h + 44, &info, sizeof info);
+    for (int c = 0; c < OVERVIEW_COLS; c++) h[44 + sizeof info + c] = 100;
+    int8_t settings[4] = {3, 20, 25, -4};          // filter lo/hi, volume, balance
+    memcpy(h + 44 + sizeof info + OVERVIEW_COLS, settings, 4);
+    FILE *f = fopen((simRoot + "/looper/track5.wav").c_str(), "wb");
+    fwrite(h, 1, sizeof h, f);
+    for (uint32_t i = 0; i < legacyFrames; i++) { int16_t fr[2] = {(int16_t)(i % 1000 - 500), 0}; fwrite(fr, 4, 1, f); }
+    fclose(f);
+  }
+  printf("first boot (with track 5 in the older one-file-per-track format)\n");
   storageBegin([](const char *m) { if (*m) printf("  (%s)\n", m); });
+  {
+    const Track &tr = tracks[4];
+    char m[160];
+    snprintf(m, sizeof m, "track 5 now plays sample %04u: %u frames, %u bar, range %u+%u, muted %d",
+             tr.sample, tr.recordedFrames, tr.loopBars, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted);
+    check(tr.sample == 1 && tr.recordedFrames == legacyFrames && tr.loopBars == 1 && tr.rangeBeats == 2 &&
+          tr.state == TrackState::Muted && tr.overview[10] == 100, m);
+    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 25 && tr.balance == -4, "its filter, volume and balance kept");
+    check(wavLeft(4, 0) == -500 && wavLeft(4, 1234) == 1234 % 1000 - 500 && wavLeft(4, legacyFrames - 1) == (int16_t)((legacyFrames - 1) % 1000 - 500),
+          "its audio is intact in samples/0001.wav");
+    FILE *old = fopen((simRoot + "/looper/track5.wav").c_str(), "rb");
+    check(!old && sampleCount() == 1, "the old track file is gone; one sample on the card");
+    if (old) fclose(old);
+    clearTrack(4);
+    flushHeaders();
+  }
   transport.spb = spbForBpm(120);
   int fsChangesAtStart = simFsChanges;
   midiBegin(&midi);
@@ -378,6 +412,26 @@ int main(int argc, char **argv) {
     engine.monitor = true;
   }
 
+  printf("clipboard: track 3 cut, pasted onto tracks 6 and 7 while playing\n");
+  {
+    uint32_t sample = tracks[2].sample;
+    int32_t anchor = tracks[2].rangeAnchorQ;
+    check(cutTrack(2) && tracks[2].state == TrackState::Empty && clipboardFull(), "cut: track 3 empty, clipboard full");
+    check(!cutTrack(2), "nothing to cut on an empty track");
+    check(pasteTrack(5) && pasteTrack(6) && clipboardFull(), "pasted twice, still on the clipboard");
+    check(!pasteTrack(0), "no pasting over a clip");
+    check(tracks[5].sample == sample && tracks[6].sample == sample &&
+          (tracks[6].rangeAnchorQ - anchor) % (int32_t)(4 * tracks[6].rangeBeats) == 0,
+          "both play the same sample, in the same alignment");
+    runBeats(4);
+    checkSync(5, "track 6 (pasted)");
+    checkSync(6, "track 7 (pasted)");
+    check(sampleExists(sample), "the sample is still on the card's list");
+    clearTrack(6);
+    for (auto &x : tracks) x.gain = 1;
+    engine.monitor = true;
+  }
+
   printf("SD card stops responding while recording track 4 (others playing)\n");
   {
     feedRamp = true;
@@ -437,6 +491,11 @@ int main(int argc, char **argv) {
   printf("power cycle: tracks come back from their WAV headers\n");
   {
     transportStop();
+    // Stopped: finished samples are cut down to size and the recording space
+    // topped up, a file at a time.
+    int changes = simFsChanges;
+    for (int i = 0; i < 20; i++) serviceStorage();
+    check(simFsChanges > changes, "stopped: samples trimmed and recording space refilled");
     flushHeaders();
     Track saved[NUM_TRACKS];
     for (int t = 0; t < NUM_TRACKS; t++) {
@@ -447,7 +506,7 @@ int main(int argc, char **argv) {
       memcpy(saved[t].overview, tracks[t].overview, OVERVIEW_COLS);
       tracks[t].state = TrackState::Empty; tracks[t].file = FsFile();
     }
-    int before = simFsChanges;
+    int before = simFileCreates;
     storageBegin([](const char *) {});
     bool same = true;
     for (int t = 0; t < NUM_TRACKS; t++) {
@@ -467,7 +526,7 @@ int main(int argc, char **argv) {
     bool flat = true;
     for (int c = 0; c < OVERVIEW_COLS; c++) if (tracks[cleared].overview[c]) flat = false;
     check(flat, "clearing a track flattens its waveform");
-    check(simFsChanges - before == 8, "second boot only removes the 8 old-style settings files, creates nothing");
+    check(simFileCreates == before, "second boot creates no files");
   }
 
   printf("slow card (measurement): 8 tracks playing while track 8 is recorded and cleared again and again\n");

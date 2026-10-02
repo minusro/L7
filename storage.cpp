@@ -1,12 +1,25 @@
 // storage.cpp — see storage.h
 //
+// Files, in /looper:
+//   samples/0001.wav ...  every recording, numbered in order (up to 9999) and
+//                         kept when tracks stop using it. 16-bit stereo WAV
+//                         whose 512-byte header carries, in its JUNK chunk,
+//                         the loop's length and tempo and its waveform overview.
+//   track1.unit ...       each track: the sample it plays and its settings
+//                         (loop range, mute, filter, volume and balance). 512 bytes.
+//   session.txt           the tempo.
+// Older versions kept each track in a full-size track1.wav ... : at boot those
+// become samples (and the empty ones recording space).
+//
 // Rule: nothing that changes the card's file system (create, resize, delete,
-// directory updates) happens while the transport runs. On a slow card those
-// take hundreds of ms to seconds and starve the track streams. So:
-//   * every track has a full-size WAV file, created once at boot; recording
-//     only overwrites its audio, clearing only marks it empty
-//   * a track's settings live in its WAV header (inside the JUNK chunk), so
-//     saving them is a single 512-byte write, done when the buffers are full
+// rename) happens while the transport runs. On a slow card those take
+// hundreds of ms to seconds and starve the track streams. So:
+//   * recordings go into sample files made ahead of time at full size (a pool
+//     of POOL_SIZE, refilled while stopped); a finished one is cut down to its
+//     length the next time the transport stops. Only if the pool runs out
+//     while playing is a file made then.
+//   * settings are saved by overwriting a unit file's 512 bytes (and a
+//     recording's details its sample's header), when the buffers are full
 //   * tracks joining mid-play fill their buffer through the normal streaming
 //     instead of a blocking burst of reads
 #include "storage.h"
@@ -16,12 +29,16 @@ namespace looper {
 
 volatile const char *debugStage = "boot";
 static uint32_t chunk[CHUNK_FRAMES];
-static uint8_t headerDirty = 0;                  // bit t: track t's header needs saving
+static uint8_t headerDirty = 0;                  // bit t: track t's unit file needs saving
 // A write is waiting for the playback buffers to be topped up (see serviceStreams).
 static bool writePending = false;
-static constexpr uint64_t TRACK_FILE_BYTES = WAV_DATA_OFFSET + (uint64_t)MAX_REC_FRAMES * 4;
+static constexpr uint64_t SAMPLE_FILE_BYTES = WAV_DATA_OFFSET + (uint64_t)MAX_REC_FRAMES * 4;
+static constexpr int POOL_SIZE = 4;              // empty sample files kept ready for recordings
+static constexpr uint32_t MAX_SAMPLES = 9999;
 
-static void trackPath(int t, char *buf, size_t n) { snprintf(buf, n, "/looper/track%d.wav", t + 1); }
+static void samplePath(uint32_t n, char *buf, size_t size) { snprintf(buf, size, "/looper/samples/%04u.wav", (unsigned)n); }
+static void unitPath(int t, char *buf, size_t size) { snprintf(buf, size, "/looper/track%d.unit", t + 1); }
+static void legacyPath(int t, char *buf, size_t size) { snprintf(buf, size, "/looper/track%d.wav", t + 1); }
 
 static int32_t posMod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; }
 
@@ -29,28 +46,208 @@ static int32_t posMod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? 
 // within each beat).
 static uint32_t quarterFrames(uint32_t q, uint32_t spb) { return (q / 4) * spb + (q % 4) * spb / 4; }
 
-// ---- WAV header with the track's settings
-// 16-bit stereo PCM; a JUNK chunk pads the header to 512 bytes so the audio is
-// sector-aligned, and carries the settings below at offset 44.
-struct TrackInfo {
-  char magic[4];                                 // "M8LP"
-  uint32_t version, used, spb, loopBars, recordedFrames, rangeStart, rangeLen, muted;
-  uint32_t rangePhase;                           // position in the range at transport beat 0
+// ---- Samples
+// Header: RIFF/WAVE/fmt, then a JUNK chunk padding it to 512 bytes so the
+// audio is sector-aligned, with SampleInfo at offset 44 and the overview after it.
+struct SampleInfo {
+  char magic[4];                                 // "M8SM"
+  uint32_t version, frames, spb, loopBars;       // frames 0: empty (recording space)
 };
-// Version 9: then volume and balance steps (2 signed bytes).
-// Version 8: the filter's lo and hi steps (2 signed bytes) after the overview.
-// Version 7: the filter's base and width steps instead (lo = base, hi = base + width).
-// Version 6: waveform overview of OVERVIEW_COLS (286) bytes right after TrackInfo.
-// Version 5: the same with 112 columns.
-// Version 4: rangePhase in quarter beats. Version 3: rangePhase in beats.
-// Version 2: no rangePhase. Version 1: range in bars. Older ones are converted
-// (their overview is worked out at boot).
-static constexpr uint32_t INFO_OFFSET = 44, INFO_VERSION = 9;
-static constexpr uint32_t OVERVIEW_OFFSET = INFO_OFFSET + sizeof(TrackInfo);
-static constexpr uint32_t FILTER_OFFSET = OVERVIEW_OFFSET + OVERVIEW_COLS;
-static constexpr uint32_t MIX_OFFSET = FILTER_OFFSET + 2;
-static_assert(MIX_OFFSET + 2 <= WAV_DATA_OFFSET - 8, "overview, filter and mix must fit in the header");
-static uint8_t needsOverview = 0;                // bit t: header predates overviews
+static constexpr uint32_t INFO_OFFSET = 44, SAMPLE_VERSION = 1;
+static constexpr uint32_t SAMPLE_OVERVIEW_OFFSET = INFO_OFFSET + sizeof(SampleInfo);
+static_assert(SAMPLE_OVERVIEW_OFFSET + OVERVIEW_COLS <= WAV_DATA_OFFSET - 8, "the overview must fit in the header");
+
+static uint8_t sampleBits[(MAX_SAMPLES + 8) / 8];   // bit n: sample n holds a recording
+static uint32_t sampleTotal = 0;
+static uint32_t nextSample = 1;                  // number for the next new file
+static uint16_t pool[POOL_SIZE];                 // empty sample files, lowest number first
+static int poolCount = 0;
+static uint16_t untrimmed[64];                   // finished samples still at full size
+static int untrimmedCount = 0;
+
+static void noteSample(uint32_t n) {
+  if (n < 1 || n > MAX_SAMPLES || (sampleBits[n / 8] & (1 << (n % 8)))) return;
+  sampleBits[n / 8] |= 1 << (n % 8);
+  sampleTotal++;
+}
+uint32_t sampleCount() { return sampleTotal; }
+bool sampleExists(uint32_t n) { return n >= 1 && n <= MAX_SAMPLES && (sampleBits[n / 8] & (1 << (n % 8))); }
+
+static void put16(uint8_t *p, uint16_t v) { p[0] = v; p[1] = v >> 8; }
+static void put32(uint8_t *p, uint32_t v) { put16(p, v); put16(p + 2, v >> 16); }
+
+static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t loopBars, const uint8_t *overview) {
+  uint8_t h[WAV_DATA_OFFSET] = {};
+  memcpy(h, "RIFF", 4);       put32(h + 4, WAV_DATA_OFFSET - 8 + frames * 4);
+  memcpy(h + 8, "WAVE", 4);
+  memcpy(h + 12, "fmt ", 4);  put32(h + 16, 16);
+  put16(h + 20, 1);           put16(h + 22, 2);           // PCM, stereo
+  put32(h + 24, 44100);       put32(h + 28, 44100 * 4);
+  put16(h + 32, 4);           put16(h + 34, 16);
+  memcpy(h + 36, "JUNK", 4);  put32(h + 40, WAV_DATA_OFFSET - 44 - 8);
+  SampleInfo info = {{'M', '8', 'S', 'M'}, SAMPLE_VERSION, frames, spb, loopBars};
+  memcpy(h + INFO_OFFSET, &info, sizeof info);
+  if (overview) memcpy(h + SAMPLE_OVERVIEW_OFFSET, overview, OVERVIEW_COLS);
+  memcpy(h + WAV_DATA_OFFSET - 8, "data", 4);
+  put32(h + WAV_DATA_OFFSET - 4, frames * 4);
+  debugStage = "SD write (sample header)";
+  bool ok = f.seekSet(0) && f.write(h, sizeof h) == (int)sizeof h;
+  // Also pushes out the end of a recording still held in SdFat's sector cache,
+  // so it survives power-off (the file's size doesn't change: no FS update).
+  return f.sync() && ok;
+}
+
+static bool readSampleHeader(FsFile &f, SampleInfo &info, uint8_t *overview) {
+  uint8_t h[WAV_DATA_OFFSET];
+  if (!f.seekSet(0) || f.read(h, sizeof h) != (int)sizeof h) return false;
+  memcpy(&info, h + INFO_OFFSET, sizeof info);
+  if (memcmp(h, "RIFF", 4) || memcmp(info.magic, "M8SM", 4) || info.version < 1) return false;
+  if (overview) memcpy(overview, h + SAMPLE_OVERVIEW_OFFSET, OVERVIEW_COLS);
+  return true;
+}
+
+// A sample that can play: a recording of a sane length and tempo.
+static bool playable(const SampleInfo &info) {
+  return info.frames && info.frames <= MAX_REC_FRAMES && info.spb && info.loopBars && info.loopBars <= MAX_BARS;
+}
+
+// A new empty sample file at full size, for the pool (changes the file system).
+static bool createPoolFile() {
+  if (poolCount >= POOL_SIZE || nextSample > MAX_SAMPLES) return false;
+  char path[40];
+  samplePath(nextSample, path, sizeof path);
+  if (transport.running) Serial.printf("no recording space left: creating %s while playing\n", path);
+  debugStage = "SD create (sample file)";
+  FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
+  if (!f) return false;
+  f.preAllocate(SAMPLE_FILE_BYTES);
+  uint8_t zero = 0;                              // give the file its full size
+  bool ok = f.seekSet(SAMPLE_FILE_BYTES - 1) && f.write(&zero, 1) == 1;
+  ok = writeSampleHeader(f, 0, 0, 0, nullptr) && ok;
+  f.close();
+  if (!ok) {                                     // probably no space: don't keep half a file
+    SD.sdfs.remove(path);
+    return false;
+  }
+  pool[poolCount++] = nextSample++;
+  return true;
+}
+
+// Cuts a finished sample down to its recording (changes the file system).
+static void trimSample(uint32_t n) {
+  char path[40];
+  samplePath(n, path, sizeof path);
+  FsFile f = SD.sdfs.open(path, O_RDWR);
+  SampleInfo info;
+  if (f && readSampleHeader(f, info, nullptr) && playable(info)) {
+    debugStage = "SD trim (sample file)";
+    f.truncate(WAV_DATA_OFFSET + (uint64_t)info.frames * 4);
+  }
+}
+
+// ---- Tracks and their unit files
+struct UnitInfo {
+  char magic[4];                                 // "M8TU"
+  uint32_t version, sample;                      // sample 0: empty track
+  uint32_t rangeStart, rangeLen, rangePhase;     // beats; position in the range at transport beat 0, in quarters
+  uint32_t muted;
+  int8_t filterLo, filterHi, volume, balance;
+};
+static constexpr uint32_t UNIT_VERSION = 1;
+
+static UnitInfo clipboard;                       // sample 0: empty
+
+static UnitInfo unitOf(int t) {
+  const Track &tr = tracks[t];
+  UnitInfo u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, 0, 0, 0, 0, 0, tr.filterLo, tr.filterHi, tr.volume, tr.balance};
+  if (tr.state == TrackState::Empty) return u;
+  u.sample = tr.sample;
+  trackRange(t, u.rangeStart, u.rangeLen);       // a queued range counts
+  u.rangePhase = (uint32_t)posMod(-tr.rangeAnchorQ, 4 * u.rangeLen);
+  u.muted = tr.state == TrackState::Muted;
+  return u;
+}
+
+// Opens sample n for track t and takes on its recording (length, tempo,
+// overview). The track's settings are left to the caller.
+static bool loadSample(int t, uint32_t n) {
+  Track &tr = tracks[t];
+  char path[40];
+  samplePath(n, path, sizeof path);
+  tr.file = SD.sdfs.open(path, O_RDWR);
+  SampleInfo info;
+  if (!tr.file || !readSampleHeader(tr.file, info, tr.overview) || !playable(info)) {
+    tr.file.close();
+    return false;
+  }
+  tr.sample = n;
+  tr.spbNative = info.spb;
+  tr.loopBars = info.loopBars;
+  tr.recordedFrames = info.frames;
+  tr.overviewVersion++;
+  return true;
+}
+
+// Takes on a unit's settings (its sample already loaded).
+static void applyUnit(int t, const UnitInfo &u) {
+  Track &tr = tracks[t];
+  uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
+  uint32_t len = u.rangeLen && u.rangeLen <= loopBeats ? u.rangeLen : loopBeats;
+  while (len & (len - 1)) len &= len - 1;        // a power of two
+  tr.rangePending = false;
+  tr.rangeStartBeat = u.rangeStart < loopBeats ? u.rangeStart : 0;
+  tr.rangeBeats = len;
+  tr.rangeAnchorQ = -(int32_t)(u.rangePhase % (4 * len));
+  setTrackFilter(t, u.filterLo, u.filterHi);
+  setTrackMix(t, u.volume, u.balance);
+  tr.state = u.muted ? TrackState::Muted : TrackState::Playing;
+}
+
+static bool writeUnit(int t) {
+  UnitInfo u = unitOf(t);
+  uint8_t h[WAV_DATA_OFFSET] = {};
+  memcpy(h, &u, sizeof u);
+  debugStage = "SD write (track unit)";
+  Track &tr = tracks[t];
+  bool ok = tr.unitFile.seekSet(0) && tr.unitFile.write(h, sizeof h) == (int)sizeof h;
+  return tr.unitFile.sync() && ok;
+}
+
+static void readUnit(int t) {
+  Track &tr = tracks[t];
+  tr.state = TrackState::Empty;
+  tr.sample = 0;
+  uint8_t h[WAV_DATA_OFFSET];
+  UnitInfo u;
+  if (!tr.unitFile.seekSet(0) || tr.unitFile.read(h, sizeof h) != (int)sizeof h) return;
+  memcpy(&u, h, sizeof u);
+  if (memcmp(u.magic, "M8TU", 4) || u.version < 1) return;
+  setTrackFilter(t, u.filterLo, u.filterHi);
+  setTrackMix(t, u.volume, u.balance);
+  if (u.sample && loadSample(t, u.sample)) applyUnit(t, u);
+}
+
+void trackChanged(int t) { headerDirty |= 1 << t; }
+
+static bool streamsTopped();
+static void startTrack(int t, int32_t beat0, bool fillNow);
+
+// Writes pending unit files, but only when the streams can afford a pause.
+static void serviceHeaders() {
+  if (!headerDirty) return;
+  if (transport.running && !streamsTopped()) {
+    writePending = true;
+    return;
+  }
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    if (!(headerDirty & (1 << t))) continue;
+    if (recording.track == t && recording.mode != Recording::Idle) continue;  // written at the end
+    headerDirty &= ~(1 << t);
+    writeUnit(t);
+    writePending = false;
+    return;                                      // one per pass
+  }
+}
 
 // ---- Waveform overview
 // Peaks per PEAK_BIN_FRAMES of the recording in progress (max |sample|, both
@@ -102,130 +299,94 @@ bool recordingWaveform(uint8_t *cols, uint32_t &bars, uint32_t &framesPerBar, ui
   return true;
 }
 
-static void put16(uint8_t *p, uint16_t v) { p[0] = v; p[1] = v >> 8; }
-static void put32(uint8_t *p, uint32_t v) { put16(p, v); put16(p + 2, v >> 16); }
+// ---- Older versions: a full-size track1.wav ... per track, its settings in
+// the header (versions 1-9). Recordings become samples, empty files recording
+// space; the settings go to the track's unit file.
+struct LegacyInfo {
+  char magic[4];                                 // "M8LP"
+  uint32_t version, used, spb, loopBars, recordedFrames, rangeStart, rangeLen, muted;
+  uint32_t rangePhase;
+};
 
-static bool writeHeader(int t) {
-  const Track &tr = tracks[t];
-  bool used = tr.state != TrackState::Empty;
-  uint32_t frames = used ? tr.recordedFrames : 0;
-  uint8_t h[WAV_DATA_OFFSET] = {};
-  memcpy(h, "RIFF", 4);       put32(h + 4, WAV_DATA_OFFSET - 8 + frames * 4);
-  memcpy(h + 8, "WAVE", 4);
-  memcpy(h + 12, "fmt ", 4);  put32(h + 16, 16);
-  put16(h + 20, 1);           put16(h + 22, 2);           // PCM, stereo
-  put32(h + 24, 44100);       put32(h + 28, 44100 * 4);
-  put16(h + 32, 4);           put16(h + 34, 16);
-  memcpy(h + 36, "JUNK", 4);  put32(h + 40, WAV_DATA_OFFSET - 44 - 8);
-  TrackInfo info = {{'M', '8', 'L', 'P'}, INFO_VERSION, used, tr.spbNative, tr.loopBars,
-                    frames, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted,
-                    used ? (uint32_t)posMod(-tr.rangeAnchorQ, 4 * tr.rangeBeats) : 0};
-  memcpy(h + INFO_OFFSET, &info, sizeof info);
-  if (used) memcpy(h + OVERVIEW_OFFSET, tr.overview, OVERVIEW_COLS);
-  h[FILTER_OFFSET] = (uint8_t)tr.filterLo;
-  h[FILTER_OFFSET + 1] = (uint8_t)tr.filterHi;
-  h[MIX_OFFSET] = (uint8_t)tr.volume;
-  h[MIX_OFFSET + 1] = (uint8_t)tr.balance;
-  memcpy(h + WAV_DATA_OFFSET - 8, "data", 4);
-  put32(h + WAV_DATA_OFFSET - 4, frames * 4);
-  debugStage = "SD write (track header)";
-  Track &w = tracks[t];
-  bool ok = w.file.seekSet(0) && w.file.write(h, sizeof h) == (int)sizeof h;
-  // Also pushes out the end of a recording still held in SdFat's sector cache,
-  // so it survives power-off (the file's size doesn't change: no FS update).
-  return w.file.sync() && ok;
-}
-
-static void readHeader(int t) {
-  Track &tr = tracks[t];
-  tr.state = TrackState::Empty;
-  uint8_t h[WAV_DATA_OFFSET];
-  if (!tr.file.seekSet(0) || tr.file.read(h, sizeof h) != (int)sizeof h) return;
-  TrackInfo info;
-  memcpy(&info, h + INFO_OFFSET, sizeof info);
-  if (memcmp(h, "RIFF", 4) || memcmp(info.magic, "M8LP", 4) || info.version < 1 || info.version > 9) return;
-  if (info.version == 1) { info.rangeStart *= BEATS_PER_BAR; info.rangeLen *= BEATS_PER_BAR; }
-  if (info.version < 3) info.rangePhase = 0;
-  if (info.version < 4) info.rangePhase *= 4;
-  uint32_t loopBeats = info.loopBars * BEATS_PER_BAR;
-  if (!info.used || !info.spb || !info.loopBars || !info.rangeLen ||
-      info.rangeStart >= loopBeats || info.rangeLen > loopBeats || info.recordedFrames > MAX_REC_FRAMES)
-    return;
-  while (info.rangeLen & (info.rangeLen - 1)) info.rangeLen &= info.rangeLen - 1;   // power of two
-  tr.spbNative = info.spb;
-  tr.loopBars = info.loopBars;
-  tr.recordedFrames = info.recordedFrames;
-  tr.rangeStartBeat = info.rangeStart;
-  tr.rangeBeats = info.rangeLen;
-  tr.rangeAnchorQ = -(int32_t)(info.rangePhase % (4 * info.rangeLen));
-  tr.state = info.muted ? TrackState::Muted : TrackState::Playing;
-  if (info.version >= 9) setTrackMix(t, (int8_t)h[MIX_OFFSET], (int8_t)h[MIX_OFFSET + 1]);
-  if (info.version >= 8) setTrackFilter(t, (int8_t)h[FILTER_OFFSET], (int8_t)h[FILTER_OFFSET + 1]);
-  else if (info.version == 7) setTrackFilter(t, h[FILTER_OFFSET], h[FILTER_OFFSET] + h[FILTER_OFFSET + 1]);
-  if (info.version >= 6) memcpy(tr.overview, h + OVERVIEW_OFFSET, OVERVIEW_COLS);
-  else needsOverview |= 1 << t;
-  tr.overviewVersion++;
-}
-
-// Older headers have no overview: read the recording once (at boot, before
-// anything plays) and save one.
-static void computeOverviewFromFile(int t) {
-  Track &tr = tracks[t];
-  memset(recPeaks, 0, sizeof recPeaks);
-  for (uint32_t f = 0; f < tr.recordedFrames; f += CHUNK_FRAMES) {
-    uint32_t n = min(CHUNK_FRAMES, tr.recordedFrames - f);
-    if (!tr.file.seekSet(WAV_DATA_OFFSET + (uint64_t)f * 4) || tr.file.read(chunk, n * 4) != (int)(n * 4)) break;
-    addPeaks(chunk, n, f, recPeaks);
-  }
-  buildOverview(tr, recPeaks, tr.recordedFrames);
-  writeHeader(t);
-}
-
-void trackChanged(int t) { headerDirty |= 1 << t; }
-
-static bool streamsTopped();
-
-// Writes pending headers, but only when the streams can afford a pause.
-static void serviceHeaders() {
-  if (!headerDirty) return;
-  if (transport.running && !streamsTopped()) {
-    writePending = true;
-    return;
-  }
-  for (int t = 0; t < NUM_TRACKS; t++) {
-    if (!(headerDirty & (1 << t))) continue;
-    if (recording.track == t && recording.mode != Recording::Idle) continue;  // written at the end
-    headerDirty &= ~(1 << t);
-    writeHeader(t);
-    writePending = false;
-    return;                                      // one per pass
-  }
-}
-
-// ---- Track files: created once, full size, never resized while playing
-static bool prepareTrackFile(int t, void (*progress)(const char *)) {
-  Track &tr = tracks[t];
-  char path[32];
-  trackPath(t, path, sizeof path);
-  tr.file = SD.sdfs.open(path, O_RDWR);
-  if (tr.file && tr.file.fileSize() == TRACK_FILE_BYTES) {
-    readHeader(t);
-    return true;
-  }
-  tr.file.close();
+static void migrateLegacy(int t, void (*progress)(const char *)) {
+  char from[40], to[40];
+  legacyPath(t, from, sizeof from);
+  FsFile f = SD.sdfs.open(from, O_RDWR);
+  if (!f) return;
   char msg[48];
-  snprintf(msg, sizeof msg, "preparing track %d file (once)...", t + 1);
+  snprintf(msg, sizeof msg, "converting track %d to a sample...", t + 1);
   progress(msg);
-  SD.sdfs.remove(path);
-  tr.file = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
-  if (!tr.file) return false;
-  tr.file.preAllocate(TRACK_FILE_BYTES);
-  uint8_t zero = 0;                              // give the file its full size
-  tr.file.seekSet(TRACK_FILE_BYTES - 1);
-  tr.file.write(&zero, 1);
-  tr.file.sync();
-  tr.state = TrackState::Empty;
-  return writeHeader(t);
+  uint8_t h[WAV_DATA_OFFSET];
+  LegacyInfo info = {};
+  bool read = f.seekSet(0) && f.read(h, sizeof h) == (int)sizeof h;
+  if (read) memcpy(&info, h + INFO_OFFSET, sizeof info);
+  bool ok = read && !memcmp(h, "RIFF", 4) && !memcmp(info.magic, "M8LP", 4) && info.version >= 1 && info.version <= 9;
+  if (ok && info.version == 1) { info.rangeStart *= BEATS_PER_BAR; info.rangeLen *= BEATS_PER_BAR; }
+  if (ok && info.version < 3) info.rangePhase = 0;
+  if (ok && info.version < 4) info.rangePhase *= 4;
+  uint32_t loopBeats = info.loopBars * BEATS_PER_BAR;
+  bool used = ok && info.used && info.spb && info.loopBars && info.loopBars <= MAX_BARS && info.rangeLen &&
+              info.rangeStart + info.rangeLen <= loopBeats && info.recordedFrames && info.recordedFrames <= MAX_REC_FRAMES;
+  if (!used) {                                   // empty: keep it as recording space if it's full size
+    bool space = f.fileSize() == SAMPLE_FILE_BYTES && poolCount < POOL_SIZE && nextSample <= MAX_SAMPLES;
+    if (space) writeSampleHeader(f, 0, 0, 0, nullptr);
+    f.close();
+    samplePath(nextSample, to, sizeof to);
+    if (space && SD.sdfs.rename(from, to)) pool[poolCount++] = nextSample++;
+    else SD.sdfs.remove(from);
+    return;
+  }
+  // The overview: from the header (version 6 on), else from the audio.
+  Track &tr = tracks[t];
+  tr.loopBars = info.loopBars;
+  tr.spbNative = info.spb;
+  if (info.version >= 6) {
+    memcpy(tr.overview, h + INFO_OFFSET + sizeof(LegacyInfo), OVERVIEW_COLS);
+  } else {
+    memset(recPeaks, 0, sizeof recPeaks);
+    for (uint32_t fr = 0; fr < info.recordedFrames; fr += CHUNK_FRAMES) {
+      uint32_t n = min(CHUNK_FRAMES, info.recordedFrames - fr);
+      if (!f.seekSet(WAV_DATA_OFFSET + (uint64_t)fr * 4) || f.read(chunk, n * 4) != (int)(n * 4)) break;
+      addPeaks(chunk, n, fr, recPeaks);
+    }
+    buildOverview(tr, recPeaks, info.recordedFrames);
+  }
+  UnitInfo u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, nextSample, info.rangeStart, info.rangeLen, info.rangePhase,
+                info.muted, 0, FILTER_MAX, VOLUME_UNITY, 0};
+  const uint32_t FILTER_AT = INFO_OFFSET + sizeof(LegacyInfo) + OVERVIEW_COLS, MIX_AT = FILTER_AT + 2;
+  if (info.version >= 8) { u.filterLo = (int8_t)h[FILTER_AT]; u.filterHi = (int8_t)h[FILTER_AT + 1]; }
+  else if (info.version == 7) { u.filterLo = h[FILTER_AT]; u.filterHi = h[FILTER_AT] + h[FILTER_AT + 1]; }
+  if (info.version >= 9) { u.volume = (int8_t)h[MIX_AT]; u.balance = (int8_t)h[MIX_AT + 1]; }
+  writeSampleHeader(f, info.recordedFrames, info.spb, info.loopBars, tr.overview);
+  f.truncate(WAV_DATA_OFFSET + (uint64_t)info.recordedFrames * 4);
+  f.close();
+  samplePath(nextSample, to, sizeof to);
+  if (!SD.sdfs.rename(from, to)) return;
+  noteSample(nextSample++);
+  tr.file.close();
+  if (loadSample(t, u.sample)) applyUnit(t, u);
+  writeUnit(t);
+}
+
+// ---- Clipboard
+bool clipboardFull() { return clipboard.sample != 0; }
+
+bool cutTrack(int t) {
+  if (tracks[t].state == TrackState::Empty || (recording.mode != Recording::Idle && recording.track == t)) return false;
+  clipboard = unitOf(t);
+  clearTrack(t);
+  return true;
+}
+
+bool pasteTrack(int t) {
+  Track &tr = tracks[t];
+  if (!clipboard.sample || tr.state != TrackState::Empty || (recording.mode != Recording::Idle && recording.track == t))
+    return false;
+  if (!loadSample(t, clipboard.sample)) return false;
+  applyUnit(t, clipboard);                       // its alignment too: in step with the track it came from
+  trackChanged(t);
+  if (transport.running) startTrack(t, transport.beat + 2, false);
+  return true;
 }
 
 float loadTempo() {
@@ -246,6 +407,37 @@ void saveTempo(float bpm) {
   f.close();
 }
 
+// Finds the samples: which hold recordings (cut down to size if needed),
+// which are recording space, and the next free number.
+static void scanSamples() {
+  memset(sampleBits, 0, sizeof sampleBits);
+  sampleTotal = 0;
+  poolCount = 0;
+  untrimmedCount = 0;
+  FsFile dir = SD.sdfs.open("/looper/samples", O_RDONLY);
+  FsFile f;
+  char name[32];
+  while (dir && f.openNext(&dir, O_RDONLY)) {
+    f.getName(name, sizeof name);
+    unsigned n = 0;
+    bool numbered = !f.isDir() && sscanf(name, "%4u.wav", &n) == 1 && n >= 1 && n <= MAX_SAMPLES;
+    SampleInfo info;
+    bool ok = numbered && readSampleHeader(f, info, nullptr);
+    uint64_t size = f.fileSize();
+    f.close();
+    if (!numbered) continue;
+    if (n >= nextSample) nextSample = n + 1;
+    if (ok && playable(info)) {
+      noteSample(n);
+      if (size > WAV_DATA_OFFSET + (uint64_t)info.frames * 4 && untrimmedCount < 64) untrimmed[untrimmedCount++] = n;
+    } else if (ok && info.frames == 0 && size == SAMPLE_FILE_BYTES && poolCount < POOL_SIZE) {
+      int i = poolCount++;                       // keep the pool sorted
+      while (i > 0 && pool[i - 1] > n) { pool[i] = pool[i - 1]; i--; }
+      pool[i] = n;
+    }
+  }
+}
+
 bool storageBegin(void (*progress)(const char *)) {
   // DMA mode: every read/write is one self-contained transfer done by the SD
   // controller. The default FIFO mode leaves a multi-sector transfer open
@@ -253,22 +445,30 @@ bool storageBegin(void (*progress)(const char *)) {
   // seconds at a time (1 s timeouts, retried) with the audio engine running.
   if (!SD.sdfs.begin(SdioConfig(DMA_SDIO))) return false;
   SD.sdfs.mkdir("/looper");
+  SD.sdfs.mkdir("/looper/samples");
+  scanSamples();
+  while (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);
   bool ok = true;
   for (int t = 0; t < NUM_TRACKS; t++) {
-    char path[32];
+    char path[40];
     snprintf(path, sizeof path, "/looper/track%d.txt", t + 1);
-    SD.sdfs.remove(path);                        // settings files of the previous version
-    ok &= prepareTrackFile(t, progress);
+    SD.sdfs.remove(path);                        // settings files of an early version
+    Track &tr = tracks[t];
+    unitPath(t, path, sizeof path);
+    tr.unitFile = SD.sdfs.open(path, O_RDWR);
+    if (!tr.unitFile) tr.unitFile = SD.sdfs.open(path, O_RDWR | O_CREAT);
+    ok &= (bool)tr.unitFile;
+    tr.file.close();
+    readUnit(t);
+    migrateLegacy(t, progress);                  // older version: its track file becomes a sample
   }
-  for (int t = 0; t < NUM_TRACKS; t++) {
-    if (!(needsOverview & (1 << t)) || tracks[t].state == TrackState::Empty) continue;
-    char msg[48];
-    snprintf(msg, sizeof msg, "drawing track %d waveform (once)...", t + 1);
+  while (poolCount < POOL_SIZE) {
+    char msg[64];
+    snprintf(msg, sizeof msg, "preparing recording space (%d of %d, once)...", poolCount + 1, POOL_SIZE);
     progress(msg);
-    computeOverviewFromFile(t);
+    if (!createPoolFile()) break;
   }
-  needsOverview = 0;
-  return ok;
+  return ok && poolCount > 0;
 }
 
 // Slow or failed SD transfers go to Serial with the card's error code. Writes
@@ -296,7 +496,7 @@ static void recoverSd() {
   debugStage = "SD recovery";
   Serial.println("SD card stopped responding: re-initialising it");
   // Drop the handles without closing them: closing would talk to the card.
-  for (auto &tr : tracks) tr.file = FsFile();
+  for (auto &tr : tracks) { tr.file = FsFile(); tr.unitFile = FsFile(); }
   if (!SD.sdfs.begin(SdioConfig(DMA_SDIO))) {
     Serial.println("SD re-init failed, retrying");
     lastTryFailed = true;
@@ -304,10 +504,14 @@ static void recoverSd() {
     return;
   }
   lastTryFailed = false;
-  char path[32];
+  char path[40];
   for (int t = 0; t < NUM_TRACKS; t++) {
-    trackPath(t, path, sizeof path);
-    tracks[t].file = SD.sdfs.open(path, O_RDWR);
+    Track &tr = tracks[t];
+    unitPath(t, path, sizeof path);
+    tr.unitFile = SD.sdfs.open(path, O_RDWR);
+    if (!tr.sample) continue;
+    samplePath(tr.sample, path, sizeof path);
+    tr.file = SD.sdfs.open(path, O_RDWR);
   }
   sdFailed = false;
   Serial.println("SD card back");
@@ -518,9 +722,14 @@ static void finishRecording() {
       addPeaks(chunk, n, f0, recPeaks);
   }
   buildOverview(tr, recPeaks, tr.recordedFrames);
+  // The sample's header: its length, tempo and overview. One 512-byte write,
+  // like a unit file's (the file is cut down to size once stopped).
+  writeSampleHeader(tr.file, tr.recordedFrames, tr.spbNative, tr.loopBars, tr.overview);
+  noteSample(tr.sample);
+  if (untrimmedCount < 64) untrimmed[untrimmedCount++] = tr.sample;
   recording.mode = Recording::Idle;
   recording.track = -1;
-  trackChanged(t);                               // header saved when the buffers allow
+  trackChanged(t);                               // unit saved when the buffers allow
   if (transport.running && !tr.live && !tr.armed) startTrack(t, transport.beat + 2, false);
 }
 
@@ -581,10 +790,35 @@ static void serviceRecorder() {
   writePending = false;
 }
 
+// A recording goes into the lowest-numbered empty sample file (made now if
+// none is ready).
+static bool takeRecordingSample(int t) {
+  if (!poolCount && !createPoolFile()) return false;
+  char path[40];
+  samplePath(pool[0], path, sizeof path);
+  Track &tr = tracks[t];
+  tr.file = SD.sdfs.open(path, O_RDWR);
+  if (!tr.file) return false;
+  tr.sample = pool[0];
+  memmove(pool, pool + 1, --poolCount * sizeof pool[0]);
+  return true;
+}
+
+// A recording cancelled before it started: its file goes back to the pool.
+static void returnRecordingSample(int t) {
+  Track &tr = tracks[t];
+  tr.file.close();
+  if (tr.sample && poolCount < POOL_SIZE) {
+    memmove(pool + 1, pool, poolCount++ * sizeof pool[0]);
+    pool[0] = tr.sample;
+  }
+  tr.sample = 0;
+}
+
 bool recordPress(int t) {
   switch (recording.mode) {
     case Recording::Idle: {
-      if (tracks[t].state != TrackState::Empty || !tracks[t].file) return false;
+      if (tracks[t].state != TrackState::Empty || !takeRecordingSample(t)) return false;
       recording.track = t;
       recording.written = 0;
       recording.overruns = 0;
@@ -610,6 +844,7 @@ bool recordPress(int t) {
     }
     case Recording::WaitBar:                     // cancel before it started
       recording.mode = Recording::Idle;
+      returnRecordingSample(recording.track);
       recording.track = -1;
       return true;
     case Recording::Running:
@@ -626,6 +861,8 @@ void clearTrack(int t) {
   tr.live = false;
   tr.armed = false;
   tr.state = TrackState::Empty;
+  tr.file.close();                               // its sample stays on the card
+  tr.sample = 0;
   setTrackFilter(t, 0, FILTER_MAX);                // flat again
   setTrackMix(t, VOLUME_UNITY, 0);
   memset(tr.overview, 0, sizeof tr.overview);
@@ -720,12 +957,21 @@ void flushHeaders() {
   while (headerDirty) {
     int t = __builtin_ctz(headerDirty);
     headerDirty &= ~(1 << t);
-    writeHeader(t);
+    writeUnit(t);
   }
+}
+
+// While stopped (and not recording): cut finished samples down to size, then
+// top the pool of recording space up. One file per call.
+static void serviceFiles() {
+  if (transport.running || recording.mode != Recording::Idle || sdFailed) return;
+  if (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);
+  else if (poolCount < POOL_SIZE) createPoolFile();
 }
 
 void serviceStorage() {
   if (sdFailed) recoverSd();
+  serviceFiles();
   serviceRecorder();
   for (int t = 0; t < NUM_TRACKS; t++)
     if (tracks[t].needsRestart && transport.running) startTrack(t, transport.beat + 2, false);

@@ -150,7 +150,10 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
   if (pressed & m8::BTN_EDIT && !onStatus) {
     Track &tr = tracks[selected];
     if (shift) {
-      clearTrack(selected);
+      // SHIFT+A: cut the clip to the clipboard, or paste it onto an empty
+      // track (nothing while recording).
+      if (hasClip(selected)) cutTrack(selected);
+      else if (!recordingOn(selected)) pasteTrack(selected);
     } else if (tr.state == TrackState::Empty || recordingOn(selected)) {
       recordPress(selected);
     } else {

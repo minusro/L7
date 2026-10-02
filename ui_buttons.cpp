@@ -10,11 +10,12 @@
 // The status row's button (always highlighted) shows what A does now on the
 // selected row: record (red) on an empty track; finish recording (play);
 // cancel a recording still waiting for its bar (X); mute (stop) or unmute
-// (play); with SHIFT held, delete the clip (X). On the status row itself:
+// (play); with SHIFT held, cut the clip (scissors) or, on an empty track,
+// paste (a clipboard; very dim while the clipboard is empty). On the status row itself:
 // tap tempo ("TAP"); with SHIFT, start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, dimmed.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -32,7 +33,7 @@ static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
   if (selected == STATUS_ROW) return shift ? ICON_PLAY : ICON_TAP;   // restart / tap tempo
   const Track &tr = tracks[selected];
-  if (shift) return hasClip(selected) ? ICON_DELETE : ICON_NONE;
+  if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) ? ICON_NONE : ICON_PASTE;
   if (recordingOn(selected)) {
     switch (recording.mode) {
       case Recording::WaitBar: return ICON_DELETE;   // cancels it
@@ -72,6 +73,8 @@ static int buttonIcon(int i) {
 static uint16_t iconColor(int i, int icon) {
   uint16_t c = i == STATUS_ROW ? (icon == ICON_RECORD ? ICON_RECORD_COLOR : ICON_SELECTED)   // record: red
              : i == selected || recordingOn(i) ? ICON_SELECTED : ICON_IDLE;
+  if (i == STATUS_ROW && icon == ICON_PASTE && !clipboardFull())
+    c = blend565(c, cellBackground(i, -1), ICON_UNAVAILABLE_WEIGHT);   // nothing to paste
   if (i == STATUS_ROW && heldAction >= 0) c = blend565(c, cellBackground(i, -1), ICON_PRESSED_WEIGHT);   // A held
   return c;
 }
@@ -106,6 +109,27 @@ static bool onIcon(int icon, float dx, float dy) {
     case ICON_PAUSE: {                             // two bars
       float ax = fabsf(dx);
       return fabsf(dy) <= h && ax >= 0.25f * h && ax <= 0.8f * h;
+    }
+    case ICON_CUT: {                               // scissors: two finger rings left, blades crossing to the right
+      for (float sy : {-1.0f, 1.0f}) {
+        float rx = dx + 0.55f * h, ry = dy - sy * 0.55f * h;
+        if (fabsf(sqrtf(rx * rx + ry * ry) - 0.3f * h) <= 0.5f) return true;
+        // Blade from the ring across the middle to the far side's tip.
+        float ax = -0.3f * h, ay = sy * 0.4f * h, bx = h, by = -sy * 0.6f * h;
+        float ex = bx - ax, ey = by - ay;
+        float u = constrain(((dx - ax) * ex + (dy - ay) * ey) / (ex * ex + ey * ey), 0.0f, 1.0f);
+        float qx = dx - (ax + u * ex), qy = dy - (ay + u * ey);
+        if (qx * qx + qy * qy <= 0.36f) return true;
+      }
+      return false;
+    }
+    case ICON_PASTE: {                             // clipboard: an outlined board, a clip on top, two lines
+      float ax = fabsf(dx);
+      if (ax <= 0.35f * h && dy >= -h && dy <= -0.55f * h) return true;   // the clip
+      bool inBoard = ax <= 0.7f * h && dy >= -0.75f * h && dy <= h;
+      bool inside = ax <= 0.7f * h - 1 && dy >= -0.75f * h + 1 && dy <= h - 1;
+      if (inBoard && !inside) return true;
+      return ax <= 0.35f * h && (fabsf(dy - 0.05f * h) <= 0.45f || fabsf(dy - 0.5f * h) <= 0.45f);
     }
     case ICON_DELETE: {                            // X: two diagonal strokes
       const float arm = DELETE_HALF, stroke = DELETE_STROKE / 2;

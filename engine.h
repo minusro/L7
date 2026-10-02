@@ -76,7 +76,9 @@ struct Track {
   volatile uint32_t underruns = 0;
 
   // Producer side (loop() only)
-  FsFile file;
+  uint16_t sample = 0;             // the sample file it plays (or records into); 0: none
+  FsFile file;                     // that file
+  FsFile unitFile;                 // where the track's settings are saved
   uint32_t fileFrame = 0;          // loop frame that stream frame `head` comes from
 
   // Queued loop range (loop() only): the stream switches to it at stream

@@ -37,6 +37,7 @@ constexpr uint16_t PLAYHEAD_EDGE = 0x0000;   // black: the line on its left
 constexpr uint16_t ICON_SELECTED = 0xFFFF;   // white: icons on the selected row
 constexpr uint16_t ICON_RECORD_COLOR = 0xF800;   // red: record, on the status row (A records)
 constexpr uint16_t ICON_IDLE = 0x630C;           // grey ~99: track state icons on unselected rows
+constexpr uint8_t ICON_UNAVAILABLE_WEIGHT = 48;  // an action with nothing to act on (paste, clipboard empty): ~19%
 constexpr uint8_t ICON_PRESSED_WEIGHT = 96;      // the status row's icon while A is held: dimmed to ~38%
 
 // ---- Filter curve

@@ -6,8 +6,8 @@
 
 namespace looper {
 
-// Mount SD, load saved tracks; creates the full-size track files the first
-// time (progress messages go to `progress`). false = no card / no space.
+// Mount SD, load saved tracks; prepares recording space the first time
+// (progress messages go to `progress`). false = no card / no space.
 bool storageBegin(void (*progress)(const char *));
 void serviceStorage();               // call as often as possible from loop()
 
@@ -18,7 +18,16 @@ void transportRestart();             // from bar 1 again, running or not
 // Record button for track t: start (or arm until the next bar), then stop.
 // Returns false if the track already holds a loop.
 bool recordPress(int t);
-void clearTrack(int t);
+void clearTrack(int t);               // its sample stays on the card
+// Clipboard: a track's sample and settings. cutTrack copies a track there and
+// clears it; pasteTrack puts it on an empty track (it stays on the clipboard).
+bool cutTrack(int t);
+bool pasteTrack(int t);
+bool clipboardFull();
+// Samples on the card holding recordings (0001-9999), including ones no
+// track plays.
+uint32_t sampleCount();
+bool sampleExists(uint32_t n);
 // Loop range in beats: starts on any beat of the loop; the length must be a
 // power of two (1 beat = 1/4 bar up to the whole loop). It may run past the
 // loop's end and carry on from its start. While playing, the change is queued and takes over at

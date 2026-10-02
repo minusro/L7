@@ -44,8 +44,8 @@ no dropouts or overruns
 
 - switch tempo and clock labels, add play icon between
 - 80s lcd ui
-- cut / paste clips logic
-	- decide whether it's Shift+A or B+A
+- cut / paste clips logic V
+	- decide whether it's Shift+A or B+A - Shift+A for now V
 
 - [[ Clip Switching ]]
 - [[ Scene Logic ]]
