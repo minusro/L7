@@ -42,7 +42,7 @@ no dropouts or overruns
 - 80s lcd ui
 
 - switch tempo and clock labels, add play icon between
-- use the status row action button to tap tempo
+- use the status row action button to tap tempo V
 
 - cut / paste clips logic
 	- decide whether it's Shift+A or B+A

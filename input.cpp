@@ -21,6 +21,27 @@ static void resetCell() {
   }
 }
 
+// Tap tempo (A on the status row): the tempo follows the average of the last
+// TAP_AVERAGE intervals from the second tap on. Taps further apart than
+// TAP_TIMEOUT_MS start a new count. Every 4th tap after the first (the 5th,
+// 9th, 13th ...) lands on a bar line: the transport starts there from 1.1.1
+// (or restarts, if it's running).
+static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // a little over a beat at the slowest tempo (30 BPM)
+static constexpr int TAP_AVERAGE = 4;
+
+static void tapTempo() {
+  static uint32_t times[TAP_AVERAGE + 1];           // the latest taps, oldest first
+  static int count = 0;                             // taps in this run
+  uint32_t now = millis();
+  if (count > 0 && now - times[min(count, TAP_AVERAGE + 1) - 1] > TAP_TIMEOUT_MS) count = 0;
+  if (count >= TAP_AVERAGE + 1) memmove(times, times + 1, TAP_AVERAGE * sizeof times[0]);
+  times[min(count, TAP_AVERAGE)] = now;
+  count++;
+  int intervals = min(count, TAP_AVERAGE + 1) - 1;
+  if (intervals > 0 && now > times[0]) setTempo(60000.0f * intervals / (now - times[0]));
+  if (count > 1 && count % 4 == 1) transportRestart();   // 5th, 9th, ...: 1.1.1 now
+}
+
 static void onKeys(uint8_t keys, uint8_t pressed) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   bool onStatus = selected == STATUS_ROW;
@@ -116,12 +137,14 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
     if (pressed & m8::BTN_RIGHT && selectedCell < CELLS - 1) selectedCell++;
   }
 
-  // START (or A on the status row): start from 1.1.1 / stop. With SHIFT:
-  // start from 1.1.1 on every press, running or not.
+  // START: start from 1.1.1 / stop. With SHIFT: start from 1.1.1 on every
+  // press, running or not. A on the status row: tap tempo (with SHIFT: the
+  // same as SHIFT+START).
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
-  bool transportKey = (pressed & m8::BTN_PLAY) || (pressed & m8::BTN_EDIT && onStatus);
+  bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
-  if (transportKey && shift) transportRestart();
+  if ((transportKey || (pressed & m8::BTN_EDIT && onStatus)) && shift) transportRestart();
+  if (pressed & m8::BTN_EDIT && onStatus && !shift) tapTempo();
   if (pressed & m8::BTN_EDIT && !onStatus) {
     Track &tr = tracks[selected];
     if (shift) {

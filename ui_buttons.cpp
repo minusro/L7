@@ -11,10 +11,10 @@
 // selected row: record (red) on an empty track; finish recording (play);
 // cancel a recording still waiting for its bar (X); mute (stop) or unmute
 // (play); with SHIFT held, delete the clip (X). On the status row itself:
-// start (play) or stop the transport; with SHIFT, start from 1.1.1 (play).
+// tap tempo ("TAP"); with SHIFT, start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, dimmed.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -30,7 +30,7 @@ static bool flashOn() {
 // What A does on the selected row (mirrors onKeys()).
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
-  if (selected == STATUS_ROW) return transport.running && !shift ? ICON_STOP : ICON_PLAY;
+  if (selected == STATUS_ROW) return shift ? ICON_PLAY : ICON_TAP;   // restart / tap tempo
   const Track &tr = tracks[selected];
   if (shift) return hasClip(selected) ? ICON_DELETE : ICON_NONE;
   if (recordingOn(selected)) {
@@ -165,7 +165,13 @@ void drawCells(int i) {
     // The button: its background, then the icon (a small area: no visible flash).
     t.fillRect(BUTTON_X, y0, BUTTON_W, h, k.bgButton);
     if (i == DIVIDER_ROW && k.bgButton == BG) t.drawFastHLine(BUTTON_X, dividerY(), BUTTON_W, DIVIDER);
-    if (k.icon != ICON_NONE)
+    if (k.icon == ICON_TAP) {                        // the word, in the status text's font
+      t.setTextSize(1);
+      t.setTextColor(k.iconColor, k.bgButton);
+      t.setCursor(BUTTON_X + (BUTTON_W - 17) / 2, y + (ROW_BAND - 7) / 2);   // 3 glyphs: 17 x 7 px lit
+      t.print("TAP");
+    } else if (k.icon != ICON_NONE) {
       drawIcon(k.icon, BUTTON_X + BUTTON_W / 2, y + ROW_BAND / 2, k.iconColor, k.bgButton);
+    }
   }
 }

@@ -29,8 +29,10 @@
 //                      tempo: LEFT/RIGHT -/+ 0.1 BPM, UP/DOWN +/- 1 BPM
 //   EDIT             empty track: record / stop recording; full track: mute/unmute
 //   SHIFT+EDIT       clear the track
-//   PLAY             start from 1.1.1 / stop (also EDIT on the status row)
+//   PLAY             start from 1.1.1 / stop
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
+//   EDIT (status)    tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
+//                      tap starts (or restarts) from 1.1.1
 //   power (hold)     switch off
 //
 // Build: Teensyduino, board "Teensy 4.0", USB type "Serial", CPU speed 600 MHz.
