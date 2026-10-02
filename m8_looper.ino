@@ -17,6 +17,8 @@
 // Keys:
 //   UP/DOWN          select a row: tracks 1-8, then the status row
 //   LEFT/RIGHT       select a cell (third cell: waveform; on the status row, tempo)
+//   OPT twice        reset the current cell (waveform: whole loop; filter: open;
+//                      volume: unity, balance centred)
 //   OPT + arrows     change the current cell:
 //                      waveform: LEFT/RIGHT move the loop range by a beat,
 //                                UP/DOWN double/halve it (1/4 bar to the whole loop)
@@ -749,11 +751,44 @@ static void drawTrack(int i) {
 
 // ---- Keys
 static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 100;   // held arrows
+static constexpr uint32_t DOUBLE_TAP_MS = 200;      // B twice: reset the current cell
+
+// The selected track's current cell back to its defaults: the whole loop as
+// the range, the filter open, volume at unity and balance centred.
+static void resetCell() {
+  if (selected == STATUS_ROW || tracks[selected].state == TrackState::Empty) return;
+  const Track &tr = tracks[selected];
+  if (selectedCell == WAVE_CELL) {
+    setRange(selected, 0, tr.loopBars * BEATS_PER_BAR);
+  } else if (selectedCell == FILTER_CELL) {
+    setTrackFilter(selected, 0, FILTER_MAX);
+    trackChanged(selected);
+  } else if (selectedCell == MIX_CELL) {
+    setTrackMix(selected, VOLUME_UNITY, 0);
+    trackChanged(selected);
+  }
+}
 
 static void onKeys(uint8_t keys, uint8_t pressed) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   bool onStatus = selected == STATUS_ROW;
   int prevSel = selected;
+
+  // OPT (B) tapped twice within DOUBLE_TAP_MS (with no arrows in between):
+  // the current cell's parameters back to their defaults.
+  static uint32_t lastOptTap = 0;
+  static bool optTapArmed = false;
+  const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
+  if (pressed & arrows) optTapArmed = false;         // B was used as a modifier
+  if (pressed & m8::BTN_OPT) {
+    if (optTapArmed && millis() - lastOptTap < DOUBLE_TAP_MS) {
+      resetCell();
+      optTapArmed = false;
+    } else {
+      optTapArmed = true;
+      lastOptTap = millis();
+    }
+  }
 
   if (opt) {
     // OPT (B) + arrows: the current cell's parameters (none on empty tracks).

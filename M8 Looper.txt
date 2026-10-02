@@ -27,7 +27,7 @@ no dropouts or overruns
 - tempo label flicker V
 - antialias filter curves V
 - white and black playheads for better visibility V
-- double tap B to reset values
+- double tap B to reset values V
 - 80s lcd ui
 - move back channel content into front channel content when balancing towards one
 	- maybe first investigate how other devices balance stereo signal channels
