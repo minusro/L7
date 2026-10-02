@@ -6,8 +6,8 @@
 // (dim grey across the whole screen for the selected track, dark red while
 // recording), the waveform (80% white inside the loop range, grey outside; muted
 // clips dimmed by MUTED_WEIGHT) with faint darker bar lines at the clip's bar
-// boundaries, and the playhead: a white line with a black one either side
-// on unmuted clips; on muted ones the same, dimmed, only on the selected track. Full redraws only happen when
+// boundaries, and the playhead: a white line with a black one on its left
+// on unmuted clips; on muted ones a single line like the range lines, only on the selected track. Full redraws only happen when
 // something changes; the playhead moves by redrawing just its columns.
 // While a track records it shows the recording growing (live view) with a
 // red record head, over the length it would become.
@@ -21,7 +21,8 @@ struct WaveView {
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
   int markCol = -1, beginCol = -1, endCol = -1;    // start position flag, range's first and last columns; -1: none
   int playCol = -1;                                // playhead / record head; -1: none
-  uint16_t headColor = 0;                          // playhead: playCol in this colour, PLAYHEAD_EDGE either side
+  uint16_t headColor = 0;                          // playhead: playCol in this colour,
+  bool headEdge = true;                            // and PLAYHEAD_EDGE on its left
   // live view
   uint32_t liveBars = 0;
   int liveFilled = 0;                              // columns with recorded audio
@@ -91,7 +92,7 @@ static void drawColumn(int i, int c) {
   drawColumnUnder(i, c);
   drawMark(i, c);
   const WaveView &v = views[i];
-  if (v.visible && v.playCol >= 0 && abs(c - v.playCol) <= 1)   // on top, the row's full height
+  if (v.visible && v.playCol >= 0 && (c == v.playCol || (v.headEdge && c == v.playCol - 1)))   // on top, the row's full height
     board.tft().drawFastVLine(WAVE_X + c, rowTop(i), ROW_BAND, c == v.playCol ? v.headColor : PLAYHEAD_EDGE);
 }
 
@@ -137,15 +138,16 @@ void drawWave(int i, bool recordingHere) {
 
 // Moves a view's playhead (or record head) to col with the given look,
 // redrawing only the columns it leaves and covers.
-static void movePlayhead(int i, int col, uint16_t color) {
+static void movePlayhead(int i, int col, uint16_t color, bool edge = true) {
   WaveView &v = views[i];
-  if (col == v.playCol && color == v.headColor) return;
+  if (col == v.playCol && color == v.headColor && edge == v.headEdge) return;
   int old = v.playCol;
   v.playCol = col;
   v.headColor = color;
+  v.headEdge = edge;
   // The columns it leaves (those it still covers draw as the new playhead), then the new ones.
-  if (old >= 0) for (int c = old - 1; c <= old + 1; c++) if (col < 0 || abs(c - col) > 1) drawColumn(i, c);
-  if (col >= 0) for (int c = col - 1; c <= col + 1; c++) drawColumn(i, c);
+  if (old >= 0) for (int c = old - 1; c <= old; c++) if (col < 0 || c < col - 1 || c > col) drawColumn(i, c);
+  if (col >= 0) for (int c = col - 1; c <= col; c++) drawColumn(i, c);
 }
 
 // Live view of the recording: new columns as audio is written, a full
@@ -167,6 +169,7 @@ static void updateLive(int i) {
     memcpy(v.liveData, cols, OVERVIEW_COLS);
     v.playCol = head;
     v.headColor = REC_HEAD;
+    v.headEdge = true;
     for (int c = 0; c < WAVE_W; c++) drawColumn(i, c);
     return;
   }
@@ -191,7 +194,7 @@ void updatePlayheads() {
     const Track &tr = tracks[i];
     WaveView &v = views[i];
     if (v.live) { updateLive(i); continue; }
-    // Unmuted: white. Muted: none, but dimmed on the selected track.
+    // Unmuted: white (black edge). Muted: none, but a line on the selected track.
     bool muted = tr.state == TrackState::Muted;
     int col = -1;
     if (v.visible && running && tr.live && (!muted || i == selected)) {
@@ -200,6 +203,6 @@ void updatePlayheads() {
       double loopBeat = fmod(tr.rangeStartBeat + inRange, (double)(tr.loopBars * BEATS_PER_BAR));
       col = min(WAVE_W - 1, (int)(loopBeat * WAVE_W / (tr.loopBars * BEATS_PER_BAR)));
     }
-    movePlayhead(i, col, muted ? MUTED_HEAD : PLAYHEAD);
+    movePlayhead(i, col, muted ? MUTED_HEAD : PLAYHEAD, !muted);   // muted: a single line
   }
 }

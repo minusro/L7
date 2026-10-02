@@ -32,10 +32,15 @@ no dropouts or overruns
 	- maybe first investigate how other devices balance stereo signal channels
 - navigation key retrigger speed tweaks (maybe a bit quicker without feeling too light?) V
 - refactor main sketch file into several (it's getting big) V
+- remove rightmost black line in the playhead V
+- after recording, the playhead doesn't appear immediately after starting playback
+- revert muted & selected track playhead to single dim line V
 
 - 80s lcd ui
 
-- switch tempo and clock labels, add play icon between, and use the action button to tap tempo
+- switch tempo and clock labels, add play icon between
+- use the status row action button to tap tempo
+
 - cut / paste clips logic
 	- decide whether it's Shift+A or B+A
 - [[ Clip Switching ]]
