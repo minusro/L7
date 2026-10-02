@@ -211,17 +211,17 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       }
     }
   } else if (shift) {
-    // SHIFT+UP/DOWN: newer / older scene; twice quickly: straight to that
-    // end (UP: N+1*, DOWN: the empty scene 0*).
+    // SHIFT+UP/DOWN: older / newer scene; twice quickly: straight to that
+    // end (UP: the empty scene 0*, DOWN: N+1*).
     static uint32_t lastUpTap = 0, lastDownTap = 0;
     if (pressed & m8::BTN_UP) {
       bool twice = !repeat && millis() - lastUpTap < DOUBLE_TAP_MS;
-      sceneChanged |= twice ? sceneGoEnd() : sceneStep(1);
+      sceneChanged |= twice ? sceneGoEmpty() : sceneStep(-1);
       lastUpTap = repeat || twice ? 0 : millis();
     }
     if (pressed & m8::BTN_DOWN) {
       bool twice = !repeat && millis() - lastDownTap < DOUBLE_TAP_MS;
-      sceneChanged |= twice ? sceneGoEmpty() : sceneStep(-1);
+      sceneChanged |= twice ? sceneGoEnd() : sceneStep(1);
       lastDownTap = repeat || twice ? 0 : millis();
     }
     // SHIFT+LEFT/RIGHT on a track: its sample, the previous / next on the card.
