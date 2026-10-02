@@ -4,7 +4,7 @@
 // MIDI clock.
 //
 //   cd tools/looper_sim
-//   c++ -std=c++17 -O1 -Istubs -I../.. ../../engine.cpp ../../storage.cpp looper_sim.cpp -o looper_sim
+//   c++ -std=c++17 -O1 -Istubs -I../.. ../../engine.cpp ../../storage.cpp ../../scenes.cpp looper_sim.cpp -o looper_sim
 //   ./looper_sim
 #include <cmath>
 #include <vector>
@@ -57,7 +57,12 @@ static void realisticSd(size_t bytes, bool write) {
 static void block() {
   audioBlock();
   serviceStorage();
+  serviceScenes();
 }
+
+// The app's tempo, for scenes.
+static float simTempo() { return bpmForSpb(transport.pendingSpb ? transport.pendingSpb : transport.spb); }
+static bool simSetTempo(float b) { transport.pendingSpb = spbForBpm(b); return true; }
 
 #include <map>
 static std::map<std::string, uint32_t> dropStages;   // what loop() was doing when tracks ran dry
@@ -223,7 +228,7 @@ static int fuzz(int seconds, unsigned seed) {
     if (rand() % 300 == 0) {
       sel = rand() % NUM_TRACKS;
       Track &tr = tracks[sel];
-      switch (rand() % 9) {
+      switch (rand() % 13) {
         case 0: case 1: lastAction = "record press"; recordPress(sel); break;
         case 2: lastAction = "clear"; clearTrack(sel); break;
         case 3: lastAction = "mute"; if (tr.state != TrackState::Empty) tr.state = tr.state == TrackState::Playing ? TrackState::Muted : TrackState::Playing; break;
@@ -239,6 +244,10 @@ static int fuzz(int seconds, unsigned seed) {
                 }
                 break;
         case 6: lastAction = "transport"; if (transport.running) transportStop(); else transportStart(); break;
+        case 9: lastAction = "scene"; sceneStep(rand() % 2 ? 1 : -1); break;
+        case 10: lastAction = "scene cut/paste"; if (rand() % 2) sceneCut(); else scenePaste(); break;
+        case 11: lastAction = "scene copy"; if (rand() % 2) sceneDuplicate(); else sceneGoEmpty(); break;
+        case 12: lastAction = "track cut/paste"; if (!cutTrack(sel)) pasteTrack(sel); break;
         default: lastAction = "nothing"; break;
       }
     }
@@ -288,6 +297,8 @@ int main(int argc, char **argv) {
   }
   printf("first boot (with track 5 in the older one-file-per-track format)\n");
   storageBegin([](const char *m) { if (*m) printf("  (%s)\n", m); });
+  scenesBegin(simTempo, simSetTempo);
+  check(sceneCount() == 1 && sceneCurrent() == 1, "scenes start with what's on the tracks as scene 1");
   {
     const Track &tr = tracks[4];
     char m[160];
@@ -491,6 +502,46 @@ int main(int argc, char **argv) {
     engine.monitor = true;
   }
 
+  printf("scenes while playing\n");
+  {
+    for (int i = 0; i < 50; i++) block();        // changes so far saved in scene 1
+    auto empty = [] { for (auto &x : tracks) if (x.state != TrackState::Empty) return false; return true; };
+    uint32_t s1 = tracks[0].sample, s2 = tracks[1].sample;
+    check(sceneCurrent() == 1 && sceneCount() == 1, "on scene 1 of 1");
+    check(sceneStep(-1) && sceneCurrent() == 0 && empty(), "SHIFT+DOWN: the empty scene 0*, tracks empty");
+    check(!sceneStep(-1), "no wrapping past 0*");
+    check(sceneStep(1) && tracks[0].sample == s1 && tracks[1].sample == s2, "SHIFT+UP: scene 1 back");
+    check(sceneStep(1) && sceneCurrent() == 2 && sceneCount() == 1 && tracks[0].sample == s1,
+          "SHIFT+UP past the last: 2*, a copy of scene 1, not stored");
+    check(!sceneStep(1), "nothing after 2*");
+    tracks[1].state = TrackState::Muted;           // a change on 2*
+    trackChanged(1);
+    block();
+    check(sceneCount() == 2 && sceneCurrent() == 2, "changing 2* makes it scene 2");
+    check(sceneStep(-1) && tracks[1].state == TrackState::Playing, "scene 1 keeps track 2 playing");
+    check(sceneStep(1) && tracks[1].state == TrackState::Muted, "scene 2 has it muted");
+    check(sceneCut() && sceneClipboardFull() && sceneCount() == 1 && sceneCurrent() == 1 &&
+          tracks[1].state == TrackState::Playing, "SHIFT+B+A on scene 2: cut, back on scene 1");
+    check(scenePaste() && sceneCount() == 2 && sceneCurrent() == 2 && tracks[1].state == TrackState::Muted,
+          "B+A: pasted after it as scene 2");
+    check(sceneDuplicate() && sceneCount() == 3 && sceneCurrent() == 3 && tracks[1].state == TrackState::Muted,
+          "SHIFT+B twice: a copy as scene 3");
+    check(sceneGoEnd() && sceneCurrent() == sceneCount() + 1, "SHIFT+UP twice: straight to N+1*");
+    check(sceneGoEmpty() && sceneCurrent() == 0 && empty(), "SHIFT+DOWN twice: straight to 0*");
+    setTrackMix(7, 20, 0);                         // a change on 0*
+    trackChanged(7);
+    block();
+    check(sceneCurrent() == 1 && sceneCount() == 4 && tracks[7].volume == 20, "changing 0* inserts a new scene 1");
+    check(sceneStep(1) && sceneCurrent() == 2 && tracks[0].sample == s1 && tracks[1].state == TrackState::Playing &&
+          tracks[7].volume == VOLUME_UNITY, "the others moved up: old scene 1 is now 2");
+    runBeats(4);
+    for (auto &x : tracks) { x.gain = 0; x.underruns = 0; }
+    tracks[0].gain = 1;
+    checkSync(0, "track 1 after the scene changes");
+    for (auto &x : tracks) x.gain = 1;
+    engine.monitor = true;
+  }
+
   printf("SD card stops responding while recording track 4 (others playing)\n");
   {
     feedRamp = true;
@@ -566,7 +617,11 @@ int main(int argc, char **argv) {
       tracks[t].state = TrackState::Empty; tracks[t].file = FsFile();
     }
     int before = simFileCreates;
+    int scenes = sceneCount(), scene = sceneCurrent();
+    for (int i = 0; i < 20; i++) serviceScenes();  // anything left saved
     storageBegin([](const char *) {});
+    scenesBegin(simTempo, simSetTempo);
+    check(sceneCount() == scenes && sceneCurrent() == scene, "scenes and the current one restored");
     bool same = true;
     for (int t = 0; t < NUM_TRACKS; t++) {
       const Track &a = saved[t], &b = tracks[t];

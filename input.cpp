@@ -45,20 +45,23 @@ static void tapTempo() {
   }
 }
 
-static void onKeys(uint8_t keys, uint8_t pressed) {
+static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   bool onStatus = selected == STATUS_ROW;
   int prevSel = selected;
+  bool sceneChanged = false;                         // every row to redraw
 
-  // OPT (B) tapped twice within DOUBLE_TAP_MS (with no arrows in between):
-  // the current cell's parameters back to their defaults.
+  // OPT (B) tapped twice within DOUBLE_TAP_MS (with no arrows or A in
+  // between): the current cell's parameters back to their defaults; with
+  // SHIFT, a copy of the scene inserted after it.
   static uint32_t lastOptTap = 0;
   static bool optTapArmed = false;
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
-  if (pressed & arrows) optTapArmed = false;         // B was used as a modifier
+  if (pressed & (arrows | m8::BTN_EDIT)) optTapArmed = false;   // B was used as a modifier
   if (pressed & m8::BTN_OPT) {
     if (optTapArmed && millis() - lastOptTap < DOUBLE_TAP_MS) {
-      resetCell();
+      if (shift) sceneChanged = sceneDuplicate();
+      else resetCell();
       optTapArmed = false;
     } else {
       optTapArmed = true;
@@ -135,12 +138,25 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
         trackChanged(selected);
       }
     }
-  } else if (shift && !onStatus && !recordingOn(selected)) {
+  } else if (shift) {
+    // SHIFT+UP/DOWN: newer / older scene; twice quickly: straight to that
+    // end (UP: N+1*, DOWN: the empty scene 0*).
+    static uint32_t lastUpTap = 0, lastDownTap = 0;
+    if (pressed & m8::BTN_UP) {
+      bool twice = !repeat && millis() - lastUpTap < DOUBLE_TAP_MS;
+      sceneChanged |= twice ? sceneGoEnd() : sceneStep(1);
+      lastUpTap = repeat || twice ? 0 : millis();
+    }
+    if (pressed & m8::BTN_DOWN) {
+      bool twice = !repeat && millis() - lastDownTap < DOUBLE_TAP_MS;
+      sceneChanged |= twice ? sceneGoEmpty() : sceneStep(-1);
+      lastDownTap = repeat || twice ? 0 : millis();
+    }
     // SHIFT+LEFT/RIGHT on a track: its sample, the previous / next on the card.
-    if (pressed & m8::BTN_LEFT) stepSample(selected, -1);
-    if (pressed & m8::BTN_RIGHT) stepSample(selected, 1);
-    if (pressed & m8::BTN_UP && selected > 0) selected--;
-    if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
+    if (!onStatus && !recordingOn(selected)) {
+      if (pressed & m8::BTN_LEFT) stepSample(selected, -1);
+      if (pressed & m8::BTN_RIGHT) stepSample(selected, 1);
+    }
   } else {
     if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
     if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
@@ -151,12 +167,15 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
   // START: start from 1.1.1 / stop. With SHIFT: start from 1.1.1 on every
   // press, running or not. A on the status row: tap tempo (with SHIFT: the
   // same as SHIFT+START).
+  // B+A: paste the scene clipboard after the scene; SHIFT+B+A: cut the scene to it.
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
+  bool edit = (pressed & m8::BTN_EDIT) && !opt;
+  if ((pressed & m8::BTN_EDIT) && opt) sceneChanged = shift ? sceneCut() : scenePaste();
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
-  if ((transportKey || (pressed & m8::BTN_EDIT && onStatus)) && shift) transportRestart();
-  if (pressed & m8::BTN_EDIT && onStatus && !shift) tapTempo();
-  if (pressed & m8::BTN_EDIT && !onStatus) {
+  if ((transportKey || (edit && onStatus)) && shift) transportRestart();
+  if (edit && onStatus && !shift) tapTempo();
+  if (edit && !onStatus) {
     Track &tr = tracks[selected];
     if (shift) {
       // SHIFT+A: cut the clip to the clipboard, or paste it onto an empty
@@ -176,6 +195,8 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
   }
   // Show the result right away rather than on the rows' next redraw: the new
   // selection first, then the old one, so highlight and icon move together.
+  if (sceneChanged)
+    for (int i = 0; i < ROWS; i++) drawTrack(i);
   drawTrack(selected);
   if (prevSel != selected) drawTrack(prevSel);
 }
@@ -213,12 +234,12 @@ void pollKeys() {
     } else if (!(keys & repeatKey)) {
       repeatKey = 0;                                 // released
     }
-    onKeys(keys, pressed);
+    onKeys(keys, pressed, false);
     prev = keys;
   } else if (repeatKey && (int32_t)(millis() - repeatAt) >= 0) {
     debugStage = "key repeat";
     repeatAt = millis() + REPEAT_PERIOD_MS;          // after a slow pass: no burst of catch-up repeats
-    onKeys(prev, repeatKey);
+    onKeys(prev, repeatKey, true);
   }
 }
 

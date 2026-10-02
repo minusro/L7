@@ -3,8 +3,27 @@
 // Everything here runs from loop(), never from an interrupt.
 #pragma once
 #include "engine.h"
+#include "scenes.h"
 
 namespace looper {
+
+// A track's clip and settings: its sample, loop range and alignment, mute,
+// filter, volume and balance. Saved in its unit file; scenes hold one per track.
+struct TrackUnit {
+  char magic[4];                                 // "M8TU"
+  uint32_t version, sample;                      // sample 0: empty track
+  uint32_t rangeStart, rangeLen, rangePhase;     // beats; position in the range at transport beat 0, in quarters
+  uint32_t muted;
+  int8_t filterLo, filterHi, volume, balance;
+};
+TrackUnit unitOf(int t);
+// Puts unit u on track t. A track keeping its clip and range plays on; one
+// with another clip or range rejoins two beats later. false: its sample is
+// gone (the track is left empty) or it's recording.
+bool setTrackUnit(int t, const TrackUnit &u);
+// A write may go to the card now (stopped, or the playback buffers are full);
+// false also asks for the buffers to be topped up first.
+bool storageMayWrite();
 
 // Mount SD, load saved tracks; prepares recording space the first time
 // (progress messages go to `progress`). false = no card / no space.

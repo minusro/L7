@@ -11,7 +11,8 @@
 // selected row: record (red) on an empty track; finish recording (play);
 // cancel a recording still waiting for its bar (X); mute (stop) or unmute
 // (play); with SHIFT held, cut the clip (scissors) or, on an empty track,
-// paste (a clipboard; very dim while the clipboard is empty). On the status row itself:
+// paste (a clipboard; very dim while the clipboard is empty). With B held:
+// paste a scene (a clipboard), or with SHIFT too cut the scene (scissors). On the status row itself:
 // tap tempo ("TAP"); with SHIFT, start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, dimmed.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
@@ -31,6 +32,7 @@ static bool flashOn() {
 // What A does on the selected row (mirrors onKeys()).
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
+  if (board.keys() & m8::BTN_OPT) return shift ? ICON_CUT : ICON_PASTE;   // B+A: the scene
   if (selected == STATUS_ROW) return shift ? ICON_PLAY : ICON_TAP;   // restart / tap tempo
   const Track &tr = tracks[selected];
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) ? ICON_NONE : ICON_PASTE;
@@ -73,7 +75,8 @@ static int buttonIcon(int i) {
 static uint16_t iconColor(int i, int icon) {
   uint16_t c = i == STATUS_ROW ? (icon == ICON_RECORD ? ICON_RECORD_COLOR : ICON_SELECTED)   // record: red
              : i == selected || recordingOn(i) ? ICON_SELECTED : ICON_IDLE;
-  if (i == STATUS_ROW && icon == ICON_PASTE && !clipboardFull())
+  bool scene = board.keys() & m8::BTN_OPT;
+  if (i == STATUS_ROW && icon == ICON_PASTE && !(scene ? sceneClipboardFull() : clipboardFull()))
     c = blend565(c, cellBackground(i, -1), ICON_UNAVAILABLE_WEIGHT);   // nothing to paste
   if (i == STATUS_ROW && heldAction >= 0) c = blend565(c, cellBackground(i, -1), ICON_PRESSED_WEIGHT);   // A held
   return c;

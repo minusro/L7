@@ -46,6 +46,9 @@ static int32_t posMod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? 
 // within each beat).
 static uint32_t quarterFrames(uint32_t q, uint32_t spb) { return (q / 4) * spb + (q % 4) * spb / 4; }
 
+static bool streamsTopped();
+static void startTrack(int t, int32_t beat0, bool fillNow);
+
 // ---- Samples
 // Header: RIFF/WAVE/fmt, then a JUNK chunk padding it to 512 bytes so the
 // audio is sector-aligned, with SampleInfo at offset 44 and the overview after it.
@@ -168,20 +171,14 @@ static void trimSample(uint32_t n) {
 }
 
 // ---- Tracks and their unit files
-struct UnitInfo {
-  char magic[4];                                 // "M8TU"
-  uint32_t version, sample;                      // sample 0: empty track
-  uint32_t rangeStart, rangeLen, rangePhase;     // beats; position in the range at transport beat 0, in quarters
-  uint32_t muted;
-  int8_t filterLo, filterHi, volume, balance;
-};
 static constexpr uint32_t UNIT_VERSION = 1;
 
-static UnitInfo clipboard;                       // sample 0: empty
+static TrackUnit clipboard;                       // sample 0: empty
+static bool applyingUnit = false;                // setTrackUnit() at work: not a change of the scene
 
-static UnitInfo unitOf(int t) {
+TrackUnit unitOf(int t) {
   const Track &tr = tracks[t];
-  UnitInfo u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, 0, 0, 0, 0, 0, tr.filterLo, tr.filterHi, tr.volume, tr.balance};
+  TrackUnit u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, 0, 0, 0, 0, 0, tr.filterLo, tr.filterHi, tr.volume, tr.balance};
   if (tr.state == TrackState::Empty) return u;
   u.sample = tr.sample;
   trackRange(t, u.rangeStart, u.rangeLen);       // a queued range counts
@@ -211,7 +208,7 @@ static bool loadSample(int t, uint32_t n) {
 }
 
 // Takes on a unit's settings (its sample already loaded).
-static void applyUnit(int t, const UnitInfo &u) {
+static void applyUnit(int t, const TrackUnit &u) {
   Track &tr = tracks[t];
   uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
   uint32_t len = u.rangeLen && u.rangeLen <= loopBeats ? u.rangeLen : loopBeats;
@@ -226,7 +223,7 @@ static void applyUnit(int t, const UnitInfo &u) {
 }
 
 static bool writeUnit(int t) {
-  UnitInfo u = unitOf(t);
+  TrackUnit u = unitOf(t);
   uint8_t h[WAV_DATA_OFFSET] = {};
   memcpy(h, &u, sizeof u);
   debugStage = "SD write (track unit)";
@@ -240,7 +237,7 @@ static void readUnit(int t) {
   tr.state = TrackState::Empty;
   tr.sample = 0;
   uint8_t h[WAV_DATA_OFFSET];
-  UnitInfo u;
+  TrackUnit u;
   if (!tr.unitFile.seekSet(0) || tr.unitFile.read(h, sizeof h) != (int)sizeof h) return;
   memcpy(&u, h, sizeof u);
   if (memcmp(u.magic, "M8TU", 4) || u.version < 1) return;
@@ -249,10 +246,54 @@ static void readUnit(int t) {
   if (u.sample && loadSample(t, u.sample)) applyUnit(t, u);
 }
 
-void trackChanged(int t) { headerDirty |= 1 << t; }
+void trackChanged(int t) {
+  headerDirty |= 1 << t;
+  if (!applyingUnit) sceneStateChanged();        // the scene follows (not while it's being loaded)
+}
 
-static bool streamsTopped();
-static void startTrack(int t, int32_t beat0, bool fillNow);
+bool storageMayWrite() {
+  if (!transport.running || streamsTopped()) return true;
+  writePending = true;
+  return false;
+}
+
+bool setTrackUnit(int t, const TrackUnit &u) {
+  Track &tr = tracks[t];
+  if (recording.mode != Recording::Idle && recording.track == t) return false;
+  TrackUnit now = unitOf(t);
+  if (!memcmp(&now, &u, sizeof u)) return true;  // nothing to do
+  applyingUnit = true;
+  bool sameClip = u.sample && now.sample == u.sample && now.rangeStart == u.rangeStart &&
+                  now.rangeLen == u.rangeLen && now.rangePhase == u.rangePhase;
+  bool ok = true;
+  if (sameClip) {                                // keeps playing: just its settings
+    setTrackFilter(t, u.filterLo, u.filterHi);
+    setTrackMix(t, u.volume, u.balance);
+    tr.state = u.muted ? TrackState::Muted : TrackState::Playing;
+    trackChanged(t);
+  } else if (!u.sample) {
+    clearTrack(t);
+    setTrackFilter(t, u.filterLo, u.filterHi);
+    setTrackMix(t, u.volume, u.balance);
+  } else {
+    tr.live = false;
+    tr.armed = false;
+    tr.rangePending = false;
+    if (now.sample != u.sample) {
+      tr.file.close();
+      ok = loadSample(t, u.sample);
+    }
+    if (ok) {
+      applyUnit(t, u);
+      if (transport.running) startTrack(t, transport.beat + 2, false);
+      trackChanged(t);
+    } else {
+      clearTrack(t);                             // its sample is gone
+    }
+  }
+  applyingUnit = false;
+  return ok;
+}
 
 // Writes pending unit files, but only when the streams can afford a pause.
 static void serviceHeaders() {
@@ -335,9 +376,6 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
   legacyPath(t, from, sizeof from);
   FsFile f = SD.sdfs.open(from, O_RDWR);
   if (!f) return;
-  char msg[48];
-  snprintf(msg, sizeof msg, "converting track %d to a sample...", t + 1);
-  progress(msg);
   uint8_t h[WAV_DATA_OFFSET];
   LegacyInfo info = {};
   bool read = f.seekSet(0) && f.read(h, sizeof h) == (int)sizeof h;
@@ -358,6 +396,9 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
     else SD.sdfs.remove(from);
     return;
   }
+  char msg[48];
+  snprintf(msg, sizeof msg, "converting track %d to a sample...", t + 1);
+  progress(msg);
   // The overview: from the header (version 6 on), else from the audio.
   Track &tr = tracks[t];
   tr.loopBars = info.loopBars;
@@ -373,7 +414,7 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
     }
     buildOverview(tr, recPeaks, info.recordedFrames);
   }
-  UnitInfo u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, nextSample, info.rangeStart, info.rangeLen, info.rangePhase,
+  TrackUnit u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, nextSample, info.rangeStart, info.rangeLen, info.rangePhase,
                 info.muted, 0, FILTER_MAX, VOLUME_UNITY, 0};
   const uint32_t FILTER_AT = INFO_OFFSET + sizeof(LegacyInfo) + OVERVIEW_COLS, MIX_AT = FILTER_AT + 2;
   if (info.version >= 8) { u.filterLo = (int8_t)h[FILTER_AT]; u.filterHi = (int8_t)h[FILTER_AT + 1]; }

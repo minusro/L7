@@ -3,7 +3,7 @@
 
 extern "C" const unsigned char glcdfont[];     // ILI9341_t3n's built-in 5x7 font
 
-// Status row text, in its tempo cell: the tempo and the clock (Bar.Beat.Step)
+// Status row text, in its first cell: the tempo and the clock (Bar.Beat.Step)
 // STATUS_INSET px inside the waveforms' left and right edges. The tempo is
 // white while its cell is selected, grey otherwise; the clock white while
 // running, a grey 1.1.1 while stopped. The font's glyphs carry empty columns
@@ -62,4 +62,13 @@ void drawStatus() {
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
   printToRight(WAVE_X + WAVE_W - 1 - STATUS_INSET, text, 10, running ? TEXT_ACTIVE : TEXT_IDLE, bg);
+
+  // The scene, in the next cell: "SCN 3/7"; the empty scene and the copy
+  // after the last (not stored yet) with a star, in grey.
+  int scene = sceneCurrent(), count = sceneCount();
+  bool temporary = scene == 0 || scene > count;
+  snprintf(text, sizeof text, "SCN %d%s/%d", scene, temporary ? "*" : "", count);
+  const Cell &cell = CELL[1];
+  printFromLeft(cell.x + STATUS_INSET, cell.x, text, 12, temporary ? TEXT_IDLE : TEXT_ACTIVE,
+                cellBackground(STATUS_ROW, 1));
 }

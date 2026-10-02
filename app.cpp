@@ -19,10 +19,12 @@ bool setTempo(float b) {
     double speed = (double)tr.spbNative / spb;
     if (speed < MIN_SPEED || speed > MAX_SPEED) return false;
   }
+  if (b == bpm) return true;
   bpm = b;
   transport.pendingSpb = spb;
   tempoChangedMs = millis();
   tempoDirty = true;
+  sceneStateChanged();                             // the current scene follows
   return true;
 }
 

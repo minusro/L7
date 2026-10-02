@@ -31,6 +31,11 @@
 //   SHIFT+LEFT/RIGHT the track's sample: previous / next on the card (empty track:
 //                      newest / oldest); keeps volume, filter, mute; whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
+//   SHIFT+UP/DOWN    newer / older scene (0*: empty; after the last, a copy of it)
+//   SHIFT+UP twice   straight to the copy after the last (N+1*); SHIFT+DOWN twice: to 0*
+//   OPT+EDIT         paste the scene clipboard after the current scene
+//   SHIFT+OPT+EDIT   cut the scene (to the scene clipboard), go to the one before
+//   SHIFT+OPT twice  insert a copy of the current scene after it
 //   PLAY             start from 1.1.1 / stop
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
 //   EDIT (status)    tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
@@ -130,6 +135,7 @@ void setup() {
   progress("");
   bpm = roundf(loadTempo() * 10) / 10;
   transport.spb = spbForBpm(bpm);
+  scenesBegin([] { return bpm; }, setTempo);
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);
@@ -152,6 +158,7 @@ void loop() {
   debugStage = "keys (I2C)";
   pollKeys();
   saveTempoWhenIdle();
+  serviceScenes();
 
   // Report dropouts with what the storage code was doing (debugging).
   static uint32_t lastDropCheck = 0, lastDrops[NUM_TRACKS] = {};
