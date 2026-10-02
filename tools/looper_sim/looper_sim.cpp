@@ -116,9 +116,22 @@ static void recordTrack(int t, double beats, uint32_t expectBars, const char *la
   uint32_t start = recording.startSample;
   runBeats(beats);
   recordPress(t);
-  runUntilIdle();
+  // Carrying on to the loop length: playback must take over exactly where the
+  // loop starts again (the beat after the recording's last), not later.
   const Track &tr = tracks[t];
+  int32_t loopEnd = recording.startBeat + (int32_t)(recording.loopBars * BEATS_PER_BAR);
+  bool endAhead = transport.beat < loopEnd;
+  int32_t liveAt = -1;
+  for (int i = 0; i < 20000 && liveAt < 0 && (endAhead || recording.mode != Recording::Idle); i++) {
+    block();
+    if (tr.live) liveAt = transport.beat;
+  }
+  runUntilIdle();
   char msg[128];
+  if (endAhead) {
+    snprintf(msg, sizeof msg, "plays from the loop's start as the recording ends (beat %d, live at %d)", loopEnd, liveAt);
+    check(liveAt == loopEnd, msg);
+  }
   snprintf(msg, sizeof msg, "loop is %u bars (expected %u), %u frames recorded",
            tr.loopBars, expectBars, tr.recordedFrames);
   check(tr.loopBars == expectBars && tr.state == TrackState::Playing, msg);

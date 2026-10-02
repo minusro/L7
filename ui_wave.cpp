@@ -163,12 +163,24 @@ static void updateLive(int i) {
   int32_t sofar = (int32_t)(transport.now - recording.startSample);
   interrupts();
   int head = sofar < 0 ? -1 : min(WAVE_W - 1, (int)((uint64_t)sofar * WAVE_W / total));
+  uint16_t headColor = REC_HEAD;
+  if (tracks[i].live) {
+    // The loop already plays (the rest of the recording is still being
+    // saved): its playhead instead of the record head.
+    noInterrupts();
+    double pos = transport.beat + (double)transport.sampleInBeat / transport.spb;
+    interrupts();
+    double loopBeats = bars * BEATS_PER_BAR, beat = fmod(pos - recording.startBeat, loopBeats);
+    if (beat < 0) beat += loopBeats;
+    head = min(WAVE_W - 1, (int)(beat * WAVE_W / loopBeats));
+    headColor = PLAYHEAD;
+  }
   if (bars != v.liveBars) {                        // new scale: redraw everything
     v.liveBars = bars;
     v.liveFilled = filled;
     memcpy(v.liveData, cols, OVERVIEW_COLS);
     v.playCol = head;
-    v.headColor = REC_HEAD;
+    v.headColor = headColor;
     v.headEdge = true;
     for (int c = 0; c < WAVE_W; c++) drawColumn(i, c);
     return;
@@ -180,7 +192,7 @@ static void updateLive(int i) {
   v.liveFilled = filled;
   for (int c = 0; c < WAVE_W; c++)
     if (columnLevel(v.liveData, c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c);
-  movePlayhead(i, head, REC_HEAD);
+  movePlayhead(i, head, headColor);
 }
 
 // Playhead column for each track from the transport position and the
@@ -193,6 +205,8 @@ void updatePlayheads() {
   for (int i = 0; i < NUM_TRACKS; i++) {
     const Track &tr = tracks[i];
     WaveView &v = views[i];
+    // Recording started or ended: switch view now, not on the row's next redraw.
+    if (v.live != recordingOn(i)) drawWave(i, recordingOn(i));
     if (v.live) { updateLive(i); continue; }
     // Unmuted: white (black edge). Muted: none, but a line on the selected track.
     bool muted = tr.state == TrackState::Muted;

@@ -33,8 +33,9 @@ no dropouts or overruns
 - navigation key retrigger speed tweaks (maybe a bit quicker without feeling too light?) V
 - refactor main sketch file into several (it's getting big) V
 - remove rightmost black line in the playhead V
-- after recording, the playhead doesn't appear immediately after starting playback
 - revert muted & selected track playhead to single dim line V
+- after recording, the playhead doesn't appear immediately after starting playback V
+- fix audio post recording gap (haven't heard it, only saw the playhead doesn't appear immediately) V
 
 - 80s lcd ui
 

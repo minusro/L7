@@ -336,6 +336,13 @@ static void applyQueuedRange(Track &tr) {
   trackChanged(&tr - tracks);
 }
 
+// A track whose recording is still being saved, and that has caught up with
+// it: nothing to read yet.
+static bool waitingForRecording(const Track &tr) {
+  return recording.mode != Recording::Idle && recording.track == &tr - tracks &&
+         tr.fileFrame < tr.recordedFrames && tr.fileFrame >= recording.written;
+}
+
 // One SD read (or one block of padding silence) into the track's ring.
 static void produce(Track &tr) {
   if (tr.rangePending && tr.head == tr.switchS) applyQueuedRange(tr);
@@ -349,6 +356,9 @@ static void produce(Track &tr) {
     memset(chunk, 0, n * 4);                     // padding after the recording (or no card)
   } else {
     n = min(n, tr.recordedFrames - tr.fileFrame);
+    if (waitingForRecording(tr)) return;
+    if (recording.mode != Recording::Idle && recording.track == &tr - tracks)
+      n = min(n, recording.written - tr.fileFrame);   // still being recorded: only what's saved
     debugStage = "SD read (track stream)";
     uint32_t t0 = millis();
     tr.file.seekSet(WAV_DATA_OFFSET + (uint64_t)tr.fileFrame * 4);
@@ -407,7 +417,7 @@ static void serviceStreams() {
     Track *best = nullptr;
     uint32_t bestFill = RING_FRAMES;
     for (auto &tr : tracks) {
-      if (!(tr.live || tr.armed)) continue;
+      if (!(tr.live || tr.armed) || waitingForRecording(tr)) continue;
       uint32_t fill = tr.head - tr.tail;
       if (RING_FRAMES - fill >= refillThreshold() && fill < bestFill) { best = &tr; bestFill = fill; }
     }
@@ -440,6 +450,41 @@ static uint32_t maxRecordingFrames() {
   return min(MAX_BARS * BEATS_PER_BAR * transport.spb, MAX_REC_FRAMES);
 }
 
+// The recording's loop length is known: set its track up to play. If the
+// loop's end is still ahead (recording carries on to it), the track joins
+// exactly there, from the beginning already in its ring, so playback follows
+// the recording with no gap. If it has passed (trimmed), it joins at the next
+// beat, read from the file right away. Frames not yet saved are never read
+// (produce() waits for them).
+static void armRecordedLoop(bool endAhead) {
+  int t = recording.track;
+  Track &tr = tracks[t];
+  tr.live = false;
+  tr.armed = false;
+  tr.needsRestart = false;
+  tr.spbNative = transport.spb;
+  tr.loopBars = recording.loopBars;
+  tr.recordedFrames = recording.targetFrames;
+  tr.rangeStartBeat = 0;
+  tr.rangeBeats = tr.loopBars * BEATS_PER_BAR;
+  tr.rangePending = false;
+  tr.rangeAnchorQ = 4 * recording.startBeat;
+  tr.state = TrackState::Playing;
+  if (!transport.running) return;
+  if (!endAhead) {
+    startTrack(t, transport.beat + 1, true);
+    return;
+  }
+  memset(tr.filterZ, 0, sizeof tr.filterZ);
+  tr.s0 = 0;
+  tr.tail = 0;
+  tr.frac = 0;
+  tr.head = min(recording.written, RING_FRAMES);  // the beginning, already in the ring
+  tr.fileFrame = tr.head;
+  tr.startBeat = recording.startBeat + (int32_t)tr.rangeBeats;
+  tr.armed = true;
+}
+
 static void stopRecording() {
   noInterrupts();
   uint32_t stopSample = transport.now + LATENCY_FRAMES;
@@ -451,6 +496,7 @@ static void stopRecording() {
   // until it is reached (serviceRecorder keeps writing the input until then).
   recording.targetFrames = min(recording.loopBars * BEATS_PER_BAR * spb, maxRecordingFrames());
   recording.mode = Recording::Finishing;
+  armRecordedLoop(recording.targetFrames > length);
 }
 
 static void finishRecording() {
@@ -475,7 +521,7 @@ static void finishRecording() {
   recording.mode = Recording::Idle;
   recording.track = -1;
   trackChanged(t);                               // header saved when the buffers allow
-  if (transport.running) startTrack(t, transport.beat + 2, false);
+  if (transport.running && !tr.live && !tr.armed) startTrack(t, transport.beat + 2, false);
 }
 
 static void serviceRecorder() {
@@ -524,6 +570,13 @@ static void serviceRecorder() {
     return;
   }
   addPeaks(chunk, n, recording.written, recPeaks);
+  // The loop's beginning also goes into the track's ring (stream frame = loop
+  // frame), so playback can start the moment the recording ends, without
+  // reading it back first (see armRecordedLoop).
+  if (recording.mode == Recording::Running) {
+    Track &tr = tracks[recording.track];
+    for (uint32_t i = 0; i < n && recording.written + i < RING_FRAMES; i++) tr.ring[recording.written + i] = chunk[i];
+  }
   recording.written += n;
   writePending = false;
 }
@@ -598,6 +651,7 @@ uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBe
 
 bool setRange(int t, uint32_t startBeat, uint32_t beats) {
   Track &tr = tracks[t];
+  if (recording.mode != Recording::Idle && recording.track == t) return false;   // still finishing
   if (tr.state == TrackState::Empty || beats < 1 || (beats & (beats - 1)) ||
       startBeat >= tr.loopBars * BEATS_PER_BAR || beats > tr.loopBars * BEATS_PER_BAR)
     return false;
