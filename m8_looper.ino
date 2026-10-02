@@ -36,6 +36,7 @@
 #include "M8Board.h"
 #include "engine.h"
 #include "storage.h"
+#include "colors.h"
 
 using namespace looper;
 
@@ -126,14 +127,6 @@ static constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w, WAV
 // (right-aligned with them).
 static constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, TEMPO_CELL = 2;
 
-// Blends two RGB565 colours: a at weight w (0-255), b at 255 - w.
-static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
-  int r = (((a >> 11) & 31) * w + ((b >> 11) & 31) * (255 - w)) / 255;
-  int g = (((a >> 5) & 63) * w + ((b >> 5) & 63) * (255 - w)) / 255;
-  int bl = ((a & 31) * w + (b & 31) * (255 - w)) / 255;
-  return (r << 11) | (g << 5) | bl;
-}
-
 
 // ---- Waveforms
 // Each track's whole loop, drawn one column at a time: the row background
@@ -146,22 +139,13 @@ static uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
 // While a track records it shows the recording growing (live view) with a
 // red record head, over the length it would become.
 // Outside the loop range: the same dark grey for playing and muted clips.
-static constexpr uint16_t WAVE_IN = 0xCE79, WAVE_OUT = 0x2104;               // 80% white (~206), ~33/33/33
-static constexpr uint16_t WAVE_IN_BAR = 0x9CD3, WAVE_OUT_BAR = 0x18C3;       // the same at ~75%
-static constexpr uint16_t BG_SELECTED = 0x1082, BG_RECORDING = 0x3800;       // grey ~16 (half WAVE_OUT), dark red
-// The selected row's other cells and its button: grey ~8.
-static constexpr uint16_t BG_ROW = 0x0841;
-static constexpr uint16_t PLAYHEAD = 0x6B4D, REC_HEAD = ILI9341_RED;   // grey ~107, red
+// (Colours: colors.h.)
 static constexpr int HEAD_W = 2;                     // playheads: from the playing column, 2 px to the right
-static constexpr uint16_t MUTED_HEAD = ILI9341_BLACK;
-static constexpr uint16_t BUTTON_ICON = ILI9341_WHITE;
-static constexpr uint16_t DIVIDER = 0x1082;          // under the last track row: grey ~16
-static constexpr uint16_t EMPTY_ICON = 0x1082;       // grey ~16: half WAVE_OUT
 
 struct WaveView {
   bool visible = false;                            // something is shown (not an empty track)
   bool live = false;                               // recording in progress: live view
-  uint16_t bg = ILI9341_BLACK;
+  uint16_t bg = BG;
   int rangeFirst = 0, rangeLast = -1;              // columns inside the loop range
   int playCol = -1;                                // playhead / record head; -1: none
   int headW = HEAD_W;                              // playhead covers playCol .. playCol + headW - 1
@@ -194,7 +178,7 @@ static bool recordingOn(int i) { return recording.track == i && recording.mode !
 // grey; a recording track's waveform cell is dark red.
 static uint16_t cellBackground(int i, int cell) {
   if (cell == WAVE_CELL && recordingOn(i)) return BG_RECORDING;
-  if (i != selected) return ILI9341_BLACK;
+  if (i != selected) return BG;
   return (cell != -1 && cell == selectedCell) ? BG_SELECTED : BG_ROW;
 }
 static int waveTop(int i) { return rowTop(i) + (ROW_BAND - WAVE_H) / 2; }
@@ -222,7 +206,7 @@ static void drawColumn(int i, int c) {
   const WaveView &v = views[i];
   int x = WAVE_X + c, top = waveTop(i), mid = top + WAVE_H / 2;
   t.drawFastVLine(x, bgTop(i), bgHeight(i), v.bg);   // background: the row's full height
-  if (i == DIVIDER_ROW && v.bg == ILI9341_BLACK) t.drawPixel(x, dividerY(), DIVIDER);
+  if (i == DIVIDER_ROW && v.bg == BG) t.drawPixel(x, dividerY(), DIVIDER);
   if (!v.visible) return;
   if (v.playCol >= 0 && c >= v.playCol && c < v.playCol + v.headW) {
     t.drawFastVLine(x, rowTop(i), ROW_BAND, v.headColor);   // the row's full height
@@ -233,7 +217,7 @@ static void drawColumn(int i, int c) {
   bool in = v.live || (c >= v.rangeFirst && c <= v.rangeLast);
   uint16_t color = in ? (bar ? WAVE_IN_BAR : WAVE_IN) : (bar ? WAVE_OUT_BAR : WAVE_OUT);
   if (!v.live && in && tr.state == TrackState::Muted)
-    color = blend565(color, ILI9341_BLACK, 128);   // muted: the loop range at half brightness
+    color = blend565(color, BG, MUTED_WEIGHT);   // muted: the loop range at half brightness
   int h = columnLevel(v.live ? v.liveData : tr.overview, c) * (WAVE_H / 2) / 255;
   t.drawFastVLine(x, mid - h, 2 * h + 1, color);
 }
@@ -381,11 +365,11 @@ static int buttonIcon(int i) {
 
 static uint16_t iconColor(int i, int icon) {
   switch (icon) {
-    case ICON_RECORD:     return ILI9341_RED;
-    case ICON_EMPTY:      return EMPTY_ICON;
+    case ICON_RECORD:     return ICON_RECORD_COLOR;
+    case ICON_EMPTY:      return ICON_EMPTY_COLOR;
     case ICON_TOGGLE_ON:
-    case ICON_TOGGLE_OFF: return i == selected ? BUTTON_ICON : WAVE_OUT;
-    default:              return i == selected ? BUTTON_ICON : ILI9341_DARKGREY;   // play/stop: as the clock
+    case ICON_TOGGLE_OFF: return i == selected ? ICON_SELECTED : ICON_TOGGLE_IDLE;
+    default:              return i == selected ? ICON_SELECTED : ICON_TRANSPORT_IDLE;   // play/stop
   }
 }
 
@@ -463,11 +447,11 @@ static void drawCells(int i) {
   t.fillRect(CELL[1].x, y0, CELL[1].w, h, k.bg1);
   if (i == STATUS_ROW) t.fillRect(CELL[2].x, y0, CELL[2].w, h, k.bg2);
   for (int c = 0; c < CELLS; c++)                    // 1 px gaps after each cell
-    t.drawFastVLine(CELL[c].x + CELL[c].w, y0, h, ILI9341_BLACK);
+    t.drawFastVLine(CELL[c].x + CELL[c].w, y0, h, GAP);
   t.fillRect(BUTTON_X, y0, BUTTON_W, h, k.bgButton);
   if (i == DIVIDER_ROW) {                            // broken at the gaps (the waveform: drawColumn)
-    if (k.bg1 == ILI9341_BLACK) t.drawFastHLine(CELL[1].x, dividerY(), CELL[1].w, DIVIDER);
-    if (k.bgButton == ILI9341_BLACK) t.drawFastHLine(BUTTON_X, dividerY(), BUTTON_W, DIVIDER);
+    if (k.bg1 == BG) t.drawFastHLine(CELL[1].x, dividerY(), CELL[1].w, DIVIDER);
+    if (k.bgButton == BG) t.drawFastHLine(BUTTON_X, dividerY(), BUTTON_W, DIVIDER);
   }
   if (k.icon != ICON_NONE)
     drawIcon(k.icon, BUTTON_X + BUTTON_W / 2, y + ROW_BAND / 2, k.iconColor, k.bgButton);
@@ -491,15 +475,15 @@ static void drawFilter(int i) {
   k.lo = tr.filterLo;
   k.hi = tr.filterHi;
   k.bg = cellBackground(i, FILTER_CELL);
-  k.line = tr.state == TrackState::Playing ? WAVE_IN
-         : tr.state == TrackState::Muted ? blend565(WAVE_IN, ILI9341_BLACK, 128) : WAVE_OUT;
+  k.line = tr.state == TrackState::Playing ? CURVE
+         : tr.state == TrackState::Muted ? blend565(CURVE, BG, MUTED_WEIGHT) : CURVE_EMPTY;
   if (drawn[i] && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = true;
   shown[i] = k;
   auto &t = board.tft();
   const Cell &cell = CELL[FILTER_CELL];
   int top = rowTop(i) + (ROW_BAND - CURVE_H) / 2, bottom = top + CURVE_H - 1;
-  uint16_t fill = blend565(k.line, k.bg, 48);
+  uint16_t fill = blend565(k.line, k.bg, CURVE_FILL_WEIGHT);
   int prevY = -1;
   for (int c = 0; c < cell.w; c++) {
     int x = cell.x + c;
@@ -508,7 +492,7 @@ static void drawFilter(int i) {
     int y = top + (int)lroundf(min(-db, CURVE_DB) / CURVE_DB * (CURVE_H - 1));
     if (prevY < 0) prevY = y;
     t.drawFastVLine(x, bgTop(i), bgHeight(i), k.bg);
-    if (i == DIVIDER_ROW && k.bg == ILI9341_BLACK) t.drawPixel(x, dividerY(), DIVIDER);
+    if (i == DIVIDER_ROW && k.bg == BG) t.drawPixel(x, dividerY(), DIVIDER);
     if (y < bottom) t.drawFastVLine(x, y + 1, bottom - y, fill);
     int a = min(prevY, y), b = max(prevY, y);      // joins steep slopes
     if (y < bottom || prevY < bottom) t.drawFastVLine(x, a, min(b, bottom) - a + 1, k.line);
@@ -566,7 +550,7 @@ static void drawStatus() {
   char text[24];
   snprintf(text, sizeof text, "%.1f BPM", bpm);
   bool editing = selected == STATUS_ROW && selectedCell == TEMPO_CELL;
-  printFromLeft(WAVE_X + STATUS_INSET, CELL[TEMPO_CELL].x, text, 10, editing ? ILI9341_WHITE : ILI9341_DARKGREY, bg);
+  printFromLeft(WAVE_X + STATUS_INSET, CELL[TEMPO_CELL].x, text, 10, editing ? TEXT_ACTIVE : TEXT_IDLE, bg);
   noInterrupts();
   int32_t beat = transport.beat;
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
@@ -576,7 +560,7 @@ static void drawStatus() {
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
-  printToRight(WAVE_X + WAVE_W - 1 - STATUS_INSET, text, 10, running ? ILI9341_WHITE : ILI9341_DARKGREY, bg);
+  printToRight(WAVE_X + WAVE_W - 1 - STATUS_INSET, text, 10, running ? TEXT_ACTIVE : TEXT_IDLE, bg);
 }
 
 static void drawTrack(int i) {
@@ -716,7 +700,7 @@ static void handlePowerButton() {
 
 static void fatal(const char *msg) {
   auto &t = board.tft();
-  t.setTextColor(ILI9341_RED, ILI9341_BLACK);
+  t.setTextColor(TEXT_ERROR, BG);
   t.setTextSize(1);
   t.setCursor(4, 100);
   t.print(msg);
@@ -734,11 +718,11 @@ void setup() {
   codec.lineInLevel(5);
   codec.volume(0.6f);
 
-  board.tft().fillScreen(ILI9341_BLACK);
+  board.tft().fillScreen(BG);
   board.tft().setTextWrap(false);
   auto progress = [](const char *msg) {
     auto &t = board.tft();
-    t.setTextColor(ILI9341_YELLOW, ILI9341_BLACK);
+    t.setTextColor(TEXT_PROGRESS, BG);
     t.setTextSize(1);
     t.setCursor(4, 100);
     t.printf("%-50s", msg);
