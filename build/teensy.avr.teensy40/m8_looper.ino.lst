@@ -12373,7 +12373,7 @@ void loop() {
     43c0:	603b      	str	r3, [r7, #0]
     43c2:	f8d8 3000 	ldr.w	r3, [r8]
     repeatAt = millis() + REPEAT_PERIOD_MS;          // after a slow pass: no burst of catch-up repeats
-    43c6:	3364      	adds	r3, #100	@ 0x64
+    43c6:	3332      	adds	r3, #50	@ 0x32
     43c8:	6013      	str	r3, [r2, #0]
     onKeys(prev, repeatKey);
     43ca:	4b41      	ldr	r3, [pc, #260]	@ (44d0 <loop+0x2b8>)

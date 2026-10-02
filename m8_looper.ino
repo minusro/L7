@@ -751,7 +751,7 @@ static void drawTrack(int i) {
 }
 
 // ---- Keys
-static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 100;   // held arrows
+static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;   // held arrows
 static constexpr uint32_t DOUBLE_TAP_MS = 200;      // B twice: reset the current cell
 
 // The selected track's current cell back to its defaults: the whole loop as
