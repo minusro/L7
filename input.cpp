@@ -95,37 +95,58 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         if (pressed & m8::BTN_DOWN) setTempo((tenths + 9) / 10 - 1);
       }
     } else if (selectedCell == WAVE_CELL) {
-      // Loop range in beats: 1 or 2 beats or whole bars, up to the whole
-      // loop. LEFT/RIGHT move its start by a beat, wrapping around the loop (a
-      // range may run past the loop's end); UP/DOWN make it a bar longer /
-      // shorter (1 beat - 2 beats - 1 bar - 2 bars ...). Tapped twice: LEFT/
-      // RIGHT move it by its own length, UP/DOWN to the next / previous power
-      // of two (1, 2, 4, 8 ... beats; up to the whole loop). The start stays
-      // when the length changes. A double tap counts from the range before
-      // the first tap (which already moved it a step).
+      // Loop range in beats: any whole number of beats, up to the whole loop.
+      //   LEFT/RIGHT: move its start a step, wrapping around the loop (a range
+      //     may run past the loop's end): a beat for loops up to 4 bars, half
+      //     a bar up to 16 bars, a bar beyond. Starts off that grid go to the
+      //     next grid point that way.
+      //   UP/DOWN: to the next / previous of 1/4, 1/2, 3/4, 1, 1 1/2, 2, 3, 4,
+      //     5, 6 ... bars (up to the whole loop).
+      //   Tapped twice, LEFT/RIGHT: by its own length. A range inside the loop
+      //     stops at the loop's edge rather than crossing it; one already at
+      //     that edge jumps to the other. A range across the edge moves freely.
+      //   Tapped twice, UP/DOWN: to the next / previous power of two: 1/4,
+      //     1/2, 1, 2, 4, 8, 16, 32 bars (up to the whole loop).
+      // The start stays when the length changes. A double tap counts from the
+      // range before the first tap (which already moved it a step).
       Track &tr = tracks[selected];
       uint32_t rs, rb, loopBeats = tr.loopBars * BEATS_PER_BAR;
       trackRange(selected, rs, rb);                  // includes a queued change
       static int tapTrack = -1;
       static uint32_t tapAt[4], tapStart[4], tapLen[4];   // per arrow: the last tap and the range before it
       const uint8_t keys4[4] = {m8::BTN_LEFT, m8::BTN_RIGHT, m8::BTN_UP, m8::BTN_DOWN};
+      // Lengths in beats: the steps (1, 2, 3, 4, 6, 8, then every 4) and the
+      // jumps (powers of two). Next above / below l (at least 1 beat).
+      auto stepAbove = [](uint32_t l) { return l < 4 ? l + 1 : l < 8 ? (l / 2 + 1) * 2 : (l / 4 + 1) * 4; };
+      auto stepBelow = [](uint32_t l) {
+        return l <= 1 ? 1 : l <= 4 ? l - 1 : l <= 8 ? (l - 1) / 2 * 2 : (l - 1) / 4 * 4;
+      };
+      auto jumpAbove = [](uint32_t l) { uint32_t j = 1; while (j <= l) j *= 2; return j; };
+      auto jumpBelow = [](uint32_t l) { uint32_t j = 1; while (j * 2 < l) j *= 2; return l <= 1 ? 1 : j; };
+      uint32_t step = tr.loopBars <= 4 ? 1 : tr.loopBars <= 16 ? 2 : 4;   // the start's grid
       for (int k = 0; k < 4; k++) {
         if (!(pressed & keys4[k])) continue;
         bool twice = !repeat && tapTrack == selected && tapAt[k] && millis() - tapAt[k] < DOUBLE_TAP_MS;
         uint32_t s0 = twice ? tapStart[k] : rs, l0 = twice ? tapLen[k] : rb, s = s0, l = l0;
         if (!twice && !repeat) { tapTrack = selected; tapAt[k] = millis(); tapStart[k] = rs; tapLen[k] = rb; }
         if (twice) tapAt[k] = 0;
+        bool inside = s0 + l0 <= loopBeats;          // not across the loop's edge
         switch (k) {
-          case 0: s = (s0 + loopBeats - (twice ? l0 % loopBeats : 1)) % loopBeats; break;
-          case 1: s = (s0 + (twice ? l0 : 1)) % loopBeats; break;
-          case 2:
-            if (twice) { l = 1; while (l <= l0) l *= 2; }
-            else l = l0 < 2 ? 2 : l0 < 4 ? 4 : (l0 / 4 + 1) * 4;   // 1 - 2 - a bar - the next whole bar
-            l = min(l, loopBeats);
+          case 0:                                    // LEFT
+            if (!twice) s = s0 % step ? s0 / step * step : (s0 + loopBeats - step) % loopBeats;
+            else if (!inside) s = (s0 + loopBeats - l0 % loopBeats) % loopBeats;
+            else s = s0 == 0 ? loopBeats - l0 : s0 < l0 ? 0 : s0 - l0;
             break;
-          case 3:
-            if (twice) { l = 1; while (l * 2 < l0) l *= 2; if (l >= l0) l = l0; }
-            else l = l0 <= 1 ? 1 : l0 <= 2 ? 1 : l0 <= 4 ? 2 : (l0 % 4 ? l0 / 4 * 4 : l0 - 4);
+          case 1:                                    // RIGHT
+            if (!twice) s = (s0 / step + 1) * step % loopBeats;
+            else if (!inside) s = (s0 + l0) % loopBeats;
+            else s = s0 + l0 == loopBeats ? 0 : s0 + 2 * l0 > loopBeats ? loopBeats - l0 : s0 + l0;
+            break;
+          case 2:                                    // UP
+            l = min(twice ? jumpAbove(l0) : stepAbove(l0), loopBeats);
+            break;
+          case 3:                                    // DOWN
+            l = twice ? jumpBelow(l0) : stepBelow(l0);
             break;
         }
         if (s != rs || l != rb) setRange(selected, s, l);
