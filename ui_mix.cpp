@@ -1,63 +1,63 @@
 // ui_mix.cpp — the volume / balance cell and its meters (see ui.h)
 #include "ui.h"
 
-// ---- Volume / balance cell: concentric arcs around the cell's centre, (((
-// for the left channel and ))) for the right, MIX_ARCS each. A channel's
-// level lights its arcs from the inside out, over MIX_FLOOR_DB..MIX_TOP_DB:
-// the volume, plus what the balance moves onto that side (up to the mono sum,
-// +6 dB) or takes away from it. The meter (the channel's actual output, with
-// peak hold falling at METER_FALL_DB_PER_S) lights them white on the same
-// scale, so a full-scale signal on both channels reaches the level's arc. Each arc's pixels
-// (with anti-aliasing coverage) are worked out once; an arc is only redrawn
-// when its colour changes.
-static constexpr int MIX_ARCS = 6, MIX_ARC_PX = 128;
-static constexpr float MIX_R0 = 8, MIX_DR = 5, MIX_STROKE = 1.25f, MIX_HALF_H = 10, MIX_SLOPE = 1.2f;
+// ---- Volume / balance cell: concentric arcs of blocks around the cell's
+// centre, ((( for the left channel and ))) for the right, MIX_ARCS each. A
+// channel's level lights its arcs from the inside out, over
+// MIX_FLOOR_DB..MIX_TOP_DB: the volume, plus what the balance moves onto that
+// side (up to the mono sum, +6 dB) or takes away from it. The meter (the
+// channel's actual output, with peak hold falling at METER_FALL_DB_PER_S)
+// lights them white on the same scale. Arcs above both: dotted (every other
+// block, dim); up to the level: dim. An arc is only redrawn when its look changes.
+static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = ROW_BAND / PX;   // 39 x 13
+static constexpr int MIX_ARCS = 4;
+static constexpr float MIX_R0 = 4, MIX_DR = 3.5f, MIX_HALF_H = 5, MIX_SLOPE = 1.2f;   // in blocks
 static constexpr float MIX_FLOOR_DB = -40, MIX_TOP_DB = 12, METER_FALL_DB_PER_S = 24;
 
-struct ArcPx { uint8_t x, y, cov; };                 // in the cell; coverage 1..16
-static ArcPx arcPx[2 * MIX_ARCS][MIX_ARC_PX];         // [side * MIX_ARCS + arc]
-static int arcCount[2 * MIX_ARCS];
+static int8_t arcAt[BAND_ROWS][CELL_COLS];          // [row][col]: side * MIX_ARCS + arc, -1: none
 
 static void buildArcs() {
-  const Cell &cell = CELL[MIX_CELL];
-  const float cx = cell.w / 2.0f, cy = ROW_BAND / 2.0f;
-  for (int y = 0; y < ROW_BAND; y++) {
-    for (int x = 0; x < cell.w; x++) {
-      int cov[2 * MIX_ARCS] = {};
-      for (int sy = 0; sy < 4; sy++) {
-        for (int sx = 0; sx < 4; sx++) {
-          float dx = x + (sx + 0.5f) / 4 - cx, dy = y + (sy + 0.5f) / 4 - cy;
-          if (fabsf(dy) > MIX_HALF_H || fabsf(dy) > fabsf(dx) * MIX_SLOPE) continue;
-          float d = sqrtf(dx * dx + dy * dy);
-          int j = (int)lroundf((d - MIX_R0) / MIX_DR);
-          if (j < 0 || j >= MIX_ARCS || fabsf(d - (MIX_R0 + j * MIX_DR)) > MIX_STROKE / 2) continue;
-          cov[(dx < 0 ? 0 : MIX_ARCS) + j]++;
-        }
-      }
-      for (int a = 0; a < 2 * MIX_ARCS; a++)
-        if (cov[a] && arcCount[a] < MIX_ARC_PX) arcPx[a][arcCount[a]++] = {(uint8_t)x, (uint8_t)y, (uint8_t)cov[a]};
+  const float cx = CELL_COLS / 2.0f, cy = BAND_ROWS / 2.0f;
+  for (int r = 0; r < BAND_ROWS; r++)
+    for (int c = 0; c < CELL_COLS; c++) {
+      arcAt[r][c] = -1;
+      if (r == 0 || r == BAND_ROWS - 1 || c == 0 || c == CELL_COLS - 1) continue;   // the frame's
+      float dx = c + 0.5f - cx, dy = r + 0.5f - cy;
+      if (fabsf(dy) > MIX_HALF_H || fabsf(dy) > fabsf(dx) * MIX_SLOPE) continue;
+      float d = sqrtf(dx * dx + dy * dy);
+      int j = (int)lroundf((d - MIX_R0) / MIX_DR);
+      if (j < 0 || j >= MIX_ARCS || fabsf(d - (MIX_R0 + j * MIX_DR)) > 0.55f) continue;
+      arcAt[r][c] = (dx < 0 ? 0 : MIX_ARCS) + j;
     }
-  }
 }
 
-// How many arcs (0..MIX_ARCS, fractional) a level in dB lights.
-static float arcsForDb(float db) {
-  return constrain((db - MIX_FLOOR_DB) / (MIX_TOP_DB - MIX_FLOOR_DB), 0.0f, 1.0f) * MIX_ARCS;
+// How many arcs (0..MIX_ARCS) a level in dB lights.
+static int arcsForDb(float db) {
+  return (int)lroundf(constrain((db - MIX_FLOOR_DB) / (MIX_TOP_DB - MIX_FLOOR_DB), 0.0f, 1.0f) * MIX_ARCS);
 }
 static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
 
-// Arc j's colour for a channel lit to `level` arcs, with the meter at `meter` arcs.
-// Partly lit arcs blend in quarter steps.
-static uint16_t arcColor(int j, float level, float meter, uint16_t levelColor) {
-  auto part = [](float f) { return (uint8_t)(lroundf(constrain(f, 0.0f, 1.0f) * 4) * 255 / 4); };
-  uint16_t c = blend565(levelColor, MIX_ARC_OFF, part(level - j));
-  return blend565(MIX_ARC_METER, c, part(meter - j));
+// An arc's look: 0 off (checker), 1 up to the level (dim), 2 the meter (white).
+enum : uint8_t { ARC_OFF, ARC_LEVEL, ARC_METER, ARC_NONE };
+
+static uint16_t blockColor(uint8_t look, int r, int c) {
+  switch (look) {
+    case ARC_METER: return INK;
+    case ARC_LEVEL: return DIM;
+    case ARC_OFF:   return (r + c) % 2 ? DIM : BG;   // (blocks along an arc alternate)
+    default:        return BG;
+  }
+}
+
+static void drawBlock(int i, int r, int c, uint16_t color) {
+  board.tft().fillRect(CELL[MIX_CELL].x + c * PX, rowTop(i) + r * PX, PX, PX, color);
 }
 
 void drawMix(int i) {
   static bool built = false;
   if (!built) { buildArcs(); built = true; }
-  static uint16_t shownBg[NUM_TRACKS], shown[NUM_TRACKS][2 * MIX_ARCS];
+  static uint16_t shownFrame[NUM_TRACKS];
+  static uint8_t shown[NUM_TRACKS][2 * MIX_ARCS];
   static uint32_t drawn[NUM_TRACKS];               // uiGeneration when last drawn whole
   static float meterDb[NUM_TRACKS][2];
   static uint32_t lastMs[NUM_TRACKS];
@@ -71,44 +71,46 @@ void drawMix(int i) {
   lastMs[i] = now;
   for (int ch = 0; ch < 2; ch++) meterDb[i][ch] = max(gainDb(peak[ch]), meterDb[i][ch] - fall);
 
-  uint16_t bg = cellBackground(i, MIX_CELL);
-  uint16_t colors[2 * MIX_ARCS];
-  bool empty = !hasClip(i);
-  uint16_t levelColor = tr.state == TrackState::Muted ? blend565(MIX_ARC_LEVEL, BG, MUTED_WEIGHT) : MIX_ARC_LEVEL;
+  uint16_t frame = cellFrame(i, MIX_CELL);
+  uint8_t looks[2 * MIX_ARCS];
   float gains[2] = {tr.levelL, tr.levelR};
   for (int ch = 0; ch < 2; ch++) {
-    float level = arcsForDb(gainDb(gains[ch])), meter = arcsForDb(meterDb[i][ch]);
+    int level = arcsForDb(gainDb(gains[ch])), meter = arcsForDb(meterDb[i][ch]);
     for (int j = 0; j < MIX_ARCS; j++)
-      colors[ch * MIX_ARCS + j] = empty ? bg : arcColor(j, level, meter, levelColor);
+      looks[ch * MIX_ARCS + j] = !hasClip(i) ? ARC_NONE : j < meter ? ARC_METER : j < level ? ARC_LEVEL : ARC_OFF;
   }
 
   auto &t = board.tft();
   const Cell &cell = CELL[MIX_CELL];
   int top = rowTop(i);
-  if (drawn[i] != uiGeneration || shownBg[i] != bg) {
+  if (drawn[i] != uiGeneration || shownFrame[i] != frame) {
     // Whole cell: built in a buffer and sent at once (no flash).
-    static uint16_t buf[ROW_BAND * CELL[MIX_CELL].w];
-    for (auto &p : buf) p = bg;
-    if (i == DIVIDER_ROW && bg == BG)
-      for (int x = 0; x < cell.w; x++) buf[(dividerY() - top) * cell.w + x] = DIVIDER;
-    for (int a = 0; a < 2 * MIX_ARCS; a++)
-      for (int k = 0; k < arcCount[a]; k++) {
-        const ArcPx &p = arcPx[a][k];
-        buf[p.y * cell.w + p.x] = blend565(colors[a], bg, p.cov * 255 / 16);
+    static uint16_t px[ROW_BAND * CELL[MIX_CELL].w];
+    for (int r = 0; r < BAND_ROWS; r++)
+      for (int c = 0; c < CELL_COLS; c++) {
+        uint16_t color = BG;
+        if (frame != BG) {
+          bool side = c == 0 || c == CELL_COLS - 1, edge = r == 0 || r == BAND_ROWS - 1;
+          if (side != edge) color = frame;                       // (corners cut)
+        } else if (i == DIVIDER_ROW && r == BAND_ROWS - 1) {
+          color = DIVIDER;
+        }
+        if (arcAt[r][c] >= 0) color = blockColor(looks[arcAt[r][c]], r, c);
+        for (int dy = 0; dy < PX; dy++)
+          for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * cell.w + c * PX + dx] = color;
       }
-    if (bgTop(i) < top) t.fillRect(cell.x, bgTop(i), cell.w, top - bgTop(i), bg);   // the first row's margin
-    t.writeRect(cell.x, top, cell.w, ROW_BAND, buf);
+    if (bgTop(i) < top) t.fillRect(cell.x, bgTop(i), cell.w, top - bgTop(i), BG);   // the first row's margin
+    t.writeRect(cell.x, top, cell.w, ROW_BAND, px);
     drawn[i] = uiGeneration;
-    shownBg[i] = bg;
-    memcpy(shown[i], colors, sizeof colors);
+    shownFrame[i] = frame;
+    memcpy(shown[i], looks, sizeof looks);
     return;
   }
   for (int a = 0; a < 2 * MIX_ARCS; a++) {
-    if (colors[a] == shown[i][a]) continue;
-    shown[i][a] = colors[a];
-    for (int k = 0; k < arcCount[a]; k++) {
-      const ArcPx &p = arcPx[a][k];
-      t.drawPixel(cell.x + p.x, top + p.y, blend565(colors[a], bg, p.cov * 255 / 16));
-    }
+    if (looks[a] == shown[i][a]) continue;
+    shown[i][a] = looks[a];
+    for (int r = 0; r < BAND_ROWS; r++)
+      for (int c = 0; c < CELL_COLS; c++)
+        if (arcAt[r][c] == a) drawBlock(i, r, c, blockColor(looks[a], r, c));
   }
 }

@@ -14,6 +14,7 @@ Comments in the source stay the authority on details; these pages give the map.
 | [controls-and-ui.md](controls-and-ui.md) | Keys, screen layout, icons, colours, splash screen |
 | [build-and-test.md](build-and-test.md) | Building, the PC simulator, hardware logs |
 | [decisions.md](decisions.md) | Agreed behaviour, preferences, known limits, open ideas |
+| [design/](design/) | The Elektron-style restyle: `l8_restyle.html` (before/after and every state, self-contained) and the screenshots in `screens/` (rendered with tools/ui_preview) |
 
 Hardware pinout and board variants: [../HARDWARE.md](../HARDWARE.md).
 Work log and to-do notes kept by the author: `../M8 Looper.txt`.

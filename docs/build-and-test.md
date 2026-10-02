@@ -42,6 +42,19 @@ on the M8's card). `LOOPER_TRACE=1 ./looper_sim 0` prints the card
 operations before the first dropouts. input.cpp and ui*.cpp are not in the
 simulator — key handling and drawing are only tested on the device.
 
+## UI preview (`tools/ui_preview`)
+
+Renders the screen on the PC with the firmware's own drawing code (ui*.cpp,
+app, engine, storage, scenes) against a stand-in display that draws into a
+frame buffer (`stubs/M8Board.h`). `preview.cpp` sets the tracks up in a few
+states (a selected cell of each kind, the status row, an empty, a muted and a
+recording track) and writes each as a PNG at 2× (needs Python with PIL).
+
+```sh
+cd tools/ui_preview
+./build.sh && ./ui_preview <out-dir>
+```
+
 ## On the device
 
 Serial (115200) logs worth asking for when something glitches:

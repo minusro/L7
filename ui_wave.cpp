@@ -2,27 +2,38 @@
 #include "ui.h"
 
 // ---- Waveforms
-// Each track's whole loop, drawn one column at a time: the row background
-// (dim grey across the whole screen for the selected track, dark red while
-// recording), the waveform (80% white inside the loop range, grey outside; muted
-// clips dimmed by MUTED_WEIGHT) with faint darker bar lines at the clip's bar
-// boundaries, and the playhead: a white line with a black one on its left
-// on unmuted clips; on muted ones a single line like the range lines, only on the selected track. Full redraws only happen when
-// something changes; the playhead moves by redrawing just its columns.
-// While a track records it shows the recording growing (live view) with a
-// red record head, over the length it would become.
-// Outside the loop range: the same dark grey for playing and muted clips.
-// (Colours: colors.h.)
+// Each track's whole loop in WAVE_COLS columns of blocks, inside the cell's
+// frame column on either side. Rows of blocks (13 in the band):
+//   0, 12   the frame (selected row); on the last track row 12 is the
+//           divider when there's no frame
+//   1       the loop range: a bracket over it, its ends down to row 2
+//   2 - 10  the waveform: a line along row 6, the peaks reaching up to 4
+//           blocks above and below it
+//   11      bar ticks
+// The waveform is white inside the loop range and dim outside; on a muted
+// clip the range is dim and the rest a dim checker pattern. The bracket, the
+// start position (a dotted line) and the bar ticks only show on the selected
+// track. The playhead inverts its column (white on black, black on white);
+// on a muted clip, only when selected, it's a dim line. A recording track's
+// cell is inverted, its waveform growing in black (live view), the record
+// head inverting its column too.
+// Full redraws only happen when something changes; the playhead moves by
+// redrawing just its columns.
+
+static constexpr int BLOCK_COLS = WAVE_W / PX;                  // 66, the frame's included
+static constexpr int WAVE_COLS = BLOCK_COLS - 2;               // 64 waveform columns
+static constexpr int BAND_ROWS = ROW_BAND / PX;                // 13
+static constexpr int MID_ROW = 6, WAVE_REACH = 4;              // rows 2-10
+static constexpr int TICK_ROW = MID_ROW + WAVE_REACH + 1;      // 11
 
 struct WaveView {
   bool visible = false;                            // something is shown (not an empty track)
   bool live = false;                               // recording in progress: live view
-  uint16_t bg = BG;
+  uint16_t bg = BG, frame = BG;
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
-  int markCol = -1, beginCol = -1, endCol = -1;    // start position flag, range's first and last columns; -1: none
+  int markCol = -1, beginCol = -1, endCol = -1;    // start position, range's first and last columns; -1: none
   int playCol = -1;                                // playhead / record head; -1: none
-  uint16_t headColor = 0;                          // playhead: playCol in this colour,
-  bool headEdge = true;                            // and PLAYHEAD_EDGE on its left
+  uint16_t headColor = 0;                          // PLAYHEAD: inverts the column; else a line this colour
   // live view
   uint32_t liveBars = 0;
   int liveFilled = 0;                              // columns with recorded audio
@@ -35,66 +46,66 @@ struct WaveView {
 };
 static WaveView views[NUM_TRACKS];
 
-static int waveTop(int i) { return rowTop(i) + (ROW_BAND - WAVE_H) / 2; }
-
-// A screen column holds a bar line if a bar boundary (other than the start)
-// falls in it.
+// A column holds a bar tick if a bar boundary (other than the start) falls in it.
 static bool isBarColumn(uint32_t bars, int c) {
-  uint32_t b0 = ((uint64_t)c * bars + WAVE_W - 1) / WAVE_W;                 // first boundary >= column start
-  return b0 > 0 && b0 < bars && (uint64_t)b0 * WAVE_W < (uint64_t)(c + 1) * bars;
+  uint32_t b0 = ((uint64_t)c * bars + WAVE_COLS - 1) / WAVE_COLS;   // first boundary >= column start
+  return b0 > 0 && b0 < bars && (uint64_t)b0 * WAVE_COLS < (uint64_t)(c + 1) * bars;
 }
 
-// Level shown in screen column c: the peak of the stored overview columns
+// Level shown in column c: the peak of the stored overview columns
 // (OVERVIEW_COLS of them) that it covers.
 static uint8_t columnLevel(const uint8_t *src, int c) {
-  int a = c * OVERVIEW_COLS / WAVE_W, b = max(a + 1, (c + 1) * OVERVIEW_COLS / WAVE_W);
+  int a = c * OVERVIEW_COLS / WAVE_COLS, b = max(a + 1, (c + 1) * OVERVIEW_COLS / WAVE_COLS);
   uint8_t m = 0;
   for (int k = a; k < b; k++) m = max(m, src[k]);
   return m;
 }
 
-static void drawColumnUnder(int i, int c) {
-  auto &t = board.tft();
+// Block column bc (0 and BLOCK_COLS - 1: the frame's), drawn whole.
+static void drawColumn(int i, int bc) {
+  if (bc < 0 || bc >= BLOCK_COLS) return;
   const Track &tr = tracks[i];
   const WaveView &v = views[i];
-  int x = WAVE_X + c, top = waveTop(i), mid = top + WAVE_H / 2;
-  t.drawFastVLine(x, bgTop(i), bgHeight(i), v.bg);   // background: the row's full height
-  if (i == DIVIDER_ROW && v.bg == BG) t.drawPixel(x, dividerY(), DIVIDER);
-  if (!v.visible) return;
-  if (v.live && c >= v.liveFilled) return;
-  bool bar = isBarColumn(v.live ? v.liveBars : tr.loopBars, c);
-  bool in = v.live || (c - v.rangeFirst + WAVE_W) % WAVE_W < v.rangeCols;
-  uint16_t color = in ? (bar ? WAVE_IN_BAR : WAVE_IN) : (bar ? WAVE_OUT_BAR : WAVE_OUT);
-  if (!v.live && in && tr.state == TrackState::Muted)
-    color = blend565(color, BG, MUTED_WEIGHT);   // muted: the loop range dimmed
-  int h = columnLevel(v.live ? v.liveData : tr.overview, c) * (WAVE_H / 2) / 255;
-  t.drawFastVLine(x, mid - h, 2 * h + 1, color);
-}
-
-// Markers (behind the playhead; only on the selected track), 1 px lines down
-// the row: the range's first and last columns,
-// and the start position, which also has a small triangle at its top
-// pointing right (MARK_FLAG rows tall, widest in the middle).
-static constexpr int MARK_TOP = 1, MARK_FLAG = 5;
-
-static void drawMark(int i, int c) {
-  const WaveView &v = views[i];
-  if (v.markCol < 0 || i != selected) return;
+  uint16_t col[BAND_ROWS];
+  for (auto &c : col) c = v.bg;
+  if (v.frame != BG) {                             // the frame, its corners cut (black on an inverted cell)
+    uint16_t frame = v.bg == INK ? BG : v.frame;
+    if (bc == 0 || bc == BLOCK_COLS - 1) for (int r = 1; r < BAND_ROWS - 1; r++) col[r] = frame;
+    else col[0] = col[BAND_ROWS - 1] = frame;
+  } else if (i == DIVIDER_ROW) {
+    col[BAND_ROWS - 1] = DIVIDER;
+  }
+  int c = bc - 1;                                  // waveform column
+  bool selectedTrack = i == selected;
+  if (c >= 0 && c < WAVE_COLS && v.visible) {
+    bool muted = !v.live && tr.state == TrackState::Muted;
+    bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
+    if (!v.live || c < v.liveFilled) {
+      uint16_t ink = v.live ? BG : (in && !muted) ? INK : DIM;   // (live: on the inverted cell)
+      int h = (columnLevel(v.live ? v.liveData : tr.overview, c) * WAVE_REACH + 127) / 255;
+      for (int r = MID_ROW - h; r <= MID_ROW + h; r++)
+        if (in || !muted || (c + r) % 2 == 0) col[r] = ink;   // muted, outside: every other block
+    }
+    if (selectedTrack && !v.live) {
+      uint16_t mark = muted ? DIM : INK;
+      if (in) col[1] = mark;                                      // the bracket
+      if (c == v.beginCol || c == v.endCol) col[2] = mark;        // its ends
+      if (isBarColumn(tr.loopBars, c)) col[TICK_ROW] = DIM;
+      if (c == v.markCol)                                         // the start position: dotted, inverting
+        for (int r = MID_ROW - WAVE_REACH; r < TICK_ROW; r += 2) col[r] = col[r] == v.bg ? mark : v.bg;
+    }
+    if (c == v.playCol) {                                         // on top: the playhead
+      for (int r = 1; r < BAND_ROWS - 1; r++)
+        col[r] = v.headColor != PLAYHEAD ? v.headColor : col[r] == BG ? INK : BG;
+    }
+  }
+  static uint16_t px[ROW_BAND * PX];
+  for (int r = 0; r < BAND_ROWS; r++)
+    for (int y = 0; y < PX; y++) px[(r * PX + y) * PX] = px[(r * PX + y) * PX + 1] = col[r];
   auto &t = board.tft();
-  uint16_t color = tracks[i].state == TrackState::Muted ? blend565(START_MARK, BG, MUTED_WEIGHT) : START_MARK;
-  int x = WAVE_X + c, top = rowTop(i) + MARK_TOP, half = MARK_FLAG / 2;
-  if (c == v.markCol || c == v.beginCol || c == v.endCol) t.drawFastVLine(x, top, ROW_BAND - 2 * MARK_TOP, color);
-  int k = c - v.markCol;                           // the triangle, right of its line
-  if (k > 0 && k <= half) t.drawFastVLine(x, top + k, MARK_FLAG - 2 * k, color);
-}
-
-static void drawColumn(int i, int c) {
-  if (c < 0 || c >= WAVE_W) return;
-  drawColumnUnder(i, c);
-  drawMark(i, c);
-  const WaveView &v = views[i];
-  if (v.visible && v.playCol >= 0 && (c == v.playCol || (v.headEdge && c == v.playCol - 1)))   // on top, the row's full height
-    board.tft().drawFastVLine(WAVE_X + c, rowTop(i), ROW_BAND, c == v.playCol ? v.headColor : PLAYHEAD_EDGE);
+  int x = WAVE_X + bc * PX, top = rowTop(i);
+  if (bgTop(i) < top) t.fillRect(x, bgTop(i), PX, top - bgTop(i), v.bg);   // the first row's margin
+  t.writeRect(x, top, PX, ROW_BAND, px);
 }
 
 void drawWave(int i, bool recordingHere) {
@@ -102,9 +113,9 @@ void drawWave(int i, bool recordingHere) {
   WaveView &v = views[i];
   uint32_t rs = 0, rb = 0;
   if (tr.state != TrackState::Empty) trackRange(i, rs, rb);
-  uint16_t bg = cellBackground(i, WAVE_CELL);
+  uint16_t bg = cellBackground(i, WAVE_CELL), frame = cellFrame(i, WAVE_CELL);
   if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
-      v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg)
+      v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.frame == frame)
     return;
   v.drawn = uiGeneration;
   v.version = tr.overviewVersion;
@@ -113,6 +124,7 @@ void drawWave(int i, bool recordingHere) {
   v.rs = rs;
   v.rb = rb;
   v.bg = bg;
+  v.frame = frame;
   v.live = recordingHere;
   v.visible = recordingHere || tr.state != TrackState::Empty;
   if (!v.visible || v.live) v.playCol = -1;
@@ -126,29 +138,27 @@ void drawWave(int i, bool recordingHere) {
     v.liveFilled = 0;
   } else if (v.visible) {
     uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
-    v.rangeFirst = rs * WAVE_W / loopBeats;
-    int end = (int)(((rs + rb) * WAVE_W + loopBeats - 1) / loopBeats);   // unwrapped
-    v.rangeCols = constrain(end - v.rangeFirst, 1, WAVE_W);
-    v.markCol = startPosition(loopBeats, rs, rb) * WAVE_W / loopBeats;
+    v.rangeFirst = rs * WAVE_COLS / loopBeats;
+    int end = (int)(((rs + rb) * WAVE_COLS + loopBeats - 1) / loopBeats);   // unwrapped
+    v.rangeCols = constrain(end - v.rangeFirst, 1, WAVE_COLS);
+    v.markCol = startPosition(loopBeats, rs, rb) * WAVE_COLS / loopBeats;
     v.beginCol = v.rangeFirst;
-    // The range's last column; a whole-loop range's edges meet: one line.
-    v.endCol = v.rangeCols >= WAVE_W ? v.beginCol : (v.rangeFirst + v.rangeCols - 1) % WAVE_W;
+    // The range's last column; a whole-loop range's ends meet: one tick.
+    v.endCol = v.rangeCols >= WAVE_COLS ? v.beginCol : (v.rangeFirst + v.rangeCols - 1) % WAVE_COLS;
   }
-  for (int c = 0; c < WAVE_W; c++) drawColumn(i, c);
+  for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
 }
 
 // Moves a view's playhead (or record head) to col with the given look,
 // redrawing only the columns it leaves and covers.
-static void movePlayhead(int i, int col, uint16_t color, bool edge = true) {
+static void movePlayhead(int i, int col, uint16_t color) {
   WaveView &v = views[i];
-  if (col == v.playCol && color == v.headColor && edge == v.headEdge) return;
+  if (col == v.playCol && color == v.headColor) return;
   int old = v.playCol;
   v.playCol = col;
   v.headColor = color;
-  v.headEdge = edge;
-  // The columns it leaves (those it still covers draw as the new playhead), then the new ones.
-  if (old >= 0) for (int c = old - 1; c <= old; c++) if (col < 0 || c < col - 1 || c > col) drawColumn(i, c);
-  if (col >= 0) for (int c = col - 1; c <= col; c++) drawColumn(i, c);
+  if (old >= 0 && old != col) drawColumn(i, old + 1);
+  if (col >= 0) drawColumn(i, col + 1);
 }
 
 // Live view of the recording: new columns as audio is written, a full
@@ -159,12 +169,11 @@ static void updateLive(int i) {
   uint32_t bars, framesPerBar, recorded;
   if (!recordingWaveform(cols, bars, framesPerBar, recorded)) return;
   uint32_t total = bars * framesPerBar;
-  int filled = min(WAVE_W, (int)(((uint64_t)recorded * WAVE_W + total - 1) / total));
+  int filled = min(WAVE_COLS, (int)(((uint64_t)recorded * WAVE_COLS + total - 1) / total));
   noInterrupts();
   int32_t sofar = (int32_t)(transport.now - recording.startSample);
   interrupts();
-  int head = sofar < 0 ? -1 : min(WAVE_W - 1, (int)((uint64_t)sofar * WAVE_W / total));
-  uint16_t headColor = REC_HEAD;
+  int head = sofar < 0 ? -1 : min(WAVE_COLS - 1, (int)((uint64_t)sofar * WAVE_COLS / total));
   if (tracks[i].live) {
     // The loop already plays (the rest of the recording is still being
     // saved): its playhead instead of the record head.
@@ -173,27 +182,25 @@ static void updateLive(int i) {
     interrupts();
     double loopBeats = bars * BEATS_PER_BAR, beat = fmod(pos - recording.startBeat, loopBeats);
     if (beat < 0) beat += loopBeats;
-    head = min(WAVE_W - 1, (int)(beat * WAVE_W / loopBeats));
-    headColor = PLAYHEAD;
+    head = min(WAVE_COLS - 1, (int)(beat * WAVE_COLS / loopBeats));
   }
   if (bars != v.liveBars) {                        // new scale: redraw everything
     v.liveBars = bars;
     v.liveFilled = filled;
     memcpy(v.liveData, cols, OVERVIEW_COLS);
     v.playCol = head;
-    v.headColor = headColor;
-    v.headEdge = true;
-    for (int c = 0; c < WAVE_W; c++) drawColumn(i, c);
+    v.headColor = PLAYHEAD;
+    for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
     return;
   }
-  uint8_t before[WAVE_W];
-  for (int c = 0; c < WAVE_W; c++) before[c] = columnLevel(v.liveData, c);
+  uint8_t before[WAVE_COLS];
+  for (int c = 0; c < WAVE_COLS; c++) before[c] = columnLevel(v.liveData, c);
   memcpy(v.liveData, cols, OVERVIEW_COLS);
   int oldFilled = v.liveFilled;
   v.liveFilled = filled;
-  for (int c = 0; c < WAVE_W; c++)
-    if (columnLevel(v.liveData, c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c);
-  movePlayhead(i, head, headColor);
+  for (int c = 0; c < WAVE_COLS; c++)
+    if (columnLevel(v.liveData, c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c + 1);
+  movePlayhead(i, head, PLAYHEAD);
 }
 
 // Playhead column for each track from the transport position and the
@@ -210,15 +217,15 @@ void updatePlayheads() {
     // not on its next turn.
     if (v.live != recordingOn(i)) drawTrack(i);
     if (v.live) { updateLive(i); continue; }
-    // Unmuted: white (black edge). Muted: none, but a line on the selected track.
+    // Unmuted: inverting. Muted: none, but a dim line on the selected track.
     bool muted = tr.state == TrackState::Muted;
     int col = -1;
     if (v.visible && running && tr.live && (!muted || i == selected)) {
       double inRange = fmod(pos - tr.rangeAnchorQ / 4.0, (double)tr.rangeBeats);
       if (inRange < 0) inRange += tr.rangeBeats;
       double loopBeat = fmod(tr.rangeStartBeat + inRange, (double)(tr.loopBars * BEATS_PER_BAR));
-      col = min(WAVE_W - 1, (int)(loopBeat * WAVE_W / (tr.loopBars * BEATS_PER_BAR)));
+      col = min(WAVE_COLS - 1, (int)(loopBeat * WAVE_COLS / (tr.loopBars * BEATS_PER_BAR)));
     }
-    movePlayhead(i, col, muted ? MUTED_HEAD : PLAYHEAD, !muted);   // muted: a single line
+    movePlayhead(i, col, muted ? MUTED_HEAD : PLAYHEAD);
   }
 }

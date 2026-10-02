@@ -2,15 +2,18 @@
 #include "ui.h"
 
 // ---- Filter cell: the response of the track's highpass + lowpass pair over
-// 20 Hz - 20 kHz (log), 0 dB at the top to -CURVE_DB at the bottom; a line
-// with a faint fill under it. Bright while the clip plays, dimmed when
-// muted, nothing on an empty track. Each column is drawn whole (background,
-// fill, line), so a change doesn't flash.
-static constexpr int CURVE_H = 18;
-static constexpr float CURVE_DB = 30, CURVE_LINE = 1.2f;   // line width in px (anti-aliased)
+// 20 Hz - 20 kHz (log), 0 dB at the top to -CURVE_DB at the bottom, in
+// blocks: a line one block thick (white while the clip plays, dim when
+// muted) with a dim checker pattern under it. Nothing on an empty track.
+// The cell is built in a buffer and sent at once (no flash).
+static constexpr int CELL_COLS = CELL[FILTER_CELL].w / PX;      // 39, the frame's included
+static constexpr int GRAPH_COLS = CELL_COLS - 2;
+static constexpr int BAND_ROWS = ROW_BAND / PX;                 // 13
+static constexpr int TOP_ROW = 2, BOTTOM_ROW = 10;              // 0 dB, -CURVE_DB
+static constexpr float CURVE_DB = 30;
 
 void drawFilter(int i) {
-  struct Key { int8_t lo, hi; uint16_t bg, line; };
+  struct Key { int8_t lo, hi; uint16_t frame, line; };
   static Key shown[NUM_TRACKS];
   static uint32_t drawn[NUM_TRACKS];               // uiGeneration when last drawn
   const Track &tr = tracks[i];
@@ -18,58 +21,50 @@ void drawFilter(int i) {
   memset(&k, 0, sizeof k);                         // padding too: compared with memcmp
   k.lo = tr.filterLo;
   k.hi = tr.filterHi;
-  k.bg = cellBackground(i, FILTER_CELL);
-  k.line = !hasClip(i) ? BG                                       // empty (or still recording): no curve
-         : tr.state == TrackState::Playing ? CURVE : blend565(CURVE, BG, MUTED_WEIGHT);
+  k.frame = cellFrame(i, FILTER_CELL);
+  k.line = !hasClip(i) ? BG                        // empty (or still recording): no curve
+         : tr.state == TrackState::Playing ? INK : DIM;
   if (drawn[i] == uiGeneration && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;
   shown[i] = k;
-  auto &t = board.tft();
-  const Cell &cell = CELL[FILTER_CELL];
-  const int band = rowTop(i), top = (ROW_BAND - CURVE_H) / 2, bottom = top + CURVE_H - 1;   // rows in the band
-  uint16_t fill = blend565(k.line, k.bg, CURVE_FILL_WEIGHT);
-  // The curve through each column's centre, in band pixel coordinates (row
-  // r spans r..r+1); below the graph it keeps going down, out of sight.
-  static float curveY[CELL[FILTER_CELL].w + 2];      // columns -1 .. w
-  for (int c = -1; c <= cell.w; c++) {
-    float hz = FILTER_MIN_HZ * powf(2.0f, FILTER_OCTAVES * (c + 0.5f) / cell.w);
-    curveY[c + 1] = top + 0.5f + -filterResponseDb(k.lo, k.hi, hz) / CURVE_DB * (CURVE_H - 1);
+
+  // The curve's row (fractional) at each column's centre.
+  float y[GRAPH_COLS];
+  for (int c = 0; c < GRAPH_COLS; c++) {
+    float hz = FILTER_MIN_HZ * powf(2.0f, FILTER_OCTAVES * (c + 0.5f) / GRAPH_COLS);
+    y[c] = TOP_ROW + -filterResponseDb(k.lo, k.hi, hz) / CURVE_DB * (BOTTOM_ROW - TOP_ROW);
   }
-  auto yAt = [&](float x) {                        // straight between column centres
-    float f = constrain(x - 0.5f, -1.0f, (float)cell.w);
-    int c = min((int)floorf(f), cell.w - 1);
-    return curveY[c + 1] + (curveY[c + 2] - curveY[c + 1]) * (f - c);
-  };
-  // Distance from (x, y) to the curve's segment between columns c and c + 1.
-  auto segDist = [&](int c, float x, float y) {
-    float ax = c + 0.5f, ay = curveY[c + 1], dx = 1, dy = curveY[c + 2] - ay;
-    float u = constrain(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy), 0.0f, 1.0f);
-    float ex = x - (ax + u * dx), ey = y - (ay + u * dy);
-    return sqrtf(ex * ex + ey * ey);
-  };
-  static uint16_t col[ROW_BAND];
-  for (int c = 0; c < cell.w; c++) {
-    for (int r = 0; r < ROW_BAND; r++) col[r] = k.bg;
-    if (i == DIVIDER_ROW && k.bg == BG) col[dividerY() - band] = DIVIDER;
-    if (hasClip(i)) {
-      for (int r = top - 1; r <= bottom; r++) {
-        // 4x4 samples: on the line (within CURVE_LINE / 2), or under it (fill).
-        int onLine = 0, under = 0;
-        for (int sx = 0; sx < 4; sx++) {
-          float x = c + (sx + 0.5f) / 4, cy = yAt(x);
-          for (int sy = 0; sy < 4; sy++) {
-            float y = r + (sy + 0.5f) / 4;
-            if (min(segDist(c - 1, x, y), segDist(c, x, y)) <= CURVE_LINE / 2) onLine++;
-            else if (y > cy && y < bottom + 1) under++;
-          }
-        }
-        if (onLine || under) {
-          uint16_t base = blend565(fill, k.bg, under * 255 / (16 - onLine ? 16 - onLine : 1));
-          col[r] = blend565(k.line, base, onLine * 255 / 16);
-        }
-      }
+  uint16_t blocks[BAND_ROWS][CELL_COLS];
+  for (auto &row : blocks) for (auto &b : row) b = BG;
+  for (int c = 0; c < CELL_COLS; c++) {
+    if (k.frame != BG) {
+      if (c == 0 || c == CELL_COLS - 1) for (int r = 1; r < BAND_ROWS - 1; r++) blocks[r][c] = k.frame;
+      else blocks[0][c] = blocks[BAND_ROWS - 1][c] = k.frame;
+    } else if (i == DIVIDER_ROW) {
+      blocks[BAND_ROWS - 1][c] = DIVIDER;
     }
-    if (bgTop(i) < band) t.drawFastVLine(cell.x + c, bgTop(i), band - bgTop(i), k.bg);   // the first row's margin
-    t.writeRect(cell.x + c, band, 1, ROW_BAND, col);
   }
+  if (k.line != BG) {
+    for (int c = 0; c < GRAPH_COLS; c++) {
+      // The line: this column's row, stretched halfway to its neighbours'
+      // so it stays joined where it's steep.
+      float lo = y[c], hi = y[c];
+      if (c > 0) { lo = min(lo, (y[c] + y[c - 1]) / 2); hi = max(hi, (y[c] + y[c - 1]) / 2); }
+      if (c < GRAPH_COLS - 1) { lo = min(lo, (y[c] + y[c + 1]) / 2); hi = max(hi, (y[c] + y[c + 1]) / 2); }
+      int r0 = (int)lroundf(lo), r1 = (int)lroundf(hi);
+      for (int r = max(r0, TOP_ROW); r <= min(r1, BOTTOM_ROW); r++) blocks[r][c + 1] = k.line;
+      for (int r = max(r1 + 1, TOP_ROW); r <= BOTTOM_ROW; r++)   // under it: every other block
+        if ((c + r) % 2 == 0) blocks[r][c + 1] = DIM;
+    }
+  }
+  static uint16_t px[ROW_BAND * CELL[FILTER_CELL].w];
+  const int w = CELL[FILTER_CELL].w;
+  for (int r = 0; r < BAND_ROWS; r++)
+    for (int c = 0; c < CELL_COLS; c++)
+      for (int dy = 0; dy < PX; dy++)
+        for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * w + c * PX + dx] = blocks[r][c];
+  auto &t = board.tft();
+  int top = rowTop(i);
+  if (bgTop(i) < top) t.fillRect(CELL[FILTER_CELL].x, bgTop(i), w, top - bgTop(i), BG);   // the first row's margin
+  t.writeRect(CELL[FILTER_CELL].x, top, w, ROW_BAND, px);
 }

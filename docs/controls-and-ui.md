@@ -49,17 +49,33 @@ double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
 320×240, no frame buffer: everything is drawn over its own background and
 only what changed is redrawn (`uiGeneration` forces a full redraw, e.g. after
 the panel or splash). 9 rows of 26 px: 8 tracks + status row; cells
-waveform | filter | volume | icon button.
+waveform | filter | volume | button (square).
 
-* Waveform: overview inside/outside the range, bar lines, start-position line,
-  playheads (white with a black edge; muted: single line in the range colour,
-  only when selected). Empty tracks draw nothing.
-* Filter: anti-aliased response curve. Volume: `((()))` arcs + level meter.
-* Icons: record (red) / stop / play / pause / cut / paste / menu / home /
-  scene cut / scene paste; the status button shows what A does now and dims
-  while A is held. Recording waits flash.
-* Status row: tempo, clock (bar.beat.step, wraps at 256 bars), scene label.
-* Colours: all in `colors.h` (grey, not bluish, for idle icons).
+Style (after Elektron's monochrome screens): white (`INK`) on black with one
+dim level (`DIM`); checker patterns for in-between shades; red only for the
+record icon on the status button. Everything sits on a grid of 2×2-pixel
+blocks (`PX`), a 160×120 screen of chunky pixels. Selection: a white frame
+on the current cell, dim frames on the row's other cells, the row's button
+inverted; the status button is always inverted (white on black while A is
+held). A recording track's waveform cell is inverted.
+
+* Waveform (`ui_wave.cpp`): 64 columns, a centre line with peaks up to 4
+  blocks each way; white inside the loop range, dim outside (muted: dim
+  range, dotted outside). Selected track: a bracket over the range, a dotted
+  start line, bar ticks. Playheads invert their column (muted: a dim line,
+  only when selected).
+* Filter (`ui_filter.cpp`): the response as a one-block line, a dim checker
+  under it.
+* Volume (`ui_mix.cpp`): `((( )))`, 4 arcs a side: dotted above the level, dim
+  up to it, white for the meter.
+* Icons (`ui_buttons.cpp`): bitmaps of blocks; "TAP" in the pixel font.
+* Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
+  the splash's lower case and ©) and tags (plain / outlined / inverted).
+  Status row: tempo (inverted while edited), clock, an inverted SCN tag
+  with the scene position (flashing while a change waits).
+* Colours: all in `colors.h`.
+* Working on the look without the device: `tools/ui_preview` renders the real
+  drawing code to PNGs (see build-and-test.md).
 * Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
   into 43×26 blocks of 2×2 px (two tracks tall), white, with
   "© 2026 Daniel Stanciu" under it in a 3×5 block font (7×7 ©); at least
