@@ -66,14 +66,16 @@ no dropouts or overruns
 - no longer wait for shift release and end of bar after jumping to and from the duplicate scene at the end, jumping directly via double-tapping to the scene list edges, as well as cutting, pasting and duplicating scenes. these should jump as quickly as possible, it's acceptable if waits for a beat crossing to switch V
 - save project context knowledge in md files in a subfolder V
 - invert scene navigation again V
+- de-clicking at loop edges and other transitions, including recording pre-roll V
 
 - 80s lcd ui experiment
 - switch tempo and clock labels, add play icon between
 
-- de-clicking at loop edges (?)
-- crossfading between two scenes
-- animated splash screen (?)
 - [ Projects ]
+- crossfading between two scenes
+- optimize ram usage
+
+- animated splash screen (?)
 
 
 L8

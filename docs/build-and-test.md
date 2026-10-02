@@ -29,8 +29,12 @@ c++ -std=c++17 -O1 -Wno-macro-redefined -Istubs -I../.. \
 It checks recording alignment and lengths, gapless playback, sync after every
 kind of change (`checkSync`: each beat starts on the right frame), ranges,
 clipboard, sample stepping, scenes (including bar-line and quick switching,
-the SHIFT hold, playhead continuity), queued recordings, overrun silence, and
-that nothing changes the file system while playing.
+the SHIFT hold, playhead continuity), queued recordings, overrun silence,
+declicking (sine input: the largest sample-to-sample step at loop and range
+wraps, mute, a clip switch and transport stop stays within twice the sine's
+own), and that nothing changes the file system while playing. Loop code that
+busy-waits for the interrupt uses `delayMicroseconds()`, which the simulator
+turns into audio blocks.
 
 Measurements (printed as `info`, not pass/fail) use `realisticSd`: reads
 ~2 ms + size, 16 KB writes 97 % ~10 ms, 2 % ~90 ms, 1 % ~250 ms (calibrated

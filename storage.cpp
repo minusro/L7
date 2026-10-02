@@ -70,12 +70,18 @@ struct Plan {
   uint32_t switchS = 0;
   TrackUnit u;
   FsFile file;                                   // the new sample (none: the same one)
-  uint32_t spb = 0, loopBars = 0, frames = 0;
+  uint32_t spb = 0, loopBars = 0, frames = 0, preroll = 0;
   uint8_t overview[OVERVIEW_COLS];
+  // The old clip's frames just before the switch, as they were before the
+  // crossfade into the new one (a replanned switch crossfades again from them).
+  uint32_t before[XFADE_FRAMES];
+  bool beforeSaved = false;
 };
 static Plan plans[NUM_TRACKS];
+static uint32_t prerollFrames[NUM_TRACKS];        // each track's sample: its stored pre-roll (see SampleInfo)
 static void applyPlan(int t);
 static void dropPlan(int t);
+static void crossfadeInto(Track &tr, uint32_t at, uint32_t entry, uint32_t *saved, bool &haveSaved);
 
 // A change of a track's unit while playing (a scene change, or another
 // sample), due on transport quarter beat q: the clip switches there (a Plan),
@@ -90,6 +96,28 @@ struct Change {
 };
 static Change changes[NUM_TRACKS];
 
+// Takes tracks (bit t of mask) off, playing ones after the interrupt has
+// faded them out (a few ms, waited for here): no click.
+static void silenceTracks(uint8_t mask) {
+  bool fading = false;
+  for (int t = 0; t < NUM_TRACKS; t++)
+    if ((mask >> t & 1) && transport.running && tracks[t].live) {
+      tracks[t].stopping = true;
+      fading = true;
+    }
+  for (uint32_t t0 = micros(); fading && micros() - t0 < 30000;) {
+    delayMicroseconds(250);
+    fading = false;
+    for (const auto &tr : tracks) if (tr.stopping && tr.live) fading = true;
+  }
+  for (int t = 0; t < NUM_TRACKS; t++)
+    if (mask >> t & 1) {
+      tracks[t].live = false;
+      tracks[t].armed = false;
+      tracks[t].stopping = false;
+    }
+}
+
 // Recording, waiting to, or queued: its sample is spoken for.
 static bool recordingTrack(int t) {
   return (recording.mode != Recording::Idle && recording.track == t) || queuedTrack == t;
@@ -102,9 +130,14 @@ struct SampleInfo {
   char magic[4];                                 // "M8SM"
   uint32_t version, frames, spb, loopBars;       // frames 0: empty (recording space)
   uint32_t order;                                // when it was recorded: 1, 2, 3 ... (version 2)
+  uint32_t preroll;                              // frames of the input before the loop's start (version 3)
 };
 // Version 2: order. Version 1 samples are ordered by their number.
-static constexpr uint32_t INFO_OFFSET = 44, SAMPLE_VERSION = 2;
+// Version 3: preroll. The input just before the recording started is kept
+// after the loop's frames (frames .. frames + preroll), for crossfading the
+// loop's end into its start.
+static constexpr uint32_t INFO_OFFSET = 44, SAMPLE_VERSION = 3;
+static uint32_t prerollOf(const SampleInfo &info) { return info.version >= 3 ? info.preroll : 0; }
 static constexpr uint32_t SAMPLE_OVERVIEW_OFFSET = INFO_OFFSET + sizeof(SampleInfo);
 static_assert(SAMPLE_OVERVIEW_OFFSET + OVERVIEW_COLS <= WAV_DATA_OFFSET - 8, "the overview must fit in the header");
 
@@ -153,7 +186,7 @@ static void put16(uint8_t *p, uint16_t v) { p[0] = v; p[1] = v >> 8; }
 static void put32(uint8_t *p, uint32_t v) { put16(p, v); put16(p + 2, v >> 16); }
 
 static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t loopBars, const uint8_t *overview,
-                              uint32_t order = 0) {
+                              uint32_t order = 0, uint32_t preroll = 0) {
   uint8_t h[WAV_DATA_OFFSET] = {};
   memcpy(h, "RIFF", 4);       put32(h + 4, WAV_DATA_OFFSET - 8 + frames * 4);
   memcpy(h + 8, "WAVE", 4);
@@ -162,7 +195,7 @@ static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t
   put32(h + 24, 44100);       put32(h + 28, 44100 * 4);
   put16(h + 32, 4);           put16(h + 34, 16);
   memcpy(h + 36, "JUNK", 4);  put32(h + 40, WAV_DATA_OFFSET - 44 - 8);
-  SampleInfo info = {{'M', '8', 'S', 'M'}, SAMPLE_VERSION, frames, spb, loopBars, order};
+  SampleInfo info = {{'M', '8', 'S', 'M'}, SAMPLE_VERSION, frames, spb, loopBars, order, preroll};
   memcpy(h + INFO_OFFSET, &info, sizeof info);
   if (overview) memcpy(h + SAMPLE_OVERVIEW_OFFSET, overview, OVERVIEW_COLS);
   memcpy(h + WAV_DATA_OFFSET - 8, "data", 4);
@@ -218,7 +251,7 @@ static void trimSample(uint32_t n) {
   SampleInfo info;
   if (f && readSampleHeader(f, info, nullptr) && playable(info)) {
     debugStage = "SD trim (sample file)";
-    f.truncate(WAV_DATA_OFFSET + (uint64_t)info.frames * 4);
+    f.truncate(WAV_DATA_OFFSET + (uint64_t)(info.frames + prerollOf(info)) * 4);
   }
 }
 
@@ -260,6 +293,7 @@ static bool loadSample(int t, uint32_t n) {
   SampleInfo info;
   if (!openSample(n, tr.file, info, tr.overview)) return false;
   tr.sample = n;
+  prerollFrames[t] = prerollOf(info);
   tr.spbNative = info.spb;
   tr.loopBars = info.loopBars;
   tr.recordedFrames = info.frames;
@@ -421,6 +455,7 @@ static PlanResult planSwitch(int t, const TrackUnit &u, int32_t q) {
       p.outBeats = tr.rangeBeats;
       p.outAnchorQ = tr.rangeAnchorQ;
     }
+    p.beforeSaved = false;                       // a new switch point
   }
   int64_t late = msToSamples(PLAN_LATE_MS) * tr.playSpb / transport.spb;   // in stream frames
   if ((int32_t)(switchS - tail) < late) return pending ? WAIT : FAILED;
@@ -437,6 +472,7 @@ static PlanResult planSwitch(int t, const TrackUnit &u, int32_t q) {
     p.spb = info.spb;
     p.loopBars = info.loopBars;
     p.frames = info.frames;
+    p.preroll = prerollOf(info);
   }
   p.u = u;
   p.q = q;
@@ -459,6 +495,7 @@ static void applyPlan(int t) {
   if (!p.on) return;
   p.on = false;
   if (p.stop) {                                  // what follows in the stream isn't played
+    crossfadeInto(tr, p.switchS, UINT32_MAX, p.before, p.beforeSaved);   // fades out
     noInterrupts();
     tr.switchAt = p.switchS;
     tr.nextSpb = 0;
@@ -474,6 +511,7 @@ static void applyPlan(int t) {
     tr.spbNative = p.spb;
     tr.loopBars = p.loopBars;
     tr.recordedFrames = p.frames;
+    prerollFrames[t] = p.preroll;
     memcpy(tr.overview, p.overview, OVERVIEW_COLS);
     tr.overviewVersion++;
   }
@@ -483,6 +521,7 @@ static void applyPlan(int t) {
   if (tr.state == TrackState::Empty) tr.state = TrackState::Muted;   // (its settings follow at the switch)
   int32_t phaseQ = posMod(p.q - tr.rangeAnchorQ, 4 * tr.rangeBeats);
   tr.fileFrame = tr.rangeFrame(quarterFrames(phaseQ, tr.spbNative));
+  crossfadeInto(tr, p.switchS, tr.fileFrame, p.before, p.beforeSaved);
   // The next beat line after the switch, and the stream frame there.
   int32_t beat = (p.q + 3) / 4;
   uint32_t s0 = p.switchS + quarterFrames(phaseQ + 4 * beat - p.q, tr.spbNative) - quarterFrames(phaseQ, tr.spbNative);
@@ -519,8 +558,7 @@ static bool setUnitNow(int t, const TrackUnit &u) {
     return true;
   }
   dropPlan(t);
-  tr.live = false;
-  tr.armed = false;
+  silenceTracks(1 << t);
   tr.rangePending = false;
   if (tr.state == TrackState::Empty || now.sample != u.sample || !tr.file) {
     tr.file.close();
@@ -1007,11 +1045,88 @@ static void recoverSd() {
 
 // ---- Streaming
 
+// ---- Declicking: crossfades where the stream jumps
+// Where a stream jumps (a range's end back to its start, the loop's end back
+// to frame 0, a switch to another range or clip), the XFADE_FRAMES before the
+// jump are crossfaded into the frames that precede the jump's target in the
+// recording, so the target follows on smoothly and keeps its attack. Before
+// frame 0 that's the recording's stored pre-roll; without one (older samples,
+// a recording still being saved) silence: a short fade out.
+
+static uint32_t mixFrames(uint32_t a, uint32_t b, float w) {   // (1 - w) a + w b, per channel
+  float al = (int16_t)(a & 0xFFFF), ar = (int16_t)(a >> 16), bl = (int16_t)(b & 0xFFFF), br = (int16_t)(b >> 16);
+  int16_t l = (int16_t)lroundf(al + (bl - al) * w), r = (int16_t)lroundf(ar + (br - ar) * w);
+  return (uint16_t)l | ((uint32_t)(uint16_t)r << 16);
+}
+
+// The XFADE_FRAMES of track t's sample before loop frame `at` (UINT32_MAX:
+// silence), into out.
+static void readFramesBefore(Track &tr, uint32_t at, uint32_t *out) {
+  memset(out, 0, XFADE_FRAMES * 4);
+  if (at == UINT32_MAX || sdFailed) return;
+  uint32_t from, n = XFADE_FRAMES;
+  if (at == 0) {
+    if (prerollFrames[&tr - tracks] < XFADE_FRAMES) return;
+    from = tr.recordedFrames;                    // the pre-roll, kept after the loop
+  } else if (at >= XFADE_FRAMES) {
+    from = at - XFADE_FRAMES;
+    if (from >= tr.recordedFrames) return;       // the loop's silent end
+    n = min(n, tr.recordedFrames - from);
+  } else {
+    return;                                      // (ranges start on beats: not used)
+  }
+  debugStage = "SD read (crossfade)";
+  if (!tr.file.seekSet(WAV_DATA_OFFSET + (uint64_t)from * 4) || tr.file.read(out, n * 4) != (int)(n * 4))
+    memset(out, 0, XFADE_FRAMES * 4);
+}
+
+// The frames before each jump target a track keeps hitting (a range's start,
+// frame 0), so wrapping costs no read: two per track.
+struct FramesBefore { uint16_t sample = 0; uint32_t at = 0, preroll = 0; uint32_t frames[XFADE_FRAMES]; };
+static FramesBefore framesBefore[NUM_TRACKS][2];
+static uint8_t framesBeforeNext[NUM_TRACKS];
+
+static const uint32_t *cachedFramesBefore(Track &tr, uint32_t at) {
+  int t = &tr - tracks;
+  for (auto &c : framesBefore[t])
+    if (c.sample == tr.sample && c.at == at && c.preroll == prerollFrames[t]) return c.frames;
+  FramesBefore &c = framesBefore[t][framesBeforeNext[t]++ & 1];
+  readFramesBefore(tr, at, c.frames);
+  c.sample = tr.sample;
+  c.at = at;
+  c.preroll = prerollFrames[t];
+  return c.frames;
+}
+
+// A switch at stream frame `at` (ring head) into the clip now set up from loop
+// frame `entry` (UINT32_MAX: into silence): the ring's last XFADE_FRAMES
+// before it crossfade into what precedes the entry. `saved` keeps those
+// frames as they were, so a switch replanned to the same point starts over
+// from them.
+static void crossfadeInto(Track &tr, uint32_t at, uint32_t entry, uint32_t *saved, bool &haveSaved) {
+  uint32_t into[XFADE_FRAMES];
+  readFramesBefore(tr, entry, into);
+  noInterrupts();
+  uint32_t tail = tr.tail;
+  interrupts();
+  for (uint32_t i = 0; i < XFADE_FRAMES; i++) {
+    uint32_t s = at - XFADE_FRAMES + i;
+    uint32_t &f = tr.ring[s % RING_FRAMES];
+    if (haveSaved) f = saved[i];
+    else saved[i] = f;
+    if ((int32_t)(s - tail) < (int32_t)(2 * AUDIO_BLOCK_SAMPLES)) continue;   // already playing
+    f = mixFrames(f, into[i], (i + 1.0f) / (XFADE_FRAMES + 1));
+  }
+  haveSaved = true;
+}
+
 // The stream has reached the queued range's switch point. If the new range
 // contains the spot that would have played next, carry on from it (the range
 // is re-anchored around the playhead); otherwise start the new range in
 // phase with the existing anchor.
 static void applyQueuedRange(Track &tr) {
+  uint32_t before[XFADE_FRAMES];
+  bool saved = false;
   tr.rangeStartBeat = tr.pendingStartBeat;
   tr.rangeBeats = tr.pendingBeats;
   tr.rangePending = false;
@@ -1024,6 +1139,7 @@ static void applyQueuedRange(Track &tr) {
   } else {
     int32_t phaseQ = posMod(tr.switchQ - tr.rangeAnchorQ, 4 * tr.rangeBeats);
     tr.fileFrame = tr.rangeFrame(quarterFrames(phaseQ, tr.spbNative));
+    crossfadeInto(tr, tr.head, tr.fileFrame, before, saved);   // (the switch point: head)
   }
   trackChanged(&tr - tracks);
 }
@@ -1068,6 +1184,19 @@ static void produce(Track &tr) {
     if (ms > SLOW_SD_MS || got != (int)(n * 4))
       logSd("read", ms, got, n * 4);
   }
+  // Frames close to the next jump crossfade into what precedes its target.
+  uint32_t toLoopEnd = tr.loopFrames() - tr.fileFrame, toJump = min(toRangeEnd, toLoopEnd);
+  if (toJump - n < XFADE_FRAMES) {
+    uint32_t target = toRangeEnd <= toLoopEnd ? tr.rangeStartFrame() : 0;
+    const uint32_t *into = cachedFramesBefore(tr, target);
+    for (uint32_t i = 0; i < n; i++) {
+      uint32_t d = toJump - i;                     // frames to the jump (1: the last before it)
+      if (d <= XFADE_FRAMES) {
+        uint32_t k = XFADE_FRAMES - d;
+        chunk[i] = mixFrames(chunk[i], into[k], (k + 1.0f) / (XFADE_FRAMES + 1));
+      }
+    }
+  }
   uint32_t head = tr.head;
   for (uint32_t i = 0; i < n; i++) tr.ring[(head + i) % RING_FRAMES] = chunk[i];
   tr.head = head + n;
@@ -1080,8 +1209,7 @@ static void produce(Track &tr) {
 // start); otherwise serviceStreams() fills it, emptiest track first.
 static void startTrack(int t, int32_t beat0, bool fillNow) {
   Track &tr = tracks[t];
-  tr.live = false;
-  tr.armed = false;
+  silenceTracks(1 << t);                         // (if it was playing)
   tr.needsRestart = false;
   applyPlan(t);                                  // a planned clip: starts as that
   tr.sampleSwitch = false;
@@ -1200,6 +1328,19 @@ static void stopRecording() {
   armRecordedLoop(recording.targetFrames > length);
 }
 
+// The input just before the recording's first frame (see SampleInfo),
+// copied from the input history once it's there; written with the header.
+static uint32_t prerollBuf[XFADE_FRAMES];
+static bool prerollTaken = false, prerollKept = false;
+
+static void takePreroll() {
+  uint32_t now = transport.now, from = recording.startSample - XFADE_FRAMES;
+  if (prerollTaken || (int32_t)(now - recording.startSample) < 0) return;   // (starts a little ahead)
+  prerollTaken = true;
+  prerollKept = now - from < INPUT_FRAMES - AUDIO_BLOCK_SAMPLES;
+  for (uint32_t i = 0; i < XFADE_FRAMES; i++) prerollBuf[i] = inputRing[(from + i) % INPUT_FRAMES];
+}
+
 static void finishRecording() {
   int t = recording.track;
   Track &tr = tracks[t];
@@ -1221,7 +1362,14 @@ static void finishRecording() {
   buildOverview(tr, recPeaks, tr.recordedFrames);
   // The sample's header: its length, tempo and overview. One 512-byte write,
   // like a unit file's (the file is cut down to size once stopped).
-  writeSampleHeader(tr.file, tr.recordedFrames, tr.spbNative, tr.loopBars, tr.overview, lastOrder + 1);
+  // The pre-roll after the loop's frames, then the header (512 bytes each).
+  takePreroll();
+  uint32_t preroll = 0;
+  if (prerollKept && tr.file.seekSet(WAV_DATA_OFFSET + (uint64_t)tr.recordedFrames * 4) &&
+      tr.file.write(prerollBuf, sizeof prerollBuf) == (int)sizeof prerollBuf)
+    preroll = XFADE_FRAMES;
+  writeSampleHeader(tr.file, tr.recordedFrames, tr.spbNative, tr.loopBars, tr.overview, lastOrder + 1, preroll);
+  prerollFrames[t] = preroll;                    // its loop's end now crossfades into it
   noteSample(tr.sample, lastOrder + 1);
   if (untrimmedCount < 64) untrimmed[untrimmedCount++] = tr.sample;
   uint32_t end = recording.startSample + recording.targetFrames;
@@ -1277,6 +1425,7 @@ static void silenceGap() {
 
 static void serviceRecorder() {
   if (recording.mode != Recording::Running && recording.mode != Recording::Finishing) return;
+  takePreroll();
   uint32_t now = transport.now;
   uint32_t next = recording.startSample + recording.written;   // next input sample to save
   if ((int32_t)(now - next) > (int32_t)(INPUT_FRAMES - CHUNK_FRAMES)) {
@@ -1383,6 +1532,8 @@ int recordQueued() { return queuedTrack; }
 static void startRecording(int t, uint32_t from, int32_t beat, int32_t maxBehind) {
   recording.track = t;
   recording.written = 0;
+  prerollTaken = prerollKept = false;
+  prerollFrames[t] = 0;                          // (none until it's saved)
   gapCount = 0;
   recording.overruns = 0;
   memset(recPeaks, 0, sizeof recPeaks);
@@ -1453,8 +1604,7 @@ void clearTrack(int t) {
   Track &tr = tracks[t];
   dropPlan(t);
   changes[t].on = false;
-  tr.live = false;
-  tr.armed = false;
+  silenceTracks(1 << t);
   tr.state = TrackState::Empty;
   tr.file.close();                               // its sample stays on the card
   tr.sample = 0;
@@ -1542,6 +1692,7 @@ void transportStop() {
     uint32_t sofar = transport.now + LATENCY_FRAMES - recording.startSample;
     recording.targetFrames = min(recording.targetFrames, max(sofar, recording.written));
   }
+  silenceTracks(0xFF);                           // faded out, not cut off
   transport.running = false;
   transport.spbAtBeat = -1;                      // a scene's tempo: now
   for (int t = 0; t < NUM_TRACKS; t++) {
@@ -1563,9 +1714,9 @@ void transportSnapToBar() {
   interrupts();
   int32_t target = (beat / BEATS_PER_BAR + (into >= barLen / 2 ? 1 : 0)) * BEATS_PER_BAR;
   for (int t = 0; t < NUM_TRACKS; t++) settleNow(t);   // changes on their way: now
+  silenceTracks(0xFF);                           // faded out, then in again at the new position
   // Paused while the tracks refill for the new position (as when starting).
   transport.running = false;
-  for (auto &tr : tracks) { tr.live = false; tr.armed = false; }
   transport.beat = target;
   transport.sampleInBeat = 0;
   for (int t = 0; t < NUM_TRACKS; t++) startTrack(t, target, true);

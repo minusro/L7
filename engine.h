@@ -74,6 +74,11 @@ struct Track {
   volatile int32_t startBeat = 0;
   uint32_t s0 = 0;
   volatile uint32_t playSpb = 0;         // spbNative of what the interrupt is playing
+  // Level glide (interrupt only): the mix gains actually applied, moving
+  // towards the targets; 0 while not live. stopping (loop() -> interrupt):
+  // glide to silence, then go off (live false).
+  float curMix[4] = {};
+  volatile bool stopping = false;
   volatile uint32_t underruns = 0;
   // Sample switch (loop() -> interrupt): from stream frame switchAt on, the
   // stream holds another recording (or range); the start handshake's mapping

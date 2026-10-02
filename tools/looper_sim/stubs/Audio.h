@@ -19,6 +19,9 @@ template <class T, class L, class H> T constrain(T v, L lo, H hi) { return v < l
 extern uint32_t simMicros;
 inline uint32_t micros() { return simMicros; }
 inline uint32_t millis() { return simMicros / 1000; }
+// Busy waits let the (simulated) audio interrupt run meanwhile.
+extern void (*simDelayHook)(uint32_t us);
+inline void delayMicroseconds(uint32_t us) { if (simDelayHook) simDelayHook(us); else simMicros += us; }
 inline void noInterrupts() {}
 inline void interrupts() {}
 

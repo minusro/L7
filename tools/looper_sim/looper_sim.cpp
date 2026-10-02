@@ -16,6 +16,7 @@
 using namespace looper;
 
 uint32_t simMicros = 0;
+void (*simDelayHook)(uint32_t us) = nullptr;
 std::string simRoot;
 SDClass SD;
 SerialStub Serial;
@@ -28,6 +29,7 @@ static LooperEngine engine;
 static audio_block_t inL, inR, outL, outR;
 static uint32_t inputIndex = 0;        // index of the next input sample (== transport.now)
 static bool feedRamp = true;
+static double feedSineHz = 0;                       // instead: a sine (declicking tests)
 static int failures = 0;
 
 // Input that identifies its own sample index: left = index mod 20000 - 10000.
@@ -96,7 +98,8 @@ static void audioBlock() {
   uint32_t before = 0;
   for (auto &tr : tracks) before += tr.underruns;
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-    int16_t v = feedRamp ? rampAt(inputIndex + i) : 0;
+    int16_t v = feedSineHz ? (int16_t)lround(8000 * sin(2 * M_PI * feedSineHz * (inputIndex + i) / AUDIO_SAMPLE_RATE_EXACT))
+                : feedRamp ? rampAt(inputIndex + i) : 0;
     inL.data[i] = v;
     inR.data[i] = -v;
   }
@@ -225,6 +228,7 @@ static void checkSync(int t, const char *label) {
   engine.monitor = false;
   for (auto &tr : tracks) tr.gain = 0;
   tracks[t].gain = 1;
+  for (int i = 0; i < 6; i++) block();             // the other tracks' levels glide down (~1 ms time constant)
   const Track &tr = tracks[t];
   int bad = 0, checked = 0;
   for (int b = 0; b < 12; b++) {
@@ -315,6 +319,11 @@ static int fuzz(int seconds, unsigned seed) {
 }
 
 int main(int argc, char **argv) {
+  simDelayHook = [](uint32_t us) {                 // loop() waiting: the audio interrupt runs on
+    pendingUs += us;
+    const double blockUs = AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT;
+    while (pendingUs >= blockUs) { pendingUs -= blockUs; audioBlock(); }
+  };
   simRoot = "/tmp/looper_sim_sd";
   system(("rm -rf " + simRoot + " && mkdir -p " + simRoot + "/looper").c_str());
   // A card from an older version: track 5 holds a 1-bar loop in its own
@@ -1149,6 +1158,81 @@ int main(int argc, char **argv) {
       snprintf(m, sizeof m, "track %d after the quick change", t + 1);
       if (tracks[t].state == TrackState::Playing) checkSync(t, m);   // (muted ones are silent)
     }
+  }
+
+  printf("declicking: loop and range wraps, mute, clip switch, stop\n");
+  {
+    if (!transport.running) transportStart();
+    for (int t = 6; t < 8; t++) clearTrack(t);
+    // Sines that don't fit their loops: every wrap would be a jump.
+    auto recordSine = [&](int t, double hz, double beats) {
+      feedRamp = false;
+      feedSineHz = hz;
+      runBeats(1.5);                               // (a recording can start up to ~250 ms back)
+      recordPress(t);
+      for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+      runBeats(beats);
+      recordPress(t);
+      runUntilIdle();
+      feedSineHz = 0;
+    };
+    recordSine(6, 101, 3.6);                       // 1 bar
+    recordSine(7, 331, 3.6);
+    engine.monitor = false;
+    for (auto &x : tracks) x.gain = 0;
+    tracks[6].gain = 1;
+    for (int i = 0; i < 10; i++) block();
+    std::vector<int16_t> out;
+    auto capture = [&] { afterAudio = [&] { out.insert(out.end(), outL.data, outL.data + AUDIO_BLOCK_SAMPLES); }; };
+    // Largest step between neighbouring samples, against the sine's own
+    // steepest (amplitude x 2 pi f / rate).
+    int level = 0;                                 // the sines' peak level at the output
+    auto steps = [&](double hz, const char *what) {
+      afterAudio = nullptr;
+      int peak = 0, step = 0;
+      for (size_t i = 1; i < out.size(); i++) {
+        peak = std::max(peak, abs((int)out[i]));
+        step = std::max(step, abs(out[i] - out[i - 1]));
+      }
+      if (!level) level = peak;
+      peak = level;
+      double natural = peak * 2 * M_PI * hz / AUDIO_SAMPLE_RATE_EXACT;
+      char m[128];
+      snprintf(m, sizeof m, "%s: largest step %d, the sine's own %.0f", what, step, natural);
+      check(peak > 1000 && step <= 2 * natural + 2, m);
+      out.clear();
+    };
+    capture();
+    runBeats(9);                                   // two loop wraps
+    steps(101, "loop wraps (into the pre-roll)");
+    setRange(6, 1, 2);                             // 2 beats from beat 2: wraps into beat 1's end
+    runBeats(3);
+    capture();
+    runBeats(6);
+    steps(101, "range wraps");
+    capture();
+    runBeats(0.25);                                // (from a little before)
+    setTrackMuted(6, true);
+    runBeats(0.5);
+    steps(101, "muting");
+    setTrackMuted(6, false);
+    runBeats(1);
+    TrackUnit u = unitOf(6);
+    u.sample = tracks[7].sample;
+    u.rangeStart = u.rangeLen = u.rangePhase = 0;
+    capture();
+    setTrackUnit(6, u);
+    runBeats(2);
+    steps(331, "switching to another sample");
+    capture();
+    runBeats(0.25);
+    transportStop();
+    for (int i = 0; i < 10; i++) block();
+    steps(331, "stopping the transport");
+    transportStart();
+    for (auto &x : tracks) x.gain = 1;
+    engine.monitor = true;
+    feedRamp = true;
   }
 
   printf("random sessions\n");

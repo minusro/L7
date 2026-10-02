@@ -17,6 +17,27 @@ at `startBeat`) and arms the track; the interrupt goes live when the clock
 reaches `startBeat`. Every beat, a live track's `tail` is snapped to
 `s0 + (beat - startBeat) * playSpb`.
 
+## Declicking
+
+* **Jumps in the stream** (a range's end back to its start, the loop's end
+  back to frame 0): the `XFADE_FRAMES` (128, ~3 ms) before the jump are
+  crossfaded in `produce()` into the frames that precede the jump's target in
+  the recording, so the target follows on smoothly and keeps its attack.
+  Before frame 0 that's the recording's stored **pre-roll** (sample version
+  3, see storage.md); older samples, or a recording not saved yet, fade into
+  silence instead. The frames before each target are cached per track
+  (`framesBefore`, two per track) so wraps cost no extra reads.
+* **Switches** (`applyPlan`, `applyQueuedRange`): the ring's last 128 frames
+  before the switch point crossfade into what precedes the new clip's entry
+  frame (`crossfadeInto`; the originals are kept so a replanned switch starts
+  over from them). A switch to "empty" fades out instead.
+* **Levels** (engine): the four mix gains glide (one-pole, `GAIN_GLIDE_MS` =
+  1 ms) — mute, unmute, volume/balance, a track joining (from silence).
+  Stopping a playing track goes through `silenceTracks()`: it sets
+  `stopping`, the interrupt glides it to silence and takes it off, and
+  `loop()` waits for that (a few ms) — used by transport stop, snap to bar,
+  clearing a track and restarting one.
+
 ## Loop ranges
 
 * Any start beat, any length from 1 beat to the whole loop, may wrap past the

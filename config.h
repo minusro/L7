@@ -58,6 +58,12 @@ constexpr int VOLUME_MAX = 32, VOLUME_UNITY = 28;
 constexpr float VOLUME_STEP_DB = 1.5f;
 constexpr int BALANCE_MAX = 16;
 
+// Declicking: loop and range edges, and clip switches, are crossfaded over
+// this many frames (~3 ms); track levels (mute, volume, start, stop) glide
+// with a ~1 ms time constant.
+constexpr uint32_t XFADE_FRAMES = 128;
+constexpr float GAIN_GLIDE_MS = 1.0f;
+
 // WAV files keep their audio at a 512-byte offset so SD reads stay aligned.
 constexpr uint32_t WAV_DATA_OFFSET = 512;
 

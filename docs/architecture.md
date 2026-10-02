@@ -37,15 +37,15 @@
 
 ## RAM (Teensy 4.0: 512 KB RAM1 + 512 KB RAM2)
 
-Both banks are nearly full (≈40 KB free in RAM1, ≈29 KB in RAM2, as of the
-splash screen). The big items:
+Both banks are nearly full (≈26 KB free in RAM1, ≈29 KB in RAM2, after
+declicking). The big items:
 
 * 8 track rings × 64 KB (`RING_FRAMES` = 16384 stereo frames, ~370 ms at 1x):
   seven in RAM2 (DMAMEM), the eighth in RAM1.
 * `inputRing` 128 KB (`INPUT_FRAMES` = 32768, ~740 ms): pre-roll for late
   record presses and slack for slow SD writes.
 * `sampleOrder[]` 20 KB (DMAMEM): recording order of every sample number.
-* Per-track plans (gapless switches) ~3.6 KB, overviews, peaks.
+* Per-track plans (gapless switches) ~8 KB, crossfade caches 8 KB, overviews, peaks.
 
 Consequences: buffers can't simply grow; caching the next scene's audio is not
 possible. A track played faster than recorded empties its ring faster

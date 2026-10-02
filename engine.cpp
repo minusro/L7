@@ -154,8 +154,14 @@ static void takeSwitch(Track &tr) {
   tr.startBeat = tr.nextStartBeat;
   tr.playSpb = tr.nextSpb;
   tr.sampleSwitch = false;
-  if (!tr.playSpb) tr.live = false;              // a switch to nothing: the track stops there
+  if (!tr.playSpb) {                             // a switch to nothing: the track stops there
+    tr.live = false;
+    memset(tr.curMix, 0, sizeof tr.curMix);
+  }
 }
+
+// Per-sample step of the level glide (one-pole, GAIN_GLIDE_MS).
+static const float GLIDE = 1.0f - expf(-1000.0f / (GAIN_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));
 
 void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
   (void)blockMicros; (void)sampleIndex;
@@ -184,6 +190,7 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
     if (ahead >= 2 && ahead <= (int32_t)RING_FRAMES) {
       tr.tail = expected;
       tr.frac = 0;
+      if (!tr.live) memset(tr.curMix, 0, sizeof tr.curMix);   // joining: glides in from silence
       tr.live = true;
       tr.armed = false;
     } else if (!tr.live) {
@@ -225,7 +232,7 @@ void LooperEngine::update() {
   for (int t = 0; t < NUM_TRACKS; t++) {
     const Track &tr = tracks[t];
     speed[t] = tr.playSpb ? (double)tr.playSpb / spb : 0;
-    float g = tr.state == TrackState::Playing ? tr.gain : 0;
+    float g = tr.state == TrackState::Playing && !tr.stopping ? tr.gain : 0;
     mix[t][0] = g * tr.mixLL;
     mix[t][1] = g * tr.mixLR;
     mix[t][2] = g * tr.mixRL;
@@ -271,7 +278,9 @@ void LooperEngine::update() {
         if (tr.hpOn) { sl = runBiquad(tr.hp, tr.filterZ[0][0], sl); sr = runBiquad(tr.hp, tr.filterZ[0][1], sr); }
         if (tr.lpOn) { sl = runBiquad(tr.lp, tr.filterZ[1][0], sl); sr = runBiquad(tr.lp, tr.filterZ[1][1], sr); }
         const float *m = mix[t];
-        float ol = m[0] * sl + m[1] * sr, orr = m[2] * sl + m[3] * sr;
+        float *c = tr.curMix;                        // levels glide (no clicks on mute, volume, start, stop)
+        for (int k = 0; k < 4; k++) c[k] += (m[k] - c[k]) * GLIDE;
+        float ol = c[0] * sl + c[1] * sr, orr = c[2] * sl + c[3] * sr;
         sl = ol;
         sr = orr;
         peakL[t] = max(peakL[t], fabsf(sl));
@@ -297,6 +306,13 @@ void LooperEngine::update() {
 
   for (int t = 0; t < NUM_TRACKS; t++) {
     Track &tr = tracks[t];
+    if (tr.stopping && tr.live) {                    // faded out: off
+      const float *c = tr.curMix;
+      if (fabsf(c[0]) + fabsf(c[1]) + fabsf(c[2]) + fabsf(c[3]) < 1e-3f) {
+        tr.live = false;
+        memset(tr.curMix, 0, sizeof tr.curMix);
+      }
+    }
     if (peakL[t] > tr.peakL * 32768) tr.peakL = peakL[t] / 32768;
     if (peakR[t] > tr.peakR * 32768) tr.peakR = peakR[t] / 32768;
   }
