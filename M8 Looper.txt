@@ -1,8 +1,13 @@
+1oct26
+
 now let’s discuss building an 8 track looper
 
 LINE IN, 3.47 ms latency
 no dropouts or overruns
 27 ms lowest buffer level at 2x speed
+
+
+2oct26
 
 - separate colors in file and make them brighter V
 - don’t draw any controls for unselected empty tracks V
@@ -20,10 +25,17 @@ no dropouts or overruns
 - don't draw start points for muted clips unless they're selected V
 - loop areas should be able to straddle the loop boundary (left and right halves) V
 - tempo label flicker V
-- switch tempo and clock labels, add play icon between, and use the action button to tap tempo
+- antialias filter curves V
+- white and black playheads
+- double tap B to reset values
 - 80s lcd ui
 - move back channel content into front channel content when balancing towards one
 	- maybe first investigate how other devices balance stereo signal channels
 - navigation key retrigger speed tweaks (maybe a bit quicker without feeling too light?)
+- refactor main sketch file into several (it's getting big)
+
+- switch tempo and clock labels, add play icon between, and use the action button to tap tempo
+- cut / paste clips logic
+	- decide whether it's Shift+A or B+A
 - [[ Clip Switching ]]
 - [[ Scene Logic ]]
