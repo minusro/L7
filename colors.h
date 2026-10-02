@@ -34,12 +34,10 @@ constexpr uint16_t MUTED_HEAD = 0x0000;      // black: the selected muted clip
 constexpr uint16_t ICON_SELECTED = 0xFFFF;   // white: icons on the selected row
 constexpr uint16_t ICON_RECORD_COLOR = 0xF800;   // red: record
 constexpr uint16_t ICON_TOGGLE_IDLE = 0x6318;    // grey ~99: track on/off on unselected rows
-constexpr uint16_t ICON_EMPTY_COLOR = 0x2945;    // grey ~41: empty tracks on unselected rows
 constexpr uint16_t ICON_TRANSPORT_IDLE = 0x8C51; // grey ~140: play/stop when the status row isn't selected
 
 // ---- Filter curve
 constexpr uint16_t CURVE = WAVE_IN;          // playing clips (muted: MUTED_WEIGHT)
-constexpr uint16_t CURVE_EMPTY = WAVE_OUT;   // empty tracks
 constexpr uint8_t CURVE_FILL_WEIGHT = 64;    // fill under the curve: curve colour over the background
 
 // ---- Status row text

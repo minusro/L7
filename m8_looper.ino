@@ -328,14 +328,13 @@ static void updatePlayheads() {
 // ---- Row buttons
 // Tracks with a clip show a toggle on every row: a filled play triangle while
 // the clip plays, an outline when muted; white on the selected row, dark grey
-// on the others. Unselected empty tracks show the outline even darker; the
-// selected one shows record (red), then play while recording
+// on the others. Unselected empty tracks show nothing; the selected one shows record (red), then play while recording
 // (the press ends the recording and plays the clip). Both flash while waiting
 // for the recording to start (next bar) or to finish (its full length).
 // The status row shows the transport: play while running, stop while
 // stopped; grey, white when the row is selected (A then starts from 1.1.1).
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_TOGGLE_OFF, ICON_TOGGLE_ON, ICON_EMPTY };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_TOGGLE_OFF, ICON_TOGGLE_ON };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -359,14 +358,13 @@ static int buttonIcon(int i) {
     }
     if (tracks[i].state == TrackState::Empty) return ICON_RECORD;
   }
-  if (tracks[i].state == TrackState::Empty) return ICON_EMPTY;
+  if (tracks[i].state == TrackState::Empty) return ICON_NONE;
   return tracks[i].state == TrackState::Playing ? ICON_TOGGLE_ON : ICON_TOGGLE_OFF;
 }
 
 static uint16_t iconColor(int i, int icon) {
   switch (icon) {
     case ICON_RECORD:     return ICON_RECORD_COLOR;
-    case ICON_EMPTY:      return ICON_EMPTY_COLOR;
     case ICON_TOGGLE_ON:
     case ICON_TOGGLE_OFF: return i == selected ? ICON_SELECTED : ICON_TOGGLE_IDLE;
     default:              return i == selected ? ICON_SELECTED : ICON_TRANSPORT_IDLE;   // play/stop
@@ -401,7 +399,6 @@ static bool onIcon(int icon, float dx, float dy) {
     case ICON_STOP:   return max(fabsf(dx), fabsf(dy)) <= h;
     case ICON_PLAY:   return playTriangle(dx, dy, h) >= 0;
     case ICON_TOGGLE_OFF:
-    case ICON_EMPTY:                               // the same outline, darker
     case ICON_TOGGLE_ON: {
       float d = playTriangle(dx, dy, TOGGLE_HALF);
       return d >= 0 && (icon == ICON_TOGGLE_ON || d < TOGGLE_STROKE);
@@ -459,8 +456,8 @@ static void drawCells(int i) {
 
 // ---- Filter cell: the response of the track's highpass + lowpass pair over
 // 20 Hz - 20 kHz (log), 0 dB at the top to -CURVE_DB at the bottom; a line
-// with a faint fill under it. Bright while the clip plays, half when muted,
-// dark grey on an empty track. Each column is drawn whole (background,
+// with a faint fill under it. Bright while the clip plays, dimmed when
+// muted, nothing on an empty track. Each column is drawn whole (background,
 // fill, line), so a change doesn't flash.
 static constexpr int CURVE_H = 18;
 static constexpr float CURVE_DB = 30;
@@ -476,7 +473,7 @@ static void drawFilter(int i) {
   k.hi = tr.filterHi;
   k.bg = cellBackground(i, FILTER_CELL);
   k.line = tr.state == TrackState::Playing ? CURVE
-         : tr.state == TrackState::Muted ? blend565(CURVE, BG, MUTED_WEIGHT) : CURVE_EMPTY;
+         : tr.state == TrackState::Muted ? blend565(CURVE, BG, MUTED_WEIGHT) : BG;   // empty: no curve
   if (drawn[i] && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = true;
   shown[i] = k;
@@ -493,6 +490,7 @@ static void drawFilter(int i) {
     if (prevY < 0) prevY = y;
     t.drawFastVLine(x, bgTop(i), bgHeight(i), k.bg);
     if (i == DIVIDER_ROW && k.bg == BG) t.drawPixel(x, dividerY(), DIVIDER);
+    if (tr.state == TrackState::Empty) continue;
     if (y < bottom) t.drawFastVLine(x, y + 1, bottom - y, fill);
     int a = min(prevY, y), b = max(prevY, y);      // joins steep slopes
     if (y < bottom || prevY < bottom) t.drawFastVLine(x, a, min(b, bottom) - a + 1, k.line);
@@ -581,7 +579,7 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
   int prevSel = selected;
 
   if (opt) {
-    // OPT (B) + arrows: the current cell's parameters.
+    // OPT (B) + arrows: the current cell's parameters (none on empty tracks).
     if (onStatus) {
       if (selectedCell == TEMPO_CELL) {              // tempo: 0.1 BPM steps, or 1 BPM
         if (pressed & m8::BTN_LEFT) setTempo(bpm - 0.1f);
@@ -600,7 +598,7 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
       if (pressed & m8::BTN_RIGHT && rs + 1 + rb <= loopBeats) setRange(selected, rs + 1, rb);
       if (pressed & m8::BTN_UP && rb * 2 <= loopBeats) setRange(selected, min(rs, loopBeats - rb * 2), rb * 2);
       if (pressed & m8::BTN_DOWN && rb > 1) setRange(selected, rs, rb / 2);
-    } else if (selectedCell == FILTER_CELL) {
+    } else if (selectedCell == FILTER_CELL && tracks[selected].state != TrackState::Empty) {
       // Filter: LEFT/RIGHT move the passband a step; moving stops where both
       // points would leave the range. UP/DOWN widen/narrow it: a step on each
       // side around its centre, or, while one point sits at its edge (the
