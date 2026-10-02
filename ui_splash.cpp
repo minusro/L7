@@ -3,7 +3,7 @@
 // with the copyright line under it in a 3x5 font of the same blocks.
 #include "ui.h"
 
-static const char *const LOGO[] = {
+PROGMEM static const char LOGO[][44] = {          // (in flash: const data would sit in RAM1)
     "..............................############.",
     ".........##.................##############.",
     "........###................###############.",
@@ -31,7 +31,7 @@ static const char *const LOGO[] = {
     "#################......################....",
     "##################.....#################...",
 };
-static constexpr int LOGO_ROWS = sizeof LOGO / sizeof LOGO[0], LOGO_COLS = 43, LOGO_PIXEL = 2;
+static constexpr int LOGO_ROWS = sizeof LOGO / sizeof LOGO[0], LOGO_COLS = sizeof LOGO[0] - 1, LOGO_PIXEL = 2;
 static constexpr int LOGO_X = (320 - LOGO_COLS * LOGO_PIXEL) / 2, LOGO_Y = (240 - LOGO_ROWS * LOGO_PIXEL) / 2;
 static constexpr uint32_t SPLASH_MIN_MS = 1500;   // shown at least this long
 static uint32_t shownAt = 0;

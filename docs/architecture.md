@@ -37,17 +37,26 @@
 
 ## RAM (Teensy 4.0: 512 KB RAM1 + 512 KB RAM2)
 
-Both banks are nearly full (≈26 KB free in RAM1, ≈29 KB in RAM2, after
-declicking). The big items:
+Free: ≈70 KB in RAM1 (stack lives there), ≈13 KB in RAM2 (the heap; little
+uses it: printf internals). The big items:
 
 * 8 track rings × 64 KB (`RING_FRAMES` = 16384 stereo frames, ~370 ms at 1x):
   seven in RAM2 (DMAMEM), the eighth in RAM1.
 * `inputRing` 128 KB (`INPUT_FRAMES` = 32768, ~740 ms): pre-roll for late
   record presses and slack for slow SD writes.
-* `sampleOrder[]` 20 KB (DMAMEM): recording order of every sample number.
-* Per-track plans (gapless switches) ~8 KB, crossfade caches 8 KB, overviews, peaks.
+* `chunk` 16 KB (RAM1): the SD transfer buffer. It must stay in RAM1: SdFat's
+  SDIO driver DMAs straight into it without cache maintenance, and RAM2 is
+  cached.
+* `sampleOrder[]` 20 KB, per-track plans ~8 KB and crossfade caches ~8 KB:
+  in RAM2 (DMAMEM; only `loop()` touches them, never DMA).
 
-Consequences: buffers can't simply grow; caching the next scene's audio is not
-possible. A track played faster than recorded empties its ring faster
+Keeping RAM1 free:
+* Teensy 4 copies `const` data into RAM1 unless it's marked `PROGMEM` (the
+  splash logo is). Fonts and tables add up.
+* Don't use `sscanf`/`scanf`: newlib's version pulls in ~26 KB of Unicode
+  tables (parse by hand; `strtof`/`strtol` are fine).
+
+Consequences: the rings can't grow much (8 tracks × any increase); caching
+the next scene's audio is not possible. A track played faster than recorded empties its ring faster
 (at 1.33x a full ring lasts ~280 ms), which is where the remaining dropouts
 on slow card writes come from.

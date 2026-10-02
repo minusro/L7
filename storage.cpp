@@ -77,7 +77,7 @@ struct Plan {
   uint32_t before[XFADE_FRAMES];
   bool beforeSaved = false;
 };
-static Plan plans[NUM_TRACKS];
+DMAMEM static Plan plans[NUM_TRACKS];             // (RAM2: only loop() uses them, never DMA)
 static uint32_t prerollFrames[NUM_TRACKS];        // each track's sample: its stored pre-roll (see SampleInfo)
 static void applyPlan(int t);
 static void dropPlan(int t);
@@ -900,7 +900,8 @@ float loadTempo() {
   float bpm = 120.0f;
   char line[32];
   if (f) {
-    if (f.fgets(line, sizeof line) > 0) sscanf(line, "bpm=%f", &bpm);
+    // (Parsed by hand: sscanf would pull ~26 KB of Unicode tables into RAM.)
+    if (f.fgets(line, sizeof line) > 0 && !strncmp(line, "bpm=", 4)) bpm = strtof(line + 4, nullptr);
     f.close();
   }
   return constrain(bpm, MIN_BPM, MAX_BPM);
@@ -926,8 +927,13 @@ static void scanSamples() {
   char name[32];
   while (dir && f.openNext(&dir, O_RDONLY)) {
     f.getName(name, sizeof name);
-    unsigned n = 0;
-    bool numbered = !f.isDir() && sscanf(name, "%4u.wav", &n) == 1 && n >= 1 && n <= MAX_SAMPLES;
+    unsigned n = 0;                              // "NNNN.wav"
+    bool digits = strlen(name) == 8 && !strcmp(name + 4, ".wav");
+    for (int i = 0; digits && i < 4; i++) {
+      if (name[i] < '0' || name[i] > '9') digits = false;
+      n = n * 10 + (name[i] - '0');
+    }
+    bool numbered = !f.isDir() && digits && n >= 1 && n <= MAX_SAMPLES;
     SampleInfo info;
     bool ok = numbered && readSampleHeader(f, info, nullptr);
     uint64_t size = f.fileSize();
@@ -1083,7 +1089,7 @@ static void readFramesBefore(Track &tr, uint32_t at, uint32_t *out) {
 // The frames before each jump target a track keeps hitting (a range's start,
 // frame 0), so wrapping costs no read: two per track.
 struct FramesBefore { uint16_t sample = 0; uint32_t at = 0, preroll = 0; uint32_t frames[XFADE_FRAMES]; };
-static FramesBefore framesBefore[NUM_TRACKS][2];
+DMAMEM static FramesBefore framesBefore[NUM_TRACKS][2];   // (RAM2, as plans)
 static uint8_t framesBeforeNext[NUM_TRACKS];
 
 static const uint32_t *cachedFramesBefore(Track &tr, uint32_t at) {
