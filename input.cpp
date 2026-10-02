@@ -1,0 +1,196 @@
+// input.cpp — see input.h. The key list is at the top of m8_looper.ino.
+#include "input.h"
+#include "ui.h"
+
+static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;   // held arrows
+static constexpr uint32_t DOUBLE_TAP_MS = 200;      // B twice: reset the current cell
+
+// The selected track's current cell back to its defaults: the whole loop as
+// the range, the filter open, volume at unity and balance centred.
+static void resetCell() {
+  if (selected == STATUS_ROW || tracks[selected].state == TrackState::Empty) return;
+  const Track &tr = tracks[selected];
+  if (selectedCell == WAVE_CELL) {
+    setRange(selected, 0, tr.loopBars * BEATS_PER_BAR);
+  } else if (selectedCell == FILTER_CELL) {
+    setTrackFilter(selected, 0, FILTER_MAX);
+    trackChanged(selected);
+  } else if (selectedCell == MIX_CELL) {
+    setTrackMix(selected, VOLUME_UNITY, 0);
+    trackChanged(selected);
+  }
+}
+
+static void onKeys(uint8_t keys, uint8_t pressed) {
+  bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
+  bool onStatus = selected == STATUS_ROW;
+  int prevSel = selected;
+
+  // OPT (B) tapped twice within DOUBLE_TAP_MS (with no arrows in between):
+  // the current cell's parameters back to their defaults.
+  static uint32_t lastOptTap = 0;
+  static bool optTapArmed = false;
+  const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
+  if (pressed & arrows) optTapArmed = false;         // B was used as a modifier
+  if (pressed & m8::BTN_OPT) {
+    if (optTapArmed && millis() - lastOptTap < DOUBLE_TAP_MS) {
+      resetCell();
+      optTapArmed = false;
+    } else {
+      optTapArmed = true;
+      lastOptTap = millis();
+    }
+  }
+
+  if (opt) {
+    // OPT (B) + arrows: the current cell's parameters (none on empty tracks).
+    if (onStatus) {
+      if (selectedCell == TEMPO_CELL) {              // tempo: 0.1 BPM steps, or 1 BPM
+        if (pressed & m8::BTN_LEFT) setTempo(bpm - 0.1f);
+        if (pressed & m8::BTN_RIGHT) setTempo(bpm + 0.1f);
+        if (pressed & m8::BTN_UP) setTempo(bpm + 1);
+        if (pressed & m8::BTN_DOWN) setTempo(bpm - 1);
+      }
+    } else if (selectedCell == WAVE_CELL) {
+      // Loop range in beats, length a power of two. LEFT/RIGHT move the start
+      // by one beat, wrapping around the loop (a range may run past the
+      // loop's end); UP/DOWN double/halve the length.
+      Track &tr = tracks[selected];
+      uint32_t rs, rb, loopBeats = tr.loopBars * BEATS_PER_BAR;
+      trackRange(selected, rs, rb);                  // includes a queued change
+      if (pressed & m8::BTN_LEFT) setRange(selected, (rs + loopBeats - 1) % loopBeats, rb);
+      if (pressed & m8::BTN_RIGHT) setRange(selected, (rs + 1) % loopBeats, rb);
+      if (pressed & m8::BTN_UP && rb * 2 <= loopBeats) setRange(selected, rs, rb * 2);
+      if (pressed & m8::BTN_DOWN && rb > 1) setRange(selected, rs, rb / 2);
+    } else if (selectedCell == FILTER_CELL && tracks[selected].state != TrackState::Empty) {
+      // Filter: LEFT/RIGHT move the passband a step; moving stops where both
+      // points would leave the range. UP/DOWN widen/narrow it: a step on each
+      // side around its centre, or, while one point sits at its edge (the
+      // highpass at the bottom, the lowpass at the top; off), a step of the
+      // other point only, from that edge. With both at their edges (flat),
+      // around the centre again. Narrowing near an edge slides the band back
+      // in (setTrackFilter).
+      const Track &tr = tracks[selected];
+      int lo = tr.filterLo, hi = tr.filterHi;
+      if (pressed & m8::BTN_LEFT && hi > 0) { lo--; hi--; }
+      if (pressed & m8::BTN_RIGHT && lo < FILTER_MAX) { lo++; hi++; }
+      int grow = (pressed & m8::BTN_UP ? 1 : 0) - (pressed & m8::BTN_DOWN ? 1 : 0);
+      bool loEdge = lo <= 0, hiEdge = hi >= FILTER_MAX;
+      if (grow && loEdge != hiEdge) {
+        if (loEdge) {                                  // from the bottom: the lowpass moves
+          lo = 0;
+          hi = constrain(hi + grow, lo, lo + FILTER_MAX);
+        } else {                                       // from the top: the highpass moves
+          hi = FILTER_MAX;
+          lo = constrain(lo - grow, hi - FILTER_MAX, hi);
+        }
+      } else if (grow > 0 && hi - lo + 2 <= FILTER_MAX) {
+        lo--; hi++;
+      } else if (grow < 0 && hi - lo >= 2) {
+        lo++; hi--;
+      }
+      if (lo != tr.filterLo || hi != tr.filterHi) {
+        setTrackFilter(selected, lo, hi);
+        trackChanged(selected);
+      }
+    } else if (selectedCell == MIX_CELL && tracks[selected].state != TrackState::Empty) {
+      // Volume and balance: UP/DOWN louder/quieter, RIGHT/LEFT towards the
+      // right/left channel.
+      const Track &tr = tracks[selected];
+      int volume = tr.volume, balance = tr.balance;
+      if (pressed & m8::BTN_UP) volume++;
+      if (pressed & m8::BTN_DOWN) volume--;
+      if (pressed & m8::BTN_RIGHT) balance++;
+      if (pressed & m8::BTN_LEFT) balance--;
+      volume = constrain(volume, 0, VOLUME_MAX);
+      balance = constrain(balance, -BALANCE_MAX, BALANCE_MAX);
+      if (volume != tr.volume || balance != tr.balance) {
+        setTrackMix(selected, volume, balance);
+        trackChanged(selected);
+      }
+    }
+  } else {
+    if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
+    if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
+    if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell--;
+    if (pressed & m8::BTN_RIGHT && selectedCell < CELLS - 1) selectedCell++;
+  }
+
+  // START (or A on the status row): start from 1.1.1 / stop. With SHIFT:
+  // start from 1.1.1 on every press, running or not.
+  bool transportKey = (pressed & m8::BTN_PLAY) || (pressed & m8::BTN_EDIT && onStatus);
+  bool toggleTransport = transportKey && !shift;
+  if (transportKey && shift) transportRestart();
+  if (pressed & m8::BTN_EDIT && !onStatus) {
+    Track &tr = tracks[selected];
+    if (shift) {
+      clearTrack(selected);
+    } else if (tr.state == TrackState::Empty || recordingOn(selected)) {
+      recordPress(selected);
+    } else {
+      tr.state = tr.state == TrackState::Playing ? TrackState::Muted : TrackState::Playing;
+      trackChanged(selected);
+    }
+  }
+  if (toggleTransport) {
+    if (transport.running) transportStop();
+    else transportStart();
+  }
+  // Show the result right away rather than on the rows' next redraw: the new
+  // selection first, then the old one, so highlight and icon move together.
+  drawTrack(selected);
+  if (prevSel != selected) drawTrack(prevSel);
+}
+
+// After a recording finishes on the selected track, move on: to the next
+// empty track (in order, wrapping), else the next muted one, else stay.
+static void selectAfterRecording(int t) {
+  if (selected != t) return;                       // the user has moved on already
+  for (TrackState want : {TrackState::Empty, TrackState::Muted}) {
+    for (int k = 1; k < NUM_TRACKS; k++) {
+      int i = (t + k) % NUM_TRACKS;
+      if (tracks[i].state == want) {
+        selected = i;
+        drawTrack(i);
+        drawTrack(t);
+        return;
+      }
+    }
+  }
+}
+
+void pollKeys() {
+  // Arrows repeat while held: the press acts at once, then again after
+  // REPEAT_DELAY_MS and every REPEAT_PERIOD_MS (the most recently pressed one).
+  uint8_t keys;
+  static uint8_t prev = 0, repeatKey = 0;
+  static uint32_t repeatAt = 0;
+  const uint8_t ARROWS = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
+  if (board.keysChanged(keys)) {
+    debugStage = "key action";
+    uint8_t pressed = keys & ~prev;
+    if (pressed & ARROWS) {
+      repeatKey = pressed & ARROWS & -(pressed & ARROWS);   // one of them, if several
+      repeatAt = millis() + REPEAT_DELAY_MS;
+    } else if (!(keys & repeatKey)) {
+      repeatKey = 0;                                 // released
+    }
+    onKeys(keys, pressed);
+    prev = keys;
+  } else if (repeatKey && (int32_t)(millis() - repeatAt) >= 0) {
+    debugStage = "key repeat";
+    repeatAt = millis() + REPEAT_PERIOD_MS;          // after a slow pass: no burst of catch-up repeats
+    onKeys(prev, repeatKey);
+  }
+}
+
+void followRecording() {
+  // A recording that ended with a clip (not cancelled): select the next track.
+  static int recTrack = -1;
+  if (recording.mode != Recording::Idle) {
+    recTrack = recording.track;
+  } else if (recTrack >= 0) {
+    if (tracks[recTrack].state != TrackState::Empty) selectAfterRecording(recTrack);
+    recTrack = -1;
+  }
+}

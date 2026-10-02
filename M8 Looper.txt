@@ -31,7 +31,7 @@ no dropouts or overruns
 - move back channel content into front channel content when balancing towards one V
 	- maybe first investigate how other devices balance stereo signal channels
 - navigation key retrigger speed tweaks (maybe a bit quicker without feeling too light?) V
-- refactor main sketch file into several (it's getting big)
+- refactor main sketch file into several (it's getting big) V
 
 - 80s lcd ui
 
