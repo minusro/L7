@@ -68,6 +68,36 @@ float filterResponseDb(int lo, int hi, float hz) {
   return db;
 }
 
+// ---- Volume and balance
+float volumeGain(int volume) {
+  return volume <= 0 ? 0.0f : powf(10.0f, (volume - VOLUME_UNITY) * VOLUME_STEP_DB / 20);
+}
+
+void setTrackMix(int t, int volume, int balance) {
+  Track &tr = tracks[t];
+  volume = constrain(volume, 0, VOLUME_MAX);
+  balance = constrain(balance, -BALANCE_MAX, BALANCE_MAX);
+  float g = volumeGain(volume);
+  float l = g * (balance > 0 ? 1.0f - (float)balance / BALANCE_MAX : 1.0f);
+  float r = g * (balance < 0 ? 1.0f + (float)balance / BALANCE_MAX : 1.0f);
+  noInterrupts();
+  tr.volume = volume;
+  tr.balance = balance;
+  tr.gainL = l;
+  tr.gainR = r;
+  interrupts();
+}
+
+void takeTrackPeaks(int t, float &left, float &right) {
+  Track &tr = tracks[t];
+  noInterrupts();
+  left = tr.peakL;
+  right = tr.peakR;
+  tr.peakL = 0;
+  tr.peakR = 0;
+  interrupts();
+}
+
 static inline float runBiquad(const Biquad &q, float *z, float x) {
   float y = q.b0 * x + z[0];
   z[0] = q.b1 * x - q.a1 * y + z[1];
@@ -174,10 +204,14 @@ void LooperEngine::update() {
   const bool running = transport.running;
 
   double speed[NUM_TRACKS];
-  float gain[NUM_TRACKS];
+  float gainL[NUM_TRACKS], gainR[NUM_TRACKS];       // the tracks' own gains (metered)
+  float peakL[NUM_TRACKS] = {}, peakR[NUM_TRACKS] = {};
   for (int t = 0; t < NUM_TRACKS; t++) {
-    speed[t] = tracks[t].spbNative ? (double)tracks[t].spbNative / spb : 0;
-    gain[t] = tracks[t].state == TrackState::Playing ? tracks[t].gain * masterGain : 0;
+    const Track &tr = tracks[t];
+    speed[t] = tr.spbNative ? (double)tr.spbNative / spb : 0;
+    bool on = tr.state == TrackState::Playing;
+    gainL[t] = on ? tr.gain * tr.gainL : 0;
+    gainR[t] = on ? tr.gain * tr.gainR : 0;
   }
 
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
@@ -205,8 +239,12 @@ void LooperEngine::update() {
         float sl = al + (bl - al) * f, sr = ar + (br - ar) * f;
         if (tr.hpOn) { sl = runBiquad(tr.hp, tr.filterZ[0][0], sl); sr = runBiquad(tr.hp, tr.filterZ[0][1], sr); }
         if (tr.lpOn) { sl = runBiquad(tr.lp, tr.filterZ[1][0], sl); sr = runBiquad(tr.lp, tr.filterZ[1][1], sr); }
-        mixL += sl * gain[t];
-        mixR += sr * gain[t];
+        sl *= gainL[t];
+        sr *= gainR[t];
+        peakL[t] = max(peakL[t], fabsf(sl));
+        peakR[t] = max(peakR[t], fabsf(sr));
+        mixL += sl * masterGain;
+        mixR += sr * masterGain;
         double fr = tr.frac + speed[t];
         while (fr >= 1.0) { fr -= 1.0; tail++; }
         tr.frac = fr;
@@ -222,6 +260,12 @@ void LooperEngine::update() {
 
     outL->data[i] = (int16_t)constrain(mixL, -32767.0f, 32767.0f);
     outR->data[i] = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
+  }
+
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    Track &tr = tracks[t];
+    if (peakL[t] > tr.peakL * 32768) tr.peakL = peakL[t] / 32768;
+    if (peakR[t] > tr.peakR * 32768) tr.peakR = peakR[t] / 32768;
   }
 
   transmit(outL, 0);

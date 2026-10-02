@@ -48,6 +48,15 @@ constexpr uint32_t PEAK_BIN_FRAMES = 4096;
 constexpr int FILTER_MAX = 32;
 constexpr float FILTER_MIN_HZ = 20.0f, FILTER_OCTAVES = 10.0f;
 
+// Per-track volume and balance. Volume step v is (v - VOLUME_UNITY) *
+// VOLUME_STEP_DB dB (off at 0): -40.5 dB to +6 dB. Balance -BALANCE_MAX..
+// BALANCE_MAX, centre 0: like a stereo channel's balance pot, turning it one
+// way fades the other side out (linearly, to silence at the end) and leaves
+// this side as it is; the channels aren't mixed.
+constexpr int VOLUME_MAX = 32, VOLUME_UNITY = 28;
+constexpr float VOLUME_STEP_DB = 1.5f;
+constexpr int BALANCE_MAX = 16;
+
 // WAV files keep their audio at a 512-byte offset so SD reads stay aligned.
 constexpr uint32_t WAV_DATA_OFFSET = 512;
 

@@ -40,6 +40,12 @@ constexpr uint16_t ICON_TRANSPORT_IDLE = 0x8C51; // grey ~140: play/stop when th
 constexpr uint16_t CURVE = WAVE_IN;          // playing clips (muted: MUTED_WEIGHT)
 constexpr uint8_t CURVE_FILL_WEIGHT = 64;    // fill under the curve: curve colour over the background
 
+// ---- Volume / balance cell: concentric arcs, ((( for the left channel, )))
+// for the right
+constexpr uint16_t MIX_ARC_OFF = 0x39C7;     // grey ~58: above the channel's level
+constexpr uint16_t MIX_ARC_LEVEL = 0x8C51;   // grey ~140: up to the channel's level (volume and balance; muted: MUTED_WEIGHT)
+constexpr uint16_t MIX_ARC_METER = 0xFFFF;   // white: the meter, the channel's actual output level
+
 // ---- Status row text
 constexpr uint16_t TEXT_ACTIVE = 0xFFFF;     // white: tempo being edited, clock running
 constexpr uint16_t TEXT_IDLE = 0x8C51;       // grey ~140: tempo not selected, clock stopped

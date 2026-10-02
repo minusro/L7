@@ -28,7 +28,13 @@ struct Track {
   // first beat (it repeats every rangeBeats from there). Starts on the beat
   // the recording began; shifts when a range change keeps the playhead.
   int32_t rangeAnchorQ = 0;
-  float gain = 1.0f;
+  float gain = 1.0f;               // overall trim (tests)
+  // Volume and balance (loop() sets them with setTrackMix): per-channel gains.
+  int8_t volume = VOLUME_UNITY, balance = 0;
+  float gainL = 1.0f, gainR = 1.0f;
+  // Output level meter: peak |sample| / 32768 per channel after the track's
+  // gains (before master gain and mute), since loop() last took it.
+  volatile float peakL = 0, peakR = 0;
   // Filters (loop() sets them with setTrackFilter): highpass then lowpass,
   // 12 dB/octave each, on both channels.
   int8_t filterLo = 0, filterHi = FILTER_MAX;   // steps (see config.h)
@@ -106,6 +112,9 @@ float filterStepHz(int step);
 // then the pair shifted so they don't both lie outside 0..FILTER_MAX.
 void setTrackFilter(int t, int lo, int hi);
 float filterResponseDb(int lo, int hi, float hz);   // magnitude of the pair (analog approximation)
+void setTrackMix(int t, int volume, int balance);   // steps (config.h), clamped
+float volumeGain(int volume);                       // linear gain of a volume step
+void takeTrackPeaks(int t, float &left, float &right);   // and start the next measurement
 
 void midiBegin(HardwareSerial *port);   // port already started (Board::midiOutBegin)
 void midiSendNow(uint8_t status);        // transport start/stop messages
