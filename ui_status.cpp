@@ -64,16 +64,15 @@ void drawStatus() {
   printToRight(WAVE_X + WAVE_W - 1 - STATUS_INSET, text, 10, running ? TEXT_ACTIVE : TEXT_IDLE, bg);
 
   // The scene, in the next cell: "SCN 3/7"; the empty scene and the copy
-  // after the last (not stored yet) with a star, in grey. Dim while SHIFT is
-  // held on a scene not gone to yet; once let go, flashing with the beat
-  // (white, then dim, each beat) until the change reaches its bar line.
+  // after the last (not stored yet) with a star, in grey. Flashing with the
+  // beat (white, then dim, each beat) while another scene is selected but not
+  // there yet: SHIFT still held on it, or the change waiting for its bar line.
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;
   snprintf(text, sizeof text, "SCN %d%s/%d", scene, temporary ? "*" : "", count);
   const Cell &cell = CELL[1];
   uint16_t color = temporary ? TEXT_IDLE : TEXT_ACTIVE;
-  if (sceneHeld()) color = TEXT_WAITING;
-  else if (sceneChangeWaiting()) {
+  if (sceneHeld() || sceneChangeWaiting()) {
     noInterrupts();
     bool firstHalf = transport.sampleInBeat < transport.spb / 2;
     interrupts();
