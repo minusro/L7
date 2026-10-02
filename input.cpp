@@ -3,7 +3,7 @@
 #include "ui.h"
 
 static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;   // held arrows
-static constexpr uint32_t DOUBLE_TAP_MS = 200;      // B twice: reset the current cell
+static constexpr uint32_t DOUBLE_TAP_MS = 100;      // two taps of a key this close: a double tap
 
 // The selected track's current cell back to its defaults: the whole loop as
 // the range, the filter open, volume at unity and balance centred.
@@ -45,8 +45,28 @@ static void tapTempo() {
   }
 }
 
+// SHIFT+A, alone: on a track, cut its clip to the clipboard or paste it onto
+// an empty track (nothing while recording); on the status row, start from
+// 1.1.1. It waits out DOUBLE_TAP_MS first: SHIFT+A twice pastes a scene.
+static bool shiftAPending = false;
+static uint32_t shiftATime = 0;
+
+static void shiftA() {
+  if (selected == STATUS_ROW) transportRestart();
+  else if (hasClip(selected)) cutTrack(selected);
+  else if (!recordingOn(selected)) pasteTrack(selected);
+  drawTrack(selected);
+}
+
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
+  if (panelOpen()) {                                 // the panel: only A, to close it
+    if (pressed & m8::BTN_EDIT) {
+      noteActionPress();
+      closePanel();
+    }
+    return;
+  }
   bool onStatus = selected == STATUS_ROW;
   int prevSel = selected;
   bool sceneChanged = false;                         // every row to redraw
@@ -167,22 +187,31 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // START: start from 1.1.1 / stop. With SHIFT: start from 1.1.1 on every
   // press, running or not. A on the status row: tap tempo (with SHIFT: the
   // same as SHIFT+START).
-  // B+A: paste the scene clipboard after the scene; SHIFT+B+A: cut the scene to it.
+  // B+A: open the panel; SHIFT+B+A: cut the scene to the scene clipboard.
+  // SHIFT+A twice: paste the scene clipboard after the scene (SHIFT+A once:
+  // see shiftA(), after the double-tap wait).
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
   bool edit = (pressed & m8::BTN_EDIT) && !opt;
-  if ((pressed & m8::BTN_EDIT) && opt) sceneChanged = shift ? sceneCut() : scenePaste();
+  if ((pressed & m8::BTN_EDIT) && opt) {
+    if (shift) sceneChanged = sceneCut();
+    else openPanel();
+  }
+  if (edit && shift) {
+    if (shiftAPending && millis() - shiftATime < DOUBLE_TAP_MS) {
+      shiftAPending = false;
+      sceneChanged = scenePaste();
+    } else {
+      shiftAPending = true;
+      shiftATime = millis();
+    }
+  }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
-  if ((transportKey || (edit && onStatus)) && shift) transportRestart();
+  if (transportKey && shift) transportRestart();
   if (edit && onStatus && !shift) tapTempo();
-  if (edit && !onStatus) {
+  if (edit && !onStatus && !shift) {
     Track &tr = tracks[selected];
-    if (shift) {
-      // SHIFT+A: cut the clip to the clipboard, or paste it onto an empty
-      // track (nothing while recording).
-      if (hasClip(selected)) cutTrack(selected);
-      else if (!recordingOn(selected)) pasteTrack(selected);
-    } else if (tr.state == TrackState::Empty || recordingOn(selected)) {
+    if (tr.state == TrackState::Empty || recordingOn(selected)) {
       recordPress(selected);
     } else {
       tr.state = tr.state == TrackState::Playing ? TrackState::Muted : TrackState::Playing;
@@ -219,6 +248,10 @@ static void selectAfterRecording(int t) {
 }
 
 void pollKeys() {
+  if (shiftAPending && millis() - shiftATime >= DOUBLE_TAP_MS) {   // no second tap: SHIFT+A alone
+    shiftAPending = false;
+    if (!panelOpen()) shiftA();
+  }
   // Arrows repeat while held: the press acts at once, then again after
   // REPEAT_DELAY_MS and every REPEAT_PERIOD_MS (the most recently pressed one).
   uint8_t keys;

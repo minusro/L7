@@ -12,7 +12,7 @@ static constexpr float CURVE_DB = 30, CURVE_LINE = 1.2f;   // line width in px (
 void drawFilter(int i) {
   struct Key { int8_t lo, hi; uint16_t bg, line; };
   static Key shown[NUM_TRACKS];
-  static bool drawn[NUM_TRACKS];
+  static uint32_t drawn[NUM_TRACKS];               // uiGeneration when last drawn
   const Track &tr = tracks[i];
   Key k;
   memset(&k, 0, sizeof k);                         // padding too: compared with memcmp
@@ -21,8 +21,8 @@ void drawFilter(int i) {
   k.bg = cellBackground(i, FILTER_CELL);
   k.line = !hasClip(i) ? BG                                       // empty (or still recording): no curve
          : tr.state == TrackState::Playing ? CURVE : blend565(CURVE, BG, MUTED_WEIGHT);
-  if (drawn[i] && !memcmp(&k, &shown[i], sizeof k)) return;
-  drawn[i] = true;
+  if (drawn[i] == uiGeneration && !memcmp(&k, &shown[i], sizeof k)) return;
+  drawn[i] = uiGeneration;
   shown[i] = k;
   auto &t = board.tft();
   const Cell &cell = CELL[FILTER_CELL];

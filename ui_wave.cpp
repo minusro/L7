@@ -29,7 +29,8 @@ struct WaveView {
   uint8_t liveData[OVERVIEW_COLS] = {};
   // what the last full draw showed
   uint8_t version = 0, state = 0;
-  bool rec = false, drawn = false;
+  bool rec = false;
+  uint32_t drawn = 0;                              // uiGeneration when last drawn whole
   uint32_t rs = 0, rb = 0;
 };
 static WaveView views[NUM_TRACKS];
@@ -102,10 +103,10 @@ void drawWave(int i, bool recordingHere) {
   uint32_t rs = 0, rb = 0;
   if (tr.state != TrackState::Empty) trackRange(i, rs, rb);
   uint16_t bg = cellBackground(i, WAVE_CELL);
-  if (v.drawn && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
+  if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg)
     return;
-  v.drawn = true;
+  v.drawn = uiGeneration;
   v.version = tr.overviewVersion;
   v.state = (uint8_t)tr.state;
   v.rec = recordingHere;

@@ -58,7 +58,7 @@ void drawMix(int i) {
   static bool built = false;
   if (!built) { buildArcs(); built = true; }
   static uint16_t shownBg[NUM_TRACKS], shown[NUM_TRACKS][2 * MIX_ARCS];
-  static bool drawn[NUM_TRACKS];
+  static uint32_t drawn[NUM_TRACKS];               // uiGeneration when last drawn whole
   static float meterDb[NUM_TRACKS][2];
   static uint32_t lastMs[NUM_TRACKS];
 
@@ -85,7 +85,7 @@ void drawMix(int i) {
   auto &t = board.tft();
   const Cell &cell = CELL[MIX_CELL];
   int top = rowTop(i);
-  if (!drawn[i] || shownBg[i] != bg) {
+  if (drawn[i] != uiGeneration || shownBg[i] != bg) {
     // Whole cell: built in a buffer and sent at once (no flash).
     static uint16_t buf[ROW_BAND * CELL[MIX_CELL].w];
     for (auto &p : buf) p = bg;
@@ -98,7 +98,7 @@ void drawMix(int i) {
       }
     if (bgTop(i) < top) t.fillRect(cell.x, bgTop(i), cell.w, top - bgTop(i), bg);   // the first row's margin
     t.writeRect(cell.x, top, cell.w, ROW_BAND, buf);
-    drawn[i] = true;
+    drawn[i] = uiGeneration;
     shownBg[i] = bg;
     memcpy(shown[i], colors, sizeof colors);
     return;

@@ -50,6 +50,11 @@ constexpr uint16_t MIX_ARC_OFF = 0x39C7;     // grey ~58: above the channel's le
 constexpr uint16_t MIX_ARC_LEVEL = 0x8C51;   // grey ~140: up to the channel's level (volume and balance; muted: MUTED_WEIGHT)
 constexpr uint16_t MIX_ARC_METER = 0xFFFF;   // white: the meter, the channel's actual output level
 
+// ---- Panel (B+A)
+constexpr uint16_t PANEL_SHADE = 0x0000;     // black: every other pixel of the screen behind it
+constexpr uint16_t PANEL_BG = 0x1082;        // grey ~16
+constexpr uint16_t PANEL_BORDER = 0x4A49;    // grey ~74
+
 // ---- Status row text
 constexpr uint16_t TEXT_ACTIVE = 0xFFFF;     // white: tempo being edited, clock running
 constexpr uint16_t TEXT_IDLE = 0x8C51;       // grey ~140: tempo not selected, clock stopped

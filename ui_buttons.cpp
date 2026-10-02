@@ -12,11 +12,12 @@
 // cancel a recording still waiting for its bar (X); mute (stop) or unmute
 // (play); with SHIFT held, cut the clip (scissors) or, on an empty track,
 // paste (a clipboard; very dim while the clipboard is empty). With B held:
-// paste a scene (a clipboard), or with SHIFT too cut the scene (scissors). On the status row itself:
+// open the panel (a menu icon), or with SHIFT too cut the scene (scissors).
+// While the panel is open: a house (A closes it). On the status row itself:
 // tap tempo ("TAP"); with SHIFT, start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, dimmed.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -32,7 +33,8 @@ static bool flashOn() {
 // What A does on the selected row (mirrors onKeys()).
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
-  if (board.keys() & m8::BTN_OPT) return shift ? ICON_CUT : ICON_PASTE;   // B+A: the scene
+  if (panelOpen()) return ICON_HOME;               // A closes the panel
+  if (board.keys() & m8::BTN_OPT) return shift ? ICON_CUT : ICON_MENU;   // B+A: the panel; SHIFT+B+A: cut the scene
   if (selected == STATUS_ROW) return shift ? ICON_PLAY : ICON_TAP;   // restart / tap tempo
   const Track &tr = tracks[selected];
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) ? ICON_NONE : ICON_PASTE;
@@ -68,6 +70,7 @@ static int trackIcon(int i) {
 
 static int buttonIcon(int i) {
   if (i != STATUS_ROW) return trackIcon(i);
+  if (panelOpen() && heldAction != ICON_HOME) heldAction = -1;   // just opened: the house, at once
   if (heldAction >= 0 && !(board.keys() & m8::BTN_EDIT)) heldAction = -1;   // A released
   return heldAction >= 0 ? heldAction : actionIcon();
 }
@@ -75,8 +78,7 @@ static int buttonIcon(int i) {
 static uint16_t iconColor(int i, int icon) {
   uint16_t c = i == STATUS_ROW ? (icon == ICON_RECORD ? ICON_RECORD_COLOR : ICON_SELECTED)   // record: red
              : i == selected || recordingOn(i) ? ICON_SELECTED : ICON_IDLE;
-  bool scene = board.keys() & m8::BTN_OPT;
-  if (i == STATUS_ROW && icon == ICON_PASTE && !(scene ? sceneClipboardFull() : clipboardFull()))
+  if (i == STATUS_ROW && icon == ICON_PASTE && !clipboardFull())
     c = blend565(c, cellBackground(i, -1), ICON_UNAVAILABLE_WEIGHT);   // nothing to paste
   if (i == STATUS_ROW && heldAction >= 0) c = blend565(c, cellBackground(i, -1), ICON_PRESSED_WEIGHT);   // A held
   return c;
@@ -112,6 +114,15 @@ static bool onIcon(int icon, float dx, float dy) {
     case ICON_PAUSE: {                             // two bars
       float ax = fabsf(dx);
       return fabsf(dy) <= h && ax >= 0.25f * h && ax <= 0.8f * h;
+    }
+    case ICON_MENU:                                // three 2 px bars, on whole pixels
+      return fabsf(dx) <= 5 && (fabsf(dy) <= 1 || fabsf(fabsf(dy) - 4) <= 1);
+    case ICON_HOME: {                              // a roof with eaves over a box with a door
+      const float eaves = -0.15f * h;
+      if (dy < -h) return false;
+      if (dy < eaves) return fabsf(dx) <= (dy + h) / (eaves + h) * 1.05f * h;   // the roof
+      if (fabsf(dx) > 0.65f * h || dy > h) return false;
+      return !(fabsf(dx) <= 0.2f * h && dy >= 0.3f * h);                        // the door
     }
     case ICON_CUT: {                               // scissors: two finger rings left, blades crossing to the right
       for (float sy : {-1.0f, 1.0f}) {
@@ -181,7 +192,7 @@ static void drawTap(int x, int y, uint16_t color) {
 void drawCells(int i) {
   struct Key { int icon; uint16_t bg0, bg1, bg2, bgButton, iconColor; };
   static Key shown[ROWS];
-  static bool drawn[ROWS];
+  static uint32_t drawn[ROWS];                     // uiGeneration when last drawn whole
   Key k;
   memset(&k, 0, sizeof k);                         // padding too: compared with memcmp
   k.icon = buttonIcon(i);
@@ -190,19 +201,19 @@ void drawCells(int i) {
   k.bg2 = cellBackground(i, 2);                    // (a track's cells: drawWave(), drawFilter(), drawMix())
   k.bgButton = cellBackground(i, -1);
   k.iconColor = iconColor(i, k.icon);
-  bool first = !drawn[i];
+  bool first = drawn[i] != uiGeneration;
   if (!first && !memcmp(&k, &shown[i], sizeof k)) return;
   const Key old = shown[i];
-  drawn[i] = true;
+  drawn[i] = uiGeneration;
   shown[i] = k;
   auto &t = board.tft();
   int y = rowTop(i), y0 = bgTop(i), h = bgHeight(i);
-  if (i == STATUS_ROW) {                             // tracks: drawFilter(), drawMix(), drawWave()
+  if (i == STATUS_ROW && !panelOpen()) {             // tracks: drawFilter(), drawMix(), drawWave()
     if (first || k.bg0 != old.bg0) t.fillRect(CELL[0].x, y0, CELL[0].w, h, k.bg0);
     if (first || k.bg1 != old.bg1) t.fillRect(CELL[1].x, y0, CELL[1].w, h, k.bg1);
     if (first || k.bg2 != old.bg2) t.fillRect(CELL[2].x, y0, CELL[2].w, h, k.bg2);
   }
-  if (first)
+  if (first && !panelOpen())                         // (the panel's dimming covers them meanwhile)
     for (int c = 0; c < CELLS; c++)                  // 1 px gaps after each cell
       t.drawFastVLine(CELL[c].x + CELL[c].w, y0, h, GAP);
   if (first || k.bgButton != old.bgButton || k.icon != old.icon || k.iconColor != old.iconColor) {

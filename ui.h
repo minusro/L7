@@ -58,6 +58,16 @@ inline uint16_t cellBackground(int i, int cell) {
   return (cell != -1 && cell == selectedCell) ? BG_SELECTED : BG_ROW;
 }
 
+// Bumped when the whole screen must be redrawn (after the panel closes):
+// every part redraws in full when its last draw was of another generation.
+extern uint32_t uiGeneration;
+
+// ---- Panel (ui_panel.cpp): a centred box over the dimmed screen, opened
+// with B+A and closed with A. While it's open the rows aren't drawn.
+bool panelOpen();
+void openPanel();
+void closePanel();
+
 // ---- Drawing (ui*.cpp)
 void drawTrack(int i);                   // ui.cpp: row i (a track or the status row), whatever changed
 void uiRefresh();                        // ui.cpp: call from loop(): a little more of the screen every 30 ms

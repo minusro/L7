@@ -2,7 +2,7 @@
 #include "ui.h"
 
 void drawTrack(int i) {
-  if (i < 0 || i >= ROWS) return;
+  if (i < 0 || i >= ROWS || panelOpen()) return;
   drawCells(i);
   if (i == STATUS_ROW) {
     drawStatus();
@@ -19,6 +19,10 @@ void uiRefresh() {
   static int nextRow = 0;
   if (millis() - lastDraw >= 30) {
     lastDraw = millis();
+    if (panelOpen()) {                               // only the status row's button (its icon)
+      drawCells(STATUS_ROW);
+      return;
+    }
     // Every pass, all rows' buttons (only what changed is redrawn): the
     // recording track's icon flashes; the status row's follows SHIFT, the
     // selection and the transport.

@@ -46,9 +46,11 @@ no dropouts or overruns
 - [[ Clip Switching ]] V
 - when tapping tempo while playing, every 4th tap should snap the playhead to the nearest bar start instead of resetting to 1.1.1 V
 - [[ Scene Logic ]] V
+- scene logic iterations V
 - allow non power of two loops and recordings
 - switch tempo and clock labels, add play icon between
 - optimize sample switching times
+- immediate recording after another not starting bug
 - simple splash screen
 - 80s lcd ui experiment
 - animated splash screen ?
