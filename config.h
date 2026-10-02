@@ -27,7 +27,7 @@ constexpr uint32_t PREROLL_FRAMES = 11025;         // ~250 ms
 // earlier by this much so they line up with what was playing.
 constexpr uint32_t LATENCY_FRAMES = 153;
 
-constexpr float MIN_BPM = 30.0f, MAX_BPM = 300.0f;
+constexpr float MIN_BPM = 50.0f, MAX_BPM = 200.0f;
 constexpr float MIN_SPEED = 0.5f, MAX_SPEED = 2.0f;  // vs each track's recorded tempo
 
 // MIDI clock out (serial MIDI port 2 on variant B, see M8Board.h).

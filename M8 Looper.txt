@@ -59,6 +59,9 @@ no dropouts or overruns
 	- maybe cache the first parts of the adiacent scenes start point samples - computer said no, ram limit X
 - show the remaining recording room as powers of two even if we can stop recording after fewer bars V
 - simple splash screen V
+- set tempo range to 50-200bpm V
+- only change the displayed tempo when the scene changes after the wait
+- try waiting until the earliest between the next bar start and the next halfpoint of a bar after triggering a scene change
 
 - 80s lcd ui experiment
 - switch tempo and clock labels, add play icon between
