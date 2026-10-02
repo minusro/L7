@@ -33,6 +33,7 @@
 //                      newest / oldest); keeps volume, filter, mute; whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
 //   SHIFT+UP/DOWN    older / newer scene (0*: empty; after the last, a copy of it)
+//                    (while playing it changes on the next bar line; SCN dims until then)
 //   SHIFT+UP twice   (second tap held a moment) straight to the empty scene (0*);
 //                    SHIFT+DOWN: to the copy after the last (N+1*)
 //   OPT, SHIFT, EDIT paste the scene clipboard after the current scene (OPT pressed first)

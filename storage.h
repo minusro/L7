@@ -21,6 +21,14 @@ TrackUnit unitOf(int t);
 // with another clip or range rejoins two beats later. false: its sample is
 // gone (the track is left empty) or it's recording.
 bool setTrackUnit(int t, const TrackUnit &u);
+// Scene changes while playing: the setTrackUnit() calls between these wait
+// for one bar line, the first at least ~150 ms ahead (time to open the new
+// samples and read their starts), and take effect together there. Stepping on
+// before it reuses it (unless it's under ~50 ms away). Returns that bar
+// line's transport beat (-1: stopped, at once).
+int32_t beginSceneChange();
+void endSceneChange();
+bool sceneChangeWaiting();             // a scene change hasn't reached its bar line yet
 // A write may go to the card now (stopped, or the playback buffers are full);
 // false also asks for the buffers to be topped up first.
 bool storageMayWrite();
@@ -74,6 +82,9 @@ uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBe
 float loadTempo();                   // saved tempo, or 120
 void saveTempo(float bpm);           // creates/rewrites a file: only while stopped
 void trackChanged(int t);            // settings changed: header saved when buffers allow
+// Mute (a change on its way to the track included).
+void setTrackMuted(int t, bool muted);
+bool trackMuted(int t);
 void flushHeaders();                 // save all pending headers now (power off)
 
 // Live waveform of the recording in progress (OVERVIEW_COLS columns over

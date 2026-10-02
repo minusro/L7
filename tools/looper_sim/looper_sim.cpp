@@ -210,6 +210,12 @@ static void recordTrack(int t, double beats, uint32_t expectBars, const char *la
   check(wrong == 0, msg);
 }
 
+// Runs until a scene change has reached its bar line.
+static bool waitScene() {
+  for (int i = 0; i < 4000 && sceneChangeWaiting(); i++) block();
+  return true;
+}
+
 static int32_t pmod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; }
 static uint32_t quarterFrames(uint32_t q, uint32_t spb) { return (q / 4) * spb + (q % 4) * spb / 4; }
 
@@ -513,6 +519,7 @@ int main(int argc, char **argv) {
     check(stepSample(7, 1) && tr.sample == second && tr.rangeStartBeat == 0 && tr.rangeBeats == tr.loopBars * 4 &&
           tr.volume == 20 && tr.balance == 3, "range reset to the whole loop, volume and balance kept");
     setTrackMix(7, VOLUME_UNITY, 0);               // the sync check compares at unity gain
+    trackChanged(7);
     runBeats(4);
     for (auto &x : tracks) x.gain = 0;
     tr.gain = 1;
@@ -615,31 +622,31 @@ int main(int argc, char **argv) {
     auto empty = [] { for (auto &x : tracks) if (x.state != TrackState::Empty) return false; return true; };
     uint32_t s1 = tracks[0].sample, s2 = tracks[1].sample;
     check(sceneCurrent() == 1 && sceneCount() == 1, "on scene 1 of 1");
-    check(sceneStep(-1) && sceneCurrent() == 0 && empty(), "SHIFT+DOWN: the empty scene 0*, tracks empty");
-    check(!sceneStep(-1), "no wrapping past 0*");
-    check(sceneStep(1) && tracks[0].sample == s1 && tracks[1].sample == s2, "SHIFT+UP: scene 1 back");
-    check(sceneStep(1) && sceneCurrent() == 2 && sceneCount() == 1 && tracks[0].sample == s1,
+    check(sceneStep(-1) && waitScene() && sceneCurrent() == 0 && empty(), "SHIFT+DOWN: the empty scene 0*, tracks empty");
+    check(!sceneStep(-1) && waitScene(), "no wrapping past 0*");
+    check(sceneStep(1) && waitScene() && tracks[0].sample == s1 && tracks[1].sample == s2, "SHIFT+UP: scene 1 back");
+    check(sceneStep(1) && waitScene() && sceneCurrent() == 2 && sceneCount() == 1 && tracks[0].sample == s1,
           "SHIFT+UP past the last: 2*, a copy of scene 1, not stored");
-    check(!sceneStep(1), "nothing after 2*");
+    check(!sceneStep(1) && waitScene(), "nothing after 2*");
     tracks[1].state = TrackState::Muted;           // a change on 2*
     trackChanged(1);
     block();
     check(sceneCount() == 2 && sceneCurrent() == 2, "changing 2* makes it scene 2");
-    check(sceneStep(-1) && tracks[1].state == TrackState::Playing, "scene 1 keeps track 2 playing");
-    check(sceneStep(1) && tracks[1].state == TrackState::Muted, "scene 2 has it muted");
-    check(sceneCut() && sceneClipboardFull() && sceneCount() == 1 && sceneCurrent() == 1 &&
+    check(sceneStep(-1) && waitScene() && tracks[1].state == TrackState::Playing, "scene 1 keeps track 2 playing");
+    check(sceneStep(1) && waitScene() && tracks[1].state == TrackState::Muted, "scene 2 has it muted");
+    check(sceneCut() && waitScene() && sceneClipboardFull() && sceneCount() == 1 && sceneCurrent() == 1 &&
           tracks[1].state == TrackState::Playing, "SHIFT+B+A on scene 2: cut, back on scene 1");
-    check(scenePaste() && sceneCount() == 2 && sceneCurrent() == 2 && tracks[1].state == TrackState::Muted,
+    check(scenePaste() && waitScene() && sceneCount() == 2 && sceneCurrent() == 2 && tracks[1].state == TrackState::Muted,
           "B+A: pasted after it as scene 2");
-    check(sceneDuplicate() && sceneCount() == 3 && sceneCurrent() == 3 && tracks[1].state == TrackState::Muted,
+    check(sceneDuplicate() && waitScene() && sceneCount() == 3 && sceneCurrent() == 3 && tracks[1].state == TrackState::Muted,
           "SHIFT+B twice: a copy as scene 3");
-    check(sceneGoEnd() && sceneCurrent() == sceneCount() + 1, "SHIFT+UP twice: straight to N+1*");
-    check(sceneGoEmpty() && sceneCurrent() == 0 && empty(), "SHIFT+DOWN twice: straight to 0*");
+    check(sceneGoEnd() && waitScene() && sceneCurrent() == sceneCount() + 1, "SHIFT+UP twice: straight to N+1*");
+    check(sceneGoEmpty() && waitScene() && sceneCurrent() == 0 && empty(), "SHIFT+DOWN twice: straight to 0*");
     setTrackMix(7, 20, 0);                         // a change on 0*
     trackChanged(7);
     block();
     check(sceneCurrent() == 1 && sceneCount() == 4 && tracks[7].volume == 20, "changing 0* inserts a new scene 1");
-    check(sceneStep(1) && sceneCurrent() == 2 && tracks[0].sample == s1 && tracks[1].state == TrackState::Playing &&
+    check(sceneStep(1) && waitScene() && sceneCurrent() == 2 && tracks[0].sample == s1 && tracks[1].state == TrackState::Playing &&
           tracks[7].volume == VOLUME_UNITY, "the others moved up: old scene 1 is now 2");
     runBeats(4);
     for (auto &x : tracks) { x.gain = 0; x.underruns = 0; }
@@ -993,6 +1000,86 @@ int main(int argc, char **argv) {
     runBeats(2);
     check(tracks[0].rangeStartBeat == 4 && tracks[0].rangeBeats == 4, "then on the new range");
     checkSync(0, "track 1 on its new range");
+  }
+
+  printf("scene changes while playing wait for the next bar line\n");
+  {
+    if (!transport.running) transportStart();
+    runBeats(4);
+    sceneStateChanged();                           // scene A: what's playing
+    for (int i = 0; i < 50; i++) block();
+    TrackUnit a[NUM_TRACKS];
+    for (int t = 0; t < NUM_TRACKS; t++) a[t] = unitOf(t);
+    uint32_t spbA = transport.spb;
+    // Scene B: a copy with track 3 on another sample, track 5 muted, track 6
+    // empty and another tempo.
+    check(sceneDuplicate(), "scene B: a copy of A");
+    stepSample(2, 1);
+    setTrackMuted(4, true);
+    clearTrack(5);
+    simSetTempo(125);
+    sceneStateChanged();
+    runBeats(3);
+    TrackUnit b2 = unitOf(2);
+    uint32_t spbB = transport.spb;
+    check(b2.sample != a[2].sample && trackMuted(4) && tracks[5].state == TrackState::Empty && spbB != spbA,
+          "scene B set up");
+    runBeats(1.3);
+    // To A, and when each part of the change is heard.
+    struct At { int32_t beat = -1; uint32_t sib = 0; void mark() { if (beat < 0) { beat = transport.beat; sib = transport.sampleInBeat; } } };
+    At sw, tempo, unmute, start;
+    afterAudio = [&] {
+      if (tracks[2].sample == a[2].sample && !tracks[2].sampleSwitch && tracks[2].live) sw.mark();
+      if (transport.spb == spbA) tempo.mark();
+      if (tracks[4].state == TrackState::Playing) unmute.mark();
+      if (tracks[5].live) start.mark();
+    };
+    check(sceneStep(-1), "back to scene A");
+    check(sceneChangeWaiting() && tracks[2].sample == b2.sample && tracks[4].state == TrackState::Muted &&
+          tracks[5].state != TrackState::Empty && transport.spb == spbB, "waiting: nothing changed yet (label dim)");
+    waitScene();
+    for (int i = 0; i < 20; i++) block();
+    afterAudio = nullptr;
+    auto onBar = [](const At &x, uint32_t within) { return x.beat >= 0 && x.beat % 4 == 0 && x.sib <= within; };
+    char m[160];
+    snprintf(m, sizeof m, "on a bar line together: sample (beat %d +%u), tempo (%d +%u), unmute (%d +%u), empty track starts (%d +%u)",
+             sw.beat, sw.sib, tempo.beat, tempo.sib, unmute.beat, unmute.sib, start.beat, start.sib);
+    check(onBar(sw, AUDIO_BLOCK_SAMPLES) && onBar(tempo, AUDIO_BLOCK_SAMPLES) && onBar(unmute, 4 * AUDIO_BLOCK_SAMPLES) &&
+          onBar(start, AUDIO_BLOCK_SAMPLES) && sw.beat == tempo.beat && sw.beat == unmute.beat && sw.beat == start.beat, m);
+    bool same = true;
+    for (int t = 0; t < NUM_TRACKS; t++) if (unitOf(t).sample != a[t].sample) same = false;
+    check(same && !sceneChangeWaiting(), "scene A's tracks, label bright again");
+    checkSync(2, "track 3 back on A's sample");
+    checkSync(5, "track 6 (started on the bar)");
+    // To B: track 6 stops on the bar; a volume set while waiting stays.
+    runBeats(1.2);
+    At stop;
+    afterAudio = [&] { if (!tracks[5].live) stop.mark(); };
+    check(sceneStep(1), "to scene B");
+    setTrackMix(0, 30, 0);
+    trackChanged(0);
+    waitScene();
+    for (int i = 0; i < 20; i++) block();
+    afterAudio = nullptr;
+    snprintf(m, sizeof m, "track 6 stops on the bar line (beat %d +%u), then empty", stop.beat, stop.sib);
+    check(onBar(stop, AUDIO_BLOCK_SAMPLES) && tracks[5].state == TrackState::Empty, m);
+    check(tracks[0].volume == 30, "the volume set while waiting stayed");
+    setTrackMix(0, VOLUME_UNITY, 0);
+    trackChanged(0);
+    // Back and forth before the bar: A's clips just carry on.
+    runBeats(1.2);
+    uint32_t drops = 0;
+    for (auto &x : tracks) x.underruns = 0;
+    sceneStep(-1);
+    for (int i = 0; i < 20; i++) block();
+    sceneStep(1);
+    for (int i = 0; i < 20; i++) block();
+    sceneStep(-1);
+    waitScene();
+    runBeats(2);
+    for (auto &x : tracks) drops += x.underruns;
+    check(tracks[2].sample == a[2].sample && drops == 0, "A, B, A before the bar: A, no gaps");
+    checkSync(2, "track 3 after going back and forth");
   }
 
   printf("random sessions\n");

@@ -154,6 +154,7 @@ static void takeSwitch(Track &tr) {
   tr.startBeat = tr.nextStartBeat;
   tr.playSpb = tr.nextSpb;
   tr.sampleSwitch = false;
+  if (!tr.playSpb) tr.live = false;              // a switch to nothing: the track stops there
 }
 
 void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
@@ -175,6 +176,7 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
   for (auto &tr : tracks) {
     if (!tr.live && !(tr.armed && beat >= tr.startBeat)) continue;
     if (tr.sampleSwitch && beat >= tr.nextStartBeat) takeSwitch(tr);
+    if (!tr.playSpb) continue;
     // Where the stream should be at this beat; snapping to it every beat keeps
     // varispeed playback locked to the clock (no drift, tempo changes included).
     uint32_t expected = tr.s0 + (uint32_t)(beat - tr.startBeat) * tr.playSpb;
@@ -206,14 +208,15 @@ void LooperEngine::update() {
   const float usPerSample = 1e6f / AUDIO_SAMPLE_RATE_EXACT;
 
   // Tempo change: keep the position within the beat proportionally.
-  if (transport.pendingSpb) {
+  if (transport.pendingSpb && (transport.spbAtBeat < 0 || !transport.running)) {
+    transport.spbAtBeat = -1;
     uint32_t spb = transport.pendingSpb;
     transport.sampleInBeat = (uint64_t)transport.sampleInBeat * spb / transport.spb;
     transport.spb = spb;
     transport.pendingSpb = 0;
     nextTickAt_ = (uint64_t)tickInBeat_ * spb / 24;
   }
-  const uint32_t spb = transport.spb;
+  uint32_t spb = transport.spb;
   const bool running = transport.running;
 
   double speed[NUM_TRACKS];
@@ -235,7 +238,15 @@ void LooperEngine::update() {
 
     float mixL = monitor ? l : 0, mixR = monitor ? r : 0;
     if (running) {
-      if (transport.sampleInBeat == 0) onBeat(blockMicros, i);
+      if (transport.sampleInBeat == 0) {
+        if (transport.pendingSpb && transport.spbAtBeat >= 0 && transport.beat >= transport.spbAtBeat) {
+          spb = transport.spb = transport.pendingSpb;   // a scene's tempo, on its bar line
+          transport.pendingSpb = 0;
+          transport.spbAtBeat = -1;
+          for (int t = 0; t < NUM_TRACKS; t++) speed[t] = tracks[t].playSpb ? (double)tracks[t].playSpb / spb : 0;
+        }
+        onBeat(blockMicros, i);
+      }
       if (tickInBeat_ < 24 && transport.sampleInBeat >= nextTickAt_) {
         queueTick(blockMicros + (uint32_t)((i + AUDIO_BLOCK_SAMPLES) * usPerSample));
         tickInBeat_++;
@@ -248,6 +259,7 @@ void LooperEngine::update() {
         uint32_t tail = tr.tail;
         if (tr.sampleSwitch && (int32_t)(tail - tr.switchAt) >= 0) {
           takeSwitch(tr);
+          if (!tr.live) continue;
           speed[t] = (double)tr.playSpb / spb;
         }
         if (tr.head - tail < 2) { tr.underruns++; continue; }

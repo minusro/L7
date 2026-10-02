@@ -101,6 +101,7 @@ struct Transport {
   volatile bool running = false;         // set by loop()
   volatile uint32_t spb = 22059;         // samples per beat (~120 BPM)
   volatile uint32_t pendingSpb = 0;      // loop() -> interrupt: tempo change
+  volatile int32_t spbAtBeat = -1;       // ... at this beat's start (a scene change), not at once
   volatile int32_t beat = 0;             // beats since the transport started
   volatile uint32_t sampleInBeat = 0;
   volatile uint32_t now = 0;             // samples processed since boot

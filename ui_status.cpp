@@ -64,11 +64,12 @@ void drawStatus() {
   printToRight(WAVE_X + WAVE_W - 1 - STATUS_INSET, text, 10, running ? TEXT_ACTIVE : TEXT_IDLE, bg);
 
   // The scene, in the next cell: "SCN 3/7"; the empty scene and the copy
-  // after the last (not stored yet) with a star, in grey.
+  // after the last (not stored yet) with a star, in grey; dim while the
+  // change waits for its bar line.
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;
   snprintf(text, sizeof text, "SCN %d%s/%d", scene, temporary ? "*" : "", count);
   const Cell &cell = CELL[1];
-  printFromLeft(cell.x + STATUS_INSET, cell.x, text, 12, temporary ? TEXT_IDLE : TEXT_ACTIVE,
-                cellBackground(STATUS_ROW, 1));
+  uint16_t color = sceneChangeWaiting() ? TEXT_WAITING : temporary ? TEXT_IDLE : TEXT_ACTIVE;
+  printFromLeft(cell.x + STATUS_INSET, cell.x, text, 12, color, cellBackground(STATUS_ROW, 1));
 }

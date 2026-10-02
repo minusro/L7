@@ -285,10 +285,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     } else if (tr.state == TrackState::Empty || recordingOn(selected)) {
       recordPress(selected);
     } else {
-      tr.state = tr.state == TrackState::Playing ? TrackState::Muted : TrackState::Playing;
-      trackChanged(selected);
+      bool mute = !trackMuted(selected);
+      setTrackMuted(selected, mute);
       // Unmuted while stopped: the clock starts (from 1.1.1), as recording would.
-      if (tr.state == TrackState::Playing && !transport.running) transportStart();
+      if (!mute && !transport.running) transportStart();
     }
   }
   if (toggleTransport) {
