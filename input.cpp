@@ -65,6 +65,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool onStatus = selected == STATUS_ROW;
   int prevSel = selected;
   bool sceneChanged = false;                         // every row to redraw
+  // SHIFT held while playing: scene steps only move the label; the scene
+  // changes once SHIFT is let go (see the end).
+  if (shift && transport.running) sceneHold(true);
 
   // SHIFT+UP/DOWN tapped twice: the second tap waits. Held EDGE_HOLD_MS, it
   // goes to that end of the scene list; let go sooner, it's a step after all.
@@ -295,6 +298,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if (transport.running) transportStop();
     else transportStart();
   }
+  if (!shift) sceneChanged |= sceneHold(false);     // SHIFT let go: to the scene stepped to
   // Show the result right away rather than on the rows' next redraw: the new
   // selection first, then the old one, so highlight and icon move together.
   if (sceneChanged)

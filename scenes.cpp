@@ -34,9 +34,12 @@ static bool listDirty = false;
 static SceneInfo record;                         // waiting to be written to recordSlot
 static int recordSlot = -1;
 static SceneInfo clip;                           // the scene clipboard
+static bool holding = false;                     // stepping with the change held back (see sceneHold)
+static int target = -1;                          // where the held steps got to (-1: none)
 static bool clipFull = false;
 
-int sceneCurrent() { return list.current; }
+int sceneCurrent() { return target >= 0 ? target : list.current; }
+bool sceneHeld() { return target >= 0; }
 int sceneCount() { return list.count; }
 bool sceneClipboardFull() { return clipFull; }
 void sceneStateChanged() { if (!loading) changed = true; }
@@ -151,8 +154,13 @@ static void apply(const SceneInfo &s) {
 static bool busy() { return recording.mode != Recording::Idle; }
 
 static bool go(int pos) {
-  commit();
   pos = constrain(pos, 0, list.count + 1);
+  if (holding) {                                 // only the label moves for now
+    if (busy() || pos == sceneCurrent()) return false;
+    target = pos == list.current ? -1 : pos;
+    return true;
+  }
+  commit();
   if (busy() || pos == list.current) return false;
   list.current = pos;
   listDirty = true;
@@ -160,11 +168,29 @@ static bool go(int pos) {
   return true;
 }
 
-bool sceneStep(int dir) { return go(list.current + dir); }
+bool sceneStep(int dir) { return go(sceneCurrent() + dir); }
+
+bool sceneHold(bool on) {
+  holding = on;
+  if (on || target < 0) return false;
+  int pos = target;
+  target = -1;
+  return go(pos);
+}
+
+// A held selection is taken first (cut, paste and duplicate act on it).
+static void takeHeld() {
+  if (target < 0) return;
+  bool was = holding;
+  holding = false;
+  sceneHold(false);
+  holding = was;
+}
 bool sceneGoEmpty() { return go(0); }
 bool sceneGoEnd() { return go(list.count + 1); }
 
 bool sceneCut() {
+  takeHeld();
   commit();
   if (busy()) return false;
   clipFull = true;
@@ -179,6 +205,7 @@ bool sceneCut() {
 }
 
 bool scenePaste() {
+  takeHeld();
   commit();
   if (busy() || !clipFull) return false;
   int pos = list.current == list.count + 1 ? list.count + 1 : list.current + 1;   // N+1*: replaced
@@ -193,6 +220,7 @@ bool scenePaste() {
 }
 
 bool sceneDuplicate() {
+  takeHeld();
   commit();
   if (busy()) return false;
   SceneInfo s = list.current == 0 ? emptyScene() : snapshot();

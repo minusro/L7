@@ -27,9 +27,13 @@ bool sceneCut();               // to the scene clipboard; removed from the list,
 bool scenePaste();             // inserted after the current scene (or over N+1*), and selected
 bool sceneDuplicate();         // a copy inserted after the current scene, and selected
 bool sceneClipboardFull();
+// While on (SHIFT held, playing), stepping only moves the selection shown;
+// turning it off goes there (on the next bar line, see beginSceneChange()).
+bool sceneHold(bool on);       // true: it went somewhere
+bool sceneHeld();              // a held selection not gone to yet
 
-// Display: the current position (0: 0*; sceneCount() + 1: N+1*) and how many
-// scenes are stored.
+// Display: the current position (0: 0*; sceneCount() + 1: N+1*; a held
+// selection while there is one) and how many scenes are stored.
 int sceneCurrent();
 int sceneCount();
 

@@ -1082,6 +1082,26 @@ int main(int argc, char **argv) {
     checkSync(2, "track 3 after going back and forth");
   }
 
+  printf("SHIFT held while stepping scenes: the change starts once it's let go\n");
+  {
+    int from = sceneCurrent();
+    uint32_t sample = tracks[2].sample;
+    sceneHold(true);
+    check(sceneStep(1) && sceneCurrent() == from + 1 && sceneHeld() && !sceneChangeWaiting(),
+          "stepped while held: the label moves, nothing waits yet");
+    runBeats(9);
+    check(tracks[2].sample == sample && !sceneChangeWaiting(), "two bars later: still scene A playing");
+    int32_t released = transport.beat;
+    check(sceneHold(false) && sceneChangeWaiting() && !sceneHeld(), "let go: the change waits for its bar line");
+    int32_t at = -1;
+    afterAudio = [&] { if (at < 0 && tracks[2].sample != sample && !tracks[2].sampleSwitch) at = transport.beat; };
+    waitScene();
+    afterAudio = nullptr;
+    char m[96];
+    snprintf(m, sizeof m, "switched on the first bar line after letting go (beat %d, let go in %d)", at, released);
+    check(at % 4 == 0 && at > released && at <= released + 4 && sceneCurrent() == from + 1, m);
+  }
+
   printf("random sessions\n");
   for (unsigned seed = 1; seed <= (argc > 1 ? atoi(argv[1]) : 5); seed++) fuzz(600, seed);
 

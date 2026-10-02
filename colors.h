@@ -58,7 +58,7 @@ constexpr uint16_t PANEL_BORDER = 0x4A49;    // grey ~74
 // ---- Status row text
 constexpr uint16_t TEXT_ACTIVE = 0xFFFF;     // white: tempo being edited, clock running
 constexpr uint16_t TEXT_IDLE = 0x8C51;       // grey ~140: tempo not selected, clock stopped
-constexpr uint16_t TEXT_WAITING = 0x4A49;    // grey ~74: a scene change waiting for its bar line
+constexpr uint16_t TEXT_WAITING = 0x4A49;    // grey ~74: a scene held (SHIFT), or waiting for its bar line (flashing)
 
 // ---- Boot / errors
 constexpr uint16_t TEXT_PROGRESS = 0xFFE0;   // yellow: startup messages
