@@ -4,6 +4,7 @@
 
 static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;   // held arrows
 static constexpr uint32_t DOUBLE_TAP_MS = 200;      // two taps of a key this close: a double tap
+static constexpr uint32_t EDGE_HOLD_MS = 350;       // SHIFT+UP/DOWN's second tap held this long: to the list's end
 
 // The selected track's current cell back to its defaults: the whole loop as
 // the range, the filter open, volume at unity and balance centred.
@@ -64,6 +65,26 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool onStatus = selected == STATUS_ROW;
   int prevSel = selected;
   bool sceneChanged = false;                         // every row to redraw
+
+  // SHIFT+UP/DOWN tapped twice: the second tap waits. Held EDGE_HOLD_MS, it
+  // goes to that end of the scene list; let go sooner, it's a step after all.
+  static uint8_t edgeKey = 0;
+  static uint32_t edgeAt = 0;
+  uint8_t edgeDone = 0;                              // the arrow this call settled
+  if (edgeKey) {
+    int dir = edgeKey == m8::BTN_UP ? -1 : 1;
+    if (!(keys & edgeKey) || !shift) {
+      sceneChanged |= sceneStep(dir);
+      edgeDone = edgeKey;
+      edgeKey = 0;
+    } else if ((int32_t)(millis() - edgeAt) >= 0) {
+      sceneChanged |= dir < 0 ? sceneGoEmpty() : sceneGoEnd();
+      edgeDone = edgeKey;
+      edgeKey = 0;
+    } else {
+      pressed &= ~edgeKey;                           // still waiting: no repeats
+    }
+  }
 
   // OPT (B) tapped twice within DOUBLE_TAP_MS (with no arrows or A in
   // between): the current cell's parameters back to their defaults; with
@@ -211,18 +232,20 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       }
     }
   } else if (shift) {
-    // SHIFT+UP/DOWN: older / newer scene; twice quickly: straight to that
-    // end (UP: the empty scene 0*, DOWN: N+1*).
-    static uint32_t lastUpTap = 0, lastDownTap = 0;
-    if (pressed & m8::BTN_UP) {
-      bool twice = !repeat && millis() - lastUpTap < DOUBLE_TAP_MS;
-      sceneChanged |= twice ? sceneGoEmpty() : sceneStep(-1);
-      lastUpTap = repeat || twice ? 0 : millis();
-    }
-    if (pressed & m8::BTN_DOWN) {
-      bool twice = !repeat && millis() - lastDownTap < DOUBLE_TAP_MS;
-      sceneChanged |= twice ? sceneGoEnd() : sceneStep(1);
-      lastDownTap = repeat || twice ? 0 : millis();
+    // SHIFT+UP/DOWN: older / newer scene; tapped twice, the second tap held
+    // (see above): straight to that end (UP: the empty scene 0*, DOWN: N+1*).
+    static uint32_t lastTap[2] = {0, 0};
+    const uint8_t sceneKeys[2] = {m8::BTN_UP, m8::BTN_DOWN};
+    for (int k = 0; k < 2; k++) {
+      if (!(pressed & sceneKeys[k] & ~edgeDone)) continue;
+      bool twice = !repeat && millis() - lastTap[k] < DOUBLE_TAP_MS;
+      if (twice) {
+        edgeKey = sceneKeys[k];
+        edgeAt = millis() + EDGE_HOLD_MS;
+      } else {
+        sceneChanged |= sceneStep(k == 0 ? -1 : 1);
+      }
+      lastTap[k] = repeat || twice ? 0 : millis();
     }
     // SHIFT+LEFT/RIGHT on a track: its sample, the previous / next on the card.
     if (!onStatus && !recordingOn(selected)) {

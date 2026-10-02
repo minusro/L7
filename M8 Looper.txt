@@ -53,6 +53,7 @@ no dropouts or overruns
 - add 1.5 bars length option V
 - fix double tapping to cycle through power of 2 regions lengths V
 - invert the scene navigation order again (up is newer) V
+- require holding the arrow key a bit longer on the second press to go the scene list edges V
 
 - umuting a track while the clock is stopped should make the clock start from 1.1.1
 - investigate and optimize sample switching times when switching scenes with different samples
