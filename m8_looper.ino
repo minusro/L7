@@ -31,11 +31,10 @@
 //   SHIFT+LEFT/RIGHT the track's sample: previous / next on the card (empty track:
 //                      newest / oldest); keeps volume, filter, mute; whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
-//                      (acts after the double-tap wait, 100 ms: SHIFT+EDIT twice pastes a scene)
 //   SHIFT+UP/DOWN    newer / older scene (0*: empty; after the last, a copy of it)
 //   SHIFT+UP twice   straight to the copy after the last (N+1*); SHIFT+DOWN twice: to 0*
-//   SHIFT+EDIT twice paste the scene clipboard after the current scene
-//   SHIFT+OPT+EDIT   cut the scene (to the scene clipboard), go to the one before
+//   OPT, SHIFT, EDIT paste the scene clipboard after the current scene (OPT pressed first)
+//   SHIFT, OPT, EDIT cut the scene (to the scene clipboard), go to the one before (SHIFT first)
 //   OPT+EDIT         open the panel (EDIT closes it)
 //   SHIFT+OPT twice  insert a copy of the current scene after it
 //   PLAY             start from 1.1.1 / stop

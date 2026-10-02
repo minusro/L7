@@ -1,5 +1,6 @@
 // ui_buttons.cpp — the row buttons and their icons (see ui.h)
 #include "ui.h"
+#include "input.h"
 
 // ---- Row buttons
 // Track rows show the track's state: an unmuted track play while the clock
@@ -12,12 +13,13 @@
 // cancel a recording still waiting for its bar (X); mute (stop) or unmute
 // (play); with SHIFT held, cut the clip (scissors) or, on an empty track,
 // paste (a clipboard; very dim while the clipboard is empty). With B held:
-// open the panel (a menu icon), or with SHIFT too cut the scene (scissors).
+// open the panel (a menu icon); with SHIFT too, paste a scene (B pressed
+// first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the panel is open: a house (A closes it). On the status row itself:
 // tap tempo ("TAP"); with SHIFT, start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, dimmed.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -34,7 +36,8 @@ static bool flashOn() {
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
   if (panelOpen()) return ICON_HOME;               // A closes the panel
-  if (board.keys() & m8::BTN_OPT) return shift ? ICON_CUT : ICON_MENU;   // B+A: the panel; SHIFT+B+A: cut the scene
+  if (board.keys() & m8::BTN_OPT)                  // B+A: the panel; with SHIFT, the scene
+    return !shift ? ICON_MENU : optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
   if (selected == STATUS_ROW) return shift ? ICON_PLAY : ICON_TAP;   // restart / tap tempo
   const Track &tr = tracks[selected];
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) ? ICON_NONE : ICON_PASTE;
@@ -78,7 +81,7 @@ static int buttonIcon(int i) {
 static uint16_t iconColor(int i, int icon) {
   uint16_t c = i == STATUS_ROW ? (icon == ICON_RECORD ? ICON_RECORD_COLOR : ICON_SELECTED)   // record: red
              : i == selected || recordingOn(i) ? ICON_SELECTED : ICON_IDLE;
-  if (i == STATUS_ROW && icon == ICON_PASTE && !clipboardFull())
+  if (i == STATUS_ROW && ((icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull())))
     c = blend565(c, cellBackground(i, -1), ICON_UNAVAILABLE_WEIGHT);   // nothing to paste
   if (i == STATUS_ROW && heldAction >= 0) c = blend565(c, cellBackground(i, -1), ICON_PRESSED_WEIGHT);   // A held
   return c;
@@ -114,6 +117,13 @@ static bool onIcon(int icon, float dx, float dy) {
     case ICON_PAUSE: {                             // two bars
       float ax = fabsf(dx);
       return fabsf(dy) <= h && ax >= 0.25f * h && ax <= 0.8f * h;
+    }
+    case ICON_SCENE_CUT:                           // the track icons, smaller, in a 1 px square
+    case ICON_SCENE_PASTE: {
+      float m = max(fabsf(dx), fabsf(dy));
+      if (m >= 6 && m <= 7) return true;
+      const float k = 0.82f;
+      return onIcon(icon == ICON_SCENE_CUT ? ICON_CUT : ICON_PASTE, dx / k, dy / k);
     }
     case ICON_MENU:                                // three 2 px bars, on whole pixels
       return fabsf(dx) <= 5 && (fabsf(dy) <= 1 || fabsf(fabsf(dy) - 4) <= 1);

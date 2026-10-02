@@ -3,4 +3,5 @@
 #pragma once
 
 void pollKeys();                         // call from loop(): reads the keys, repeats held arrows
-void followRecording();                  // call from loop(): selects the next track after a recording
+void followRecording();
+bool optBeforeShift();                   // SHIFT and B held: B was pressed first                  // call from loop(): selects the next track after a recording
