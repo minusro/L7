@@ -57,6 +57,24 @@ static void startRecording(int t, uint32_t from, int32_t beat, int32_t maxBehind
 // that one ends, with no gap between them.
 static int queuedTrack = -1;
 
+// A clip change on a playing track (a scene change, or another sample):
+// planned for transport quarter beat q, stream frame switchS. The old clip
+// plays up to it; the new one, its file already open, carries on from there
+// with no gap. Applied once the stream reaches switchS (see applyPlan).
+struct Plan {
+  bool on = false;
+  int32_t q = 0;                                 // kept after applying: the interrupt may not be there yet
+  uint32_t switchS = 0;
+  TrackUnit u;
+  FsFile file;                                   // the new sample (none: the same one)
+  uint32_t spb = 0, loopBars = 0, frames = 0;
+  uint8_t overview[OVERVIEW_COLS];
+};
+static Plan plans[NUM_TRACKS];
+static void applyPlan(int t);
+static void dropPlan(int t);
+static void produce(Track &tr);
+
 // Recording, waiting to, or queued: its sample is spoken for.
 static bool recordingTrack(int t) {
   return (recording.mode != Recording::Idle && recording.track == t) || queuedTrack == t;
@@ -197,6 +215,7 @@ static bool applyingUnit = false;                // setTrackUnit() at work: not 
 
 TrackUnit unitOf(int t) {
   const Track &tr = tracks[t];
+  if (plans[t].on) return plans[t].u;            // a planned change counts
   TrackUnit u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, 0, 0, 0, 0, 0, tr.filterLo, tr.filterHi, tr.volume, tr.balance};
   if (tr.state == TrackState::Empty) return u;
   u.sample = tr.sample;
@@ -206,18 +225,25 @@ TrackUnit unitOf(int t) {
   return u;
 }
 
+// Opens sample n, reading its header (and overview); false if it can't play.
+static bool openSample(uint32_t n, FsFile &f, SampleInfo &info, uint8_t *overview) {
+  char path[40];
+  samplePath(n, path, sizeof path);
+  debugStage = "SD open (sample file)";
+  f = SD.sdfs.open(path, O_RDWR);
+  if (!f || !readSampleHeader(f, info, overview) || !playable(info)) {
+    f.close();
+    return false;
+  }
+  return true;
+}
+
 // Opens sample n for track t and takes on its recording (length, tempo,
 // overview). The track's settings are left to the caller.
 static bool loadSample(int t, uint32_t n) {
   Track &tr = tracks[t];
-  char path[40];
-  samplePath(n, path, sizeof path);
-  tr.file = SD.sdfs.open(path, O_RDWR);
   SampleInfo info;
-  if (!tr.file || !readSampleHeader(tr.file, info, tr.overview) || !playable(info)) {
-    tr.file.close();
-    return false;
-  }
+  if (!openSample(n, tr.file, info, tr.overview)) return false;
   tr.sample = n;
   tr.spbNative = info.spb;
   tr.loopBars = info.loopBars;
@@ -275,6 +301,145 @@ bool storageMayWrite() {
   return false;
 }
 
+// Lead time for a clip change while playing: the switch goes on the first
+// quarter beat at least this far ahead, leaving time to open the new sample
+// and read its start. A planned switch can still be changed up to
+// PLAN_LATE_MS before it.
+static constexpr uint32_t SWITCH_LEAD_MS = 150, PLAN_LATE_MS = 50;
+static constexpr int64_t msToSamples(uint32_t ms) { return (int64_t)ms * 441 / 10; }
+
+// The first beat at least SWITCH_LEAD_MS ahead (a track starting from silence).
+static int32_t beatAfterLead() {
+  noInterrupts();
+  int32_t beat = transport.beat;
+  uint32_t left = transport.spb - transport.sampleInBeat;
+  interrupts();
+  return beat + (left >= msToSamples(SWITCH_LEAD_MS) ? 1 : 2);
+}
+
+// Plans a gapless change of playing track t to unit u (see Plan). False if it
+// can't be (a switch just about to happen): the caller restarts the track.
+static bool planSwitch(int t, const TrackUnit &u) {
+  Track &tr = tracks[t];
+  Plan &p = plans[t];
+  noInterrupts();
+  int64_t spb = transport.spb, nowS = (int64_t)transport.beat * spb + transport.sampleInBeat;
+  uint32_t tail = tr.tail;
+  bool pending = p.on || tr.sampleSwitch;
+  interrupts();
+  auto quarterAt = [&](int32_t q) { return (int64_t)(q / 4) * spb + (q % 4) * spb / 4; };
+  int32_t q;
+  uint32_t switchS;
+  if (pending) {
+    // Already planned (stepping on quickly): the same switch point, if not too late.
+    if (quarterAt(p.q) - nowS < msToSamples(PLAN_LATE_MS)) return false;
+    q = p.q;
+    switchS = p.switchS;
+  } else {
+    q = (int32_t)((nowS + msToSamples(SWITCH_LEAD_MS)) * 4 / spb) + 1;
+    if (q < 4 * tr.startBeat) return false;      // (only just started)
+    switchS = tr.s0 + quarterFrames(q - 4 * tr.startBeat, tr.playSpb);
+    if ((int32_t)(switchS - tail) <= 0) return false;
+  }
+  // The new sample, opened now (none needed for the one the stream has).
+  if (u.sample == tr.sample) {
+    p.file.close();
+  } else if (!(p.on && p.file && p.u.sample == u.sample)) {
+    FsFile f;
+    SampleInfo info;
+    if (!openSample(u.sample, f, info, p.overview)) return false;
+    p.file.close();
+    p.file = std::move(f);
+    p.spb = info.spb;
+    p.loopBars = info.loopBars;
+    p.frames = info.frames;
+  }
+  p.u = u;
+  p.q = q;
+  p.switchS = switchS;
+  p.on = true;
+  if (tr.rangePending && (int32_t)(tr.switchS - switchS) >= 0) tr.rangePending = false;   // replaced
+  if ((int32_t)(tr.head - switchS) >= 0) {
+    tr.head = switchS;                           // the old clip's buffered rest: dropped
+    applyPlan(t);
+  } else {
+    // The old clip up to the switch first (a read or two: the ring may be too
+    // full for serviceStreams() to get to it in time).
+    for (int i = 0; i < 8 && p.on; i++) produce(tr);
+  }
+  return true;
+}
+
+// The stream has reached the plan's switch point: the track takes on the new
+// clip, and the interrupt is told where it starts.
+static void applyPlan(int t) {
+  Track &tr = tracks[t];
+  Plan &p = plans[t];
+  if (!p.on) return;
+  p.on = false;
+  if (p.file) {
+    tr.file.close();
+    tr.file = std::move(p.file);                 // (SdFat copies: the copy left behind is let go)
+    p.file.close();
+    tr.sample = p.u.sample;
+    tr.spbNative = p.spb;
+    tr.loopBars = p.loopBars;
+    tr.recordedFrames = p.frames;
+    memcpy(tr.overview, p.overview, OVERVIEW_COLS);
+    tr.overviewVersion++;
+  }
+  applyUnit(t, p.u);
+  tr.rangePending = false;
+  int32_t phaseQ = posMod(p.q - tr.rangeAnchorQ, 4 * tr.rangeBeats);
+  tr.fileFrame = tr.rangeFrame(quarterFrames(phaseQ, tr.spbNative));
+  // The next beat line after the switch, and the stream frame there.
+  int32_t beat = (p.q + 3) / 4;
+  uint32_t s0 = p.switchS + quarterFrames(phaseQ + 4 * beat - p.q, tr.spbNative) - quarterFrames(phaseQ, tr.spbNative);
+  noInterrupts();
+  tr.switchAt = p.switchS;
+  tr.nextS0 = s0;
+  tr.nextStartBeat = beat;
+  tr.nextSpb = tr.spbNative;
+  tr.sampleSwitch = true;
+  interrupts();
+}
+
+// A plan not carried out (the track stops or changes otherwise).
+static void dropPlan(int t) {
+  plans[t].on = false;
+  plans[t].file.close();
+  tracks[t].sampleSwitch = false;
+}
+
+// Track t to play unit u's clip (a sample): gaplessly if it's playing,
+// otherwise from the next beat with time to fill. False if the sample can't
+// be read (the track ends up empty).
+static bool changeClip(int t, const TrackUnit &u) {
+  Track &tr = tracks[t];
+  if (transport.running && tr.live && planSwitch(t, u)) {
+    trackChanged(t);
+    return true;
+  }
+  TrackUnit now = unitOf(t);
+  dropPlan(t);
+  tr.live = false;
+  tr.armed = false;
+  tr.rangePending = false;
+  bool ok = true;
+  if (tr.state == TrackState::Empty || now.sample != u.sample || !tr.file) {
+    tr.file.close();
+    ok = loadSample(t, u.sample);
+  }
+  if (!ok) {
+    clearTrack(t);                               // its sample is gone
+    return false;
+  }
+  applyUnit(t, u);
+  if (transport.running) startTrack(t, beatAfterLead(), false);
+  trackChanged(t);
+  return true;
+}
+
 bool setTrackUnit(int t, const TrackUnit &u) {
   Track &tr = tracks[t];
   if (recording.mode != Recording::Idle && recording.track == t) return false;
@@ -288,26 +453,14 @@ bool setTrackUnit(int t, const TrackUnit &u) {
     setTrackFilter(t, u.filterLo, u.filterHi);
     setTrackMix(t, u.volume, u.balance);
     tr.state = u.muted ? TrackState::Muted : TrackState::Playing;
+    if (plans[t].on) plans[t].u = u;             // a planned switch brings them too
     trackChanged(t);
   } else if (!u.sample) {
     clearTrack(t);
     setTrackFilter(t, u.filterLo, u.filterHi);
     setTrackMix(t, u.volume, u.balance);
   } else {
-    tr.live = false;
-    tr.armed = false;
-    tr.rangePending = false;
-    if (now.sample != u.sample) {
-      tr.file.close();
-      ok = loadSample(t, u.sample);
-    }
-    if (ok) {
-      applyUnit(t, u);
-      if (transport.running) startTrack(t, transport.beat + 2, false);
-      trackChanged(t);
-    } else {
-      clearTrack(t);                             // its sample is gone
-    }
+    ok = changeClip(t, u);
   }
   applyingUnit = false;
   return ok;
@@ -471,34 +624,18 @@ bool pasteTrack(int t) {
 
 // ---- Choosing a track's sample
 bool stepSample(int t, int dir) {
-  Track &tr = tracks[t];
   if (sampleTotal < 2 || recordingTrack(t)) return false;
-  bool empty = tr.state == TrackState::Empty;
+  TrackUnit u = unitOf(t);                       // (a planned change counts)
   // In recording order from the track's sample, wrapping around; an empty
   // track starts from the oldest (going forward) or newest (going back).
-  uint32_t from = empty ? (dir > 0 ? 0 : 0x10000) : sampleOrder[tr.sample];
+  uint32_t from = !u.sample ? (dir > 0 ? 0 : 0x10000) : sampleOrder[u.sample];
   uint32_t n = neighbourSample(from, dir);
-  if (!n || n == tr.sample) return false;
-  TrackState state = empty ? TrackState::Playing : tr.state;
-  tr.live = false;
-  tr.armed = false;
-  tr.rangePending = false;
-  tr.file.close();
-  if (!loadSample(t, n)) {                       // unreadable: the track ends up empty
-    tr.state = TrackState::Empty;
-    tr.sample = 0;
-    trackChanged(t);
-    return false;
-  }
-  // Volume, balance, filter and mute stay; the range is the whole loop again,
-  // aligned to the bar counter (its start on 1.1.1).
-  tr.rangeStartBeat = 0;
-  tr.rangeBeats = tr.loopBars * BEATS_PER_BAR;
-  tr.rangeAnchorQ = 0;
-  tr.state = state;
-  trackChanged(t);
-  if (transport.running) startTrack(t, transport.beat + 2, false);
-  return true;
+  if (!n || n == u.sample) return false;
+  // Volume, balance, filter and mute stay; the range is the whole loop again
+  // (length 0), aligned to the bar counter (its start on 1.1.1).
+  u.sample = n;
+  u.rangeStart = u.rangeLen = u.rangePhase = 0;
+  return changeClip(t, u);
 }
 
 float loadTempo() {
@@ -682,12 +819,15 @@ static bool waitingForRecording(const Track &tr) {
 // One SD read (or one block of padding silence) into the track's ring.
 static void produce(Track &tr) {
   if (tr.rangePending && tr.head == tr.switchS) applyQueuedRange(tr);
+  Plan &plan = plans[&tr - tracks];
+  if (plan.on && tr.head == plan.switchS) applyPlan(&tr - tracks);
   uint32_t free = RING_FRAMES - (tr.head - tr.tail);
   // Up to the range's end or the loop's end, whichever comes first (a range
   // can run past the loop's end and carry on from its start).
   uint32_t toRangeEnd = tr.rangeFrames() - tr.rangeOffset(tr.fileFrame);
   uint32_t n = min(min(CHUNK_FRAMES, free), min(toRangeEnd, tr.loopFrames() - tr.fileFrame));
   if (tr.rangePending) n = min(n, tr.switchS - tr.head);      // stop exactly at the switch
+  if (plan.on) n = min(n, plan.switchS - tr.head);
   if (tr.fileFrame >= tr.recordedFrames || sdFailed) {
     memset(chunk, 0, n * 4);                     // padding after the recording (or no card)
   } else {
@@ -724,6 +864,8 @@ static void startTrack(int t, int32_t beat0, bool fillNow) {
   tr.live = false;
   tr.armed = false;
   tr.needsRestart = false;
+  applyPlan(t);                                  // a planned clip: starts as that
+  tr.sampleSwitch = false;
   if (tr.rangePending) {                         // restarting: take the queued range now
     tr.rangeStartBeat = tr.pendingStartBeat;
     tr.rangeBeats = tr.pendingBeats;
@@ -740,6 +882,7 @@ static void startTrack(int t, int32_t beat0, bool fillNow) {
   if (fillNow)
     while (RING_FRAMES - (tr.head - tr.tail) >= CHUNK_FRAMES) produce(tr);
   tr.startBeat = beat0;
+  tr.playSpb = tr.spbNative;
   tr.armed = true;
 }
 
@@ -817,6 +960,7 @@ static void armRecordedLoop(bool endAhead) {
   tr.head = min(recording.written, RING_FRAMES);  // the beginning, already in the ring
   tr.fileFrame = tr.head;
   tr.startBeat = recording.startBeat + (int32_t)tr.rangeBeats;
+  tr.playSpb = tr.spbNative;
   tr.armed = true;
 }
 
@@ -1085,6 +1229,7 @@ bool recordPress(int t) {
 void clearTrack(int t) {
   if (recordingTrack(t)) return;
   Track &tr = tracks[t];
+  dropPlan(t);
   tr.live = false;
   tr.armed = false;
   tr.state = TrackState::Empty;
@@ -1115,6 +1260,7 @@ uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBe
 bool setRange(int t, uint32_t startBeat, uint32_t beats) {
   Track &tr = tracks[t];
   if (recording.mode != Recording::Idle && recording.track == t) return false;   // still finishing
+  if (plans[t].on || tr.sampleSwitch) return false;   // switching clips (a moment)
   if (tr.state == TrackState::Empty || beats < 1 ||
       startBeat >= tr.loopBars * BEATS_PER_BAR || beats > tr.loopBars * BEATS_PER_BAR)
     return false;
@@ -1173,7 +1319,13 @@ void transportStop() {
     recording.targetFrames = min(recording.targetFrames, max(sofar, recording.written));
   }
   transport.running = false;
-  for (auto &tr : tracks) { tr.live = false; tr.armed = false; }
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    Track &tr = tracks[t];
+    tr.live = false;
+    tr.armed = false;
+    applyPlan(t);                                // planned clips are the tracks' now
+    tr.sampleSwitch = false;
+  }
   midiSendNow(0xFC);                             // MIDI Stop
 }
 

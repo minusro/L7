@@ -88,6 +88,8 @@ static std::map<std::string, uint32_t> dropStages;   // what loop() was doing wh
 static std::map<std::string, uint32_t> dropPhases;   // where the recording was (measurement below)
 static uint32_t snags = 0;                            // separate dropouts (blocks with drops after one without)
 static uint32_t finishedAt = 0, lastMode = 0;
+#include <functional>
+static std::function<void()> afterAudio;              // measurements taken in the audio interrupt
 static bool lastDropped = false;
 
 static void audioBlock() {
@@ -108,6 +110,7 @@ static void audioBlock() {
   uint32_t after = 0;
   for (auto &tr : tracks) after += tr.underruns;
   if (after > before) dropStages[(const char *)debugStage] += after - before;
+  if (afterAudio) afterAudio();
   if (lastMode != Recording::Idle && recording.mode == Recording::Idle) finishedAt = inputIndex;
   lastMode = recording.mode;
   if (after > before) {
@@ -913,6 +916,83 @@ int main(int argc, char **argv) {
       for (auto &kv : dropStages) printf("        during '%s': %u\n", kv.first.c_str(), kv.second);
     }
     simSdLatency = nullptr;
+  }
+
+  printf("switching all 8 tracks to other samples while playing (as a scene change does), slow card\n");
+  {
+    simSdLatency = realisticSd;
+    srand(5);
+    std::vector<uint32_t> samples;
+    for (uint32_t n = 1; n <= 9999; n++) if (sampleExists(n)) samples.push_back(n);
+    if (!transport.running) transportStart();
+    runBeats(4);
+    auto switchAll = [&](int set) {
+      for (int t = 0; t < NUM_TRACKS; t++) {
+        TrackUnit u = unitOf(t);
+        u.sample = samples[(t + 8 * set + 3) % samples.size()];
+        u.rangeStart = 0; u.rangeLen = 0; u.rangePhase = 0; u.muted = 0;
+        setTrackUnit(t, u);
+      }
+    };
+    auto switched = [&](int set) {
+      for (int t = 0; t < NUM_TRACKS; t++)
+        if (tracks[t].sample != samples[(t + 8 * set + 3) % samples.size()] || tracks[t].sampleSwitch || !tracks[t].live)
+          return false;
+      return true;
+    };
+    switchAll(1);                                  // every track playing first (empty ones start on a beat)
+    runBeats(4);
+    double sumLatency = 0, maxLatency = 0;
+    uint32_t silent = 0, drops = 0;
+    const int SWITCHES = 12;
+    for (int sw = 0; sw < SWITCHES; sw++) {
+      runBeats(1.37 + sw * 0.29);                  // anywhere in the beat
+      for (auto &tr : tracks) tr.underruns = 0;
+      uint32_t t0 = inputIndex;
+      switchAll(sw);
+      // When the interrupt plays every new sample (loop() may be held up by
+      // the card meanwhile, so measured from the interrupt).
+      double latency = -1;
+      afterAudio = [&] {
+        for (auto &tr : tracks) if (!tr.live) silent += AUDIO_BLOCK_SAMPLES;
+        if (latency < 0 && switched(sw)) latency = (inputIndex - t0) / 44.1;
+      };
+      for (int i = 0; i < 4000 && latency < 0; i++) block();
+      afterAudio = nullptr;
+      runBeats(2);
+      for (auto &tr : tracks) drops += tr.underruns;
+      sumLatency += latency; maxLatency = std::max(maxLatency, latency);
+    }
+    char m[160];
+    snprintf(m, sizeof m, "%d switches at %.0f BPM: new samples heard after %.0f ms on average (max %.0f), %u samples of silence, %u dropped",
+             SWITCHES, bpmForSpb(transport.spb), sumLatency / SWITCHES, maxLatency, silent, drops);
+    check(maxLatency > 0 && maxLatency < 300 && silent == 0 && drops == 0, m);
+    simSdLatency = nullptr;
+    for (int t = 0; t < NUM_TRACKS; t++) {
+      snprintf(m, sizeof m, "track %d after switching (recorded at %.0f BPM)", t + 1, bpmForSpb(tracks[t].spbNative));
+      checkSync(t, m);
+    }
+    // Stepping on quickly: each change replaces the planned one.
+    runBeats(1.5);
+    switchAll(0);
+    for (int i = 0; i < 3; i++) block();
+    switchAll(1);
+    for (int i = 0; i < 3; i++) block();
+    switchAll(2);
+    for (int i = 0; i < 400 && !switched(2); i++) block();
+    check(switched(2), "three quick changes: the last one plays");
+    runBeats(1);
+    for (int t = 0; t < 2; t++) {
+      snprintf(m, sizeof m, "track %d after the quick changes", t + 1);
+      checkSync(t, m);
+    }
+    // Back to the same sample with another range: no file needed.
+    TrackUnit u = unitOf(0);
+    u.rangeStart = 4; u.rangeLen = 4; u.rangePhase = 0;
+    check(setTrackUnit(0, u) && tracks[0].live, "same sample, another range: keeps playing until the switch");
+    runBeats(2);
+    check(tracks[0].rangeStartBeat == 4 && tracks[0].rangeBeats == 4, "then on the new range");
+    checkSync(0, "track 1 on its new range");
   }
 
   printf("random sessions\n");

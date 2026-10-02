@@ -74,7 +74,14 @@ struct Track {
   volatile bool needsRestart = false;    // interrupt -> loop(): missed the start, refill
   volatile int32_t startBeat = 0;
   uint32_t s0 = 0;
+  volatile uint32_t playSpb = 0;         // spbNative of what the interrupt is playing
   volatile uint32_t underruns = 0;
+  // Sample switch (loop() -> interrupt): from stream frame switchAt on, the
+  // stream holds another recording (or range); the start handshake's mapping
+  // then becomes nextS0 / nextStartBeat / nextSpb. The old one plays up to it.
+  volatile bool sampleSwitch = false;
+  uint32_t switchAt = 0, nextS0 = 0, nextSpb = 0;
+  int32_t nextStartBeat = 0;
 
   // Producer side (loop() only)
   uint16_t sample = 0;             // the sample file it plays (or records into); 0: none

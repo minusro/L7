@@ -148,6 +148,14 @@ static void queueTick(uint32_t due) {
 }
 
 // ---- Engine
+// A track's stream has reached its sample switch: its clock mapping follows.
+static void takeSwitch(Track &tr) {
+  tr.s0 = tr.nextS0;
+  tr.startBeat = tr.nextStartBeat;
+  tr.playSpb = tr.nextSpb;
+  tr.sampleSwitch = false;
+}
+
 void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
   (void)blockMicros; (void)sampleIndex;
   int32_t beat = transport.beat;
@@ -166,9 +174,10 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
 
   for (auto &tr : tracks) {
     if (!tr.live && !(tr.armed && beat >= tr.startBeat)) continue;
+    if (tr.sampleSwitch && beat >= tr.nextStartBeat) takeSwitch(tr);
     // Where the stream should be at this beat; snapping to it every beat keeps
     // varispeed playback locked to the clock (no drift, tempo changes included).
-    uint32_t expected = tr.s0 + (uint32_t)(beat - tr.startBeat) * tr.spbNative;
+    uint32_t expected = tr.s0 + (uint32_t)(beat - tr.startBeat) * tr.playSpb;
     int32_t ahead = (int32_t)(tr.head - expected);
     if (ahead >= 2 && ahead <= (int32_t)RING_FRAMES) {
       tr.tail = expected;
@@ -212,7 +221,7 @@ void LooperEngine::update() {
   float peakL[NUM_TRACKS] = {}, peakR[NUM_TRACKS] = {};
   for (int t = 0; t < NUM_TRACKS; t++) {
     const Track &tr = tracks[t];
-    speed[t] = tr.spbNative ? (double)tr.spbNative / spb : 0;
+    speed[t] = tr.playSpb ? (double)tr.playSpb / spb : 0;
     float g = tr.state == TrackState::Playing ? tr.gain : 0;
     mix[t][0] = g * tr.mixLL;
     mix[t][1] = g * tr.mixLR;
@@ -237,6 +246,10 @@ void LooperEngine::update() {
         Track &tr = tracks[t];
         if (!tr.live) continue;
         uint32_t tail = tr.tail;
+        if (tr.sampleSwitch && (int32_t)(tail - tr.switchAt) >= 0) {
+          takeSwitch(tr);
+          speed[t] = (double)tr.playSpb / spb;
+        }
         if (tr.head - tail < 2) { tr.underruns++; continue; }
         uint32_t a = tr.ring[tail % RING_FRAMES], b = tr.ring[(tail + 1) % RING_FRAMES];
         float f = (float)tr.frac;
