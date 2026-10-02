@@ -75,7 +75,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   static uint32_t edgeAt = 0;
   uint8_t edgeDone = 0;                              // the arrow this call settled
   if (edgeKey) {
-    int dir = edgeKey == m8::BTN_UP ? -1 : 1;
+    int dir = edgeKey == m8::BTN_UP ? 1 : -1;
     if (!(keys & edgeKey) || !shift) {
       sceneChanged |= sceneStep(dir);
       edgeDone = edgeKey;
@@ -235,8 +235,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       }
     }
   } else if (shift) {
-    // SHIFT+UP/DOWN: older / newer scene; tapped twice, the second tap held
-    // (see above): straight to that end (UP: the empty scene 0*, DOWN: N+1*).
+    // SHIFT+UP/DOWN: newer / older scene; tapped twice, the second tap held
+    // (see above): straight to that end (UP: N+1*, DOWN: the empty scene 0*).
     static uint32_t lastTap[2] = {0, 0};
     const uint8_t sceneKeys[2] = {m8::BTN_UP, m8::BTN_DOWN};
     for (int k = 0; k < 2; k++) {
@@ -246,7 +246,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         edgeKey = sceneKeys[k];
         edgeAt = millis() + EDGE_HOLD_MS;
       } else {
-        sceneChanged |= sceneStep(k == 0 ? -1 : 1);
+        sceneChanged |= sceneStep(k == 0 ? 1 : -1);
       }
       lastTap[k] = repeat || twice ? 0 : millis();
     }

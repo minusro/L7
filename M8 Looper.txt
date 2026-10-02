@@ -64,8 +64,8 @@ no dropouts or overruns
 - try waiting until the earliest between the next bar start and the next halfpoint of a bar after triggering a scene change - reverted, it feels better with bar start snapping X
 
 - no longer wait for shift release and end of bar after jumping to and from the duplicate scene at the end, jumping directly via double-tapping to the scene list edges, as well as cutting, pasting and duplicating scenes. these should jump as quickly as possible, it's acceptable if waits for a beat crossing to switch V
-
-- save project context knowledge in md files in a subfolder
+- save project context knowledge in md files in a subfolder V
+- invert scene navigation again V
 
 - 80s lcd ui experiment
 - switch tempo and clock labels, add play icon between

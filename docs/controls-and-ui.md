@@ -16,8 +16,8 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | B + A | Open the panel (A closes it) |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
-| SHIFT + UP/DOWN | Older / newer scene (see scenes.md) |
-| SHIFT + UP/DOWN twice, second held | To 0\* / N+1\* |
+| SHIFT + UP/DOWN | Newer / older scene (see scenes.md) |
+| SHIFT + UP/DOWN twice, second held | To N+1\* / 0\* |
 | B, SHIFT, A / SHIFT, B, A | Paste scene (B first) / cut scene (SHIFT first) |
 | PLAY | Start from 1.1.1 / stop |
 | SHIFT + PLAY (or SHIFT + A on status) | Restart from 1.1.1 |

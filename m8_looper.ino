@@ -41,12 +41,12 @@
 //   SHIFT+LEFT/RIGHT the track's sample: previous / next on the card (empty track:
 //                      newest / oldest); keeps volume, filter, mute; whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
-//   SHIFT+UP/DOWN    older / newer scene (0*: empty; after the last, a copy of it)
+//   SHIFT+UP/DOWN    newer / older scene (0*: empty; after the last, a copy of it)
 //                    (while playing: on the next bar line after SHIFT is let go; SCN
 //                    flashes until then. To and from N+1*, the jumps to the ends, and
 //                    cutting, pasting and duplicating scenes: at once, on the next beat)
-//   SHIFT+UP twice   (second tap held a moment) straight to the empty scene (0*);
-//                    SHIFT+DOWN: to the copy after the last (N+1*)
+//   SHIFT+UP twice   (second tap held a moment) straight to the copy after the last
+//                    (N+1*); SHIFT+DOWN: to the empty scene (0*)
 //   OPT, SHIFT, EDIT paste the scene clipboard after the current scene (OPT pressed first)
 //   SHIFT, OPT, EDIT cut the scene (to the scene clipboard), go to the one before (SHIFT first)
 //   OPT+EDIT         open the panel (EDIT closes it)
