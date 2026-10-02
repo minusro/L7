@@ -39,7 +39,7 @@ tap restarts from 1.1.1 (running: snaps to the nearest bar start).
 
 Other cells with B + arrows: filter (LEFT/RIGHT move, UP/DOWN width; width
 scales from the edge at the edge), volume (UP/DOWN) and balance (LEFT/RIGHT),
-tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 50–200 BPM).
+tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–240 BPM).
 
 Timing constants (input.cpp): key repeat after 200 ms, every 50 ms;
 double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.

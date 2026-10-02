@@ -3,8 +3,9 @@
 ## Agreed behaviour (don't change without asking)
 
 * LINE IN input, always monitored. Fixed 4/4. Stereo tracks streamed from SD.
-* Tempo changes repitch (varispeed); 50–200 BPM, and each loop within
-  50–200 % of its recorded tempo.
+* Tempo changes repitch (varispeed); 30–240 BPM, with no per-loop speed
+  limit (was 50–200 % of the recorded tempo; dropped so the whole range is
+  reachable).
 * Recordings are whole bars (any count up to 32), trimmed back to the bar
   line if stopped within a beat after it, else completed to the bar's end.
   (An early design snapped to powers of two; that was replaced.)

@@ -283,7 +283,8 @@ static int fuzz(int seconds, unsigned seed) {
         case 3: lastAction = "mute"; if (tr.state != TrackState::Empty) tr.state = tr.state == TrackState::Playing ? TrackState::Muted : TrackState::Playing; break;
         case 4: { lastAction = "tempo"; float b = bpm + (rand() % 21 - 10);
                   uint32_t spb = spbForBpm(b); bool ok = recording.mode == Recording::Idle && b >= MIN_BPM && b <= MAX_BPM;
-                  for (auto &x : tracks) if (x.state != TrackState::Empty) { double sp = (double)x.spbNative / spb; if (sp < MIN_SPEED || sp > MAX_SPEED) ok = false; }
+                  // (kept within 0.5x-2x of each loop: the fuzzing is about the logic, not card bandwidth)
+                  for (auto &x : tracks) if (x.state != TrackState::Empty) { double sp = (double)x.spbNative / spb; if (sp < 0.5 || sp > 2.0) ok = false; }
                   if (ok) { bpm = b; transport.pendingSpb = spb; } break; }
         case 5: lastAction = "range";
                 if (tr.state != TrackState::Empty) {

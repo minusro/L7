@@ -14,8 +14,8 @@ extern float bpm;
 extern int selected;                               // row: a track, or STATUS_ROW (ui.h)
 extern int selectedCell;                           // cell in the row (ui.h: FILTER_CELL ...)
 
-// Every loop must stay within 50%-200% of its recorded speed: false (and no
-// change) otherwise, or while recording. In tenths of a BPM.
+// In tenths of a BPM, limited to MIN_BPM-MAX_BPM. false (and no change)
+// while recording.
 bool setTempo(float b);
 // The tempo is saved a while after it last changed, and only while stopped
 // (saving rewrites a file, which can stall the card).

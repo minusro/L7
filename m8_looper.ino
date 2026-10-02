@@ -14,8 +14,8 @@
 //     after a bar line it ends there, otherwise at the end of that bar; it
 //     starts on the bar line just passed (pressed within ~250 ms of it) or
 //     the next one
-//   * changing the tempo repitches the loops (50-200 BPM, and 50%-200% of
-//     each one's own tempo)
+//   * changing the tempo repitches the loops (30-240 BPM, whatever they were
+//     recorded at)
 //   * each track loops a range of its recording: any start beat, 1 beat up to
 //     the whole loop, possibly across the loop's end
 //   * scenes: snapshots of all tracks and the tempo, switched without gaps
