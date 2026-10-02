@@ -710,9 +710,13 @@ bool recordingWaveform(uint8_t *cols, uint32_t &bars, uint32_t &framesPerBar, ui
   if (recording.mode == Recording::Finishing) {
     bars = recording.loopBars;
   } else {
-    // The bars started so far.
+    // Room for the bars started so far, in powers of two (a stop can still
+    // end it on any bar).
     uint32_t sofar = max<int32_t>(0, (int32_t)(transport.now - recording.startSample));
-    bars = constrain((sofar + framesPerBar - 1) / framesPerBar, 1u, MAX_BARS);
+    uint32_t started = (sofar + framesPerBar - 1) / framesPerBar;
+    bars = 1;
+    while (bars < started) bars *= 2;
+    bars = min(bars, MAX_BARS);
   }
   binsToColumns(recPeaks, bars * framesPerBar, recordedFrames, cols);
   return true;
