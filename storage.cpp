@@ -52,31 +52,53 @@ static uint32_t quarterFrames(uint32_t q, uint32_t spb) { return (q / 4) * spb +
 struct SampleInfo {
   char magic[4];                                 // "M8SM"
   uint32_t version, frames, spb, loopBars;       // frames 0: empty (recording space)
+  uint32_t order;                                // when it was recorded: 1, 2, 3 ... (version 2)
 };
-static constexpr uint32_t INFO_OFFSET = 44, SAMPLE_VERSION = 1;
+// Version 2: order. Version 1 samples are ordered by their number.
+static constexpr uint32_t INFO_OFFSET = 44, SAMPLE_VERSION = 2;
 static constexpr uint32_t SAMPLE_OVERVIEW_OFFSET = INFO_OFFSET + sizeof(SampleInfo);
 static_assert(SAMPLE_OVERVIEW_OFFSET + OVERVIEW_COLS <= WAV_DATA_OFFSET - 8, "the overview must fit in the header");
 
-static uint8_t sampleBits[(MAX_SAMPLES + 8) / 8];   // bit n: sample n holds a recording
-static uint32_t sampleTotal = 0;
+// The samples holding recordings, by number: the order they were recorded in
+// (0: none). Order numbers stay below 65536: there are at most 9999 samples,
+// and new ones count on from the highest. In RAM2 (20 KB).
+DMAMEM static uint16_t sampleOrder[MAX_SAMPLES + 1];
+static uint32_t sampleTotal = 0, lastOrder = 0;
 static uint32_t nextSample = 1;                  // number for the next new file
 static uint16_t pool[POOL_SIZE];                 // empty sample files, lowest number first
 static int poolCount = 0;
 static uint16_t untrimmed[64];                   // finished samples still at full size
 static int untrimmedCount = 0;
 
-static void noteSample(uint32_t n) {
-  if (n < 1 || n > MAX_SAMPLES || (sampleBits[n / 8] & (1 << (n % 8)))) return;
-  sampleBits[n / 8] |= 1 << (n % 8);
-  sampleTotal++;
+static void noteSample(uint32_t n, uint32_t order) {
+  if (n < 1 || n > MAX_SAMPLES || !order || order > 0xFFFF) return;
+  if (!sampleOrder[n]) sampleTotal++;
+  sampleOrder[n] = order;
+  lastOrder = max(lastOrder, order);
 }
 uint32_t sampleCount() { return sampleTotal; }
-bool sampleExists(uint32_t n) { return n >= 1 && n <= MAX_SAMPLES && (sampleBits[n / 8] & (1 << (n % 8))); }
+bool sampleExists(uint32_t n) { return n >= 1 && n <= MAX_SAMPLES && sampleOrder[n]; }
+
+// The sample recorded just after (dir 1) or before (-1) the one with order
+// `from`, wrapping around; from 0 going forward: the oldest; from 0xFFFF+1
+// going back: the newest. 0 if there's none other.
+static uint32_t neighbourSample(uint32_t from, int dir) {
+  uint32_t best = 0, wrap = 0;                   // nearest that way; furthest the other way (to wrap to)
+  for (uint32_t n = 1; n <= MAX_SAMPLES; n++) {
+    uint32_t o = sampleOrder[n];
+    if (!o || o == from) continue;
+    bool ahead = dir > 0 ? o > from : o < from;
+    if (ahead && (!best || (dir > 0 ? o < sampleOrder[best] : o > sampleOrder[best]))) best = n;
+    if (!wrap || (dir > 0 ? o < sampleOrder[wrap] : o > sampleOrder[wrap])) wrap = n;
+  }
+  return best ? best : wrap;
+}
 
 static void put16(uint8_t *p, uint16_t v) { p[0] = v; p[1] = v >> 8; }
 static void put32(uint8_t *p, uint32_t v) { put16(p, v); put16(p + 2, v >> 16); }
 
-static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t loopBars, const uint8_t *overview) {
+static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t loopBars, const uint8_t *overview,
+                              uint32_t order = 0) {
   uint8_t h[WAV_DATA_OFFSET] = {};
   memcpy(h, "RIFF", 4);       put32(h + 4, WAV_DATA_OFFSET - 8 + frames * 4);
   memcpy(h + 8, "WAVE", 4);
@@ -85,7 +107,7 @@ static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t
   put32(h + 24, 44100);       put32(h + 28, 44100 * 4);
   put16(h + 32, 4);           put16(h + 34, 16);
   memcpy(h + 36, "JUNK", 4);  put32(h + 40, WAV_DATA_OFFSET - 44 - 8);
-  SampleInfo info = {{'M', '8', 'S', 'M'}, SAMPLE_VERSION, frames, spb, loopBars};
+  SampleInfo info = {{'M', '8', 'S', 'M'}, SAMPLE_VERSION, frames, spb, loopBars, order};
   memcpy(h + INFO_OFFSET, &info, sizeof info);
   if (overview) memcpy(h + SAMPLE_OVERVIEW_OFFSET, overview, OVERVIEW_COLS);
   memcpy(h + WAV_DATA_OFFSET - 8, "data", 4);
@@ -357,12 +379,12 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
   if (info.version >= 8) { u.filterLo = (int8_t)h[FILTER_AT]; u.filterHi = (int8_t)h[FILTER_AT + 1]; }
   else if (info.version == 7) { u.filterLo = h[FILTER_AT]; u.filterHi = h[FILTER_AT] + h[FILTER_AT + 1]; }
   if (info.version >= 9) { u.volume = (int8_t)h[MIX_AT]; u.balance = (int8_t)h[MIX_AT + 1]; }
-  writeSampleHeader(f, info.recordedFrames, info.spb, info.loopBars, tr.overview);
+  writeSampleHeader(f, info.recordedFrames, info.spb, info.loopBars, tr.overview, lastOrder + 1);
   f.truncate(WAV_DATA_OFFSET + (uint64_t)info.recordedFrames * 4);
   f.close();
   samplePath(nextSample, to, sizeof to);
   if (!SD.sdfs.rename(from, to)) return;
-  noteSample(nextSample++);
+  noteSample(nextSample++, lastOrder + 1);
   tr.file.close();
   if (loadSample(t, u.sample)) applyUnit(t, u);
   writeUnit(t);
@@ -389,6 +411,38 @@ bool pasteTrack(int t) {
   return true;
 }
 
+// ---- Choosing a track's sample
+bool stepSample(int t, int dir) {
+  Track &tr = tracks[t];
+  if (sampleTotal < 2 || (recording.mode != Recording::Idle && recording.track == t)) return false;
+  bool empty = tr.state == TrackState::Empty;
+  // In recording order from the track's sample, wrapping around; an empty
+  // track starts from the oldest (going forward) or newest (going back).
+  uint32_t from = empty ? (dir > 0 ? 0 : 0x10000) : sampleOrder[tr.sample];
+  uint32_t n = neighbourSample(from, dir);
+  if (!n || n == tr.sample) return false;
+  TrackState state = empty ? TrackState::Playing : tr.state;
+  tr.live = false;
+  tr.armed = false;
+  tr.rangePending = false;
+  tr.file.close();
+  if (!loadSample(t, n)) {                       // unreadable: the track ends up empty
+    tr.state = TrackState::Empty;
+    tr.sample = 0;
+    trackChanged(t);
+    return false;
+  }
+  // Volume, balance, filter and mute stay; the range is the whole loop again,
+  // aligned to the bar counter (its start on 1.1.1).
+  tr.rangeStartBeat = 0;
+  tr.rangeBeats = tr.loopBars * BEATS_PER_BAR;
+  tr.rangeAnchorQ = 0;
+  tr.state = state;
+  trackChanged(t);
+  if (transport.running) startTrack(t, transport.beat + 2, false);
+  return true;
+}
+
 float loadTempo() {
   FsFile f = SD.sdfs.open("/looper/session.txt", O_RDONLY);
   float bpm = 120.0f;
@@ -410,8 +464,9 @@ void saveTempo(float bpm) {
 // Finds the samples: which hold recordings (cut down to size if needed),
 // which are recording space, and the next free number.
 static void scanSamples() {
-  memset(sampleBits, 0, sizeof sampleBits);
+  memset(sampleOrder, 0, sizeof sampleOrder);
   sampleTotal = 0;
+  lastOrder = 0;
   poolCount = 0;
   untrimmedCount = 0;
   FsFile dir = SD.sdfs.open("/looper/samples", O_RDONLY);
@@ -428,7 +483,7 @@ static void scanSamples() {
     if (!numbered) continue;
     if (n >= nextSample) nextSample = n + 1;
     if (ok && playable(info)) {
-      noteSample(n);
+      noteSample(n, info.version >= 2 && info.order ? info.order : n);
       if (size > WAV_DATA_OFFSET + (uint64_t)info.frames * 4 && untrimmedCount < 64) untrimmed[untrimmedCount++] = n;
     } else if (ok && info.frames == 0 && size == SAMPLE_FILE_BYTES && poolCount < POOL_SIZE) {
       int i = poolCount++;                       // keep the pool sorted
@@ -436,6 +491,23 @@ static void scanSamples() {
       pool[i] = n;
     }
   }
+}
+
+// Recording space numbered below a recording (left from converting an older
+// version's track files) is renamed to the next free numbers, so new
+// recordings are numbered in the order they're made.
+static void renumberPool() {
+  uint32_t highest = 0;
+  for (uint32_t n = 1; n <= MAX_SAMPLES; n++) if (sampleOrder[n]) highest = n;
+  for (int i = 0; i < poolCount; i++) {
+    if (pool[i] > highest || nextSample > MAX_SAMPLES) continue;
+    char from[40], to[40];
+    samplePath(pool[i], from, sizeof from);
+    samplePath(nextSample, to, sizeof to);
+    if (SD.sdfs.rename(from, to)) pool[i] = nextSample++;
+  }
+  for (int i = 1; i < poolCount; i++)            // keep it sorted
+    for (int j = i; j > 0 && pool[j - 1] > pool[j]; j--) { uint16_t x = pool[j]; pool[j] = pool[j - 1]; pool[j - 1] = x; }
 }
 
 bool storageBegin(void (*progress)(const char *)) {
@@ -462,6 +534,7 @@ bool storageBegin(void (*progress)(const char *)) {
     readUnit(t);
     migrateLegacy(t, progress);                  // older version: its track file becomes a sample
   }
+  renumberPool();
   while (poolCount < POOL_SIZE) {
     char msg[64];
     snprintf(msg, sizeof msg, "preparing recording space (%d of %d, once)...", poolCount + 1, POOL_SIZE);
@@ -724,8 +797,8 @@ static void finishRecording() {
   buildOverview(tr, recPeaks, tr.recordedFrames);
   // The sample's header: its length, tempo and overview. One 512-byte write,
   // like a unit file's (the file is cut down to size once stopped).
-  writeSampleHeader(tr.file, tr.recordedFrames, tr.spbNative, tr.loopBars, tr.overview);
-  noteSample(tr.sample);
+  writeSampleHeader(tr.file, tr.recordedFrames, tr.spbNative, tr.loopBars, tr.overview, lastOrder + 1);
+  noteSample(tr.sample, lastOrder + 1);
   if (untrimmedCount < 64) untrimmed[untrimmedCount++] = tr.sample;
   recording.mode = Recording::Idle;
   recording.track = -1;

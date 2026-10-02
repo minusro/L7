@@ -271,6 +271,16 @@ int main(int argc, char **argv) {
     for (int c = 0; c < OVERVIEW_COLS; c++) h[44 + sizeof info + c] = 100;
     int8_t settings[4] = {3, 20, 25, -4};          // filter lo/hi, volume, balance
     memcpy(h + 44 + sizeof info + OVERVIEW_COLS, settings, 4);
+    // Track 4: an empty full-size file (it becomes recording space, numbered
+    // before track 5's sample: renumbered at boot so new recordings come after).
+    FILE *e = fopen((simRoot + "/looper/track4.wav").c_str(), "wb");
+    struct { char magic[4]; uint32_t version, used; } none = {{'M', '8', 'L', 'P'}, 9, 0};
+    uint8_t eh[WAV_DATA_OFFSET] = {};
+    memcpy(eh, "RIFF", 4);
+    memcpy(eh + 44, &none, sizeof none);
+    fwrite(eh, 1, sizeof eh, e);
+    ftruncate(fileno(e), WAV_DATA_OFFSET + (uint64_t)MAX_REC_FRAMES * 4);
+    fclose(e);
     FILE *f = fopen((simRoot + "/looper/track5.wav").c_str(), "wb");
     fwrite(h, 1, sizeof h, f);
     for (uint32_t i = 0; i < legacyFrames; i++) { int16_t fr[2] = {(int16_t)(i % 1000 - 500), 0}; fwrite(fr, 4, 1, f); }
@@ -281,16 +291,19 @@ int main(int argc, char **argv) {
   {
     const Track &tr = tracks[4];
     char m[160];
-    snprintf(m, sizeof m, "track 5 now plays sample %04u: %u frames, %u bar, range %u+%u, muted %d",
+    snprintf(m, sizeof m, "track 5 now plays sample %04u (after track 4's empty file): %u frames, %u bar, range %u+%u, muted %d",
              tr.sample, tr.recordedFrames, tr.loopBars, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted);
-    check(tr.sample == 1 && tr.recordedFrames == legacyFrames && tr.loopBars == 1 && tr.rangeBeats == 2 &&
+    check(tr.sample == 2 && tr.recordedFrames == legacyFrames && tr.loopBars == 1 && tr.rangeBeats == 2 &&
           tr.state == TrackState::Muted && tr.overview[10] == 100, m);
     check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 25 && tr.balance == -4, "its filter, volume and balance kept");
     check(wavLeft(4, 0) == -500 && wavLeft(4, 1234) == 1234 % 1000 - 500 && wavLeft(4, legacyFrames - 1) == (int16_t)((legacyFrames - 1) % 1000 - 500),
-          "its audio is intact in samples/0001.wav");
+          "its audio is intact in samples/0002.wav");
     FILE *old = fopen((simRoot + "/looper/track5.wav").c_str(), "rb");
     check(!old && sampleCount() == 1, "the old track file is gone; one sample on the card");
     if (old) fclose(old);
+    FILE *low = fopen((simRoot + "/looper/samples/0001.wav").c_str(), "rb");
+    check(!low, "track 4's empty file renumbered after it (0001 gone)");
+    if (low) fclose(low);
     clearTrack(4);
     flushHeaders();
   }
@@ -428,6 +441,35 @@ int main(int argc, char **argv) {
     checkSync(6, "track 7 (pasted)");
     check(sampleExists(sample), "the sample is still on the card's list");
     clearTrack(6);
+    for (auto &x : tracks) x.gain = 1;
+    engine.monitor = true;
+  }
+
+  printf("choosing samples on track 8 (empty) while playing\n");
+  {
+    Track &tr = tracks[7];
+    uint32_t oldest = 0, newest = 0, count = 0;   // recordings are numbered in order now
+    for (uint32_t n = 1; n <= 9999; n++) if (sampleExists(n)) { if (!oldest) oldest = n; newest = n; count++; }
+    setTrackMix(7, 20, 3);
+    check(stepSample(7, 1) && tr.sample == oldest, "SHIFT+RIGHT on an empty track: the oldest recording");
+    check(stepSample(7, 1) && tr.sample > oldest && sampleExists(tr.sample), "SHIFT+RIGHT: the one recorded next");
+    uint32_t second = tr.sample;
+    check(stepSample(7, -1) && tr.sample == oldest, "SHIFT+LEFT: back to the previous");
+    check(stepSample(7, -1) && tr.sample == newest, "SHIFT+LEFT on the oldest: wraps to the newest");
+    check(stepSample(7, 1) && tr.sample == oldest, "SHIFT+RIGHT on the newest: wraps to the oldest");
+    check(stepSample(7, 1) && tr.sample == second && tr.rangeStartBeat == 0 && tr.rangeBeats == tr.loopBars * 4 &&
+          tr.volume == 20 && tr.balance == 3, "range reset to the whole loop, volume and balance kept");
+    setTrackMix(7, VOLUME_UNITY, 0);               // the sync check compares at unity gain
+    runBeats(4);
+    for (auto &x : tracks) x.gain = 0;
+    tr.gain = 1;
+    checkSync(7, "track 8 playing its new sample");
+    clearTrack(7);
+    check(stepSample(7, -1) && tr.sample == newest, "SHIFT+LEFT on an empty track: the newest recording");
+    clearTrack(7);
+    char m[64];
+    snprintf(m, sizeof m, "%u recordings on the card", count);
+    check(count == 4, m);
     for (auto &x : tracks) x.gain = 1;
     engine.monitor = true;
   }

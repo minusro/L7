@@ -41,11 +41,9 @@ no dropouts or overruns
 - use the status row action button to tap tempo V
 - fractional tempo adjustment tweak (whole value moves to an integer value even if starting from a fractional one) V
 - new logic for start position determination V
-
-- switch tempo and clock labels, add play icon between
-- 80s lcd ui
 - cut / paste clips logic V
 	- decide whether it's Shift+A or B+A - Shift+A for now V
-
-- [[ Clip Switching ]]
+- [[ Clip Switching ]] V
 - [[ Scene Logic ]]
+- switch tempo and clock labels, add play icon between
+- 80s lcd ui experiment

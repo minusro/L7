@@ -28,6 +28,8 @@
 //                      volume: LEFT/RIGHT balance, UP/DOWN volume
 //                      tempo: LEFT/RIGHT -/+ 0.1 BPM, UP/DOWN +/- 1 BPM
 //   EDIT             empty track: record / stop recording; full track: mute/unmute
+//   SHIFT+LEFT/RIGHT the track's sample: previous / next on the card (empty track:
+//                      newest / oldest); keeps volume, filter, mute; whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
 //   PLAY             start from 1.1.1 / stop
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)

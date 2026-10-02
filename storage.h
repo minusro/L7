@@ -24,6 +24,11 @@ void clearTrack(int t);               // its sample stays on the card
 bool cutTrack(int t);
 bool pasteTrack(int t);
 bool clipboardFull();
+// The track's sample: the one recorded next (dir 1) or before (-1), wrapping
+// around; an empty track takes the oldest (1) or newest (-1). Needs at least
+// 2 samples on the card. Volume, balance, filter and mute stay; the range resets to
+// the whole loop. false: nothing changed.
+bool stepSample(int t, int dir);
 // Samples on the card holding recordings (0001-9999), including ones no
 // track plays.
 uint32_t sampleCount();

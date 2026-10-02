@@ -132,6 +132,12 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
         trackChanged(selected);
       }
     }
+  } else if (shift && !onStatus && !recordingOn(selected)) {
+    // SHIFT+LEFT/RIGHT on a track: its sample, the previous / next on the card.
+    if (pressed & m8::BTN_LEFT) stepSample(selected, -1);
+    if (pressed & m8::BTN_RIGHT) stepSample(selected, 1);
+    if (pressed & m8::BTN_UP && selected > 0) selected--;
+    if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
   } else {
     if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
     if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
