@@ -34,7 +34,7 @@
 //   PLAY             start from 1.1.1 / stop
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
 //   EDIT (status)    tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
-//                      tap starts (or restarts) from 1.1.1
+//                      tap starts from 1.1.1 (running: snaps to the nearest bar start)
 //   power (hold)     switch off
 //
 // Build: Teensyduino, board "Teensy 4.0", USB type "Serial", CPU speed 600 MHz.

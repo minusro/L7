@@ -24,8 +24,8 @@ static void resetCell() {
 // Tap tempo (A on the status row): the tempo follows the average of the last
 // TAP_AVERAGE intervals from the second tap on. Taps further apart than
 // TAP_TIMEOUT_MS start a new count. Every 4th tap after the first (the 5th,
-// 9th, 13th ...) lands on a bar line: the transport starts there from 1.1.1
-// (or restarts, if it's running).
+// 9th, 13th ...) lands on a bar line: a stopped transport starts there from
+// 1.1.1; a running one snaps to the nearest bar start.
 static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // a little over a beat at the slowest tempo (30 BPM)
 static constexpr int TAP_AVERAGE = 4;
 
@@ -39,7 +39,10 @@ static void tapTempo() {
   count++;
   int intervals = min(count, TAP_AVERAGE + 1) - 1;
   if (intervals > 0 && now > times[0]) setTempo(60000.0f * intervals / (now - times[0]));
-  if (count > 1 && count % 4 == 1) transportRestart();   // 5th, 9th, ...: 1.1.1 now
+  if (count > 1 && count % 4 == 1) {                // 5th, 9th, ...: a bar line now
+    if (transport.running) transportSnapToBar();
+    else transportRestart();
+  }
 }
 
 static void onKeys(uint8_t keys, uint8_t pressed) {

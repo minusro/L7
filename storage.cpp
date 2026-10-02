@@ -1021,6 +1021,23 @@ void transportStop() {
   midiSendNow(0xFC);                             // MIDI Stop
 }
 
+void transportSnapToBar() {
+  if (!transport.running || recording.mode != Recording::Idle) return;   // a recording keeps its timing
+  noInterrupts();
+  int32_t beat = transport.beat;
+  uint32_t into = (beat % BEATS_PER_BAR) * transport.spb + transport.sampleInBeat;   // samples into the bar
+  uint32_t barLen = BEATS_PER_BAR * transport.spb;
+  interrupts();
+  int32_t target = (beat / BEATS_PER_BAR + (into >= barLen / 2 ? 1 : 0)) * BEATS_PER_BAR;
+  // Paused while the tracks refill for the new position (as when starting).
+  transport.running = false;
+  for (auto &tr : tracks) { tr.live = false; tr.armed = false; }
+  transport.beat = target;
+  transport.sampleInBeat = 0;
+  for (int t = 0; t < NUM_TRACKS; t++) startTrack(t, target, true);
+  transport.running = true;
+}
+
 void transportRestart() {
   transportStop();                               // ends a recording as stopping would
   transportStart();

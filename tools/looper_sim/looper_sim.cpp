@@ -474,6 +474,23 @@ int main(int argc, char **argv) {
     engine.monitor = true;
   }
 
+  printf("snapping to the nearest bar (tap tempo while playing)\n");
+  {
+    while (transport.beat % 4 != 1) block();       // early in a bar (beat 2)
+    int32_t bar = transport.beat / 4;
+    transportSnapToBar();
+    check(transport.beat == bar * 4 && transport.sampleInBeat < 2 * AUDIO_BLOCK_SAMPLES, "early in the bar: back to its start");
+    while (transport.beat % 4 != 3) block();       // late in a bar (beat 4)
+    bar = transport.beat / 4;
+    transportSnapToBar();
+    check(transport.beat == (bar + 1) * 4, "late in the bar: on to the next one");
+    for (auto &x : tracks) x.underruns = 0;
+    checkSync(0, "track 1 after snapping");
+    checkSync(1, "track 2 after snapping");
+    for (auto &x : tracks) x.gain = 1;
+    engine.monitor = true;
+  }
+
   printf("SD card stops responding while recording track 4 (others playing)\n");
   {
     feedRamp = true;

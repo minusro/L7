@@ -44,6 +44,9 @@ no dropouts or overruns
 - cut / paste clips logic V
 	- decide whether it's Shift+A or B+A - Shift+A for now V
 - [[ Clip Switching ]] V
+- when tapping tempo while playing, every 4th tap should snap the playhead to the nearest bar start instead of resetting to 1.1.1 V
 - [[ Scene Logic ]]
 - switch tempo and clock labels, add play icon between
+- simple splash screen
 - 80s lcd ui experiment
+- animated splash screen ?

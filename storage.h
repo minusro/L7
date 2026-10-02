@@ -14,6 +14,9 @@ void serviceStorage();               // call as often as possible from loop()
 void transportStart();               // from bar 1, all tracks in sync
 void transportStop();
 void transportRestart();             // from bar 1 again, running or not
+// Running (and not recording): jump to the nearest bar start (the playheads
+// follow, in phase); the bar count carries on from there.
+void transportSnapToBar();
 
 // Record button for track t: start (or arm until the next bar), then stop.
 // Returns false if the track already holds a loop.
