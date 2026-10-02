@@ -54,16 +54,15 @@ no dropouts or overruns
 - fix double tapping to cycle through power of 2 regions lengths V
 - invert the scene navigation order again (up is newer) V
 - require holding the arrow key a bit longer on the second press to go the scene list edges V
-
-- umuting a track while the clock is stopped should make the clock start from 1.1.1
+- umuting a track while the clock is stopped should make the clock start from 1.1.1 V
 - investigate and optimize sample switching times when switching scenes with different samples
 	- maybe cache the first parts of the adiacent scenes start point samples
-- switch tempo and clock labels, add play icon between
+
 - simple splash screen
-
-
 - 80s lcd ui experiment
-- de-clicking at loop edges (?0
+- switch tempo and clock labels, add play icon between
+
+- de-clicking at loop edges (?)
 - crossfading between two scenes
 - animated splash screen (?)
 
