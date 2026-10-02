@@ -31,7 +31,7 @@ struct Track {
   float gain = 1.0f;
   // Filters (loop() sets them with setTrackFilter): highpass then lowpass,
   // 12 dB/octave each, on both channels.
-  uint8_t filterBase = 0, filterWidth = FILTER_MAX;
+  int8_t filterLo = 0, filterHi = FILTER_MAX;   // steps (see config.h)
   Biquad hp, lp;
   bool hpOn = false, lpOn = false;
   float filterZ[2][2][2] = {};     // [hp/lp][left/right][state]; interrupt only, or loop() while not live
@@ -102,8 +102,10 @@ extern uint32_t inputRing[INPUT_FRAMES];  // stereo input, index = sample % INPU
 uint32_t spbForBpm(float bpm);
 float bpmForSpb(uint32_t spb);
 float filterStepHz(int step);
-void setTrackFilter(int t, int base, int width);            // steps, clamped to 0..FILTER_MAX
-float filterResponseDb(int base, int width, float hz);      // magnitude of the pair (analog approximation)
+// Sets a track's filter points (steps). The width is clamped to 0..FILTER_MAX,
+// then the pair shifted so they don't both lie outside 0..FILTER_MAX.
+void setTrackFilter(int t, int lo, int hi);
+float filterResponseDb(int lo, int hi, float hz);   // magnitude of the pair (analog approximation)
 
 void midiBegin(HardwareSerial *port);   // port already started (Board::midiOutBegin)
 void midiSendNow(uint8_t status);        // transport start/stop messages

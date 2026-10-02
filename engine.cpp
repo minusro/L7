@@ -40,30 +40,31 @@ static Biquad butterworth(float hz, bool highpass) {
   return q;
 }
 
-void setTrackFilter(int t, int base, int width) {
+void setTrackFilter(int t, int lo, int hi) {
   Track &tr = tracks[t];
-  base = constrain(base, 0, FILTER_MAX);
-  width = constrain(width, 0, FILTER_MAX);
-  int top = base + width;
-  Biquad hp = butterworth(filterStepHz(base), true);
-  Biquad lp = butterworth(filterStepHz(min(top, FILTER_MAX - 1)), false);
+  if (hi < lo) hi = lo;
+  if (hi - lo > FILTER_MAX) hi = lo + FILTER_MAX;
+  if (hi < 0) { lo -= hi; hi = 0; }
+  if (lo > FILTER_MAX) { hi -= lo - FILTER_MAX; lo = FILTER_MAX; }
+  Biquad hp = butterworth(filterStepHz(constrain(lo, 1, FILTER_MAX)), true);
+  Biquad lp = butterworth(filterStepHz(constrain(hi, 0, FILTER_MAX - 1)), false);
   noInterrupts();
-  tr.filterBase = base;
-  tr.filterWidth = width;
+  tr.filterLo = lo;
+  tr.filterHi = hi;
   bool wasHp = tr.hpOn, wasLp = tr.lpOn;
   tr.hp = hp;
   tr.lp = lp;
-  tr.hpOn = base > 0;
-  tr.lpOn = top < FILTER_MAX;
+  tr.hpOn = lo > 0;
+  tr.lpOn = hi < FILTER_MAX;
   if (tr.hpOn && !wasHp) memset(tr.filterZ[0], 0, sizeof tr.filterZ[0]);   // start clean
   if (tr.lpOn && !wasLp) memset(tr.filterZ[1], 0, sizeof tr.filterZ[1]);
   interrupts();
 }
 
-float filterResponseDb(int base, int width, float hz) {
+float filterResponseDb(int lo, int hi, float hz) {
   float db = 0;
-  if (base > 0) db -= 10 * log10f(1 + powf(filterStepHz(base) / hz, 4));
-  if (base + width < FILTER_MAX) db -= 10 * log10f(1 + powf(hz / filterStepHz(base + width), 4));
+  if (lo > 0) db -= 10 * log10f(1 + powf(filterStepHz(lo) / hz, 4));
+  if (hi < FILTER_MAX) db -= 10 * log10f(1 + powf(hz / filterStepHz(hi), 4));
   return db;
 }
 

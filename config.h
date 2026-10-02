@@ -38,10 +38,13 @@ constexpr bool MIDI_OUT_ENABLED = true;
 constexpr int OVERVIEW_COLS = 286;                 // one per pixel: x = 30..315
 constexpr uint32_t PEAK_BIN_FRAMES = 4096;
 
-// Per-track filters: a highpass at step `base`, then a lowpass at step
-// base + width. Step k is FILTER_MIN_HZ * 2^(k * FILTER_OCTAVES / FILTER_MAX):
-// 20 Hz to ~20 kHz in third-octave steps. The highpass is off at step 0, the
-// lowpass at FILTER_MAX and above.
+// Per-track filters: a highpass at step `lo`, then a lowpass at step `hi`.
+// Step k is FILTER_MIN_HZ * 2^(k * FILTER_OCTAVES / FILTER_MAX): 0..FILTER_MAX
+// spans 20 Hz to ~20 kHz in third-octave steps. Either point may lie outside
+// that range (the highpass is off at 0 and below, the lowpass at FILTER_MAX
+// and above), but not both: hi >= 0 and lo <= FILTER_MAX, so the lowpass can
+// close all the way down and the highpass all the way up. hi - lo is
+// 0..FILTER_MAX.
 constexpr int FILTER_MAX = 32;
 constexpr float FILTER_MIN_HZ = 20.0f, FILTER_OCTAVES = 10.0f;
 

@@ -20,7 +20,7 @@
 //   OPT + arrows     change the current cell:
 //                      waveform: LEFT/RIGHT move the loop range by a beat,
 //                                UP/DOWN double/halve it (1/4 bar to the whole loop)
-//                      filter: LEFT/RIGHT -/+ width, UP/DOWN +/- base
+//                      filter: LEFT/RIGHT move the band, UP/DOWN widen/narrow it
 //                      tempo: LEFT/RIGHT -/+ 0.1 BPM, UP/DOWN +/- 1 BPM
 //   EDIT             empty track: record / stop recording; full track: mute/unmute
 //   SHIFT+EDIT       clear the track
@@ -482,14 +482,14 @@ static constexpr int CURVE_H = 18;
 static constexpr float CURVE_DB = 30;
 
 static void drawFilter(int i) {
-  struct Key { uint8_t base, width; uint16_t bg, line; };
+  struct Key { int8_t lo, hi; uint16_t bg, line; };
   static Key shown[NUM_TRACKS];
   static bool drawn[NUM_TRACKS];
   const Track &tr = tracks[i];
   Key k;
   memset(&k, 0, sizeof k);                         // padding too: compared with memcmp
-  k.base = tr.filterBase;
-  k.width = tr.filterWidth;
+  k.lo = tr.filterLo;
+  k.hi = tr.filterHi;
   k.bg = cellBackground(i, FILTER_CELL);
   k.line = tr.state == TrackState::Playing ? WAVE_IN
          : tr.state == TrackState::Muted ? blend565(WAVE_IN, ILI9341_BLACK, 128) : WAVE_OUT;
@@ -504,7 +504,7 @@ static void drawFilter(int i) {
   for (int c = 0; c < cell.w; c++) {
     int x = cell.x + c;
     float hz = FILTER_MIN_HZ * powf(2.0f, FILTER_OCTAVES * (c + 0.5f) / cell.w);
-    float db = filterResponseDb(k.base, k.width, hz);
+    float db = filterResponseDb(k.lo, k.hi, hz);
     int y = top + (int)lroundf(min(-db, CURVE_DB) / CURVE_DB * (CURVE_H - 1));
     if (prevY < 0) prevY = y;
     t.drawFastVLine(x, bgTop(i), bgHeight(i), k.bg);
@@ -617,17 +617,34 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
       if (pressed & m8::BTN_UP && rb * 2 <= loopBeats) setRange(selected, min(rs, loopBeats - rb * 2), rb * 2);
       if (pressed & m8::BTN_DOWN && rb > 1) setRange(selected, rs, rb / 2);
     } else if (selectedCell == FILTER_CELL) {
-      // Filter: LEFT/RIGHT narrow/widen, UP/DOWN raise/lower the base.
+      // Filter: LEFT/RIGHT move the passband a step; moving stops where both
+      // points would leave the range. UP/DOWN widen/narrow it: a step on each
+      // side around its centre, or, while one point sits at its edge (the
+      // highpass at the bottom, the lowpass at the top; off), a step of the
+      // other point only, from that edge. With both at their edges (flat),
+      // around the centre again. Narrowing near an edge slides the band back
+      // in (setTrackFilter).
       const Track &tr = tracks[selected];
-      int base = tr.filterBase, width = tr.filterWidth;
-      if (pressed & m8::BTN_LEFT) width--;
-      if (pressed & m8::BTN_RIGHT) width++;
-      if (pressed & m8::BTN_UP) base++;
-      if (pressed & m8::BTN_DOWN) base--;
-      base = constrain(base, 0, FILTER_MAX);
-      width = constrain(width, 0, FILTER_MAX);
-      if (base != tr.filterBase || width != tr.filterWidth) {
-        setTrackFilter(selected, base, width);
+      int lo = tr.filterLo, hi = tr.filterHi;
+      if (pressed & m8::BTN_LEFT && hi > 0) { lo--; hi--; }
+      if (pressed & m8::BTN_RIGHT && lo < FILTER_MAX) { lo++; hi++; }
+      int grow = (pressed & m8::BTN_UP ? 1 : 0) - (pressed & m8::BTN_DOWN ? 1 : 0);
+      bool loEdge = lo <= 0, hiEdge = hi >= FILTER_MAX;
+      if (grow && loEdge != hiEdge) {
+        if (loEdge) {                                  // from the bottom: the lowpass moves
+          lo = 0;
+          hi = constrain(hi + grow, lo, lo + FILTER_MAX);
+        } else {                                       // from the top: the highpass moves
+          hi = FILTER_MAX;
+          lo = constrain(lo - grow, hi - FILTER_MAX, hi);
+        }
+      } else if (grow > 0 && hi - lo + 2 <= FILTER_MAX) {
+        lo--; hi++;
+      } else if (grow < 0 && hi - lo >= 2) {
+        lo++; hi--;
+      }
+      if (lo != tr.filterLo || hi != tr.filterHi) {
+        setTrackFilter(selected, lo, hi);
         trackChanged(selected);
       }
     }
