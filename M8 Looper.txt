@@ -28,11 +28,12 @@ no dropouts or overruns
 - antialias filter curves V
 - white and black playheads for better visibility V
 - double tap B to reset values V
-- 80s lcd ui
-- move back channel content into front channel content when balancing towards one
+- move back channel content into front channel content when balancing towards one V
 	- maybe first investigate how other devices balance stereo signal channels
 - navigation key retrigger speed tweaks (maybe a bit quicker without feeling too light?)
 - refactor main sketch file into several (it's getting big)
+
+- 80s lcd ui
 
 - switch tempo and clock labels, add play icon between, and use the action button to tap tempo
 - cut / paste clips logic

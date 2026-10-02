@@ -565,15 +565,16 @@ static void drawFilter(int i) {
 
 // ---- Volume / balance cell: concentric arcs around the cell's centre, (((
 // for the left channel and ))) for the right, MIX_ARCS each. A channel's
-// level (volume and balance) lights its arcs from the inside out, over
-// MIX_FLOOR_DB..MIX_TOP_DB; the meter (the channel's actual output, with
+// level lights its arcs from the inside out, over MIX_FLOOR_DB..MIX_TOP_DB:
+// the volume, plus what the balance moves onto that side (up to the mono sum,
+// +6 dB) or takes away from it. The meter (the channel's actual output, with
 // peak hold falling at METER_FALL_DB_PER_S) lights them white on the same
-// scale, so a full-scale signal reaches the level's arc. Each arc's pixels
+// scale, so a full-scale signal on both channels reaches the level's arc. Each arc's pixels
 // (with anti-aliasing coverage) are worked out once; an arc is only redrawn
 // when its colour changes.
 static constexpr int MIX_ARCS = 6, MIX_ARC_PX = 128;
 static constexpr float MIX_R0 = 8, MIX_DR = 5, MIX_STROKE = 1.25f, MIX_HALF_H = 10, MIX_SLOPE = 1.2f;
-static constexpr float MIX_FLOOR_DB = -40, MIX_TOP_DB = 6, METER_FALL_DB_PER_S = 24;
+static constexpr float MIX_FLOOR_DB = -40, MIX_TOP_DB = 12, METER_FALL_DB_PER_S = 24;
 
 struct ArcPx { uint8_t x, y, cov; };                 // in the cell; coverage 1..16
 static ArcPx arcPx[2 * MIX_ARCS][MIX_ARC_PX];         // [side * MIX_ARCS + arc]
@@ -636,7 +637,7 @@ static void drawMix(int i) {
   uint16_t colors[2 * MIX_ARCS];
   bool empty = tr.state == TrackState::Empty;
   uint16_t levelColor = tr.state == TrackState::Muted ? blend565(MIX_ARC_LEVEL, BG, MUTED_WEIGHT) : MIX_ARC_LEVEL;
-  float gains[2] = {tr.gainL, tr.gainR};
+  float gains[2] = {tr.levelL, tr.levelR};
   for (int ch = 0; ch < 2; ch++) {
     float level = arcsForDb(gainDb(gains[ch])), meter = arcsForDb(meterDb[i][ch]);
     for (int j = 0; j < MIX_ARCS; j++)

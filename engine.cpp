@@ -78,13 +78,17 @@ void setTrackMix(int t, int volume, int balance) {
   volume = constrain(volume, 0, VOLUME_MAX);
   balance = constrain(balance, -BALANCE_MAX, BALANCE_MAX);
   float g = volumeGain(volume);
-  float l = g * (balance > 0 ? 1.0f - (float)balance / BALANCE_MAX : 1.0f);
-  float r = g * (balance < 0 ? 1.0f + (float)balance / BALANCE_MAX : 1.0f);
+  float toL = balance < 0 ? -(float)balance / BALANCE_MAX : 0;   // share of the right channel moved left
+  float toR = balance > 0 ? (float)balance / BALANCE_MAX : 0;    // share of the left channel moved right
   noInterrupts();
   tr.volume = volume;
   tr.balance = balance;
-  tr.gainL = l;
-  tr.gainR = r;
+  tr.mixLL = g * (1 - toR);
+  tr.mixLR = g * toL;
+  tr.mixRL = g * toR;
+  tr.mixRR = g * (1 - toL);
+  tr.levelL = tr.mixLL + tr.mixLR;
+  tr.levelR = tr.mixRL + tr.mixRR;
   interrupts();
 }
 
@@ -204,14 +208,16 @@ void LooperEngine::update() {
   const bool running = transport.running;
 
   double speed[NUM_TRACKS];
-  float gainL[NUM_TRACKS], gainR[NUM_TRACKS];       // the tracks' own gains (metered)
+  float mix[NUM_TRACKS][4];                          // the tracks' own volume/balance mixes (metered)
   float peakL[NUM_TRACKS] = {}, peakR[NUM_TRACKS] = {};
   for (int t = 0; t < NUM_TRACKS; t++) {
     const Track &tr = tracks[t];
     speed[t] = tr.spbNative ? (double)tr.spbNative / spb : 0;
-    bool on = tr.state == TrackState::Playing;
-    gainL[t] = on ? tr.gain * tr.gainL : 0;
-    gainR[t] = on ? tr.gain * tr.gainR : 0;
+    float g = tr.state == TrackState::Playing ? tr.gain : 0;
+    mix[t][0] = g * tr.mixLL;
+    mix[t][1] = g * tr.mixLR;
+    mix[t][2] = g * tr.mixRL;
+    mix[t][3] = g * tr.mixRR;
   }
 
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
@@ -239,8 +245,10 @@ void LooperEngine::update() {
         float sl = al + (bl - al) * f, sr = ar + (br - ar) * f;
         if (tr.hpOn) { sl = runBiquad(tr.hp, tr.filterZ[0][0], sl); sr = runBiquad(tr.hp, tr.filterZ[0][1], sr); }
         if (tr.lpOn) { sl = runBiquad(tr.lp, tr.filterZ[1][0], sl); sr = runBiquad(tr.lp, tr.filterZ[1][1], sr); }
-        sl *= gainL[t];
-        sr *= gainR[t];
+        const float *m = mix[t];
+        float ol = m[0] * sl + m[1] * sr, orr = m[2] * sl + m[3] * sr;
+        sl = ol;
+        sr = orr;
         peakL[t] = max(peakL[t], fabsf(sl));
         peakR[t] = max(peakR[t], fabsf(sr));
         mixL += sl * masterGain;

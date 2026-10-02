@@ -31,9 +31,13 @@ struct Track {
   // the recording began; shifts when a range change keeps the playhead.
   int32_t rangeAnchorQ = 0;
   float gain = 1.0f;               // overall trim (tests)
-  // Volume and balance (loop() sets them with setTrackMix): per-channel gains.
+  // Volume and balance (loop() sets them with setTrackMix): a 2x2 mix, out
+  // left = mixLL * left + mixLR * right, out right = mixRL * left + mixRR * right
+  // (volume included). levelL/R: each output's gain for a signal on both
+  // channels (row sums), for display.
   int8_t volume = VOLUME_UNITY, balance = 0;
-  float gainL = 1.0f, gainR = 1.0f;
+  float mixLL = 1, mixLR = 0, mixRL = 0, mixRR = 1;
+  float levelL = 1, levelR = 1;
   // Output level meter: peak |sample| / 32768 per channel after the track's
   // gains (before master gain and mute), since loop() last took it.
   volatile float peakL = 0, peakR = 0;
