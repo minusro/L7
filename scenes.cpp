@@ -137,7 +137,7 @@ static void commit() {
 }
 
 // Puts a scene on the looper (its tempo, if it has one, after the tracks).
-// While playing, all of it changes on the next bar line with time to load.
+// While playing, all of it changes on the next bar line or half bar with time to load.
 static void apply(const SceneInfo &s) {
   loading = true;
   int32_t bar = beginSceneChange();

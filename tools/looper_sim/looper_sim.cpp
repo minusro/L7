@@ -1040,7 +1040,7 @@ int main(int argc, char **argv) {
     waitScene();
     for (int i = 0; i < 20; i++) block();
     afterAudio = nullptr;
-    auto onBar = [](const At &x, uint32_t within) { return x.beat >= 0 && x.beat % 4 == 0 && x.sib <= within; };
+    auto onBar = [](const At &x, uint32_t within) { return x.beat >= 0 && x.beat % 2 == 0 && x.sib <= within; };   // bar or half bar
     char m[160];
     snprintf(m, sizeof m, "on a bar line together: sample (beat %d +%u), tempo (%d +%u), unmute (%d +%u), empty track starts (%d +%u)",
              sw.beat, sw.sib, tempo.beat, tempo.sib, unmute.beat, unmute.sib, start.beat, start.sib);
@@ -1109,8 +1109,8 @@ int main(int argc, char **argv) {
     waitScene();
     afterAudio = nullptr;
     char m[96];
-    snprintf(m, sizeof m, "switched on the first bar line after letting go (beat %d, let go in %d)", at, released);
-    check(at % 4 == 0 && at > released && at <= released + 4 && sceneCurrent() == from + 1, m);
+    snprintf(m, sizeof m, "switched on the first bar line or half bar after letting go (beat %d, let go in %d)", at, released);
+    check(at % 2 == 0 && at > released && at <= released + 2 && sceneCurrent() == from + 1, m);
   }
 
   printf("random sessions\n");

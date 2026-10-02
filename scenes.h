@@ -28,7 +28,7 @@ bool scenePaste();             // inserted after the current scene (or over N+1*
 bool sceneDuplicate();         // a copy inserted after the current scene, and selected
 bool sceneClipboardFull();
 // While on (SHIFT held, playing), stepping only moves the selection shown;
-// turning it off goes there (on the next bar line, see beginSceneChange()).
+// turning it off goes there (on the next bar line or half bar, see beginSceneChange()).
 bool sceneHold(bool on);       // true: it went somewhere
 bool sceneHeld();              // a held selection not gone to yet
 

@@ -61,7 +61,7 @@ no dropouts or overruns
 - simple splash screen V
 - set tempo range to 50-200bpm V
 - only change the displayed tempo when the scene changes after the wait V
-- try waiting until the earliest between the next bar start and the next halfpoint of a bar after triggering a scene change
+- try waiting until the earliest between the next bar start and the next halfpoint of a bar after triggering a scene change V
 
 - 80s lcd ui experiment
 - switch tempo and clock labels, add play icon between
