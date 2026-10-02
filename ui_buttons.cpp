@@ -130,6 +130,23 @@ static void drawIcon(int icon, float cx, float cy, uint16_t color, uint16_t bg) 
   }
 }
 
+// "TAP": a 3x4 pixel font drawn at 2x (2 px strokes), letters 1 px apart.
+static constexpr uint8_t TAP_GLYPHS[3][4] = {      // rows, bit 2 = left column
+  {0b111, 0b010, 0b010, 0b010},                    // T
+  {0b010, 0b101, 0b111, 0b101},                    // A
+  {0b110, 0b101, 0b110, 0b100},                    // P
+};
+static constexpr int TAP_SCALE = 2, TAP_W = 3 * 3 * TAP_SCALE + 2, TAP_H = 4 * TAP_SCALE;   // 20 x 8 px
+
+static void drawTap(int x, int y, uint16_t color) {
+  auto &t = board.tft();
+  for (int g = 0; g < 3; g++)
+    for (int row = 0; row < 4; row++)
+      for (int col = 0; col < 3; col++)
+        if (TAP_GLYPHS[g][row] >> (2 - col) & 1)
+          t.fillRect(x + g * (3 * TAP_SCALE + 1) + col * TAP_SCALE, y + row * TAP_SCALE, TAP_SCALE, TAP_SCALE, color);
+}
+
 // The row's cells other than the waveform (which drawWave() handles): the two
 // status row's cells, the gaps and the button. Each part is redrawn only when
 // it changes: refilling a cell that didn't change would blank what's drawn on
@@ -165,11 +182,8 @@ void drawCells(int i) {
     // The button: its background, then the icon (a small area: no visible flash).
     t.fillRect(BUTTON_X, y0, BUTTON_W, h, k.bgButton);
     if (i == DIVIDER_ROW && k.bgButton == BG) t.drawFastHLine(BUTTON_X, dividerY(), BUTTON_W, DIVIDER);
-    if (k.icon == ICON_TAP) {                        // the word, in the status text's font
-      t.setTextSize(1);
-      t.setTextColor(k.iconColor, k.bgButton);
-      t.setCursor(BUTTON_X + (BUTTON_W - 17) / 2, y + (ROW_BAND - 7) / 2);   // 3 glyphs: 17 x 7 px lit
-      t.print("TAP");
+    if (k.icon == ICON_TAP) {
+      drawTap(BUTTON_X + (BUTTON_W - TAP_W) / 2, y + (ROW_BAND - TAP_H) / 2, k.iconColor);
     } else if (k.icon != ICON_NONE) {
       drawIcon(k.icon, BUTTON_X + BUTTON_W / 2, y + ROW_BAND / 2, k.iconColor, k.bgButton);
     }

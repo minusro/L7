@@ -43,6 +43,7 @@ no dropouts or overruns
 
 - switch tempo and clock labels, add play icon between
 - use the status row action button to tap tempo V
+- fractional tempo adjustment tweak (whole value moves to an integer value even if starting from a fractional one) V
 
 - cut / paste clips logic
 	- decide whether it's Shift+A or B+A

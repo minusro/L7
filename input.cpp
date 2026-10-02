@@ -69,8 +69,10 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
       if (selectedCell == TEMPO_CELL) {              // tempo: 0.1 BPM steps, or 1 BPM
         if (pressed & m8::BTN_LEFT) setTempo(bpm - 0.1f);
         if (pressed & m8::BTN_RIGHT) setTempo(bpm + 0.1f);
-        if (pressed & m8::BTN_UP) setTempo(bpm + 1);
-        if (pressed & m8::BTN_DOWN) setTempo(bpm - 1);
+        // UP/DOWN: to the next whole BPM that way (120.5 up: 121; 135 down: 134).
+        long tenths = lroundf(bpm * 10);
+        if (pressed & m8::BTN_UP) setTempo(tenths / 10 + 1);
+        if (pressed & m8::BTN_DOWN) setTempo((tenths + 9) / 10 - 1);
       }
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats, length a power of two. LEFT/RIGHT move the start
