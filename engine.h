@@ -23,7 +23,9 @@ struct Track {
   uint32_t spbNative = 0;          // samples per beat at the tempo it was recorded at
   uint32_t loopBars = 0;           // power of two
   uint32_t recordedFrames = 0;     // audio in the file; the rest of the loop is silence
-  uint32_t rangeStartBeat = 0, rangeBeats = 0;   // loop range; length is a power of two beats
+  // Loop range: starts anywhere in the loop, length a power of two beats; it
+  // may run past the loop's end and continue from its start.
+  uint32_t rangeStartBeat = 0, rangeBeats = 0;
   // Transport position, in quarter beats, at which the loop range is at its
   // first beat (it repeats every rangeBeats from there). Starts on the beat
   // the recording began; shifts when a range change keeps the playhead.
@@ -48,6 +50,11 @@ struct Track {
 
   uint32_t rangeStartFrame() const { return rangeStartBeat * spbNative; }
   uint32_t rangeFrames() const { return rangeBeats * spbNative; }
+  uint32_t loopFrames() const { return loopBars * BEATS_PER_BAR * spbNative; }
+  // Loop frame `offset` frames into the range (offset < rangeFrames()).
+  uint32_t rangeFrame(uint32_t offset) const { return (rangeStartFrame() + offset) % loopFrames(); }
+  // How far loop frame f is into the range (>= rangeFrames(): outside it).
+  uint32_t rangeOffset(uint32_t f) const { return (f + loopFrames() - rangeStartFrame()) % loopFrames(); }
 
   // Stream: frames of the looped range in playback order. head is written by
   // loop(), tail by the interrupt. Counters run freely; ring index = n % RING.

@@ -19,16 +19,17 @@ void transportRestart();             // from bar 1 again, running or not
 // Returns false if the track already holds a loop.
 bool recordPress(int t);
 void clearTrack(int t);
-// Loop range in beats; the length must be a power of two (1 beat = 1/4 bar
-// up to the whole loop). While playing, the change is queued and takes over at
+// Loop range in beats: starts on any beat of the loop; the length must be a
+// power of two (1 beat = 1/4 bar up to the whole loop). It may run past the
+// loop's end and carry on from its start. While playing, the change is queued and takes over at
 // the next quarter beat the track hasn't buffered yet (usually within a beat);
 // trackRange() reports the queued range if any.
 bool setRange(int t, uint32_t startBeat, uint32_t beats);
 void trackRange(int t, uint32_t &startBeat, uint32_t &beats);
 // The range's start position (a beat of the loop): the first of the
-// lowest-order power-of-two divisions of the loop that falls in the range
-// (order 0: the loop's start; 1: its middle; 2: its quarters; ...). The
-// transport starting at 1.1.1 plays each track from here.
+// lowest-order power-of-two divisions of the loop in the range, where the
+// loop's start and middle rank the same (then its quarters, eighths, ...).
+// The transport starting at 1.1.1 plays each track from here.
 uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats);
 
 float loadTempo();                   // saved tempo, or 120

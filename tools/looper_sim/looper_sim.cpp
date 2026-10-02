@@ -170,7 +170,7 @@ static void checkSync(int t, const char *label) {
         block();
         if (!tr.live || offset >= AUDIO_BLOCK_SAMPLES) break;
         int32_t phaseQ = pmod(4 * target - tr.rangeAnchorQ, 4 * tr.rangeBeats);
-        uint32_t frame = tr.rangeStartFrame() + quarterFrames(phaseQ, tr.spbNative);
+        uint32_t frame = tr.rangeFrame(quarterFrames(phaseQ, tr.spbNative));
         float expect = frame < tr.recordedFrames ? wavLeft(t, frame) * engine.masterGain : 0;
         checked++;
         if (fabsf(outL.data[offset] - expect) > 2) {
@@ -222,7 +222,7 @@ static int fuzz(int seconds, unsigned seed) {
                 if (tr.state != TrackState::Empty) {
                   uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR, len = 1;
                   while (len * 2 <= loopBeats && rand() % 2) len *= 2;
-                  setRange(sel, rand() % (loopBeats - len + 1), len);
+                  setRange(sel, rand() % loopBeats, len);   // may run past the loop's end
                 }
                 break;
         case 6: lastAction = "transport"; if (transport.running) transportStop(); else transportStart(); break;
@@ -294,7 +294,7 @@ int main(int argc, char **argv) {
           bool newRange = 4 * target >= sw;
           uint32_t rs = newRange ? 4 : oldStart, rb = newRange ? 8 : oldBeats;
           int32_t anchor = newRange ? tr.rangeAnchorQ : oldAnchor;   // re-anchored at the switch
-          uint32_t frame = rs * tr.spbNative + quarterFrames(pmod(4 * target - anchor, 4 * rb), tr.spbNative);
+          uint32_t frame = (rs * tr.spbNative + quarterFrames(pmod(4 * target - anchor, 4 * rb), tr.spbNative)) % tr.loopFrames();
           float expect = frame < tr.recordedFrames ? wavLeft(0, frame) * engine.masterGain : 0;
           checked++;
           if (!newRange) before++;
@@ -344,6 +344,22 @@ int main(int argc, char **argv) {
       check(!inside || got == due, m);
       checkSync(0, "after the slide");
     }
+    // Ranges running past the loop's end carry on from its start.
+    uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
+    setRange(0, loopBeats - 2, 4);
+    runBeats(6);
+    check(!tr.rangePending && tr.rangeStartBeat == loopBeats - 2, "range across the loop's end applied");
+    checkSync(0, "range across the loop's end");
+    setRange(0, loopBeats / 4, loopBeats);         // the whole loop, from a quarter in
+    runBeats(6);
+    checkSync(0, "whole-loop range offset by a quarter");
+    check(startPosition(loopBeats, loopBeats / 4, loopBeats) == loopBeats / 2,
+          "whole loop offset 25%: start position at 50%");
+    check(startPosition(16, 15, 16) == 0, "whole loop offset ~90%: start position at 0%");
+    check(startPosition(16, 4, 8) == 8 && startPosition(16, 0, 16) == 0, "start positions inside the loop");
+    check(startPosition(32, 3, 16) == 16, "half-loop range offset ~10%: start position at 50%");
+    check(startPosition(16, 1, 4) == 4 && startPosition(16, 5, 2) == 6 && startPosition(32, 3, 8) == 8,
+          "start positions of short ranges");
     setRange(0, 4, 8);
     runBeats(6);
     for (auto &x : tracks) x.gain = 1;

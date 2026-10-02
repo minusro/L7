@@ -149,7 +149,7 @@ static void readHeader(int t) {
   if (info.version < 4) info.rangePhase *= 4;
   uint32_t loopBeats = info.loopBars * BEATS_PER_BAR;
   if (!info.used || !info.spb || !info.loopBars || !info.rangeLen ||
-      info.rangeStart + info.rangeLen > loopBeats || info.recordedFrames > MAX_REC_FRAMES)
+      info.rangeStart >= loopBeats || info.rangeLen > loopBeats || info.recordedFrames > MAX_REC_FRAMES)
     return;
   while (info.rangeLen & (info.rangeLen - 1)) info.rangeLen &= info.rangeLen - 1;   // power of two
   tr.spbNative = info.spb;
@@ -323,15 +323,15 @@ static void applyQueuedRange(Track &tr) {
   tr.rangeStartBeat = tr.pendingStartBeat;
   tr.rangeBeats = tr.pendingBeats;
   tr.rangePending = false;
-  uint32_t start = tr.rangeStartFrame();
-  if (tr.fileFrame >= start && tr.fileFrame < start + tr.rangeFrames()) {
+  uint32_t offset = tr.rangeOffset(tr.fileFrame);
+  if (offset < tr.rangeFrames()) {
     // Playhead position in the new range, in quarter beats (switches fall on
     // quarter beats; round away the per-quarter rounding of frames).
-    int32_t posQ = (int32_t)(((uint64_t)(tr.fileFrame - start) * 4 + tr.spbNative / 2) / tr.spbNative);
+    int32_t posQ = (int32_t)(((uint64_t)offset * 4 + tr.spbNative / 2) / tr.spbNative);
     tr.rangeAnchorQ = tr.switchQ - posQ;
   } else {
     int32_t phaseQ = posMod(tr.switchQ - tr.rangeAnchorQ, 4 * tr.rangeBeats);
-    tr.fileFrame = start + quarterFrames(phaseQ, tr.spbNative);
+    tr.fileFrame = tr.rangeFrame(quarterFrames(phaseQ, tr.spbNative));
   }
   trackChanged(&tr - tracks);
 }
@@ -340,8 +340,10 @@ static void applyQueuedRange(Track &tr) {
 static void produce(Track &tr) {
   if (tr.rangePending && tr.head == tr.switchS) applyQueuedRange(tr);
   uint32_t free = RING_FRAMES - (tr.head - tr.tail);
-  uint32_t rangeEnd = tr.rangeStartFrame() + tr.rangeFrames();
-  uint32_t n = min(min(CHUNK_FRAMES, free), rangeEnd - tr.fileFrame);
+  // Up to the range's end or the loop's end, whichever comes first (a range
+  // can run past the loop's end and carry on from its start).
+  uint32_t toRangeEnd = tr.rangeFrames() - tr.rangeOffset(tr.fileFrame);
+  uint32_t n = min(min(CHUNK_FRAMES, free), min(toRangeEnd, tr.loopFrames() - tr.fileFrame));
   if (tr.rangePending) n = min(n, tr.switchS - tr.head);      // stop exactly at the switch
   if (tr.fileFrame >= tr.recordedFrames || sdFailed) {
     memset(chunk, 0, n * 4);                     // padding after the recording (or no card)
@@ -364,8 +366,8 @@ static void produce(Track &tr) {
   uint32_t head = tr.head;
   for (uint32_t i = 0; i < n; i++) tr.ring[(head + i) % RING_FRAMES] = chunk[i];
   tr.head = head + n;
-  tr.fileFrame += n;
-  if (tr.fileFrame >= rangeEnd) tr.fileFrame = tr.rangeStartFrame();
+  if (n == toRangeEnd) tr.fileFrame = tr.rangeStartFrame();
+  else tr.fileFrame = (tr.fileFrame + n) % tr.loopFrames();
 }
 
 // Sets the track up to join in at transport beat beat0, in phase with its
@@ -388,7 +390,7 @@ static void startTrack(int t, int32_t beat0, bool fillNow) {
   tr.s0 = quarterFrames(phaseQ, tr.spbNative);
   tr.tail = tr.s0;
   tr.head = tr.s0;
-  tr.fileFrame = tr.rangeStartFrame() + tr.s0;
+  tr.fileFrame = tr.rangeFrame(tr.s0);
   if (fillNow)
     while (RING_FRAMES - (tr.head - tr.tail) >= CHUNK_FRAMES) produce(tr);
   tr.startBeat = beat0;
@@ -585,17 +587,19 @@ void trackRange(int t, uint32_t &startBeat, uint32_t &beats) {
 }
 
 uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats) {
-  for (uint32_t step = loopBeats; step >= 1; step /= 2) {
-    uint32_t first = (rangeStart + step - 1) / step * step;   // first multiple of step in or after the range start
-    if (first < rangeStart + rangeBeats) return first;
+  // The loop's start and middle rank the same (the first step is half the
+  // loop). The range may wrap past the loop's end, where the loop starts again.
+  for (uint32_t step = loopBeats / 2; step >= 1; step /= 2) {
+    uint32_t first = (rangeStart + step - 1) / step * step;   // first multiple of step at or after the range start
+    if (first < rangeStart + rangeBeats) return first % loopBeats;
   }
-  return rangeStart;                             // not reached: ranges are at least a beat
+  return rangeStart;                             // not reached: step 1 always finds the range start
 }
 
 bool setRange(int t, uint32_t startBeat, uint32_t beats) {
   Track &tr = tracks[t];
   if (tr.state == TrackState::Empty || beats < 1 || (beats & (beats - 1)) ||
-      startBeat + beats > tr.loopBars * BEATS_PER_BAR)
+      startBeat >= tr.loopBars * BEATS_PER_BAR || beats > tr.loopBars * BEATS_PER_BAR)
     return false;
   if (!tr.live) {                                // not playing: just change it
     tr.rangePending = false;

@@ -22,7 +22,7 @@ constexpr uint16_t DIVIDER = 0x2104;         // grey ~33: line under the last tr
 constexpr uint16_t WAVE_IN = 0xCE79;         // grey ~206 (80% white): inside the loop range
 constexpr uint16_t WAVE_IN_BAR = 0x9CD3;     // grey ~154: bar lines inside the loop range
 constexpr uint16_t WAVE_OUT = 0x4A49;        // grey ~74: outside the loop range
-constexpr uint16_t START_MARK = 0xFFFF;      // white: the start position flag (muted clips: MUTED_WEIGHT)
+constexpr uint16_t START_MARK = 0xFFFF;      // white: the start position flag and the range edge lines (muted clips: MUTED_WEIGHT)
 constexpr uint16_t WAVE_OUT_BAR = 0x39C7;    // grey ~58: bar lines outside the loop range
 constexpr uint8_t MUTED_WEIGHT = 160;        // muted clips: loop range (and filter curve) at ~63% brightness
 

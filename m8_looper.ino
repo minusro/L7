@@ -147,8 +147,8 @@ struct WaveView {
   bool visible = false;                            // something is shown (not an empty track)
   bool live = false;                               // recording in progress: live view
   uint16_t bg = BG;
-  int rangeFirst = 0, rangeLast = -1;              // columns inside the loop range
-  int markCol = -1;                                // start position flag; -1: none
+  int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
+  int markCol = -1, beginCol = -1, endCol = -1;    // start position flag, range's first and last columns; -1: none
   int playCol = -1;                                // playhead / record head; -1: none
   int headW = HEAD_W;                              // playhead covers playCol .. playCol + headW - 1
   uint16_t headColor = 0;
@@ -211,7 +211,7 @@ static void drawColumnUnder(int i, int c) {
   if (!v.visible) return;
   if (v.live && c >= v.liveFilled) return;
   bool bar = isBarColumn(v.live ? v.liveBars : tr.loopBars, c);
-  bool in = v.live || (c >= v.rangeFirst && c <= v.rangeLast);
+  bool in = v.live || (c - v.rangeFirst + WAVE_W) % WAVE_W < v.rangeCols;
   uint16_t color = in ? (bar ? WAVE_IN_BAR : WAVE_IN) : (bar ? WAVE_OUT_BAR : WAVE_OUT);
   if (!v.live && in && tr.state == TrackState::Muted)
     color = blend565(color, BG, MUTED_WEIGHT);   // muted: the loop range dimmed
@@ -219,22 +219,21 @@ static void drawColumnUnder(int i, int c) {
   t.drawFastVLine(x, mid - h, 2 * h + 1, color);
 }
 
-// Start position flag (behind the playhead; on muted clips only when the
-// track is selected): a 1 px line down the row, and at its top a small
-// triangle pointing right (MARK_FLAG rows tall, widest in the middle).
+// Markers (behind the playhead; only on the selected track), 1 px lines down
+// the row: the range's first and last columns,
+// and the start position, which also has a small triangle at its top
+// pointing right (MARK_FLAG rows tall, widest in the middle).
 static constexpr int MARK_TOP = 1, MARK_FLAG = 5;
 
 static void drawMark(int i, int c) {
   const WaveView &v = views[i];
-  int k = c - v.markCol;
-  int half = MARK_FLAG / 2;
-  if (v.markCol < 0 || k < 0 || k > half) return;
-  if (tracks[i].state == TrackState::Muted && i != selected) return;   // muted: only on the selected track
+  if (v.markCol < 0 || i != selected) return;
   auto &t = board.tft();
   uint16_t color = tracks[i].state == TrackState::Muted ? blend565(START_MARK, BG, MUTED_WEIGHT) : START_MARK;
-  int x = WAVE_X + c, top = rowTop(i) + MARK_TOP;
-  if (k == 0) t.drawFastVLine(x, top, ROW_BAND - 2 * MARK_TOP, color);
-  else t.drawFastVLine(x, top + k, MARK_FLAG - 2 * k, color);   // the flag narrows to a point
+  int x = WAVE_X + c, top = rowTop(i) + MARK_TOP, half = MARK_FLAG / 2;
+  if (c == v.markCol || c == v.beginCol || c == v.endCol) t.drawFastVLine(x, top, ROW_BAND - 2 * MARK_TOP, color);
+  int k = c - v.markCol;                           // the triangle, right of its line
+  if (k > 0 && k <= half) t.drawFastVLine(x, top + k, MARK_FLAG - 2 * k, color);
 }
 
 static void drawColumn(int i, int c) {
@@ -266,16 +265,22 @@ static void drawWave(int i, bool recordingHere) {
   v.visible = recordingHere || tr.state != TrackState::Empty;
   if (!v.visible || v.live) v.playCol = -1;
   v.rangeFirst = 0;
-  v.rangeLast = -1;
+  v.rangeCols = 0;
   v.markCol = -1;
+  v.beginCol = -1;
+  v.endCol = -1;
   if (v.live) {
     v.liveBars = 0;                                // updatePlayheads() fills it in
     v.liveFilled = 0;
   } else if (v.visible) {
     uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
     v.rangeFirst = rs * WAVE_W / loopBeats;
-    v.rangeLast = max(v.rangeFirst, (int)(((rs + rb) * WAVE_W + loopBeats - 1) / loopBeats) - 1);
+    int end = (int)(((rs + rb) * WAVE_W + loopBeats - 1) / loopBeats);   // unwrapped
+    v.rangeCols = constrain(end - v.rangeFirst, 1, WAVE_W);
     v.markCol = startPosition(loopBeats, rs, rb) * WAVE_W / loopBeats;
+    v.beginCol = v.rangeFirst;
+    // The range's last column; a whole-loop range's edges meet: one line.
+    v.endCol = v.rangeCols >= WAVE_W ? v.beginCol : (v.rangeFirst + v.rangeCols - 1) % WAVE_W;
   }
   for (int c = 0; c < WAVE_W; c++) drawColumn(i, c);
 }
@@ -344,7 +349,7 @@ static void updatePlayheads() {
     if (v.visible && running && tr.live && (!muted || i == selected)) {
       double inRange = fmod(pos - tr.rangeAnchorQ / 4.0, (double)tr.rangeBeats);
       if (inRange < 0) inRange += tr.rangeBeats;
-      double loopBeat = tr.rangeStartBeat + inRange;
+      double loopBeat = fmod(tr.rangeStartBeat + inRange, (double)(tr.loopBars * BEATS_PER_BAR));
       col = min(WAVE_W - 1, (int)(loopBeat * WAVE_W / (tr.loopBars * BEATS_PER_BAR)));
     }
     movePlayhead(i, col, muted ? 1 : HEAD_W, muted ? MUTED_HEAD : PLAYHEAD);
@@ -736,14 +741,14 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
       }
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats, length a power of two. LEFT/RIGHT move the start
-      // by one beat; UP/DOWN double/halve the length (doubling keeps the
-      // range inside the loop).
+      // by one beat, wrapping around the loop (a range may run past the
+      // loop's end); UP/DOWN double/halve the length.
       Track &tr = tracks[selected];
       uint32_t rs, rb, loopBeats = tr.loopBars * BEATS_PER_BAR;
       trackRange(selected, rs, rb);                  // includes a queued change
-      if (pressed & m8::BTN_LEFT && rs >= 1) setRange(selected, rs - 1, rb);
-      if (pressed & m8::BTN_RIGHT && rs + 1 + rb <= loopBeats) setRange(selected, rs + 1, rb);
-      if (pressed & m8::BTN_UP && rb * 2 <= loopBeats) setRange(selected, min(rs, loopBeats - rb * 2), rb * 2);
+      if (pressed & m8::BTN_LEFT) setRange(selected, (rs + loopBeats - 1) % loopBeats, rb);
+      if (pressed & m8::BTN_RIGHT) setRange(selected, (rs + 1) % loopBeats, rb);
+      if (pressed & m8::BTN_UP && rb * 2 <= loopBeats) setRange(selected, rs, rb * 2);
       if (pressed & m8::BTN_DOWN && rb > 1) setRange(selected, rs, rb / 2);
     } else if (selectedCell == FILTER_CELL && tracks[selected].state != TrackState::Empty) {
       // Filter: LEFT/RIGHT move the passband a step; moving stops where both
