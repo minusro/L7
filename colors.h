@@ -27,9 +27,11 @@ constexpr uint16_t WAVE_OUT_BAR = 0x39C7;    // grey ~58: bar lines outside the 
 constexpr uint8_t MUTED_WEIGHT = 160;        // muted clips: loop range (and filter curve) at ~63% brightness
 
 // ---- Playheads
-constexpr uint16_t PLAYHEAD = 0x8C51;        // grey ~140: playing clips
+// A playhead is three 1 px lines: its colour at the position, PLAYHEAD_EDGE either side.
+constexpr uint16_t PLAYHEAD = 0xFFFF;        // white: playing clips
 constexpr uint16_t REC_HEAD = 0xF800;        // red: the recording position
-constexpr uint16_t MUTED_HEAD = 0x0000;      // black: the selected muted clip
+constexpr uint16_t MUTED_HEAD = blend565(PLAYHEAD, BG, MUTED_WEIGHT);   // dimmed white: the selected muted clip
+constexpr uint16_t PLAYHEAD_EDGE = 0x0000;   // black: the lines either side
 
 // ---- Row buttons
 constexpr uint16_t ICON_SELECTED = 0xFFFF;   // white: icons on the selected row

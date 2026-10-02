@@ -26,7 +26,7 @@ no dropouts or overruns
 - loop areas should be able to straddle the loop boundary (left and right halves) V
 - tempo label flicker V
 - antialias filter curves V
-- white and black playheads
+- white and black playheads for better visibility V
 - double tap B to reset values
 - 80s lcd ui
 - move back channel content into front channel content when balancing towards one
