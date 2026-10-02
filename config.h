@@ -7,8 +7,8 @@ namespace looper {
 constexpr int NUM_TRACKS = 8;
 constexpr int BEATS_PER_BAR = 4;                   // fixed 4/4
 constexpr uint32_t MAX_BARS = 32;                  // longest recording
-// Stopping a recording up to this many beats past a power-of-two length trims
-// it to that length; stopping later keeps recording up to the next one.
+// Stopping a recording up to this many beats past a bar line trims it to end
+// there; stopping later keeps recording to the end of that bar.
 constexpr double SNAP_THRESHOLD_BEATS = 1.0;
 // Every track file is created once at this size: 32 bars at 60 BPM (~22.6 MB).
 // Below 60 BPM a recording stops at this length instead of 32 bars.

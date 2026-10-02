@@ -212,7 +212,6 @@ static void applyUnit(int t, const TrackUnit &u) {
   Track &tr = tracks[t];
   uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
   uint32_t len = u.rangeLen && u.rangeLen <= loopBeats ? u.rangeLen : loopBeats;
-  while (len & (len - 1)) len &= len - 1;        // a power of two
   tr.rangePending = false;
   tr.rangeStartBeat = u.rangeStart < loopBeats ? u.rangeStart : 0;
   tr.rangeBeats = len;
@@ -353,10 +352,9 @@ bool recordingWaveform(uint8_t *cols, uint32_t &bars, uint32_t &framesPerBar, ui
   if (recording.mode == Recording::Finishing) {
     bars = recording.loopBars;
   } else {
-    // Smallest power of two bars that holds what's recorded so far.
+    // The bars started so far.
     uint32_t sofar = max<int32_t>(0, (int32_t)(transport.now - recording.startSample));
-    bars = 1;
-    while (bars < MAX_BARS && (uint64_t)bars * framesPerBar < sofar) bars *= 2;
+    bars = constrain((sofar + framesPerBar - 1) / framesPerBar, 1u, MAX_BARS);
   }
   binsToColumns(recPeaks, bars * framesPerBar, recordedFrames, cols);
   return true;
@@ -753,15 +751,14 @@ static bool streamsTopped() {
 }
 
 // ---- Recording
-// Loop length in bars for a recording stopped after `beats` beats: the power
-// of two P just below, if the stop came at most SNAP_THRESHOLD_BEATS past it;
-// otherwise the next one, 2P (the recording then carries on until it gets
-// there). Under one bar it carries on to one bar.
+// Loop length in bars for a recording stopped after `beats` beats: the whole
+// bars done, if the stop came at most SNAP_THRESHOLD_BEATS past the last bar
+// line; otherwise one more (the recording then carries on to the end of that
+// bar). Under one bar it carries on to one bar.
 static uint32_t targetBars(double beats) {
-  uint32_t p = 1;
-  while (p * 2 * BEATS_PER_BAR <= beats && p * 2 <= MAX_BARS) p *= 2;
-  if (beats <= p * BEATS_PER_BAR + SNAP_THRESHOLD_BEATS || p == MAX_BARS) return p;
-  return p * 2;
+  uint32_t p = min((uint32_t)(beats / BEATS_PER_BAR), MAX_BARS);   // whole bars done
+  if (p >= 1 && (beats <= p * BEATS_PER_BAR + SNAP_THRESHOLD_BEATS || p == MAX_BARS)) return p;
+  return p + 1;
 }
 
 static uint32_t maxRecordingFrames() {
@@ -1002,7 +999,7 @@ uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBe
 bool setRange(int t, uint32_t startBeat, uint32_t beats) {
   Track &tr = tracks[t];
   if (recording.mode != Recording::Idle && recording.track == t) return false;   // still finishing
-  if (tr.state == TrackState::Empty || beats < 1 || (beats & (beats - 1)) ||
+  if (tr.state == TrackState::Empty || beats < 1 ||
       startBeat >= tr.loopBars * BEATS_PER_BAR || beats > tr.loopBars * BEATS_PER_BAR)
     return false;
   if (!tr.live) {                                // not playing: just change it

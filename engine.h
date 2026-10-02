@@ -21,10 +21,11 @@ struct Track {
   // Description of the loop (set by loop() while not live)
   volatile TrackState state = TrackState::Empty;
   uint32_t spbNative = 0;          // samples per beat at the tempo it was recorded at
-  uint32_t loopBars = 0;           // power of two
+  uint32_t loopBars = 0;           // whole bars
   uint32_t recordedFrames = 0;     // audio in the file; the rest of the loop is silence
-  // Loop range: starts anywhere in the loop, length a power of two beats; it
-  // may run past the loop's end and continue from its start.
+  // Loop range: starts on any beat of the loop; 1 or 2 beats or whole bars
+  // long, up to the whole loop. It may run past the loop's end and continue
+  // from its start.
   uint32_t rangeStartBeat = 0, rangeBeats = 0;
   // Transport position, in quarter beats, at which the loop range is at its
   // first beat (it repeats every rangeBeats from there). Starts on the beat

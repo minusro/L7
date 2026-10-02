@@ -95,16 +95,43 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         if (pressed & m8::BTN_DOWN) setTempo((tenths + 9) / 10 - 1);
       }
     } else if (selectedCell == WAVE_CELL) {
-      // Loop range in beats, length a power of two. LEFT/RIGHT move the start
-      // by one beat, wrapping around the loop (a range may run past the
-      // loop's end); UP/DOWN double/halve the length.
+      // Loop range in beats: 1 or 2 beats or whole bars, up to the whole
+      // loop. LEFT/RIGHT move its start by a beat, wrapping around the loop (a
+      // range may run past the loop's end); UP/DOWN make it a bar longer /
+      // shorter (1 beat - 2 beats - 1 bar - 2 bars ...). Tapped twice: LEFT/
+      // RIGHT move it by its own length, UP/DOWN to the next / previous power
+      // of two (1, 2, 4, 8 ... beats; up to the whole loop). The start stays
+      // when the length changes. A double tap counts from the range before
+      // the first tap (which already moved it a step).
       Track &tr = tracks[selected];
       uint32_t rs, rb, loopBeats = tr.loopBars * BEATS_PER_BAR;
       trackRange(selected, rs, rb);                  // includes a queued change
-      if (pressed & m8::BTN_LEFT) setRange(selected, (rs + loopBeats - 1) % loopBeats, rb);
-      if (pressed & m8::BTN_RIGHT) setRange(selected, (rs + 1) % loopBeats, rb);
-      if (pressed & m8::BTN_UP && rb * 2 <= loopBeats) setRange(selected, rs, rb * 2);
-      if (pressed & m8::BTN_DOWN && rb > 1) setRange(selected, rs, rb / 2);
+      static int tapTrack = -1;
+      static uint32_t tapAt[4], tapStart[4], tapLen[4];   // per arrow: the last tap and the range before it
+      const uint8_t keys4[4] = {m8::BTN_LEFT, m8::BTN_RIGHT, m8::BTN_UP, m8::BTN_DOWN};
+      for (int k = 0; k < 4; k++) {
+        if (!(pressed & keys4[k])) continue;
+        bool twice = !repeat && tapTrack == selected && tapAt[k] && millis() - tapAt[k] < DOUBLE_TAP_MS;
+        uint32_t s0 = twice ? tapStart[k] : rs, l0 = twice ? tapLen[k] : rb, s = s0, l = l0;
+        if (!twice && !repeat) { tapTrack = selected; tapAt[k] = millis(); tapStart[k] = rs; tapLen[k] = rb; }
+        if (twice) tapAt[k] = 0;
+        switch (k) {
+          case 0: s = (s0 + loopBeats - (twice ? l0 % loopBeats : 1)) % loopBeats; break;
+          case 1: s = (s0 + (twice ? l0 : 1)) % loopBeats; break;
+          case 2:
+            if (twice) { l = 1; while (l <= l0) l *= 2; }
+            else l = l0 < 2 ? 2 : l0 < 4 ? 4 : (l0 / 4 + 1) * 4;   // 1 - 2 - a bar - the next whole bar
+            l = min(l, loopBeats);
+            break;
+          case 3:
+            if (twice) { l = 1; while (l * 2 < l0) l *= 2; if (l >= l0) l = l0; }
+            else l = l0 <= 1 ? 1 : l0 <= 2 ? 1 : l0 <= 4 ? 2 : (l0 % 4 ? l0 / 4 * 4 : l0 - 4);
+            break;
+        }
+        if (s != rs || l != rb) setRange(selected, s, l);
+        rs = s;
+        rb = l;
+      }
     } else if (selectedCell == FILTER_CELL && hasClip(selected)) {
       // Filter: LEFT/RIGHT move the passband a step; moving stops where both
       // points would leave the range. UP/DOWN widen/narrow it: a step on each

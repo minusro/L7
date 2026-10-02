@@ -47,7 +47,8 @@ no dropouts or overruns
 - when tapping tempo while playing, every 4th tap should snap the playhead to the nearest bar start instead of resetting to 1.1.1 V
 - [[ Scene Logic ]] V
 - scene logic iterations V
-- allow non power of two loops and recordings
+- added menu button and placeholder panel V
+- allow non power of two loops and recordings V
 - switch tempo and clock labels, add play icon between
 - optimize sample switching times
 - immediate recording after another not starting bug

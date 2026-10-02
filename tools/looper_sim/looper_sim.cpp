@@ -238,8 +238,7 @@ static int fuzz(int seconds, unsigned seed) {
                   if (ok) { bpm = b; transport.pendingSpb = spb; } break; }
         case 5: lastAction = "range";
                 if (tr.state != TrackState::Empty) {
-                  uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR, len = 1;
-                  while (len * 2 <= loopBeats && rand() % 2) len *= 2;
+                  uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR, len = 1 + rand() % loopBeats;   // any length
                   setRange(sel, rand() % loopBeats, len);   // may run past the loop's end
                 }
                 break;
@@ -323,7 +322,7 @@ int main(int argc, char **argv) {
   midiBegin(&midi);
 
   recordTrack(0, 4 * 4 + 0.5, 4, "track 1: stop 4 bars + 0.5 beats in, from stopped (trims to 4 bars)");
-  recordTrack(1, 2 * 4 + 3, 4, "track 2: stop 2 bars + 3 beats in (carries on to 4 bars)");
+  recordTrack(1, 2 * 4 + 3, 3, "track 2: stop 2 bars + 3 beats in (carries on to the end of bar 3)");
   recordTrack(2, 3, 1, "track 3: stop 3 beats in (carries on to 1 bar)");
 
   runBeats(4);
@@ -381,7 +380,7 @@ int main(int argc, char **argv) {
              before, checked - before, tr.underruns);
     check(bad == 0 && checked - before > 4 && tr.underruns == 0, m);
     check(!tr.rangePending && tr.rangeStartBeat == 4 && tr.rangeBeats == 8, "range applied and kept");
-    check(!setRange(0, 0, 3) && !setRange(0, 0, 0), "lengths that aren't a power of two are refused");
+    check(!setRange(0, 0, 0) && !setRange(0, 0, tr.loopBars * 4 + 1), "lengths of 0 or longer than the loop are refused");
     for (auto &x : tracks) x.gain = 1;
     engine.monitor = true;
   }
