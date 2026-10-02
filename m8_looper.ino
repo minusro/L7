@@ -760,8 +760,8 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
       }
     }
   } else {
-    if (pressed & m8::BTN_UP) selected = (selected + ROWS - 1) % ROWS;
-    if (pressed & m8::BTN_DOWN) selected = (selected + 1) % ROWS;
+    if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
+    if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
     if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell--;
     if (pressed & m8::BTN_RIGHT && selectedCell < CELLS - 1) selectedCell++;
   }
