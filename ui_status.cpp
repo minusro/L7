@@ -49,7 +49,13 @@ void drawStatus() {
   t.setTextSize(HEADER_SCALE);
   uint16_t bg = cellBackground(STATUS_ROW, TEMPO_CELL);
   char text[24];
-  snprintf(text, sizeof text, "%.1f BPM", bpm);
+  // A scene's tempo waiting for its bar line: the one playing until then.
+  noInterrupts();
+  bool tempoWaiting = transport.pendingSpb && transport.spbAtBeat >= 0;
+  uint32_t playingSpb = transport.spb;
+  interrupts();
+  float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
+  snprintf(text, sizeof text, "%.1f BPM", shown);
   bool editing = selected == STATUS_ROW && selectedCell == TEMPO_CELL;
   printFromLeft(WAVE_X + STATUS_INSET, CELL[TEMPO_CELL].x, text, 10, editing ? TEXT_ACTIVE : TEXT_IDLE, bg);
   noInterrupts();
