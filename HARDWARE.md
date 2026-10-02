@@ -36,8 +36,8 @@ build and is unreachable on Model:01, because the flag can only be 0 or 1.
 | **SD card** | SDIO / USDHC1 on bottom pads 34–39 (`BUILTIN_SDCARD`) | same | confirmed |
 | SD card detect | pin 4, INPUT_PULLUP, CHANGE IRQ | pin 17, INPUT_PULLUP, CHANGE IRQ | pin setup confirmed, purpose inferred |
 | **Serial MIDI**, 31 250 baud | port 1: Serial7 (RX 28/TX 29); port 2: Serial1 (RX 0/TX 1) | port 1: Serial1 (RX 0/TX 1); port 2: Serial3 (TX 14. RX 15 is the key INT) | confirmed |
-| Headphone sense (analog, INPUT_PULLDOWN, low-pass filtered) | pin 26 (A12) | pin 22 (A8) | inferred |
-| Headphone/amp enable (OUTPUT, HIGH at init) | pin 30 | pin 9 | inferred |
+| Headphone sense (analog, INPUT_PULLDOWN, low-pass filtered) | pin 26 (A12) | pin 22 (A8) | variant B confirmed on hardware: `analogRead` ≈ 10 with headphones plugged in, ≈ 580 without; A inferred |
+| Speaker amp enable (OUTPUT, HIGH at init) | pin 30 | pin 9 | variant B confirmed on hardware: HIGH = speaker on, LOW = speaker off; A inferred |
 | **Charger** | no I²C charger; status pins 14 and 15 (INPUT_PULLUP); battery voltage on pin 22 (A8); pin 24 input | **TI BQ2589x** @0x6A on Wire; pin 2 INPUT (probably charger INT) | chips confirmed, pin roles inferred |
 | **Fuel gauge** | n/a | **ST STC3115/3117** @0x70 on Wire | confirmed (register map matches) |
 | Early boot line | n/a | pin 1 OUTPUT HIGH, then 30 ms delay. **Keep it HIGH**: using it as Serial1 TX (MIDI out) made the SD card reset repeatedly (command timeouts on every SD command) until the card was re-initialised. Likely a power enable | setup confirmed; effect observed on hardware |

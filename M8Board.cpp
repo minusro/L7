@@ -124,6 +124,23 @@ bool Board::powerButtonPressed() {
   return true;
 }
 
+// ---- Headphones
+int Board::headphoneSenseRaw() { return analogRead(_pins->hpSense); }
+
+bool Board::headphonesChanged(bool &in) {
+  if (millis() - _hpPolledMs < HP_POLL_MS) return false;
+  _hpPolledMs = millis();
+  bool now = headphoneSenseRaw() < HP_SENSE_THRESHOLD;   // the jack pulls it low
+  _hpCount = now == _hpLast ? min(_hpCount + 1, 255) : 1;
+  _hpLast = now;
+  if (_hpCount < HP_DEBOUNCE || _hpState == (int8_t)now) return false;
+  _hpState = now;
+  in = now;
+  return true;
+}
+
+void Board::setSpeaker(bool on) { digitalWrite(_pins->hpEnable, on ? HIGH : LOW); }
+
 bool Board::powerButtonHeld() { return SNVS_HPSR & SNVS_HPSR_BTN; }
 
 void Board::powerOff() {

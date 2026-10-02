@@ -44,8 +44,8 @@ struct Pins {
   uint8_t keyInt;             // expander interrupt output (active low)
   // Misc (see HARDWARE.md for how certain each one is)
   uint8_t sdDetect;           // INPUT_PULLUP, HIGH = card removed
-  uint8_t hpSense;            // analog input, INPUT_PULLDOWN (likely headphone detect)
-  uint8_t hpEnable;           // driven HIGH at boot by stock fw (likely amp enable)
+  uint8_t hpSense;            // analog input, INPUT_PULLDOWN: headphone detect (low = plugged in)
+  uint8_t hpEnable;           // speaker amp enable (HIGH = on), HIGH at boot like the stock fw
   uint8_t touchInt;           // optional FocalTech touch controller INT
   // Serial port for MIDI out. Variant A: port 1 (Serial7). Variant B: port 2
   // (Serial3, TX pin 14) — port 1's TX is pin 1, and driving it made the SD
@@ -72,6 +72,16 @@ public:
   bool keysChanged(uint8_t &now);   // true once per change
 
   void setBacklight(uint8_t level);  // 0..255
+
+  // Headphone jack (see HARDWARE.md): the sense pin read as analog
+  // (0..1023): ~10 with headphones in, ~580 without (measured, variant B).
+  // Plugged in when it reads below HP_SENSE_THRESHOLD for HP_DEBOUNCE polls
+  // in a row (one poll per HP_POLL_MS at most).
+  static constexpr int HP_SENSE_THRESHOLD = 300, HP_DEBOUNCE = 3;
+  static constexpr uint32_t HP_POLL_MS = 50;
+  int headphoneSenseRaw();
+  bool headphonesChanged(bool &in);  // true once per change (and once at first)
+  void setSpeaker(bool on);          // the amp enable pin (HIGH = on)
 
   // Starts the MIDI out port at 31250 baud and returns it. On variant B this
   // also gives pin 15 back to the key expander's INT (Serial3 claims it as RX).
@@ -105,6 +115,10 @@ private:
   uint8_t _keys = 0, _lastReported = 0;
   bool _first = true;
   uint8_t _touchId = 0;
+  int8_t _hpState = -1;              // -1: not reported yet
+  uint8_t _hpCount = 0;
+  bool _hpLast = false;
+  uint32_t _hpPolledMs = 0;
 };
 
 } // namespace m8

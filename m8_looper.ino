@@ -871,6 +871,13 @@ void loop() {
   debugStage = "storage";
   serviceStorage();
 
+  // Speaker off while headphones are plugged in.
+  bool phones;
+  if (board.headphonesChanged(phones)) {
+    board.setSpeaker(!phones);
+    Serial.printf("headphones %s: speaker %s\n", phones ? "in" : "out", phones ? "off" : "on");
+  }
+
   debugStage = "keys (I2C)";
   // Arrows repeat while held: the press acts at once, then again after
   // REPEAT_DELAY_MS and every REPEAT_PERIOD_MS (the most recently pressed one).
