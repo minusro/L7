@@ -366,13 +366,12 @@ int main(int argc, char **argv) {
     setRange(0, loopBeats / 4, loopBeats);         // the whole loop, from a quarter in
     runBeats(6);
     checkSync(0, "whole-loop range offset by a quarter");
-    check(startPosition(loopBeats, loopBeats / 4, loopBeats) == loopBeats / 2,
-          "whole loop offset 25%: start position at 50%");
-    check(startPosition(16, 15, 16) == 0, "whole loop offset ~90%: start position at 0%");
-    check(startPosition(16, 4, 8) == 8 && startPosition(16, 0, 16) == 0, "start positions inside the loop");
-    check(startPosition(32, 3, 16) == 16, "half-loop range offset ~10%: start position at 50%");
-    check(startPosition(16, 1, 4) == 4 && startPosition(16, 5, 2) == 6 && startPosition(32, 3, 8) == 8,
-          "start positions of short ranges");
+    check(startPosition(16, 0, 16) == 0 && startPosition(16, 4, 8) == 4 && startPosition(32, 3, 16) == 4,
+          "ranges of a bar or more: the first bar start");
+    check(startPosition(16, 15, 16) == 0 && startPosition(16, 13, 4) == 0, "... also across the loop's end");
+    check(startPosition(16, 5, 2) == 6 && startPosition(16, 6, 2) == 6 && startPosition(16, 15, 2) == 0,
+          "2-beat ranges: the first bar start or middle");
+    check(startPosition(16, 5, 1) == 5 && startPosition(16, 15, 1) == 15, "1-beat ranges: their start");
     setRange(0, 4, 8);
     runBeats(6);
     for (auto &x : tracks) x.gain = 1;

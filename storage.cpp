@@ -640,13 +640,12 @@ void trackRange(int t, uint32_t &startBeat, uint32_t &beats) {
 }
 
 uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats) {
-  // The loop's start and middle rank the same (the first step is half the
-  // loop). The range may wrap past the loop's end, where the loop starts again.
-  for (uint32_t step = loopBeats / 2; step >= 1; step /= 2) {
-    uint32_t first = (rangeStart + step - 1) / step * step;   // first multiple of step at or after the range start
-    if (first < rangeStart + rangeBeats) return first % loopBeats;
-  }
-  return rangeStart;                             // not reached: step 1 always finds the range start
+  // The grid to snap to: beats, half bars or bars. A range always holds one
+  // of its points (ranges are powers of two beats long); it may wrap past the
+  // loop's end, where the loop (and a bar) starts again.
+  uint32_t step = rangeBeats <= 1 ? 1 : rangeBeats < (uint32_t)BEATS_PER_BAR ? BEATS_PER_BAR / 2 : BEATS_PER_BAR;
+  uint32_t first = (rangeStart + step - 1) / step * step;   // first grid point at or after the range start
+  return first % loopBeats;
 }
 
 bool setRange(int t, uint32_t startBeat, uint32_t beats) {

@@ -38,14 +38,14 @@ no dropouts or overruns
 - fix audio post recording gap (haven't heard it, only saw the playhead doesn't appear immediately) - verified working V
 - only show the "playing" cells when recording has actually completed V
 - reduce the "late time" for stopping recording after a crossing to 1 beat instead of 2 beats V
-
-- 80s lcd ui
-
-- switch tempo and clock labels, add play icon between
 - use the status row action button to tap tempo V
 - fractional tempo adjustment tweak (whole value moves to an integer value even if starting from a fractional one) V
+- new logic for start position determination V
 
+- switch tempo and clock labels, add play icon between
+- 80s lcd ui
 - cut / paste clips logic
 	- decide whether it's Shift+A or B+A
+
 - [[ Clip Switching ]]
 - [[ Scene Logic ]]
