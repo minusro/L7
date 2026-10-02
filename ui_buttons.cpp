@@ -34,7 +34,7 @@ static int buttonIcon(int i) {
     }
     if (tracks[i].state == TrackState::Empty) return ICON_RECORD;
   }
-  if (tracks[i].state == TrackState::Empty) return ICON_NONE;
+  if (!hasClip(i)) return ICON_NONE;
   return tracks[i].state == TrackState::Playing ? ICON_TOGGLE_ON : ICON_TOGGLE_OFF;
 }
 

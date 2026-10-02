@@ -73,7 +73,7 @@ void drawMix(int i) {
 
   uint16_t bg = cellBackground(i, MIX_CELL);
   uint16_t colors[2 * MIX_ARCS];
-  bool empty = tr.state == TrackState::Empty;
+  bool empty = !hasClip(i);
   uint16_t levelColor = tr.state == TrackState::Muted ? blend565(MIX_ARC_LEVEL, BG, MUTED_WEIGHT) : MIX_ARC_LEVEL;
   float gains[2] = {tr.levelL, tr.levelR};
   for (int ch = 0; ch < 2; ch++) {

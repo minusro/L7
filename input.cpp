@@ -8,7 +8,7 @@ static constexpr uint32_t DOUBLE_TAP_MS = 200;      // B twice: reset the curren
 // The selected track's current cell back to its defaults: the whole loop as
 // the range, the filter open, volume at unity and balance centred.
 static void resetCell() {
-  if (selected == STATUS_ROW || tracks[selected].state == TrackState::Empty) return;
+  if (selected == STATUS_ROW || !hasClip(selected)) return;
   const Track &tr = tracks[selected];
   if (selectedCell == WAVE_CELL) {
     setRange(selected, 0, tr.loopBars * BEATS_PER_BAR);
@@ -62,7 +62,7 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
       if (pressed & m8::BTN_RIGHT) setRange(selected, (rs + 1) % loopBeats, rb);
       if (pressed & m8::BTN_UP && rb * 2 <= loopBeats) setRange(selected, rs, rb * 2);
       if (pressed & m8::BTN_DOWN && rb > 1) setRange(selected, rs, rb / 2);
-    } else if (selectedCell == FILTER_CELL && tracks[selected].state != TrackState::Empty) {
+    } else if (selectedCell == FILTER_CELL && hasClip(selected)) {
       // Filter: LEFT/RIGHT move the passband a step; moving stops where both
       // points would leave the range. UP/DOWN widen/narrow it: a step on each
       // side around its centre, or, while one point sits at its edge (the
@@ -93,7 +93,7 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
         setTrackFilter(selected, lo, hi);
         trackChanged(selected);
       }
-    } else if (selectedCell == MIX_CELL && tracks[selected].state != TrackState::Empty) {
+    } else if (selectedCell == MIX_CELL && hasClip(selected)) {
       // Volume and balance: UP/DOWN louder/quieter, RIGHT/LEFT towards the
       // right/left channel.
       const Track &tr = tracks[selected];

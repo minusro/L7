@@ -47,6 +47,10 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
 // Background of a cell in track row i (cell -1: the button). The selected row
 // highlights its current cell; its other cells and the button get a darker
 // grey; a recording track's waveform cell is dark red.
+// The track has a finished clip: until its recording is completely done, its
+// cells and button show it as empty (and its controls don't act).
+inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !recordingOn(i); }
+
 inline uint16_t cellBackground(int i, int cell) {
   if (cell == WAVE_CELL && recordingOn(i)) return BG_RECORDING;
   if (i != selected) return BG;

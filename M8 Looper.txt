@@ -35,7 +35,8 @@ no dropouts or overruns
 - remove rightmost black line in the playhead V
 - revert muted & selected track playhead to single dim line V
 - after recording, the playhead doesn't appear immediately after starting playback V
-- fix audio post recording gap (haven't heard it, only saw the playhead doesn't appear immediately) V
+- fix audio post recording gap (haven't heard it, only saw the playhead doesn't appear immediately) - verified working V
+- only show the "playing" cells when recording has actually completed V
 
 - 80s lcd ui
 

@@ -205,8 +205,9 @@ void updatePlayheads() {
   for (int i = 0; i < NUM_TRACKS; i++) {
     const Track &tr = tracks[i];
     WaveView &v = views[i];
-    // Recording started or ended: switch view now, not on the row's next redraw.
-    if (v.live != recordingOn(i)) drawWave(i, recordingOn(i));
+    // Recording started or ended: redraw the row now (its cells change too),
+    // not on its next turn.
+    if (v.live != recordingOn(i)) drawTrack(i);
     if (v.live) { updateLive(i); continue; }
     // Unmuted: white (black edge). Muted: none, but a line on the selected track.
     bool muted = tr.state == TrackState::Muted;

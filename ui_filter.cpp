@@ -19,8 +19,8 @@ void drawFilter(int i) {
   k.lo = tr.filterLo;
   k.hi = tr.filterHi;
   k.bg = cellBackground(i, FILTER_CELL);
-  k.line = tr.state == TrackState::Playing ? CURVE
-         : tr.state == TrackState::Muted ? blend565(CURVE, BG, MUTED_WEIGHT) : BG;   // empty: no curve
+  k.line = !hasClip(i) ? BG                                       // empty (or still recording): no curve
+         : tr.state == TrackState::Playing ? CURVE : blend565(CURVE, BG, MUTED_WEIGHT);
   if (drawn[i] && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = true;
   shown[i] = k;
@@ -51,7 +51,7 @@ void drawFilter(int i) {
   for (int c = 0; c < cell.w; c++) {
     for (int r = 0; r < ROW_BAND; r++) col[r] = k.bg;
     if (i == DIVIDER_ROW && k.bg == BG) col[dividerY() - band] = DIVIDER;
-    if (tr.state != TrackState::Empty) {
+    if (hasClip(i)) {
       for (int r = top - 1; r <= bottom; r++) {
         // 4x4 samples: on the line (within CURVE_LINE / 2), or under it (fill).
         int onLine = 0, under = 0;
