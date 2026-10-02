@@ -5,10 +5,9 @@
 
 // ---- Row buttons
 // Track rows show the track's state: an unmuted track play while the clock
-// runs, pause while it's stopped (black on the selected row's inverted
-// button, dim on the others); the recording track record, flashing while it
-// waits for the bar, steady while recording, then a flashing play while it
-// carries on to its length (white). Nothing on muted or empty tracks.
+// runs, pause while it's stopped (grey); the recording track record, flashing while it waits for the bar,
+// steady while recording, then a flashing play while it carries on to its
+// length (in the accent colour). Nothing on muted or empty tracks.
 // The status row's button (always inverted) shows what A does now on the
 // selected row: record (red) on an empty track; finish recording (play);
 // cancel a recording still waiting for its bar (X); mute (stop) or unmute
@@ -81,9 +80,11 @@ static int buttonIcon(int i) {
   return heldAction >= 0 ? heldAction : actionIcon();
 }
 
-// Icons: bitmaps of blocks ('#'), centred in the button. On an inverted
-// button (the selected track's, the status row's) they're black; elsewhere
-// the accent colour for a recording, grey for the others. When A records, the
+// Icons: bitmaps of blocks ('#'), centred in the button. On the status row's
+// inverted button they're black; elsewhere the accent colour for a
+// recording, grey otherwise (the selected track's too); on track rows
+// two blocks left of centre (clear of the grey line along the selected track's
+// button's right edge, its left corners cut). When A records, the
 // status button is in the accent colour. An action with nothing to act on
 // (paste, clipboard empty) is dark grey; while A is held the status button
 // turns back to black.
@@ -124,6 +125,10 @@ static uint16_t iconColor(int i, int icon) {
   return i == STATUS_ROW ? INK : DIM;
 }
 
+// The selected track's line: grey, as the selected cell's frame; light grey
+// while A alone is held (acting on the track).
+static uint16_t markColor() { return board.keys() == m8::BTN_EDIT ? LIGHT : DIM; }
+
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {
   static uint16_t px[BUTTON_W * ROW_BAND];
@@ -145,11 +150,17 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {
     }
   } else if (icon != ICON_NONE) {
     const Icon &ic = ICONS[icon];
-    int c0 = (cols - ic.w) / 2, r0 = (rows - ic.h) / 2;
+    int c0 = (cols - ic.w) / 2 - (i != STATUS_ROW ? 2 : 0), r0 = (rows - ic.h) / 2;
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);
   }
+  if (i == selected && i != STATUS_ROW)            // the selected track: a line at the right edge
+    for (int y = 0; y < ROW_BAND; y++)
+      for (int x = BUTTON_W - TRACK_MARK_W; x < BUTTON_W; x++) {
+        bool leftCorner = x < BUTTON_W - TRACK_MARK_W + PX && (y < PX || y >= ROW_BAND - PX);
+        if (!leftCorner) px[y * BUTTON_W + x] = markColor();
+      }
   auto &t = board.tft();
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(BUTTON_X, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin
@@ -161,7 +172,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {
 // The row's gaps and button (the cells: drawWave(), drawFilter(), drawMix(),
 // drawStatus()). Redrawn only when they change.
 void drawCells(int i) {
-  struct Key { int icon; uint16_t bg, iconColor; };
+  struct Key { int icon; uint16_t bg, iconColor, mark; };
   static Key shown[ROWS];
   static uint32_t drawn[ROWS];                     // uiGeneration when last drawn whole
   Key k;
@@ -169,6 +180,7 @@ void drawCells(int i) {
   k.icon = buttonIcon(i);
   k.bg = buttonBackground(i, k.icon);
   k.iconColor = iconColor(i, k.icon);
+  k.mark = i == selected ? markColor() : BG;
   bool first = drawn[i] != uiGeneration;
   if (!first && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;
@@ -176,6 +188,7 @@ void drawCells(int i) {
   auto &t = board.tft();
   if (first && !panelOpen())                         // (the panel's dimming covers them meanwhile)
     for (int c = 0; c < CELLS; c++) {                // the gaps after each cell
+      if (i == STATUS_ROW && c == SCENE_CELL) continue;   // (inside the scene's cell there)
       int from = CELL[c].x + CELL[c].w, to = c + 1 < CELLS ? CELL[c + 1].x : BUTTON_X;
       t.fillRect(from, bgTop(i), to - from, bgHeight(i), BG);
     }

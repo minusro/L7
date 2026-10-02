@@ -18,17 +18,25 @@ constexpr int sliceTop(int k) { return LAYOUT_TOP + k * SLICE_H; }
 constexpr int sliceCentredTop(int k, int h) { return sliceTop(k) + (SLICE_H - h) / 2; }
 // Each track row: three cells, then the button (a square), separated by
 // one-block gaps: the waveform, the filter (its response curve), then volume
-// and balance. On the selected row the current cell gets a white frame, the
-// others a dim one, and the button is inverted.
+// and balance. The selected cell gets a grey frame; the selected track a
+// grey line down the screen's right edge (TRACK_MARK_W px, in its button).
 //   waveform: x 0-131   filter: x 134-211   volume: x 214-291   button: x 294-319
 struct Cell { int x, w; };
 constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left to right
 constexpr Cell CELL[CELLS] = {{0, 132}, {134, 78}, {214, 78}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
+constexpr int TRACK_MARK_W = 2 * PX;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
-// The status row below the tracks has the same cells; its first, under the
-// waveforms, holds the tempo (left) and the clock (right).
-constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, TEMPO_CELL = WAVE_CELL;
+// The status row below the tracks: its first cell, under the waveforms,
+// holds the tempo (left) and the clock (right); the second, spanning the
+// filter and volume columns, the scene.
+constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, TEMPO_CELL = WAVE_CELL, SCENE_CELL = 1;
+constexpr Cell SCENE_BOX = {CELL[1].x, CELL[2].x + CELL[2].w - CELL[1].x};
+// The cells a row has (the status row two: the volume column is the scene's).
+inline int cellCount(int i) { return i == STATUS_ROW ? SCENE_CELL + 1 : CELLS; }
+// The selected cell in row i's terms (on the status row, the volume column
+// is the scene's).
+inline int selectedCellIn(int i) { return min(selectedCell, cellCount(i) - 1); }
 
 inline int rowTop(int i) { return sliceCentredTop(i, ROW_BAND); }
 // A row's backgrounds: its band, the first and last rows also out to the
@@ -47,18 +55,23 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
 inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !recordingOn(i); }
 
 // Background of a cell in row i (cell -1: the button): black, but inverted
-// for the selected row's button and the status row's (white), and the
-// waveform cell of a recording track (the accent).
+// for the status row's button (white) and the waveform cell of a recording
+// track (the accent).
 inline uint16_t cellBackground(int i, int cell) {
   if (cell == WAVE_CELL && recordingOn(i)) return ACCENT;
-  if (cell == -1 && (i == STATUS_ROW || i == selected)) return INK;
+  if (cell == -1 && i == STATUS_ROW) return INK;
   return BG;
 }
-// Its frame: white round the selected cell, dark grey round the selected
-// row's others, none elsewhere (BG).
+// Its frame: grey round the selected cell (light grey while B alone is held:
+// B + arrows edit it), none elsewhere (BG).
 inline uint16_t cellFrame(int i, int cell) {
-  if (i != selected) return BG;
-  return cell == selectedCell ? INK : DARK;
+  if (i != selected || cell != selectedCellIn(i)) return BG;
+  return board.keys() == m8::BTN_OPT ? LIGHT : DIM;
+}
+// The cell is being edited: it's the selected one and B is held (B + arrows
+// change it). Its markings then show in the accent colour.
+inline bool editingCell(int i, int cell) {
+  return i == selected && cell == selectedCell && (board.keys() & m8::BTN_OPT);
 }
 // Does the frame (one block wide, corners cut) cover pixel (x, y) of a cell
 // w x h px? Corner blocks are left out, for rounded corners.

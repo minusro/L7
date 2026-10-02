@@ -6,14 +6,17 @@
 // frame column on either side. Rows of blocks (13 in the band):
 //   0, 12   the frame (selected row); on the last track row 12 is the
 //           divider when there's no frame
-//   1       the loop range: a bracket over it, its ends down to row 2
+//   1       the loop range: a line over it
 //   2 - 10  the waveform: a line along row 6, the peaks reaching up to 4
 //           blocks above and below it
-//   11      bar ticks
+//   11      the loop range again: a line under it, a gap where a bar
+//           starts; outside the range, bar ticks
+// The start position: a gap in both lines (a black block on each).
 // The waveform is white inside the loop range and dark grey outside; on a
-// muted clip the range is 50% grey and the rest dotted dark grey. The bracket,
-// the start position (a dotted line) and the bar ticks (dark grey) only show
-// on the selected track. The playhead inverts its column (white on black,
+// muted clip the range is 50% grey (the rest dark grey too). The range's
+// lines, the start position and the bar ticks (dark grey) only show while
+// the waveform cell is selected: the lines white (muted: grey), in the accent
+// colour while B is held (B + arrows change the range). The playhead inverts its column (white on black,
 // black on white); on a muted clip, only when selected, it's a grey line. A
 // recording track's cell is in the accent colour, its waveform growing in
 // black (live view), the record head inverting its column too.
@@ -31,9 +34,10 @@ struct WaveView {
   bool live = false;                               // recording in progress: live view
   uint16_t bg = BG, frame = BG;
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
-  int markCol = -1, beginCol = -1, endCol = -1;    // start position, range's first and last columns; -1: none
+  int markCol = -1;                                // the start position's column; -1: none
   int playCol = -1;                                // playhead / record head; -1: none
   uint16_t headColor = 0;                          // PLAYHEAD: inverts the column; else a line this colour
+  uint16_t marks = BG;                             // the range's lines and start position: their colour; BG: none
   // live view
   uint32_t liveBars = 0;
   int liveFilled = 0;                              // columns with recorded audio
@@ -76,7 +80,6 @@ static void drawColumn(int i, int bc) {
     col[BAND_ROWS - 1] = DIVIDER;
   }
   int c = bc - 1;                                  // waveform column
-  bool selectedTrack = i == selected;
   if (c >= 0 && c < WAVE_COLS && v.visible) {
     bool muted = !v.live && tr.state == TrackState::Muted;
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
@@ -84,15 +87,18 @@ static void drawColumn(int i, int bc) {
       uint16_t ink = v.live ? BG : !in ? DARK : muted ? DIM : INK;   // (live: on the coloured cell)
       int h = (columnLevel(v.live ? v.liveData : tr.overview, c) * WAVE_REACH + 127) / 255;
       for (int r = MID_ROW - h; r <= MID_ROW + h; r++)
-        if (in || !muted || (c + r) % 2 == 0) col[r] = ink;   // muted, outside: every other block
+        col[r] = ink;
     }
-    if (selectedTrack && !v.live) {
-      uint16_t mark = muted ? DIM : INK;
-      if (in) col[1] = mark;                                      // the bracket
-      if (c == v.beginCol || c == v.endCol) col[2] = mark;        // its ends
-      if (isBarColumn(tr.loopBars, c)) col[TICK_ROW] = DARK;
-      if (c == v.markCol)                                         // the start position: dotted, inverting
-        for (int r = MID_ROW - WAVE_REACH; r < TICK_ROW; r += 2) col[r] = col[r] == v.bg ? mark : v.bg;
+    if (v.marks != BG && !v.live) {
+      uint16_t mark = v.marks;
+      bool bar = isBarColumn(tr.loopBars, c);
+      if (in) {                                                   // the range's lines, above and below
+        col[1] = mark;
+        if (!bar) col[TICK_ROW] = mark;                           // (bar starts: a gap)
+      } else if (bar) {
+        col[TICK_ROW] = DARK;                                     // outside it: bar ticks
+      }
+      if (c == v.markCol) col[1] = col[TICK_ROW] = v.bg;          // the start position: a gap in both lines
     }
     if (c == v.playCol) {                                         // on top: the playhead
       for (int r = 1; r < BAND_ROWS - 1; r++)
@@ -115,8 +121,11 @@ void drawWave(int i, bool recordingHere) {
   uint32_t rs = 0, rb = 0;
   if (tr.state != TrackState::Empty) trackRange(i, rs, rb);
   uint16_t bg = cellBackground(i, WAVE_CELL), frame = cellFrame(i, WAVE_CELL);
+  uint16_t marks = i != selected || selectedCell != WAVE_CELL ? BG
+                 : editingCell(i, WAVE_CELL) ? ACCENT : tr.state == TrackState::Muted ? DIM : INK;
   if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
-      v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.frame == frame)
+      v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.frame == frame &&
+      v.marks == marks)
     return;
   v.drawn = uiGeneration;
   v.version = tr.overviewVersion;
@@ -126,14 +135,13 @@ void drawWave(int i, bool recordingHere) {
   v.rb = rb;
   v.bg = bg;
   v.frame = frame;
+  v.marks = marks;
   v.live = recordingHere;
   v.visible = recordingHere || tr.state != TrackState::Empty;
   if (!v.visible || v.live) v.playCol = -1;
   v.rangeFirst = 0;
   v.rangeCols = 0;
   v.markCol = -1;
-  v.beginCol = -1;
-  v.endCol = -1;
   if (v.live) {
     v.liveBars = 0;                                // updatePlayheads() fills it in
     v.liveFilled = 0;
@@ -143,9 +151,6 @@ void drawWave(int i, bool recordingHere) {
     int end = (int)(((rs + rb) * WAVE_COLS + loopBeats - 1) / loopBeats);   // unwrapped
     v.rangeCols = constrain(end - v.rangeFirst, 1, WAVE_COLS);
     v.markCol = startPosition(loopBeats, rs, rb) * WAVE_COLS / loopBeats;
-    v.beginCol = v.rangeFirst;
-    // The range's last column; a whole-loop range's ends meet: one tick.
-    v.endCol = v.rangeCols >= WAVE_COLS ? v.beginCol : (v.rangeFirst + v.rangeCols - 1) % WAVE_COLS;
   }
   for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
 }

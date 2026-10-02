@@ -258,8 +258,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   } else {
     if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
     if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
-    if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell--;
-    if (pressed & m8::BTN_RIGHT && selectedCell < CELLS - 1) selectedCell++;
+    // (On the status row the volume column belongs to the scene cell.)
+    if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell = selectedCellIn(selected) - 1;
+    if (pressed & m8::BTN_RIGHT && selectedCell < cellCount(selected) - 1) selectedCell++;
   }
 
   // START: start from 1.1.1 / stop. With SHIFT: start from 1.1.1 on every

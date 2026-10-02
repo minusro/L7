@@ -72,6 +72,8 @@ static void writePng(const std::string &path) {
 
 // Draws the whole screen as the looper would after a full redraw.
 static void render(const std::string &path) {
+  simMicros += 5000000;                            // time passes: the meters fall to the current peaks
+  for (int t = 0; t < NUM_TRACKS; t++) { tracks[t].peakL = 0.02f + 0.03f * t; tracks[t].peakR = 0.015f + 0.025f * t; }
   board.tft().fillScreen(BG);
   uiGeneration++;
   for (int i = 0; i < ROWS; i++) drawTrack(i);
@@ -94,7 +96,6 @@ int main(int argc, char **argv) {
   setTrackMix(4, 24, -6);
   setTrack(6, TrackState::Playing, 8, 28, 8, 6, 0.5f);   // a range across the loop's end
   setTrackFilter(6, 0, 14);
-  for (int t = 0; t < NUM_TRACKS; t++) { tracks[t].peakL = 0.3f + 0.08f * t; tracks[t].peakR = 0.25f + 0.07f * t; }
 
   selected = 1;
   selectedCell = WAVE_CELL;
@@ -105,9 +106,27 @@ int main(int argc, char **argv) {
   selected = 4;
   selectedCell = MIX_CELL;
   render(out + "/ui_mix.png");
+  // B held on each kind of cell: what B + arrows change shows in the accent colour.
+  board.heldKeys = m8::BTN_OPT;
+  selected = 1;
+  selectedCell = WAVE_CELL;
+  render(out + "/ui_wave_edit.png");
+  selected = 3;
+  selectedCell = FILTER_CELL;
+  render(out + "/ui_filter_edit.png");
+  selected = 4;
+  selectedCell = MIX_CELL;
+  render(out + "/ui_mix_edit.png");
+  board.heldKeys = 0;
   selected = STATUS_ROW;
   selectedCell = TEMPO_CELL;
   render(out + "/ui_status.png");
+  selectedCell = MIX_CELL;                         // from a volume cell down to the status row: the scene's cell
+  render(out + "/ui_status_scene.png");
+  selectedCell = TEMPO_CELL;
+  bpm = 85.5f;                                     // a tempo below 100
+  render(out + "/ui_status_slow.png");
+  bpm = 120.0f;
   selected = 5;                                    // an empty track: A records
   selectedCell = WAVE_CELL;
   render(out + "/ui_empty.png");

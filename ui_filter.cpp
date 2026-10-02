@@ -3,8 +3,10 @@
 
 // ---- Filter cell: the response of the track's highpass + lowpass pair over
 // 20 Hz - 20 kHz (log), 0 dB at the top to -CURVE_DB at the bottom, in
-// blocks: a line one block thick (white while the clip plays, grey when
-// muted) filled dark grey under it. Nothing on an empty track.
+// blocks: dark grey under it, and while the cell is selected the line
+// itself, one block thick: white if the clip plays, in the accent colour while
+// B is held (B + arrows change the filter; a muted clip's line shows only
+// then). Nothing on an empty track.
 // The cell is built in a buffer and sent at once (no flash).
 static constexpr int CELL_COLS = CELL[FILTER_CELL].w / PX;      // 39, the frame's included
 static constexpr int GRAPH_COLS = CELL_COLS - 2;
@@ -13,7 +15,7 @@ static constexpr int TOP_ROW = 2, BOTTOM_ROW = 10;              // 0 dB, -CURVE_
 static constexpr float CURVE_DB = 30;
 
 void drawFilter(int i) {
-  struct Key { int8_t lo, hi; uint16_t frame, line; };
+  struct Key { int8_t lo, hi; bool clip; uint16_t frame, line; };
   static Key shown[NUM_TRACKS];
   static uint32_t drawn[NUM_TRACKS];               // uiGeneration when last drawn
   const Track &tr = tracks[i];
@@ -22,8 +24,10 @@ void drawFilter(int i) {
   k.lo = tr.filterLo;
   k.hi = tr.filterHi;
   k.frame = cellFrame(i, FILTER_CELL);
-  k.line = !hasClip(i) ? BG                        // empty (or still recording): no curve
-         : tr.state == TrackState::Playing ? INK : DIM;
+  k.clip = hasClip(i);                             // empty (or still recording): nothing
+  bool editing = editingCell(i, FILTER_CELL);
+  k.line = !k.clip || i != selected || selectedCell != FILTER_CELL ? BG
+         : editing ? ACCENT : tr.state == TrackState::Playing ? INK : BG;   // (muted: only while edited)
   if (drawn[i] == uiGeneration && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;
   shown[i] = k;
@@ -44,7 +48,7 @@ void drawFilter(int i) {
       blocks[BAND_ROWS - 1][c] = DIVIDER;
     }
   }
-  if (k.line != BG) {
+  if (k.clip) {
     for (int c = 0; c < GRAPH_COLS; c++) {
       // The line: this column's row, stretched halfway to its neighbours'
       // so it stays joined where it's steep.
@@ -52,8 +56,10 @@ void drawFilter(int i) {
       if (c > 0) { lo = min(lo, (y[c] + y[c - 1]) / 2); hi = max(hi, (y[c] + y[c - 1]) / 2); }
       if (c < GRAPH_COLS - 1) { lo = min(lo, (y[c] + y[c + 1]) / 2); hi = max(hi, (y[c] + y[c + 1]) / 2); }
       int r0 = (int)lroundf(lo), r1 = (int)lroundf(hi);
-      for (int r = max(r0, TOP_ROW); r <= min(r1, BOTTOM_ROW); r++) blocks[r][c + 1] = k.line;
-      for (int r = max(r1 + 1, TOP_ROW); r <= BOTTOM_ROW; r++) blocks[r][c + 1] = DARK;   // under it
+      if (k.line != BG)
+        for (int r = max(r0, TOP_ROW); r <= min(r1, BOTTOM_ROW); r++) blocks[r][c + 1] = k.line;
+      int under = k.line != BG ? r1 + 1 : (int)lroundf(y[c]);   // (no line: the fill from the curve down)
+      for (int r = max(under, TOP_ROW); r <= BOTTOM_ROW; r++) blocks[r][c + 1] = DARK;
     }
   }
   static uint16_t px[ROW_BAND * CELL[FILTER_CELL].w];

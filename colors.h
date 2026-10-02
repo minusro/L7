@@ -15,11 +15,12 @@ constexpr uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) { return (uint16_t)((
 
 // The palette: black, two greys, white, and one accent colour.
 constexpr uint16_t BG = rgb565(0, 0, 0);            // black: the background
-constexpr uint16_t DARK = rgb565(64, 64, 64);       // 25% grey: in the background (outside the loop range,
+constexpr uint16_t DARK = rgb565(32, 32, 32);       // 12.5% grey: in the background (outside the loop range,
                                                     //   the row's other frames, fills, unlit arcs)
 constexpr uint16_t DIM = rgb565(128, 128, 128);     // 50% grey: inactive (muted clips, idle icons and text)
+constexpr uint16_t LIGHT = rgb565(192, 192, 192);   // 75% grey: the selection's markers while B or A is held
 constexpr uint16_t INK = rgb565(255, 255, 255);     // white: what's active, selected, playing
-constexpr uint16_t ACCENT = rgb565(255, 176, 0);    // amber: recording, and a scene change on its way
+constexpr uint16_t ACCENT = rgb565(255, 150, 0);    // amber: recording, and a scene change on its way
 
 // ---- Roles
 constexpr uint16_t DIVIDER = DARK;           // line above the status row
