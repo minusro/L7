@@ -448,7 +448,9 @@ static void drawIcon(int icon, float cx, float cy, uint16_t color, uint16_t bg) 
 }
 
 // The row's cells other than the waveform (which drawWave() handles): the two
-// placeholder cells, the gaps and the button. Redrawn only when they change.
+// status row's cells, the gaps and the button. Each part is redrawn only when
+// it changes: refilling a cell that didn't change would blank what's drawn on
+// it (the status text) until its next redraw.
 static void drawCells(int i) {
   struct Key { int icon; uint16_t bg0, bg1, bg2, bgButton, iconColor; };
   static Key shown[ROWS];
@@ -461,22 +463,28 @@ static void drawCells(int i) {
   k.bg2 = i == STATUS_ROW ? cellBackground(i, TEMPO_CELL) : 0;   // tracks: drawWave()'s job
   k.bgButton = cellBackground(i, -1);
   k.iconColor = iconColor(i, k.icon);
-  if (drawn[i] && !memcmp(&k, &shown[i], sizeof k)) return;
+  bool first = !drawn[i];
+  if (!first && !memcmp(&k, &shown[i], sizeof k)) return;
+  const Key old = shown[i];
   drawn[i] = true;
   shown[i] = k;
   auto &t = board.tft();
   int y = rowTop(i), y0 = bgTop(i), h = bgHeight(i);
-  if (i == STATUS_ROW) t.fillRect(CELL[0].x, y0, CELL[0].w, h, k.bg0);   // tracks: drawFilter()'s job
-  if (i == STATUS_ROW) t.fillRect(CELL[1].x, y0, CELL[1].w, h, k.bg1);   // tracks: drawMix()'s job
-  if (i == STATUS_ROW) t.fillRect(CELL[2].x, y0, CELL[2].w, h, k.bg2);
-  for (int c = 0; c < CELLS; c++)                    // 1 px gaps after each cell
-    t.drawFastVLine(CELL[c].x + CELL[c].w, y0, h, GAP);
-  t.fillRect(BUTTON_X, y0, BUTTON_W, h, k.bgButton);
-  if (i == DIVIDER_ROW) {                            // broken at the gaps (the waveform: drawColumn)
-    if (k.bgButton == BG) t.drawFastHLine(BUTTON_X, dividerY(), BUTTON_W, DIVIDER);
+  if (i == STATUS_ROW) {                             // tracks: drawFilter(), drawMix(), drawWave()
+    if (first || k.bg0 != old.bg0) t.fillRect(CELL[0].x, y0, CELL[0].w, h, k.bg0);
+    if (first || k.bg1 != old.bg1) t.fillRect(CELL[1].x, y0, CELL[1].w, h, k.bg1);
+    if (first || k.bg2 != old.bg2) t.fillRect(CELL[2].x, y0, CELL[2].w, h, k.bg2);
   }
-  if (k.icon != ICON_NONE)
-    drawIcon(k.icon, BUTTON_X + BUTTON_W / 2, y + ROW_BAND / 2, k.iconColor, k.bgButton);
+  if (first)
+    for (int c = 0; c < CELLS; c++)                  // 1 px gaps after each cell
+      t.drawFastVLine(CELL[c].x + CELL[c].w, y0, h, GAP);
+  if (first || k.bgButton != old.bgButton || k.icon != old.icon || k.iconColor != old.iconColor) {
+    // The button: its background, then the icon (a small area: no visible flash).
+    t.fillRect(BUTTON_X, y0, BUTTON_W, h, k.bgButton);
+    if (i == DIVIDER_ROW && k.bgButton == BG) t.drawFastHLine(BUTTON_X, dividerY(), BUTTON_W, DIVIDER);
+    if (k.icon != ICON_NONE)
+      drawIcon(k.icon, BUTTON_X + BUTTON_W / 2, y + ROW_BAND / 2, k.iconColor, k.bgButton);
+  }
 }
 
 // ---- Filter cell: the response of the track's highpass + lowpass pair over
@@ -962,9 +970,9 @@ void loop() {
   if (millis() - lastDraw >= 30) {
     lastDraw = millis();
     debugStage = "screen";
-    drawStatus();                                    // every pass: the clock shows steps
     if (selected != STATUS_ROW) drawCells(selected);   // every pass: its icon may flash
     drawCells(STATUS_ROW);                           // the transport may have started/stopped
+    drawStatus();                                    // every pass: the clock shows steps
     updatePlayheads();
     for (int i = 0; i < NUM_TRACKS; i++) drawMix(i);   // the meters
     drawTrack(nextRow);

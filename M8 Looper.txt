@@ -19,7 +19,7 @@ no dropouts or overruns
 - draw the start points behind the playhead V
 - don't draw start points for muted clips unless they're selected V
 - loop areas should be able to straddle the loop boundary (left and right halves)
-- tempo label flicker
+- tempo label flicker V
 - switch tempo and clock labels, add play icon between, and use the action button to tap tempo
 - 80s lcd ui
 - move back channel content into front channel content when balancing towards one
