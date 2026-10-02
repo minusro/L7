@@ -345,7 +345,7 @@ bool storageMayWrite() {
 }
 
 // Lead time for a change while playing: it goes on the first quarter beat
-// (scene changes: bar line or half bar) at least this far ahead, leaving time to open the
+// (scene changes: bar line) at least this far ahead, leaving time to open the
 // new samples and read their starts. A planned switch can still be changed
 // up to PLAN_LATE_MS before it.
 static constexpr uint32_t SWITCH_LEAD_MS = 150, PLAN_LATE_MS = 50;
@@ -361,17 +361,10 @@ static int64_t nowSamples(int64_t &spb) {
 }
 static int64_t quarterTime(int32_t q, int64_t spb) { return (int64_t)(q / 4) * spb + (q % 4) * spb / 4; }
 
-// Scene changes go on a bar line or halfway through a bar, whichever comes first.
-static constexpr int32_t SCENE_GRID_BEATS = BEATS_PER_BAR / 2;
-
-// The first quarter beat (scene changes: point of that grid) at least
-// SWITCH_LEAD_MS ahead.
-static int32_t quarterAfterLead(bool scene) {
+// The first quarter beat, or bar line, at least SWITCH_LEAD_MS ahead.
+static int32_t quarterAfterLead(bool bar) {
   int64_t spb, now = nowSamples(spb) + msToSamples(SWITCH_LEAD_MS);
-  if (scene) {
-    int64_t grid = SCENE_GRID_BEATS * spb;
-    return (int32_t)((now + grid - 1) / grid) * 4 * SCENE_GRID_BEATS;
-  }
+  if (bar) return (int32_t)((now + 4 * spb - 1) / (4 * spb)) * 4 * BEATS_PER_BAR;
   return (int32_t)(now * 4 / spb) + 1;
 }
 
@@ -608,7 +601,7 @@ static void serviceChanges() {
 }
 
 // Scene changes (see storage.h).
-static int32_t sceneQ = -1;                      // the latest one's switch point, in quarter beats
+static int32_t sceneQ = -1;                      // the latest one's bar line, in quarter beats
 static bool inSceneChange = false;
 
 static bool sceneChangeOn() {
@@ -620,7 +613,7 @@ int32_t beginSceneChange() {
   inSceneChange = true;
   if (!transport.running) return -1;
   int64_t spb, now = nowSamples(spb);
-  // Stepping on before the last one happened: the same point, if there's time.
+  // Stepping on before the last one happened: the same bar line, if there's time.
   if (!(sceneChangeOn() && sceneQ >= 0 && quarterTime(sceneQ, spb) - now >= msToSamples(PLAN_LATE_MS)))
     sceneQ = quarterAfterLead(true);
   return sceneQ / 4;

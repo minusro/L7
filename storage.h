@@ -22,13 +22,13 @@ TrackUnit unitOf(int t);
 // gone (the track is left empty) or it's recording.
 bool setTrackUnit(int t, const TrackUnit &u);
 // Scene changes while playing: the setTrackUnit() calls between these wait
-// for one point, the first bar line or half bar at least ~150 ms ahead (time to open the new
+// for one bar line, the first at least ~150 ms ahead (time to open the new
 // samples and read their starts), and take effect together there. Stepping on
-// before it reuses it (unless it's under ~50 ms away). Returns that point's
-// transport beat (-1: stopped, at once).
+// before it reuses it (unless it's under ~50 ms away). Returns that bar
+// line's transport beat (-1: stopped, at once).
 int32_t beginSceneChange();
 void endSceneChange();
-bool sceneChangeWaiting();             // a scene change hasn't reached its switch point yet
+bool sceneChangeWaiting();             // a scene change hasn't reached its bar line yet
 // A write may go to the card now (stopped, or the playback buffers are full);
 // false also asks for the buffers to be topped up first.
 bool storageMayWrite();

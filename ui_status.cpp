@@ -49,7 +49,7 @@ void drawStatus() {
   t.setTextSize(HEADER_SCALE);
   uint16_t bg = cellBackground(STATUS_ROW, TEMPO_CELL);
   char text[24];
-  // A scene's tempo waiting for its switch point: the one playing until then.
+  // A scene's tempo waiting for its bar line: the one playing until then.
   noInterrupts();
   bool tempoWaiting = transport.pendingSpb && transport.spbAtBeat >= 0;
   uint32_t playingSpb = transport.spb;
@@ -72,7 +72,7 @@ void drawStatus() {
   // The scene, in the next cell: "SCN 3/7"; the empty scene and the copy
   // after the last (not stored yet) with a star, in grey. Flashing with the
   // beat (white, then dim, each beat) while another scene is selected but not
-  // there yet: SHIFT still held on it, or the change waiting for its switch point.
+  // there yet: SHIFT still held on it, or the change waiting for its bar line.
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;
   snprintf(text, sizeof text, "SCN %d%s/%d", scene, temporary ? "*" : "", count);
