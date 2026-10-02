@@ -19,8 +19,10 @@ void uiRefresh() {
   static int nextRow = 0;
   if (millis() - lastDraw >= 30) {
     lastDraw = millis();
-    if (selected != STATUS_ROW) drawCells(selected);   // every pass: its icon may flash
-    drawCells(STATUS_ROW);                           // the transport may have started/stopped
+    // Every pass, all rows' buttons (only what changed is redrawn): the
+    // recording track's icon flashes; the status row's follows SHIFT, the
+    // selection and the transport.
+    for (int i = 0; i < ROWS; i++) drawCells(i);
     drawStatus();                                    // every pass: the clock shows steps
     updatePlayheads();
     for (int i = 0; i < NUM_TRACKS; i++) drawMix(i);   // the meters

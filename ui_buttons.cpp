@@ -2,15 +2,19 @@
 #include "ui.h"
 
 // ---- Row buttons
-// Tracks with a clip show a toggle on every row: a filled play triangle while
-// the clip plays, an outline when muted; white on the selected row, dark grey
-// on the others. Unselected empty tracks show nothing; the selected one shows record (red), then play while recording
-// (the press ends the recording and plays the clip). Both flash while waiting
-// for the recording to start (next bar) or to finish (its full length).
-// The status row shows the transport: play while running, stop while
-// stopped; grey, white when the row is selected (A then starts from 1.1.1).
+// Track rows show the track's state: an unmuted track play while the clock
+// runs, pause while it's stopped (white on the selected row, grey on the
+// others); the recording track record, flashing while it waits for the bar,
+// steady while recording, then a flashing play while it carries on to its
+// length (white). Nothing on muted or empty tracks.
+// The status row's button (always highlighted) shows what A does now on the
+// selected row: record (red) on an empty track; finish recording (play);
+// cancel a recording still waiting for its bar (X); mute (stop) or unmute
+// (play); with SHIFT held, delete the clip (X). On the status row itself:
+// start (play) or stop the transport; with SHIFT, start from 1.1.1 (play).
+// While A is held it keeps showing the command it ran, dimmed.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_TOGGLE_OFF, ICON_TOGGLE_ON };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -23,28 +27,53 @@ static bool flashOn() {
   return ((uint64_t)sampleInBeat * phases / spb) % 2 == 0;
 }
 
-static int buttonIcon(int i) {
-  if (i == STATUS_ROW) return transport.running ? ICON_PLAY : ICON_STOP;   // the transport's state
-  if (i == selected) {
-    if (recordingOn(i)) {
-      Recording::Mode mode = recording.mode;
-      if (mode == Recording::Running) return ICON_PLAY;
-      if (!flashOn()) return ICON_NONE;
-      return mode == Recording::WaitBar ? ICON_RECORD : ICON_PLAY;
+// What A does on the selected row (mirrors onKeys()).
+static int actionIcon() {
+  bool shift = board.keys() & m8::BTN_SHIFT;
+  if (selected == STATUS_ROW) return transport.running && !shift ? ICON_STOP : ICON_PLAY;
+  const Track &tr = tracks[selected];
+  if (shift) return hasClip(selected) ? ICON_DELETE : ICON_NONE;
+  if (recordingOn(selected)) {
+    switch (recording.mode) {
+      case Recording::WaitBar: return ICON_DELETE;   // cancels it
+      case Recording::Running: return ICON_PLAY;     // finishes it
+      default:                 return ICON_NONE;     // already finishing
     }
-    if (tracks[i].state == TrackState::Empty) return ICON_RECORD;
+  }
+  if (tr.state == TrackState::Empty) return ICON_RECORD;
+  return tr.state == TrackState::Playing ? ICON_STOP : ICON_PLAY;   // mute / unmute
+}
+
+// The command A ran, shown dimmed while A is still held (-1: none).
+static int heldAction = -1;
+
+void noteActionPress() { heldAction = actionIcon(); }
+
+// The track's own state.
+static int trackIcon(int i) {
+  if (recordingOn(i)) {
+    switch (recording.mode) {
+      case Recording::WaitBar: return flashOn() ? ICON_RECORD : ICON_NONE;
+      case Recording::Running: return ICON_RECORD;
+      default:                 return flashOn() ? ICON_PLAY : ICON_NONE;
+    }
   }
   if (!hasClip(i)) return ICON_NONE;
-  return tracks[i].state == TrackState::Playing ? ICON_TOGGLE_ON : ICON_TOGGLE_OFF;
+  if (tracks[i].state == TrackState::Muted) return ICON_NONE;
+  return transport.running ? ICON_PLAY : ICON_PAUSE;
+}
+
+static int buttonIcon(int i) {
+  if (i != STATUS_ROW) return trackIcon(i);
+  if (heldAction >= 0 && !(board.keys() & m8::BTN_EDIT)) heldAction = -1;   // A released
+  return heldAction >= 0 ? heldAction : actionIcon();
 }
 
 static uint16_t iconColor(int i, int icon) {
-  switch (icon) {
-    case ICON_RECORD:     return ICON_RECORD_COLOR;
-    case ICON_TOGGLE_ON:
-    case ICON_TOGGLE_OFF: return i == selected ? ICON_SELECTED : ICON_TOGGLE_IDLE;
-    default:              return i == selected ? ICON_SELECTED : ICON_TRANSPORT_IDLE;   // play/stop
-  }
+  uint16_t c = i == STATUS_ROW ? (icon == ICON_RECORD ? ICON_RECORD_COLOR : ICON_SELECTED)   // record: red
+             : i == selected || recordingOn(i) ? ICON_SELECTED : ICON_IDLE;
+  if (i == STATUS_ROW && heldAction >= 0) c = blend565(c, cellBackground(i, -1), ICON_PRESSED_WEIGHT);   // A held
+  return c;
 }
 
 
@@ -53,8 +82,8 @@ static uint16_t iconColor(int i, int icon) {
 static constexpr float ICON_SIZE = 10.5f;
 static constexpr int ICON_REACH = 7;               // drawn pixels: centre +- this
 
-// Toggle: an 8 px tall play triangle, filled (on) or a 1 px outline (off).
-static constexpr float TOGGLE_HALF = 4, TOGGLE_STROKE = 1;
+// Delete: an X, 8 px across, 1.5 px strokes.
+static constexpr float DELETE_HALF = 3.5f, DELETE_STROKE = 1.5f;
 
 // Distance from (dx, dy) inside a right-pointing play triangle of half-height
 // h (negative outside).
@@ -74,10 +103,14 @@ static bool onIcon(int icon, float dx, float dy) {
     case ICON_RECORD: return dx * dx + dy * dy <= 0.5625f * h * h;   // 75% of the box
     case ICON_STOP:   return max(fabsf(dx), fabsf(dy)) <= h;
     case ICON_PLAY:   return playTriangle(dx, dy, h) >= 0;
-    case ICON_TOGGLE_OFF:
-    case ICON_TOGGLE_ON: {
-      float d = playTriangle(dx, dy, TOGGLE_HALF);
-      return d >= 0 && (icon == ICON_TOGGLE_ON || d < TOGGLE_STROKE);
+    case ICON_PAUSE: {                             // two bars
+      float ax = fabsf(dx);
+      return fabsf(dy) <= h && ax >= 0.25f * h && ax <= 0.8f * h;
+    }
+    case ICON_DELETE: {                            // X: two diagonal strokes
+      const float arm = DELETE_HALF, stroke = DELETE_STROKE / 2;
+      if (fabsf(dx) > arm + stroke || fabsf(dy) > arm + stroke) return false;
+      return fabsf(dx - dy) <= stroke * 1.41421f || fabsf(dx + dy) <= stroke * 1.41421f;
     }
     default: return false;
   }

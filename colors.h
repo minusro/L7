@@ -35,9 +35,9 @@ constexpr uint16_t PLAYHEAD_EDGE = 0x0000;   // black: the line on its left
 
 // ---- Row buttons
 constexpr uint16_t ICON_SELECTED = 0xFFFF;   // white: icons on the selected row
-constexpr uint16_t ICON_RECORD_COLOR = 0xF800;   // red: record
-constexpr uint16_t ICON_TOGGLE_IDLE = 0x6318;    // grey ~99: track on/off on unselected rows
-constexpr uint16_t ICON_TRANSPORT_IDLE = 0x8C51; // grey ~140: play/stop when the status row isn't selected
+constexpr uint16_t ICON_RECORD_COLOR = 0xF800;   // red: record, on the status row (A records)
+constexpr uint16_t ICON_IDLE = 0x630C;           // grey ~99: track state icons on unselected rows
+constexpr uint8_t ICON_PRESSED_WEIGHT = 96;      // the status row's icon while A is held: dimmed to ~38%
 
 // ---- Filter curve
 constexpr uint16_t CURVE = WAVE_IN;          // playing clips (muted: MUTED_WEIGHT)

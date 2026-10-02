@@ -118,6 +118,7 @@ static void onKeys(uint8_t keys, uint8_t pressed) {
 
   // START (or A on the status row): start from 1.1.1 / stop. With SHIFT:
   // start from 1.1.1 on every press, running or not.
+  if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
   bool transportKey = (pressed & m8::BTN_PLAY) || (pressed & m8::BTN_EDIT && onStatus);
   bool toggleTransport = transportKey && !shift;
   if (transportKey && shift) transportRestart();

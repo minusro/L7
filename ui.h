@@ -53,6 +53,7 @@ inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !rec
 
 inline uint16_t cellBackground(int i, int cell) {
   if (cell == WAVE_CELL && recordingOn(i)) return BG_RECORDING;
+  if (i == STATUS_ROW && cell == -1) return BG_SELECTED;   // its button: always highlighted
   if (i != selected) return BG;
   return (cell != -1 && cell == selectedCell) ? BG_SELECTED : BG_ROW;
 }
@@ -61,6 +62,7 @@ inline uint16_t cellBackground(int i, int cell) {
 void drawTrack(int i);                   // ui.cpp: row i (a track or the status row), whatever changed
 void uiRefresh();                        // ui.cpp: call from loop(): a little more of the screen every 30 ms
 void drawCells(int i);                   // ui_buttons.cpp: the row's button and status cells
+void noteActionPress();                  // ui_buttons.cpp: A pressed (before it acts): its icon dims while held
 void drawWave(int i, bool recordingHere);   // ui_wave.cpp
 void updatePlayheads();                  // ui_wave.cpp: playheads, record head, live recording
 void drawFilter(int i);                  // ui_filter.cpp
