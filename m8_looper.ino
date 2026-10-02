@@ -132,7 +132,7 @@ static constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, TEMPO_CELL 
 // Each track's whole loop, drawn one column at a time: the row background
 // (dim grey across the whole screen for the selected track, dark red while
 // recording), the waveform (80% white inside the loop range, grey outside; muted
-// clips at half brightness) with faint darker bar lines at the clip's bar
+// clips dimmed by MUTED_WEIGHT) with faint darker bar lines at the clip's bar
 // boundaries, and the playhead: 2 px grey on unmuted clips, a thin black line
 // on muted ones, only on the selected track. Full redraws only happen when
 // something changes; the playhead moves by redrawing just its columns.
@@ -217,7 +217,7 @@ static void drawColumn(int i, int c) {
   bool in = v.live || (c >= v.rangeFirst && c <= v.rangeLast);
   uint16_t color = in ? (bar ? WAVE_IN_BAR : WAVE_IN) : (bar ? WAVE_OUT_BAR : WAVE_OUT);
   if (!v.live && in && tr.state == TrackState::Muted)
-    color = blend565(color, BG, MUTED_WEIGHT);   // muted: the loop range at half brightness
+    color = blend565(color, BG, MUTED_WEIGHT);   // muted: the loop range dimmed
   int h = columnLevel(v.live ? v.liveData : tr.overview, c) * (WAVE_H / 2) / 255;
   t.drawFastVLine(x, mid - h, 2 * h + 1, color);
 }
