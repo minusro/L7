@@ -109,7 +109,7 @@ static void fatal(const char *msg) {
   auto &t = board.tft();
   t.setTextColor(TEXT_ERROR, BG);
   t.setTextSize(1);
-  t.setCursor(4, 100);
+  t.setCursor(4, splashBottom() + 16);           // under the logo
   t.print(msg);
   for (;;) handlePowerButton();
 }
@@ -125,13 +125,13 @@ void setup() {
   codec.lineInLevel(5);
   codec.volume(0.6f);
 
-  board.tft().fillScreen(BG);
   board.tft().setTextWrap(false);
-  auto progress = [](const char *msg) {
+  showSplash();
+  auto progress = [](const char *msg) {          // under the logo
     auto &t = board.tft();
     t.setTextColor(TEXT_PROGRESS, BG);
     t.setTextSize(1);
-    t.setCursor(4, 100);
+    t.setCursor(4, splashBottom() + 16);
     t.printf("%-50s", msg);
     Serial.println(msg);
   };
@@ -144,6 +144,7 @@ void setup() {
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);
+  hideSplash();
 }
 
 void loop() {

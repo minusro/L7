@@ -68,6 +68,12 @@ bool panelOpen();
 void openPanel();
 void closePanel();
 
+// Splash screen (ui_splash.cpp): the logo while the looper starts. hideSplash()
+// waits until it has been up a moment, then draws the looper.
+void showSplash();
+void hideSplash();
+int splashBottom();                    // y just below the logo (for startup messages)
+
 // ---- Drawing (ui*.cpp)
 void drawTrack(int i);                   // ui.cpp: row i (a track or the status row), whatever changed
 void uiRefresh();                        // ui.cpp: call from loop(): a little more of the screen every 30 ms

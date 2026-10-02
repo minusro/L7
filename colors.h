@@ -62,4 +62,5 @@ constexpr uint16_t TEXT_WAITING = 0x4A49;    // grey ~74: a scene selected, not 
 
 // ---- Boot / errors
 constexpr uint16_t TEXT_PROGRESS = 0xFFE0;   // yellow: startup messages
+constexpr uint16_t LOGO_COLOR = 0xFFFF;      // white: the splash screen's logo
 constexpr uint16_t TEXT_ERROR = 0xF800;      // red: fatal errors
