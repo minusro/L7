@@ -10382,7 +10382,7 @@ static void stopRecording() {
     307e:	e7f1      	b.n	3064 <looper::stopRecording()+0x4c>
   if (beats <= p * BEATS_PER_BAR + SNAP_THRESHOLD_BEATS || p == MAX_BARS) return p;
     3080:	009e      	lsls	r6, r3, #2
-    3082:	eeb0 5b00 	vmov.f64	d5, #0	@ 0x40000000  2.0
+    3082:	eeb7 5b00 	vmov.f64	d5, #112	@ 0x3f800000  1.0
     3086:	ee07 6a90 	vmov	s15, r6
     308a:	eeb8 7be7 	vcvt.f64.s32	d7, s15
     308e:	ee37 7b05 	vadd.f64	d7, d7, d5

@@ -37,6 +37,7 @@ no dropouts or overruns
 - after recording, the playhead doesn't appear immediately after starting playback V
 - fix audio post recording gap (haven't heard it, only saw the playhead doesn't appear immediately) - verified working V
 - only show the "playing" cells when recording has actually completed V
+- reduce the "late time" for stopping recording after a crossing to 1 beat instead of 2 beats V
 
 - 80s lcd ui
 

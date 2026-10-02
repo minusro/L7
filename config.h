@@ -9,7 +9,7 @@ constexpr int BEATS_PER_BAR = 4;                   // fixed 4/4
 constexpr uint32_t MAX_BARS = 32;                  // longest recording
 // Stopping a recording up to this many beats past a power-of-two length trims
 // it to that length; stopping later keeps recording up to the next one.
-constexpr double SNAP_THRESHOLD_BEATS = 2.0;
+constexpr double SNAP_THRESHOLD_BEATS = 1.0;
 // Every track file is created once at this size: 32 bars at 60 BPM (~22.6 MB).
 // Below 60 BPM a recording stops at this length instead of 32 bars.
 constexpr uint32_t MAX_REC_FRAMES = 128u * 44118u;

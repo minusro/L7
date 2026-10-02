@@ -264,7 +264,7 @@ int main(int argc, char **argv) {
   int fsChangesAtStart = simFsChanges;
   midiBegin(&midi);
 
-  recordTrack(0, 4 * 4 + 1.5, 4, "track 1: stop 4 bars + 1.5 beats in, from stopped (trims to 4 bars)");
+  recordTrack(0, 4 * 4 + 0.5, 4, "track 1: stop 4 bars + 0.5 beats in, from stopped (trims to 4 bars)");
   recordTrack(1, 2 * 4 + 3, 4, "track 2: stop 2 bars + 3 beats in (carries on to 4 bars)");
   recordTrack(2, 3, 1, "track 3: stop 3 beats in (carries on to 1 bar)");
 
