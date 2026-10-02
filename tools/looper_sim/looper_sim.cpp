@@ -484,6 +484,45 @@ int main(int argc, char **argv) {
     engine.monitor = true;
   }
 
+  printf("record on track 8 while track 7 records: 7 stops, 8 records next\n");
+  {
+    int changes = simFsChanges;
+    feedRamp = true;
+    recordPress(6);
+    for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+    runBeats(5.5);
+    check(recordPress(7) && recording.track == 6 && recording.mode == Recording::Finishing && recordQueued() == 7,
+          "track 7 finishing, track 8 queued");
+    int32_t end = recording.startBeat + (int32_t)(recording.loopBars * BEATS_PER_BAR);
+    for (int i = 0; i < 20000 && recording.track != 7; i++) block();
+    char m[96];
+    snprintf(m, sizeof m, "track 8 records from the bar track 7 ends on (beat %d, expected %d)", recording.startBeat, end);
+    check(recording.track == 7 && recording.startBeat == end && recordQueued() < 0, m);
+    check(tracks[6].state == TrackState::Playing && tracks[6].loopBars == 2, "track 7 holds its 2 bars");
+    runBeats(3.5);
+    recordPress(7);
+    runUntilIdle();
+    check(tracks[7].state == TrackState::Playing && tracks[7].loopBars == 1, "track 8 holds its 1 bar");
+    recordPress(0);                                // track 1 holds a clip: refused, nothing queued
+    check(recording.mode == Recording::Idle && recordQueued() < 0, "nothing recorded or queued on tracks with clips");
+    clearTrack(6);
+    clearTrack(7);
+    recordPress(6);
+    for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+    runBeats(2);
+    recordPress(7);
+    recordPress(7);
+    check(recordQueued() < 0, "pressed again: no longer queued");
+    runUntilIdle();
+    check(recording.mode == Recording::Idle && tracks[7].state == TrackState::Empty, "track 8 not recorded");
+    clearTrack(6);
+    transportStop();                               // recording space refilled for what follows
+    for (int i = 0; i < 20; i++) serviceStorage();
+    transportStart();
+    for (auto &x : tracks) x.underruns = 0;
+    fsChangesAtStart += simFsChanges - changes;   // more recordings than the pool holds: not counted
+  }
+
   printf("snapping to the nearest bar (tap tempo while playing)\n");
   {
     while (transport.beat % 4 != 1) block();       // early in a bar (beat 2)

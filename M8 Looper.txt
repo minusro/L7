@@ -49,9 +49,11 @@ no dropouts or overruns
 - scene logic iterations V
 - added menu button and placeholder panel V
 - allow non power of two loops and recordings V
-- immediate recording after another not starting bug
+- immediate recording after another not starting bug V
 - investigate and optimize sample switching times
 - switch tempo and clock labels, add play icon between
 - simple splash screen
 - 80s lcd ui experiment
+- de-clicking
+- crossfading between two scenes
 - animated splash screen ?

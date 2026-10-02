@@ -38,8 +38,11 @@ void transportRestart();             // from bar 1 again, running or not
 void transportSnapToBar();
 
 // Record button for track t: start (or arm until the next bar), then stop.
-// Returns false if the track already holds a loop.
+// Returns false if the track already holds a loop. Pressed on another track
+// while one is recording: that one stops and this one records next (pressed
+// again: not any more).
 bool recordPress(int t);
+int recordQueued();                   // the track recording next, or -1
 void clearTrack(int t);               // its sample stays on the card
 // Clipboard: a track's sample and settings. cutTrack copies a track there and
 // clears it; pasteTrack puts it on an empty track (it stays on the clipboard).

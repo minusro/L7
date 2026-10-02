@@ -814,6 +814,10 @@ static void stopRecording() {
   armRecordedLoop(recording.targetFrames > length);
 }
 
+// A track to record next: pressed while another one was recording. It starts
+// as that one finishes (on the bar line it ends on, from the input history).
+static int queuedTrack = -1;
+
 static void finishRecording() {
   int t = recording.track;
   Track &tr = tracks[t];
@@ -842,6 +846,11 @@ static void finishRecording() {
   recording.track = -1;
   trackChanged(t);                               // unit saved when the buffers allow
   if (transport.running && !tr.live && !tr.armed) startTrack(t, transport.beat + 2, false);
+  if (queuedTrack >= 0) {
+    int q = queuedTrack;
+    queuedTrack = -1;
+    if (transport.running) recordPress(q);
+  }
 }
 
 static void serviceRecorder() {
@@ -926,7 +935,23 @@ static void returnRecordingSample(int t) {
   tr.sample = 0;
 }
 
+int recordQueued() { return queuedTrack; }
+
 bool recordPress(int t) {
+  if (t == queuedTrack) {                        // pressed again: no longer queued
+    queuedTrack = -1;
+    return true;
+  }
+  if (recording.mode != Recording::Idle && t != recording.track) {
+    if (tracks[t].state != TrackState::Empty) return false;
+    if (recording.mode == Recording::WaitBar) {  // not started yet: wait on this one instead
+      recordPress(recording.track);
+    } else {
+      if (recording.mode == Recording::Running) stopRecording();
+      queuedTrack = t;
+      return true;
+    }
+  }
   switch (recording.mode) {
     case Recording::Idle: {
       if (tracks[t].state != TrackState::Empty || !takeRecordingSample(t)) return false;
@@ -1046,6 +1071,7 @@ void transportStart() {
 }
 
 void transportStop() {
+  queuedTrack = -1;
   if (recording.mode == Recording::WaitBar) recordPress(recording.track);   // cancel
   if (recording.mode == Recording::Running) stopRecording();
   if (recording.mode == Recording::Finishing) {

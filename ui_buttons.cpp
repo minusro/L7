@@ -41,6 +41,7 @@ static int actionIcon() {
   if (selected == STATUS_ROW) return shift ? ICON_PLAY : ICON_TAP;   // restart / tap tempo
   const Track &tr = tracks[selected];
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) ? ICON_NONE : ICON_PASTE;
+  if (recordQueued() == selected) return ICON_DELETE;   // takes it out of the queue
   if (recordingOn(selected)) {
     switch (recording.mode) {
       case Recording::WaitBar: return ICON_DELETE;   // cancels it
@@ -59,6 +60,7 @@ void noteActionPress() { heldAction = actionIcon(); }
 
 // The track's own state.
 static int trackIcon(int i) {
+  if (recordQueued() == i) return flashOn() ? ICON_RECORD : ICON_NONE;   // waiting, like WaitBar
   if (recordingOn(i)) {
     switch (recording.mode) {
       case Recording::WaitBar: return flashOn() ? ICON_RECORD : ICON_NONE;
