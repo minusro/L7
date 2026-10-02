@@ -1113,6 +1113,43 @@ int main(int argc, char **argv) {
     check(at % 4 == 0 && at > released && at <= released + 4 && sceneCurrent() == from + 1, m);
   }
 
+  printf("quick scene changes: on the next beat, SHIFT held or not\n");
+  {
+    auto empty = [] { for (auto &x : tracks) if (x.state != TrackState::Empty) return false; return true; };
+    while (transport.beat % 4 != 0 || transport.sampleInBeat > transport.spb / 4) block();   // early in a bar
+    int32_t pressed = transport.beat;
+    sceneHold(true);
+    check(sceneGoEmpty() && !sceneHeld() && sceneCurrent() == 0 && sceneChangeWaiting(),
+          "SHIFT held, jump to 0*: goes at once");
+    int32_t at = -1;
+    afterAudio = [&] { if (at < 0 && !sceneChangeWaiting()) at = transport.beat; };
+    waitScene();
+    for (int i = 0; i < 5; i++) block();
+    afterAudio = nullptr;
+    sceneHold(false);
+    char m[128];
+    snprintf(m, sizeof m, "switched on the next beat (beat %d, pressed in %d), tracks empty", at, pressed);
+    check(at == pressed + 1 && empty(), m);
+    // A step waiting for its bar line, then a quick jump: all on the next beat.
+    while (transport.beat % 4 != 0 || transport.sampleInBeat > transport.spb / 4) block();
+    pressed = transport.beat;
+    check(sceneStep(1) && sceneChangeWaiting(), "0* to scene 1: waits for the bar line");
+    for (int i = 0; i < 10; i++) block();
+    check(sceneGoEnd() && sceneCurrent() == sceneCount() + 1, "then straight to N+1*");
+    at = -1;
+    afterAudio = [&] { if (at < 0 && !sceneChangeWaiting()) at = transport.beat; };
+    waitScene();
+    for (int i = 0; i < 5; i++) block();
+    afterAudio = nullptr;
+    snprintf(m, sizeof m, "all of it on the next beat, not the bar line (beat %d, pressed in %d)", at, pressed);
+    check(at == pressed + 1 && !empty(), m);
+    runBeats(2);
+    for (int t = 0; t < 2; t++) {
+      snprintf(m, sizeof m, "track %d after the quick change", t + 1);
+      if (tracks[t].state == TrackState::Playing) checkSync(t, m);   // (muted ones are silent)
+    }
+  }
+
   printf("random sessions\n");
   for (unsigned seed = 1; seed <= (argc > 1 ? atoi(argv[1]) : 5); seed++) fuzz(600, seed);
 

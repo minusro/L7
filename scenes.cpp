@@ -137,38 +137,47 @@ static void commit() {
 }
 
 // Puts a scene on the looper (its tempo, if it has one, after the tracks).
-// While playing, all of it changes on the next bar line with time to load.
-static void apply(const SceneInfo &s) {
+// While playing, all of it changes on the next bar line with time to load
+// (quick: the next beat).
+static void apply(const SceneInfo &s, bool quick) {
   loading = true;
-  int32_t bar = beginSceneChange();
+  int32_t at = beginSceneChange(quick);
   for (int t = 0; t < NUM_TRACKS; t++) setTrackUnit(t, s.units[t]);
-  if (s.tempo > 0) {
-    uint32_t before = transport.pendingSpb;
-    transport.spbAtBeat = bar;
-    if (!setTempo(s.tempo) || transport.pendingSpb == before) transport.spbAtBeat = -1;
-  }
+  if (s.tempo > 0) setTempo(s.tempo);
+  // A tempo change on its way (this scene's, or one still waiting) goes with it.
+  transport.spbAtBeat = transport.pendingSpb ? at : -1;
   endSceneChange();
   loading = false;
 }
 
 static bool busy() { return recording.mode != Recording::Idle; }
 
-static bool go(int pos) {
+// To scene pos. While SHIFT is held only the label moves (see sceneHold), unless
+// quick: then at once, switching on the next beat.
+static bool go(int pos, bool quick = false) {
   pos = constrain(pos, 0, list.count + 1);
-  if (holding) {                                 // only the label moves for now
+  if (holding && !quick) {                       // only the label moves for now
     if (busy() || pos == sceneCurrent()) return false;
     target = pos == list.current ? -1 : pos;
     return true;
+  }
+  if (quick && target >= 0) {                   // a held selection: passed over
+    if (busy()) return false;
+    target = -1;
   }
   commit();
   if (busy() || pos == list.current) return false;
   list.current = pos;
   listDirty = true;
-  apply(sceneAt(min(pos, (int)list.count)));     // N+1*: a copy of N
+  apply(sceneAt(min(pos, (int)list.count)), quick);   // N+1*: a copy of N
   return true;
 }
 
-bool sceneStep(int dir) { return go(sceneCurrent() + dir); }
+// Steps to and from N+1* (the copy of the last scene) are quick.
+bool sceneStep(int dir) {
+  int from = sceneCurrent(), end = list.count + 1;
+  return go(from + dir, from == end || from + dir == end);
+}
 
 bool sceneHold(bool on) {
   holding = on;
@@ -181,13 +190,12 @@ bool sceneHold(bool on) {
 // A held selection is taken first (cut, paste and duplicate act on it).
 static void takeHeld() {
   if (target < 0) return;
-  bool was = holding;
-  holding = false;
-  sceneHold(false);
-  holding = was;
+  int pos = target;
+  target = -1;
+  go(pos, true);
 }
-bool sceneGoEmpty() { return go(0); }
-bool sceneGoEnd() { return go(list.count + 1); }
+bool sceneGoEmpty() { return go(0, true); }
+bool sceneGoEnd() { return go(list.count + 1, true); }
 
 bool sceneCut() {
   takeHeld();
@@ -200,7 +208,7 @@ bool sceneCut() {
   }
   clip = snapshot();
   if (list.current <= list.count) removeAt(list.current);   // N+1* was only a copy
-  go(list.current - 1);
+  go(list.current - 1, true);
   return true;
 }
 
@@ -215,7 +223,7 @@ bool scenePaste() {
   record = clip;
   recordSlot = slot;
   list.current = pos;
-  apply(clip);
+  apply(clip, true);
   return true;
 }
 

@@ -84,6 +84,7 @@ struct Change {
   bool on = false;
   bool planned = false;                          // its clip switch is set up (or none is needed)
   bool scene = false;                            // part of a scene change
+  int32_t grid = 0;                              // its switch points (beats; 0: quarter beats)
   int32_t q = 0;
   TrackUnit u;
 };
@@ -361,15 +362,17 @@ static int64_t nowSamples(int64_t &spb) {
 }
 static int64_t quarterTime(int32_t q, int64_t spb) { return (int64_t)(q / 4) * spb + (q % 4) * spb / 4; }
 
-// The first quarter beat, or bar line, at least SWITCH_LEAD_MS ahead.
-static int32_t quarterAfterLead(bool bar) {
+// The first quarter beat (grid > 0: start of a beat that's a multiple of
+// gridBeats) at least SWITCH_LEAD_MS ahead.
+static int32_t quarterAfterLead(int32_t gridBeats) {
   int64_t spb, now = nowSamples(spb) + msToSamples(SWITCH_LEAD_MS);
-  if (bar) return (int32_t)((now + 4 * spb - 1) / (4 * spb)) * 4 * BEATS_PER_BAR;
-  return (int32_t)(now * 4 / spb) + 1;
+  if (!gridBeats) return (int32_t)(now * 4 / spb) + 1;
+  int64_t grid = gridBeats * spb;
+  return (int32_t)((now + grid - 1) / grid) * 4 * gridBeats;
 }
 
 // The first beat at least SWITCH_LEAD_MS ahead (a track starting from silence).
-static int32_t beatAfterLead() { return (quarterAfterLead(false) + 3) / 4; }
+static int32_t beatAfterLead() { return (quarterAfterLead(0) + 3) / 4; }
 
 static bool sameClip(const TrackUnit &a, const TrackUnit &b) {
   return a.sample == b.sample && (!a.sample || (a.rangeStart == b.rangeStart && a.rangeLen == b.rangeLen &&
@@ -405,14 +408,19 @@ static PlanResult planSwitch(int t, const TrackUnit &u, int32_t q) {
   bool pending = p.on || tr.sampleSwitch;
   interrupts();
   uint32_t switchS;
-  if (pending) {
-    if (p.q != q) return WAIT;                   // another switch first
+  if (pending && p.q == q) {
     switchS = p.switchS;                         // replanned: the same switch point
+  } else if (pending && q > p.q) {
+    return WAIT;                                 // that switch first
   } else {
+    // A new switch, or one moved earlier: the interrupt is still on the old
+    // clip's mapping there (an earlier switch hasn't been reached).
     if (q < 4 * tr.startBeat) return FAILED;     // (only just started)
     switchS = tr.s0 + quarterFrames(q - 4 * tr.startBeat, tr.playSpb);
-    p.outBeats = tr.rangeBeats;
-    p.outAnchorQ = tr.rangeAnchorQ;
+    if (!pending) {                              // (moved: still the clip playing before)
+      p.outBeats = tr.rangeBeats;
+      p.outAnchorQ = tr.rangeAnchorQ;
+    }
   }
   int64_t late = msToSamples(PLAN_LATE_MS) * tr.playSpb / transport.spb;   // in stream frames
   if ((int32_t)(switchS - tail) < late) return pending ? WAIT : FAILED;
@@ -552,8 +560,10 @@ static void serviceChange(int t) {
   if (!c.planned) {
     int64_t spb, now = nowSamples(spb);
     if (quarterTime(c.q, spb) - now < msToSamples(PLAN_LATE_MS))
-      c.q = quarterAfterLead(c.scene);           // waited for another switch: the next one
-    if (sameClip(streamUnit(t), c.u)) {
+      c.q = quarterAfterLead(c.grid);            // waited for another switch: the next one
+    bool switchElsewhere = (plans[t].on || tr.sampleSwitch) && plans[t].q != c.q;   // (moved earlier)
+    bool startElsewhere = tr.armed && !tr.live && tr.startBeat != (c.q + 3) / 4;
+    if (sameClip(streamUnit(t), c.u) && !switchElsewhere && !startElsewhere) {
       // The stream has that clip already (or both are empty).
     } else if (tr.live || plans[t].on || tr.sampleSwitch) {
       PlanResult r = planSwitch(t, c.u, c.q);
@@ -601,7 +611,8 @@ static void serviceChanges() {
 }
 
 // Scene changes (see storage.h).
-static int32_t sceneQ = -1;                      // the latest one's bar line, in quarter beats
+static int32_t sceneQ = -1;                      // the latest one's switch point, in quarter beats
+static int32_t sceneGrid = BEATS_PER_BAR;        // and its grid
 static bool inSceneChange = false;
 
 static bool sceneChangeOn() {
@@ -609,13 +620,27 @@ static bool sceneChangeOn() {
   return false;
 }
 
-int32_t beginSceneChange() {
+int32_t beginSceneChange(bool quick) {
   inSceneChange = true;
   if (!transport.running) return -1;
   int64_t spb, now = nowSamples(spb);
-  // Stepping on before the last one happened: the same bar line, if there's time.
-  if (!(sceneChangeOn() && sceneQ >= 0 && quarterTime(sceneQ, spb) - now >= msToSamples(PLAN_LATE_MS)))
-    sceneQ = quarterAfterLead(true);
+  int32_t grid = quick ? 1 : BEATS_PER_BAR;
+  int32_t q = quarterAfterLead(grid);
+  // Stepping on before the last one happened: the same point, if there's time
+  // (and it isn't later than this one's would be).
+  bool reuse = sceneChangeOn() && sceneQ >= 0 && quarterTime(sceneQ, spb) - now >= msToSamples(PLAN_LATE_MS) &&
+               sceneQ <= q;
+  if (!reuse) {
+    sceneQ = q;
+    sceneGrid = grid;
+    // The waiting changes come along (the whole scene switches together).
+    for (auto &c : changes)
+      if (c.on && c.scene && c.q != q) {
+        c.q = q;
+        c.grid = grid;
+        c.planned = false;
+      }
+  }
   return sceneQ / 4;
 }
 
@@ -645,7 +670,8 @@ bool setTrackUnit(int t, const TrackUnit &u) {
     changes[t].on = false;
     ok = setUnitNow(t, u);
   } else {
-    requestChange(t, u, inSceneChange ? sceneQ : quarterAfterLead(false), inSceneChange);
+    requestChange(t, u, inSceneChange ? sceneQ : quarterAfterLead(0), inSceneChange);
+    changes[t].grid = inSceneChange ? sceneGrid : 0;
     trackChanged(t);                             // (the unit file: the change counts)
   }
   applyingUnit = was;
@@ -826,7 +852,7 @@ bool stepSample(int t, int dir) {
   u.sample = n;
   u.rangeStart = u.rangeLen = u.rangePhase = 0;
   if (!transport.running) return setUnitNow(t, u);
-  requestChange(t, u, quarterAfterLead(false), false);
+  requestChange(t, u, quarterAfterLead(0), false);
   trackChanged(t);
   return true;
 }

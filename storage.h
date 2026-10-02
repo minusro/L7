@@ -17,16 +17,18 @@ struct TrackUnit {
   int8_t filterLo, filterHi, volume, balance;
 };
 TrackUnit unitOf(int t);
-// Puts unit u on track t. A track keeping its clip and range plays on; one
-// with another clip or range rejoins two beats later. false: its sample is
-// gone (the track is left empty) or it's recording.
+// Puts unit u on track t. Stopped: at once. Playing: a track keeping its clip
+// and range plays on; one with another clip or range switches to it with no
+// gap on the next quarter beat with time to load (scene changes: see below).
+// false: its sample is gone (the track is left empty) or it's recording.
 bool setTrackUnit(int t, const TrackUnit &u);
 // Scene changes while playing: the setTrackUnit() calls between these wait
 // for one bar line, the first at least ~150 ms ahead (time to open the new
 // samples and read their starts), and take effect together there. Stepping on
-// before it reuses it (unless it's under ~50 ms away). Returns that bar
-// line's transport beat (-1: stopped, at once).
-int32_t beginSceneChange();
+// before it reuses it (unless it's under ~50 ms away). quick: the next beat
+// instead (a change already waiting moves up to it). Returns that point's
+// transport beat (-1: stopped, at once).
+int32_t beginSceneChange(bool quick = false);
 void endSceneChange();
 bool sceneChangeWaiting();             // a scene change hasn't reached its bar line yet
 // A write may go to the card now (stopped, or the playback buffers are full);
