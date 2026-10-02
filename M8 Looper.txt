@@ -11,10 +11,13 @@ no dropouts or overruns
 - check stereo channels are not flipped V
 - turn off speaker when headphones are plugged in V
 - don’t wrap vertical list navigation V
-- mark start position for each track
+- mark start position for each track on the waveform V
 	- the start position is at the first of the lowest order power-of-two-crossings in the selected area. for example, a power-of-two-crossing of order 0 is the start of the clip. the middle of the clip is a crossing of order 1. the starts of the second and fourth quarters are order 2 crossings and so on
 	- use that start position as the starting point when the clock is 1.1.1
-- playback head start bug
+	- visually the start point should look like a thin white line that has a small triangle facing right at the top, like a little flag
+- playback head start bug V
+- draw the start points behind the playhead V
+- don't draw start points for muted clips unless they're selected V
 - loop areas should be able to straddle the loop boundary (left and right halves)
 - tempo label flicker
 - switch tempo and clock labels, add play icon between, and use the action button to tap tempo

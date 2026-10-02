@@ -25,6 +25,11 @@ void clearTrack(int t);
 // trackRange() reports the queued range if any.
 bool setRange(int t, uint32_t startBeat, uint32_t beats);
 void trackRange(int t, uint32_t &startBeat, uint32_t &beats);
+// The range's start position (a beat of the loop): the first of the
+// lowest-order power-of-two divisions of the loop that falls in the range
+// (order 0: the loop's start; 1: its middle; 2: its quarters; ...). The
+// transport starting at 1.1.1 plays each track from here.
+uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats);
 
 float loadTempo();                   // saved tempo, or 120
 void saveTempo(float bpm);           // creates/rewrites a file: only while stopped

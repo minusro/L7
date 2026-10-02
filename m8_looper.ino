@@ -148,6 +148,7 @@ struct WaveView {
   bool live = false;                               // recording in progress: live view
   uint16_t bg = BG;
   int rangeFirst = 0, rangeLast = -1;              // columns inside the loop range
+  int markCol = -1;                                // start position flag; -1: none
   int playCol = -1;                                // playhead / record head; -1: none
   int headW = HEAD_W;                              // playhead covers playCol .. playCol + headW - 1
   uint16_t headColor = 0;
@@ -200,8 +201,7 @@ static uint8_t columnLevel(const uint8_t *src, int c) {
   return m;
 }
 
-static void drawColumn(int i, int c) {
-  if (c < 0 || c >= WAVE_W) return;
+static void drawColumnUnder(int i, int c) {
   auto &t = board.tft();
   const Track &tr = tracks[i];
   const WaveView &v = views[i];
@@ -209,10 +209,6 @@ static void drawColumn(int i, int c) {
   t.drawFastVLine(x, bgTop(i), bgHeight(i), v.bg);   // background: the row's full height
   if (i == DIVIDER_ROW && v.bg == BG) t.drawPixel(x, dividerY(), DIVIDER);
   if (!v.visible) return;
-  if (v.playCol >= 0 && c >= v.playCol && c < v.playCol + v.headW) {
-    t.drawFastVLine(x, rowTop(i), ROW_BAND, v.headColor);   // the row's full height
-    return;
-  }
   if (v.live && c >= v.liveFilled) return;
   bool bar = isBarColumn(v.live ? v.liveBars : tr.loopBars, c);
   bool in = v.live || (c >= v.rangeFirst && c <= v.rangeLast);
@@ -221,6 +217,33 @@ static void drawColumn(int i, int c) {
     color = blend565(color, BG, MUTED_WEIGHT);   // muted: the loop range dimmed
   int h = columnLevel(v.live ? v.liveData : tr.overview, c) * (WAVE_H / 2) / 255;
   t.drawFastVLine(x, mid - h, 2 * h + 1, color);
+}
+
+// Start position flag (behind the playhead; on muted clips only when the
+// track is selected): a 1 px line down the row, and at its top a small
+// triangle pointing right (MARK_FLAG rows tall, widest in the middle).
+static constexpr int MARK_TOP = 1, MARK_FLAG = 5;
+
+static void drawMark(int i, int c) {
+  const WaveView &v = views[i];
+  int k = c - v.markCol;
+  int half = MARK_FLAG / 2;
+  if (v.markCol < 0 || k < 0 || k > half) return;
+  if (tracks[i].state == TrackState::Muted && i != selected) return;   // muted: only on the selected track
+  auto &t = board.tft();
+  uint16_t color = tracks[i].state == TrackState::Muted ? blend565(START_MARK, BG, MUTED_WEIGHT) : START_MARK;
+  int x = WAVE_X + c, top = rowTop(i) + MARK_TOP;
+  if (k == 0) t.drawFastVLine(x, top, ROW_BAND - 2 * MARK_TOP, color);
+  else t.drawFastVLine(x, top + k, MARK_FLAG - 2 * k, color);   // the flag narrows to a point
+}
+
+static void drawColumn(int i, int c) {
+  if (c < 0 || c >= WAVE_W) return;
+  drawColumnUnder(i, c);
+  drawMark(i, c);
+  const WaveView &v = views[i];
+  if (v.visible && v.playCol >= 0 && c >= v.playCol && c < v.playCol + v.headW)   // on top, the row's full height
+    board.tft().drawFastVLine(WAVE_X + c, rowTop(i), ROW_BAND, v.headColor);
 }
 
 static void drawWave(int i, bool recordingHere) {
@@ -244,6 +267,7 @@ static void drawWave(int i, bool recordingHere) {
   if (!v.visible || v.live) v.playCol = -1;
   v.rangeFirst = 0;
   v.rangeLast = -1;
+  v.markCol = -1;
   if (v.live) {
     v.liveBars = 0;                                // updatePlayheads() fills it in
     v.liveFilled = 0;
@@ -251,6 +275,7 @@ static void drawWave(int i, bool recordingHere) {
     uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
     v.rangeFirst = rs * WAVE_W / loopBeats;
     v.rangeLast = max(v.rangeFirst, (int)(((rs + rb) * WAVE_W + loopBeats - 1) / loopBeats) - 1);
+    v.markCol = startPosition(loopBeats, rs, rb) * WAVE_W / loopBeats;
   }
   for (int c = 0; c < WAVE_W; c++) drawColumn(i, c);
 }

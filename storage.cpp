@@ -584,6 +584,14 @@ void trackRange(int t, uint32_t &startBeat, uint32_t &beats) {
   beats = tr.rangePending ? tr.pendingBeats : tr.rangeBeats;
 }
 
+uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats) {
+  for (uint32_t step = loopBeats; step >= 1; step /= 2) {
+    uint32_t first = (rangeStart + step - 1) / step * step;   // first multiple of step in or after the range start
+    if (first < rangeStart + rangeBeats) return first;
+  }
+  return rangeStart;                             // not reached: ranges are at least a beat
+}
+
 bool setRange(int t, uint32_t startBeat, uint32_t beats) {
   Track &tr = tracks[t];
   if (tr.state == TrackState::Empty || beats < 1 || (beats & (beats - 1)) ||
@@ -618,7 +626,16 @@ void transportStart() {
   if (transport.running) return;
   transport.beat = 0;
   transport.sampleInBeat = 0;
-  for (int t = 0; t < NUM_TRACKS; t++) startTrack(t, 0, true);
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    // Each track plays from its start position at 1.1.1 (beat 0).
+    Track &tr = tracks[t];
+    if (tr.state != TrackState::Empty) {
+      uint32_t rs, rb;
+      trackRange(t, rs, rb);                     // a queued range: startTrack() takes it now
+      tr.rangeAnchorQ = -4 * (int32_t)(startPosition(tr.loopBars * BEATS_PER_BAR, rs, rb) - rs);
+    }
+    startTrack(t, 0, true);
+  }
   midiSendNow(0xFA);                             // MIDI Start
   transport.running = true;
 }
