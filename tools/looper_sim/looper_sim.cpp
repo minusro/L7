@@ -1055,6 +1055,9 @@ int main(int argc, char **argv) {
     runBeats(1.2);
     At stop;
     afterAudio = [&] { if (!tracks[5].live) stop.mark(); };
+    uint32_t beatsBefore[NUM_TRACKS];
+    int32_t anchorBefore[NUM_TRACKS];
+    for (int t = 0; t < NUM_TRACKS; t++) { beatsBefore[t] = tracks[t].rangeBeats; anchorBefore[t] = tracks[t].rangeAnchorQ; }
     check(sceneStep(1), "to scene B");
     setTrackMix(0, 30, 0);
     trackChanged(0);
@@ -1064,6 +1067,14 @@ int main(int argc, char **argv) {
     snprintf(m, sizeof m, "track 6 stops on the bar line (beat %d +%u), then empty", stop.beat, stop.sib);
     check(onBar(stop, AUDIO_BLOCK_SAMPLES) && tracks[5].state == TrackState::Empty, m);
     check(tracks[0].volume == 30, "the volume set while waiting stayed");
+    int kept = 0, jumped = 0;
+    for (int t = 0; t < NUM_TRACKS; t++) {
+      if (tracks[t].state == TrackState::Empty || tracks[t].rangeBeats != beatsBefore[t]) continue;
+      if (pmod(tracks[t].rangeAnchorQ - anchorBefore[t], 4 * beatsBefore[t]) == 0) kept++; else jumped++;
+    }
+    snprintf(m, sizeof m, "loops as long as before carry on from the same spot (%d kept, %d jumped)", kept, jumped);
+    check(kept > 0 && jumped == 0, m);
+    checkSync(2, "track 3 on B's sample");
     setTrackMix(0, VOLUME_UNITY, 0);
     trackChanged(0);
     // Back and forth before the bar: A's clips just carry on.

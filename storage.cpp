@@ -64,6 +64,8 @@ static int queuedTrack = -1;
 struct Plan {
   bool on = false;
   bool stop = false;                             // the track goes empty there (nothing new to read)
+  uint32_t outBeats = 0;                         // the range playing before the switch: its length
+  int32_t outAnchorQ = 0;                        // and anchor (a new range as long carries on from it)
   int32_t q = 0;                                 // kept after applying: the interrupt may not be there yet
   uint32_t switchS = 0;
   TrackUnit u;
@@ -409,6 +411,8 @@ static PlanResult planSwitch(int t, const TrackUnit &u, int32_t q) {
   } else {
     if (q < 4 * tr.startBeat) return FAILED;     // (only just started)
     switchS = tr.s0 + quarterFrames(q - 4 * tr.startBeat, tr.playSpb);
+    p.outBeats = tr.rangeBeats;
+    p.outAnchorQ = tr.rangeAnchorQ;
   }
   int64_t late = msToSamples(PLAN_LATE_MS) * tr.playSpb / transport.spb;   // in stream frames
   if ((int32_t)(switchS - tail) < late) return pending ? WAIT : FAILED;
@@ -466,6 +470,8 @@ static void applyPlan(int t) {
     tr.overviewVersion++;
   }
   applyRange(t, p.u);
+  // A range as long as the one playing carries on from the same spot in it.
+  if (tr.rangeBeats == p.outBeats) tr.rangeAnchorQ = p.outAnchorQ;
   if (tr.state == TrackState::Empty) tr.state = TrackState::Muted;   // (its settings follow at the switch)
   int32_t phaseQ = posMod(p.q - tr.rangeAnchorQ, 4 * tr.rangeBeats);
   tr.fileFrame = tr.rangeFrame(quarterFrames(phaseQ, tr.spbNative));
