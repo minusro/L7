@@ -144,5 +144,13 @@ int main(int argc, char **argv) {
   recording.startBeat = transport.beat - 9;
   selected = 5;
   render(out + "/ui_recording.png");
+  selected = 1;                                    // the panel (B+A) over the screen
+  render(out + "/ui_panel.png");
+  board.tft().fillScreen(BG);
+  uiGeneration++;
+  for (int i = 0; i < ROWS; i++) drawTrack(i);
+  openPanel();
+  writePng(out + "/ui_panel.png");
+  closePanel();
   return 0;
 }

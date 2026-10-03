@@ -10,14 +10,17 @@
 
 uint32_t uiGeneration = 1;
 
-static constexpr int PANEL_W = 320 * 6 / 10, PANEL_H = 240 * 8 / 10;
+static constexpr int PANEL_W = 320 * 6 / 10, PANEL_H = 240 * 8 / 10;   // (on the block grid: even)
 static constexpr int PANEL_X = (320 - PANEL_W) / 2, PANEL_Y = (240 - PANEL_H) / 2;
 static bool shown = false;
 
 bool panelOpen() { return shown; }
 
+// The panel: its corner blocks cut (they're dimmed like the rest outside).
 static bool inPanel(int x, int y) {
-  return x >= PANEL_X && x < PANEL_X + PANEL_W && y >= PANEL_Y && y < PANEL_Y + PANEL_H;
+  if (x < PANEL_X || x >= PANEL_X + PANEL_W || y < PANEL_Y || y >= PANEL_Y + PANEL_H) return false;
+  bool side = x < PANEL_X + PX || x >= PANEL_X + PANEL_W - PX, edge = y < PANEL_Y + PX || y >= PANEL_Y + PANEL_H - PX;
+  return !(side && edge);
 }
 static bool inButton(int x, int y) {
   return x >= BUTTON_X && y >= bgTop(STATUS_ROW);
@@ -31,8 +34,12 @@ void openPanel() {
   for (int y = 0; y < 240; y++)
     for (int x = y & 1; x < 320; x += 2)
       if (!inPanel(x, y) && !inButton(x, y)) t.drawPixel(x, y, PANEL_SHADE);
-  t.fillRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, PANEL_BG);
-  t.drawRect(PANEL_X, PANEL_Y, PANEL_W, PANEL_H, PANEL_BORDER);
+  // A border one block wide, its corner blocks cut, round the panel's background.
+  t.fillRect(PANEL_X + PX, PANEL_Y, PANEL_W - 2 * PX, PX, PANEL_BORDER);
+  t.fillRect(PANEL_X + PX, PANEL_Y + PANEL_H - PX, PANEL_W - 2 * PX, PX, PANEL_BORDER);
+  t.fillRect(PANEL_X, PANEL_Y + PX, PX, PANEL_H - 2 * PX, PANEL_BORDER);
+  t.fillRect(PANEL_X + PANEL_W - PX, PANEL_Y + PX, PX, PANEL_H - 2 * PX, PANEL_BORDER);
+  t.fillRect(PANEL_X + PX, PANEL_Y + PX, PANEL_W - 2 * PX, PANEL_H - 2 * PX, PANEL_BG);
 }
 
 void closePanel() {
