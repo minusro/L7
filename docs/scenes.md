@@ -15,7 +15,8 @@ A scene is a snapshot of the looper: the 8 track units and the tempo
   changed.
 * On a stored scene every change updates it (`sceneStateChanged()` → `commit()`;
   written one block at a time when the buffers allow).
-* The label shows `SCN n/N`, with `*` (grey) for 0\* and N+1\*.
+* The label shows `SCN n/N`; the empty scene shows as `0/N` and the copy after
+  the last as `*/N` (both grey).
 
 ## Switching while playing
 

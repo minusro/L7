@@ -6,7 +6,8 @@
 //   first cell (under the waveforms): the scene, a "SCN" tag (inverted: white
 //     while playing, grey while stopped; in the accent colour while B is held
 //     on the cell: B + UP/DOWN step through the scenes) and its position "3/7"
-//     (white while playing, grey while stopped; 0* and N+1* with a star, grey).
+//     (white while playing, grey while stopped; the empty scene "0/7" and the
+//     copy after the last "*/7" in grey).
 //     Both in the accent colour while SHIFT is held, or B alone on the cell. The
 //     position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
@@ -101,7 +102,8 @@ void drawStatus() {
   drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : live, BG);
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;
-  snprintf(text, sizeof text, "%d%s/%d", scene, temporary ? "*" : "", count);
+  if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
+  else snprintf(text, sizeof text, "%d/%d", scene, count);       // (0: the empty scene)
   uint16_t ink = sceneAccent ? ACCENT : temporary ? DIM : live;
   if (sceneHeld() || sceneChangeWaiting()) {
     noInterrupts();
