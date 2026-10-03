@@ -73,8 +73,8 @@ void drawMix(int i) {
   float fall = (now - lastMs[i]) * (METER_FALL_DB_PER_S / 1000);
   lastMs[i] = now;
   for (int ch = 0; ch < 2; ch++) meterDb[i][ch] = max(gainDb(peak[ch]), meterDb[i][ch] - fall);
-  if (tr.state == TrackState::Muted)               // muted: no meter at once (not the peak hold falling)
-    meterDb[i][0] = meterDb[i][1] = -200;
+  if (tr.state == TrackState::Muted || !transport.running)   // muted or stopped: no meter at once
+    meterDb[i][0] = meterDb[i][1] = -200;                       // (not the peak hold falling)
 
   uint16_t frame = cellFrame(i, MIX_CELL);
   uint8_t looks[2 * MIX_ARCS];
