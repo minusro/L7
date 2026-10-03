@@ -19,6 +19,8 @@ A scene is a snapshot of the looper: the 8 track units and the tempo
 
 ## Switching while playing
 
+* B + UP/DOWN on the status row's scene cell works exactly like SHIFT + UP/DOWN
+  (B held counts as SHIFT held below).
 * **SHIFT held** (clock running): SHIFT+UP/DOWN only moves the target shown in
   the label (`sceneHold`, `sceneHeld()`); nothing loads. Letting go of SHIFT
   goes there.

@@ -6,17 +6,15 @@
 // frame column on either side. Rows of blocks (13 in the band):
 //   0, 12   the frame (selected row); on the last track row 12 is the
 //           divider when there's no frame
-//   1       the loop range: a line over it
 //   2 - 10  the waveform: a line along row 6, the peaks reaching up to 4
 //           blocks above and below it
-//   11      the loop range again: a line under it, a gap where a bar
-//           starts; outside the range, bar ticks
-// The start position: a gap in both lines (a black block on each).
+//   11      bar ticks
 // The waveform is white inside the loop range and dark grey outside; on a
-// muted clip the range is 50% grey (the rest dark grey too). The range's
-// lines, the start position and the bar ticks (dark grey) only show while
-// the waveform cell is selected: the lines white (muted: grey), in the accent
-// colour while B is held (B + arrows change the range). The playhead inverts its column (white on black,
+// muted clip the range is 50% grey (the rest dark grey too). While B alone is
+// held on the selected waveform cell (B + arrows change the range), the range
+// is in the accent colour, muted or not. The start position: a short line
+// across the middle, inverting what's there, on every track. The bar ticks
+// (dark grey) only show while the waveform cell is selected. The playhead inverts its column (white on black,
 // black on white); on a muted clip, only when selected, it's a grey line. A
 // recording track's cell is in the accent colour, its waveform growing in
 // black (live view), the record head inverting its column too.
@@ -37,7 +35,8 @@ struct WaveView {
   int markCol = -1;                                // the start position's column; -1: none
   int playCol = -1;                                // playhead / record head; -1: none
   uint16_t headColor = 0;                          // PLAYHEAD: inverts the column; else a line this colour
-  uint16_t marks = BG;                             // the range's lines and start position: their colour; BG: none
+  bool marks = false;                              // the start position and bar ticks shown
+  uint16_t rangeInk = INK;                         // the waveform inside the loop range
   // live view
   uint32_t liveBars = 0;
   int liveFilled = 0;                              // columns with recorded audio
@@ -84,22 +83,14 @@ static void drawColumn(int i, int bc) {
     bool muted = !v.live && tr.state == TrackState::Muted;
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
     if (!v.live || c < v.liveFilled) {
-      uint16_t ink = v.live ? BG : !in ? DARK : muted ? DIM : INK;   // (live: on the coloured cell)
+      uint16_t ink = v.live ? BG : !in ? DARK : v.rangeInk;   // (live: on the coloured cell)
       int h = (columnLevel(v.live ? v.liveData : tr.overview, c) * WAVE_REACH + 127) / 255;
       for (int r = MID_ROW - h; r <= MID_ROW + h; r++)
         col[r] = ink;
     }
-    if (v.marks != BG && !v.live) {
-      uint16_t mark = v.marks;
-      bool bar = isBarColumn(tr.loopBars, c);
-      if (in) {                                                   // the range's lines, above and below
-        col[1] = mark;
-        if (!bar) col[TICK_ROW] = mark;                           // (bar starts: a gap)
-      } else if (bar) {
-        col[TICK_ROW] = DARK;                                     // outside it: bar ticks
-      }
-      if (c == v.markCol) col[1] = col[TICK_ROW] = v.bg;          // the start position: a gap in both lines
-    }
+    if (v.marks && !v.live && isBarColumn(tr.loopBars, c)) col[TICK_ROW] = DARK;   // bar ticks
+    if (!v.live && c == v.markCol)                                // the start position: inverting
+      for (int r = MID_ROW - 2; r <= MID_ROW + 2; r++) col[r] = col[r] == v.bg ? (muted ? DIM : INK) : v.bg;
     if (c == v.playCol) {                                         // on top: the playhead
       for (int r = 1; r < BAND_ROWS - 1; r++)
         col[r] = v.headColor != PLAYHEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
@@ -121,11 +112,11 @@ void drawWave(int i, bool recordingHere) {
   uint32_t rs = 0, rb = 0;
   if (tr.state != TrackState::Empty) trackRange(i, rs, rb);
   uint16_t bg = cellBackground(i, WAVE_CELL), frame = cellFrame(i, WAVE_CELL);
-  uint16_t marks = i != selected || selectedCell != WAVE_CELL ? BG
-                 : editingCell(i, WAVE_CELL) ? ACCENT : tr.state == TrackState::Muted ? DIM : INK;
+  bool marks = i == selected && selectedCell == WAVE_CELL;
+  uint16_t rangeInk = marks && bAlone() ? ACCENT : tr.state == TrackState::Muted ? DIM : INK;
   if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.frame == frame &&
-      v.marks == marks)
+      v.marks == marks && v.rangeInk == rangeInk)
     return;
   v.drawn = uiGeneration;
   v.version = tr.overviewVersion;
@@ -136,6 +127,7 @@ void drawWave(int i, bool recordingHere) {
   v.bg = bg;
   v.frame = frame;
   v.marks = marks;
+  v.rangeInk = rangeInk;
   v.live = recordingHere;
   v.visible = recordingHere || tr.state != TrackState::Empty;
   if (!v.visible || v.live) v.playCol = -1;

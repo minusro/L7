@@ -16,7 +16,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | B + A | Open the panel (A closes it) |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
-| SHIFT + UP/DOWN | Newer / older scene (see scenes.md) |
+| SHIFT + UP/DOWN | Newer / older scene (see scenes.md); B + UP/DOWN does the same on the status row's scene cell (double taps and holding B included) |
 | SHIFT + UP/DOWN twice, second held | To N+1\* / 0\* |
 | B, SHIFT, A / SHIFT, B, A | Paste scene (B first) / cut scene (SHIFT first) |
 | PLAY | Start from 1.1.1 / stop |
@@ -61,32 +61,39 @@ and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
 selected cell only (75% grey while B alone is held); the selected track also gets a grey line (4 px; 75% grey while A
 alone is held) down the
 screen's right edge, in its button (none for the status row). The status
-button is always inverted (amber when A records, black while A is held). A recording track's waveform cell is amber.
+button is always inverted, with its corners cut (amber when A records, black
+while A is held). A recording track's waveform cell is amber.
 
 * Waveform (`ui_wave.cpp`): 64 columns, a centre line with peaks up to 4
   blocks each way; white inside the loop range, dark grey outside (muted:
-  50% grey range, dark grey outside). While the waveform cell is selected:
-  lines over and under the range (the bottom one with a gap where a bar
-  starts, bar ticks outside the range), the start position a black gap in
-  both lines. Playheads invert their column (muted: a dim line,
+  50% grey range, dark grey outside). The start position: a short line
+  across the middle (inverting what's there), on every track. While the
+  waveform cell is selected: bar ticks along the bottom; while B alone is held
+  on it, the range is in the accent colour, muted or not. Playheads invert their column (muted: a dim line,
   only when selected).
 * Filter (`ui_filter.cpp`): the response filled dark grey; the line itself
   only while the filter cell is selected and the clip plays (muted: only while
   B is held, in the accent colour).
 * Volume (`ui_mix.cpp`): `((( )))`, 4 arcs a side: dark grey above the level,
   50% grey up to it, white for the meter.
-* Editing (B held on the selected cell, so B + arrows change it): the range
-  lines, the filter line and the volume arcs lit by the level turn to the
+* Editing (B held on the selected cell, so B + arrows change it): the loop
+  range (B alone), the filter line and the volume arcs lit by the level turn to the
   accent colour, the volume meter midway between it and white
   (`editingCell()` in ui.h).
 * Icons (`ui_buttons.cpp`): bitmaps of blocks; "TAP" in the pixel font.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  Status row: tempo (inverted while edited) and clock in the first cell; an
-  inverted SCN tag with the scene position (flashing while a change waits) in
-  the second, which spans the filter and volume columns (room for "250*/250").
-* Track status icons: grey on every track, the selected one too (amber while
-  recording).
+  Status row (labels white while playing, grey while stopped): the scene cell
+  (an inverted SCN tag with the scene position,
+  flashing while a change waits), then the tempo cell spanning the filter and
+  volume columns (the clock on its left, the tempo on its right, inverted
+  while the cell is selected), then the button. In the accent colour: the
+  scene's tag and number while SHIFT is held, or B alone on the scene cell;
+  the tempo while B alone is held on its cell, or A alone on the status row
+  (tap tempo). The divider
+  above the status row runs the full width.
+* Track status icons: small (play 3×5 blocks, pause 3×5, record 4×4), play in
+  white, pause in grey (amber while recording); the status button's are full size.
 * Colours: all in `colors.h`.
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).

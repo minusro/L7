@@ -28,14 +28,14 @@ constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int TRACK_MARK_W = 2 * PX;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: its first cell, under the waveforms,
-// holds the tempo (left) and the clock (right); the second, spanning the
-// filter and volume columns, the scene.
-constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, TEMPO_CELL = WAVE_CELL, SCENE_CELL = 1;
-constexpr Cell SCENE_BOX = {CELL[1].x, CELL[2].x + CELL[2].w - CELL[1].x};
-// The cells a row has (the status row two: the volume column is the scene's).
-inline int cellCount(int i) { return i == STATUS_ROW ? SCENE_CELL + 1 : CELLS; }
+// holds the scene; the second, spanning the filter and volume columns, the
+// clock (left) and the tempo (right).
+constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, SCENE_CELL = 0, TEMPO_CELL = 1;
+constexpr Cell TEMPO_BOX = {CELL[1].x, CELL[2].x + CELL[2].w - CELL[1].x};
+// The cells a row has (the status row two: the volume column is the tempo's).
+inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The selected cell in row i's terms (on the status row, the volume column
-// is the scene's).
+// is the tempo's).
 inline int selectedCellIn(int i) { return min(selectedCell, cellCount(i) - 1); }
 
 inline int rowTop(int i) { return sliceCentredTop(i, ROW_BAND); }
@@ -67,6 +67,11 @@ inline uint16_t cellBackground(int i, int cell) {
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != selectedCellIn(i)) return BG;
   return board.keys() == m8::BTN_OPT ? LIGHT : DIM;
+}
+// B held as a modifier on its own (no SHIFT, A or START; arrows may be down).
+inline bool bAlone() {
+  uint8_t k = board.keys();
+  return (k & m8::BTN_OPT) && !(k & (m8::BTN_SHIFT | m8::BTN_EDIT | m8::BTN_PLAY));
 }
 // The cell is being edited: it's the selected one and B is held (B + arrows
 // change it). Its markings then show in the accent colour.

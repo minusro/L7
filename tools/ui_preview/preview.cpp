@@ -121,7 +121,11 @@ int main(int argc, char **argv) {
   selected = STATUS_ROW;
   selectedCell = TEMPO_CELL;
   render(out + "/ui_status.png");
-  selectedCell = MIX_CELL;                         // from a volume cell down to the status row: the scene's cell
+  board.heldKeys = m8::BTN_OPT;                    // B held on the tempo: B + arrows change it
+  render(out + "/ui_status_tempo_edit.png");
+  selectedCell = SCENE_CELL;                       // B held on the scene: B + UP/DOWN step through them
+  render(out + "/ui_status_scene_edit.png");
+  board.heldKeys = 0;
   render(out + "/ui_status_scene.png");
   selectedCell = TEMPO_CELL;
   bpm = 85.5f;                                     // a tempo below 100

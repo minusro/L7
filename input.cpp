@@ -24,15 +24,17 @@ static void resetCell() {
 
 // Tap tempo (A on the status row): the tempo follows the average of the last
 // TAP_AVERAGE intervals from the second tap on. Taps further apart than
-// TAP_TIMEOUT_MS start a new count. Every 4th tap after the first (the 5th,
+// TAP_TIMEOUT_MS start a new count, and so does any other key press in between. Every 4th tap after the first (the 5th,
 // 9th, 13th ...) lands on a bar line: a stopped transport starts there from
 // 1.1.1; a running one snaps to the nearest bar start.
 static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // a little over a beat at the slowest tempo (30 BPM)
 static constexpr int TAP_AVERAGE = 4;
 
+static int tapCount = 0;                            // taps in this run (0: the next is the first)
+
 static void tapTempo() {
   static uint32_t times[TAP_AVERAGE + 1];           // the latest taps, oldest first
-  static int count = 0;                             // taps in this run
+  int &count = tapCount;
   uint32_t now = millis();
   if (count > 0 && now - times[min(count, TAP_AVERAGE + 1) - 1] > TAP_TIMEOUT_MS) count = 0;
   if (count >= TAP_AVERAGE + 1) memmove(times, times + 1, TAP_AVERAGE * sizeof times[0]);
@@ -64,19 +66,24 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   bool onStatus = selected == STATUS_ROW;
   int prevSel = selected;
+  // Any press but a lone A on the status row (a tap): the next tap starts a new count.
+  if (pressed && !(onStatus && pressed == m8::BTN_EDIT && keys == m8::BTN_EDIT)) tapCount = 0;
   bool sceneChanged = false;                         // every row to redraw
-  // SHIFT held while playing: scene steps only move the label; the scene
-  // changes once SHIFT is let go (see the end).
-  if (shift && transport.running) sceneHold(true);
+  // The scene keys' modifier: SHIFT, or B on the status row's scene cell.
+  bool sceneMod = shift || (opt && onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL);
+  // Held while playing: scene steps only move the label; the scene changes
+  // once it's let go (see the end).
+  if (sceneMod && transport.running) sceneHold(true);
 
-  // SHIFT+UP/DOWN tapped twice: the second tap waits. Held EDGE_HOLD_MS, it
-  // goes to that end of the scene list; let go sooner, it's a step after all.
+  // SHIFT+UP/DOWN (or B+UP/DOWN on the scene cell) tapped twice: the second
+  // tap waits. Held EDGE_HOLD_MS, it goes to that end of the scene list; let
+  // go sooner, it's a step after all.
   static uint8_t edgeKey = 0;
   static uint32_t edgeAt = 0;
   uint8_t edgeDone = 0;                              // the arrow this call settled
   if (edgeKey) {
     int dir = edgeKey == m8::BTN_UP ? 1 : -1;
-    if (!(keys & edgeKey) || !shift) {
+    if (!(keys & edgeKey) || !sceneMod) {
       sceneChanged |= sceneStep(dir);
       edgeDone = edgeKey;
       edgeKey = 0;
@@ -107,10 +114,30 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
   }
 
+  // SHIFT+UP/DOWN: newer / older scene; tapped twice, the second tap held
+  // (see above): straight to that end (UP: N+1*, DOWN: the empty scene 0*).
+  auto sceneKeys = [&] {
+    static uint32_t lastTap[2] = {0, 0};
+    const uint8_t keys2[2] = {m8::BTN_UP, m8::BTN_DOWN};
+    for (int k = 0; k < 2; k++) {
+      if (!(pressed & keys2[k] & ~edgeDone)) continue;
+      bool twice = !repeat && millis() - lastTap[k] < DOUBLE_TAP_MS;
+      if (twice) {
+        edgeKey = keys2[k];
+        edgeAt = millis() + EDGE_HOLD_MS;
+      } else {
+        sceneChanged |= sceneStep(k == 0 ? 1 : -1);
+      }
+      lastTap[k] = repeat || twice ? 0 : millis();
+    }
+  };
+
   if (opt) {
     // OPT (B) + arrows: the current cell's parameters (none on empty tracks).
     if (onStatus) {
-      if (selectedCell == TEMPO_CELL) {              // tempo: 0.1 BPM steps, or 1 BPM
+      if (selectedCellIn(STATUS_ROW) == SCENE_CELL) {   // scene: UP/DOWN as SHIFT+UP/DOWN
+        sceneKeys();
+      } else {                                       // tempo: 0.1 BPM steps, or 1 BPM
         if (pressed & m8::BTN_LEFT) setTempo(bpm - 0.1f);
         if (pressed & m8::BTN_RIGHT) setTempo(bpm + 0.1f);
         // UP/DOWN: to the next whole BPM that way (120.5 up: 121; 135 down: 134).
@@ -235,21 +262,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       }
     }
   } else if (shift) {
-    // SHIFT+UP/DOWN: newer / older scene; tapped twice, the second tap held
-    // (see above): straight to that end (UP: N+1*, DOWN: the empty scene 0*).
-    static uint32_t lastTap[2] = {0, 0};
-    const uint8_t sceneKeys[2] = {m8::BTN_UP, m8::BTN_DOWN};
-    for (int k = 0; k < 2; k++) {
-      if (!(pressed & sceneKeys[k] & ~edgeDone)) continue;
-      bool twice = !repeat && millis() - lastTap[k] < DOUBLE_TAP_MS;
-      if (twice) {
-        edgeKey = sceneKeys[k];
-        edgeAt = millis() + EDGE_HOLD_MS;
-      } else {
-        sceneChanged |= sceneStep(k == 0 ? 1 : -1);
-      }
-      lastTap[k] = repeat || twice ? 0 : millis();
-    }
+    sceneKeys();
     // SHIFT+LEFT/RIGHT on a track: its sample, the previous / next on the card.
     if (!onStatus && !recordingOn(selected)) {
       if (pressed & m8::BTN_LEFT) stepSample(selected, -1);
@@ -258,7 +271,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   } else {
     if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
     if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
-    // (On the status row the volume column belongs to the scene cell.)
+    // (On the status row the volume column belongs to the tempo cell.)
     if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell = selectedCellIn(selected) - 1;
     if (pressed & m8::BTN_RIGHT && selectedCell < cellCount(selected) - 1) selectedCell++;
   }
@@ -299,7 +312,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if (transport.running) transportStop();
     else transportStart();
   }
-  if (!shift) sceneChanged |= sceneHold(false);     // SHIFT let go: to the scene stepped to
+  if (!sceneMod) sceneChanged |= sceneHold(false);  // SHIFT (or B) let go: to the scene stepped to
   // Show the result right away rather than on the rows' next redraw: the new
   // selection first, then the old one, so highlight and icon move together.
   if (sceneChanged)

@@ -68,13 +68,13 @@ no dropouts or overruns
 - invert scene navigation again V
 - de-clicking at loop edges and other transitions, including recording pre-roll V
 - optimize ram usage V
-
 - 80s lcd ui experiment V
-- switch tempo and clock labels, add play icon between
+- switch tempo and clock labels V
 
 - [ Projects ]
 - crossfading between two scenes
 
+- add play icon to status row (?)
 - animated splash screen (?)
 
 

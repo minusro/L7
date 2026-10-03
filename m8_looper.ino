@@ -23,7 +23,7 @@
 //
 // Keys:
 //   UP/DOWN          select a row: tracks 1-8, then the status row
-//   LEFT/RIGHT       select a cell: waveform, filter, volume (on the status row the first is the tempo)
+//   LEFT/RIGHT       select a cell: waveform, filter, volume (on the status row: scene, tempo)
 //   OPT twice        reset the current cell (waveform: whole loop; filter: open;
 //                      volume: unity, balance centred)
 //   OPT + arrows     change the current cell:
@@ -41,7 +41,8 @@
 //   SHIFT+LEFT/RIGHT the track's sample: previous / next on the card (empty track:
 //                      newest / oldest); keeps volume, filter, mute; whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
-//   SHIFT+UP/DOWN    newer / older scene (0*: empty; after the last, a copy of it)
+//   SHIFT+UP/DOWN    newer / older scene (0*: empty; after the last, a copy of it);
+//                    on the status row's scene cell B+UP/DOWN does the same
 //                    (while playing: on the next bar line after SHIFT is let go; SCN
 //                    flashes until then. To and from N+1*, the jumps to the ends, and
 //                    cutting, pasting and duplicating scenes: at once, on the next beat)

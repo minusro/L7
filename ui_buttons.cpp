@@ -5,7 +5,7 @@
 
 // ---- Row buttons
 // Track rows show the track's state: an unmuted track play while the clock
-// runs, pause while it's stopped (grey); the recording track record, flashing while it waits for the bar,
+// runs (white), pause while it's stopped (grey); the recording track record, flashing while it waits for the bar,
 // steady while recording, then a flashing play while it carries on to its
 // length (in the accent colour). Nothing on muted or empty tracks.
 // The status row's button (always inverted) shows what A does now on the
@@ -82,8 +82,8 @@ static int buttonIcon(int i) {
 
 // Icons: bitmaps of blocks ('#'), centred in the button. On the status row's
 // inverted button they're black; elsewhere the accent colour for a
-// recording, grey otherwise (the selected track's too); on track rows
-// two blocks left of centre (clear of the grey line along the selected track's
+// recording, white for a track playing, grey otherwise. Track rows' are
+// smaller, left of centre (clear of the grey line along the selected track's
 // button's right edge, its left corners cut). When A records, the
 // status button is in the accent colour. An action with nothing to act on
 // (paste, clipboard empty) is dark grey; while A is held the status button
@@ -106,6 +106,11 @@ PROGMEM static const Icon ICONS[] = {
   {9, 9, {"#########", "#.......#", "#..###..#", "#.#...#.#", "#.#.#.#.#", "#.#...#.#", "#.#####.#",
           "#.......#", "#########"}},                                                   // SCENE_PASTE
 };
+// Track rows' state icons, smaller (the status button keeps the big ones).
+PROGMEM static const Icon SMALL_RECORD = {4, 4, {".##.", "####", "####", ".##."}};
+PROGMEM static const Icon SMALL_PLAY = {3, 5, {"#..", "##.", "###", "##.", "#.."}};
+PROGMEM static const Icon SMALL_PAUSE = {3, 5, {"#.#", "#.#", "#.#", "#.#", "#.#"}};
+static constexpr int TRACK_ICON_CENTRE = 4;       // the column track rows' icons centre on (clear of the line)
 
 static bool unavailable(int i, int icon) {
   return i == STATUS_ROW && ((icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()));
@@ -122,7 +127,7 @@ static uint16_t iconColor(int i, int icon) {
   if (unavailable(i, icon)) return DARK;
   if (bg != BG) return BG;
   if (recordingOn(i) || recordQueued() == i) return ACCENT;
-  return i == STATUS_ROW ? INK : DIM;
+  return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white
 }
 
 // The selected track's line: grey, as the selected cell's frame; light grey
@@ -149,12 +154,22 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {
       c0 += glyphWidth(*g) + 1;
     }
   } else if (icon != ICON_NONE) {
-    const Icon &ic = ICONS[icon];
-    int c0 = (cols - ic.w) / 2 - (i != STATUS_ROW ? 2 : 0), r0 = (rows - ic.h) / 2;
+    bool track = i != STATUS_ROW;
+    const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
+                   : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
+    int c0 = track ? TRACK_ICON_CENTRE - ic.w / 2 : (cols - ic.w) / 2, r0 = (rows - ic.h) / 2;
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);
   }
+  if (i == STATUS_ROW && bg != BG)                 // the action button: its corners cut
+    for (int y = 0; y < PX; y++)
+      for (int x = 0; x < PX; x++)
+        for (int cy : {y, ROW_BAND - 1 - y})
+          for (int cx : {x, BUTTON_W - 1 - x}) px[cy * BUTTON_W + cx] = BG;
+  if (i == DIVIDER_ROW)                            // the divider runs on under the button
+    for (int y = ROW_BAND - PX; y < ROW_BAND; y++)
+      for (int x = 0; x < BUTTON_W; x++) px[y * BUTTON_W + x] = DIVIDER;
   if (i == selected && i != STATUS_ROW)            // the selected track: a line at the right edge
     for (int y = 0; y < ROW_BAND; y++)
       for (int x = BUTTON_W - TRACK_MARK_W; x < BUTTON_W; x++) {
@@ -188,9 +203,10 @@ void drawCells(int i) {
   auto &t = board.tft();
   if (first && !panelOpen())                         // (the panel's dimming covers them meanwhile)
     for (int c = 0; c < CELLS; c++) {                // the gaps after each cell
-      if (i == STATUS_ROW && c == SCENE_CELL) continue;   // (inside the scene's cell there)
+      if (i == STATUS_ROW && c == TEMPO_CELL) continue;   // (inside the tempo's cell there)
       int from = CELL[c].x + CELL[c].w, to = c + 1 < CELLS ? CELL[c + 1].x : BUTTON_X;
       t.fillRect(from, bgTop(i), to - from, bgHeight(i), BG);
+      if (i == DIVIDER_ROW) t.fillRect(from, dividerY(), to - from, PX, DIVIDER);   // the divider runs on
     }
   drawButton(i, k.icon, k.iconColor, k.bg);
 }
