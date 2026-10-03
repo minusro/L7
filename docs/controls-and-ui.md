@@ -92,7 +92,7 @@ while A is held). A recording track's waveform cell is in the accent colour.
   while the cell is selected), then the button. In the accent colour: the
   scene's tag and number while SHIFT is held, or B alone on the scene cell;
   the tempo while B alone is held on its cell, or A alone on the status row
-  (tap tempo). The divider
+  (tap tempo); the clock while START is held. The divider
   above the status row runs the full width.
 * Track status icons: small (play 3×5 blocks, pause 3×5, record 4×4), play in
   white, pause in grey (the accent while recording); the status button's are full size.

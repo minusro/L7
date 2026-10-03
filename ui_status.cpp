@@ -12,7 +12,8 @@
 //     another scene is selected but not there yet: SHIFT (or B) still held on
 //     it, or the change waiting for its switch point.
 //   second cell (the filter and volume columns): the clock (bar.beat.step)
-//     on the left (white while running, a grey 1.1.1 while stopped), the
+//     on the left (white while running, a grey 1.1.1 while stopped; in the
+//     accent colour while START is held), the
 //     tempo on the right (white while playing, grey while stopped; inverted
 //     while its cell is selected, on the accent colour while B is held there:
 //     B + arrows change it; in the accent colour while A alone is held on the
@@ -90,7 +91,8 @@ void drawStatus() {
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
-  drawText(TEMPO_BOX.x + INSET, textY, text, running ? INK : DIM, BG, CLOCK_W);   // (its box clears longer text)
+  uint16_t clockInk = board.keys() & m8::BTN_PLAY ? ACCENT : running ? INK : DIM;   // START held: the accent
+  drawText(TEMPO_BOX.x + INSET, textY, text, clockInk, BG, CLOCK_W);   // (its box clears longer text)
 
   // The scene. Its box reaches the cell's inner edge: the position's text
   // (up to "250*/250") always fits, and clears any longer text before it.
