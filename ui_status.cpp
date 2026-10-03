@@ -3,21 +3,18 @@
 
 // Status row, in the pixel font, each cell framed like the tracks' when the
 // row is selected:
-//   first cell: the scene, a "SCN" tag (inverted: white
-//     while playing, grey while stopped; in the accent colour while B is held
-//     on the cell: B + UP/DOWN step through the scenes) and its position "3/7"
-//     (white while playing, grey while stopped; the empty scene "0/7" and the
-//     copy after the last "*/7" in grey).
-//     Both in the accent colour while SHIFT is held, or B alone on the cell. The
-//     position flashes with the beat (the accent colour, then grey) while
+// The labels (the "SCN" tag, the scene's position, the tempo) are light grey,
+// white on the selected cell.
+//   first cell: the scene, an inverted "SCN" tag and its position "3/7" (the
+//     empty scene "0/7" and the copy after the last "*/7" in grey; in the
+//     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
+//     UP/DOWN step through the scenes). The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
 //     it, or the change waiting for its switch point.
 //   second cell: the clock (bar.beat.step)
 //     on the left (a grey 1.1.1 while stopped; running: in the accent colour
 //     on 1.1.1, white on each beat's first step, light grey on the others), the
-//     tempo on the right (white while playing, grey while stopped; inverted
-//     while its cell is selected, on the accent colour while B is held there:
-//     B + arrows change it).
+//     tempo on the right.
 // Text and tags are redrawn whole each pass (their boxes clear what was
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
@@ -65,20 +62,15 @@ void drawStatus() {
   float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
   snprintf(text, sizeof text, "%.1f BPM", shown);
   int cell = selected == STATUS_ROW ? selectedCellIn(STATUS_ROW) : -1;
-  bool playing = transport.running;                // labels: white while playing, grey while stopped
-  uint16_t live = playing ? INK : DIM;
+  auto labelInk = [&](int c) -> uint16_t { return cell == c ? INK : LIGHT; };
   int tagY = top + (CELL_H - TAG_H) / 2, textY = top + (CELL_H - FONT_H) / 2;
   {
     const Cell &box = TEMPO_BOX;
     int right = box.x + box.w - INSET;
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    bool editing = cell == TEMPO_CELL;
-    // In the accent colour: B alone held on it (B + arrows change it).
-    bool accent = editing && bAlone();
-    uint16_t back = accent ? ACCENT : INK;
     int w = tagWidth(text);
     t.fillRect(right - tempoW, tagY, tempoW - w, TAG_H, BG);   // what longer text left
-    drawTag(right - w, tagY, text, editing ? TAG_INVERTED : TAG_PLAIN, editing || accent ? back : live, BG);
+    drawTag(right - w, tagY, text, TAG_PLAIN, labelInk(TEMPO_CELL), BG);
   }
 
   // The clock.
@@ -100,15 +92,15 @@ void drawStatus() {
   // The scene. Its box reaches the cell's inner edge: the position's text
   // (up to "250*/250") always fits, and clears any longer text before it.
   const Cell &box = SCENE_BOX;
-  // In the accent colour: SHIFT held (SHIFT + UP/DOWN step through the
-  // scenes), or B alone on the cell (B + UP/DOWN do).
+  // The position in the accent colour: SHIFT held (SHIFT + UP/DOWN step
+  // through the scenes), or B alone on the cell (B + UP/DOWN do).
   bool sceneAccent = (board.keys() & m8::BTN_SHIFT) || (cell == SCENE_CELL && bAlone());
-  drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : live, BG);
+  drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, labelInk(SCENE_CELL), BG);
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
   else snprintf(text, sizeof text, "%d/%d", scene, count);       // (0: the empty scene)
-  uint16_t ink = sceneAccent ? ACCENT : temporary ? DIM : live;
+  uint16_t ink = sceneAccent ? ACCENT : temporary ? DIM : labelInk(SCENE_CELL);
   if (sceneHeld() || sceneChangeWaiting()) {
     noInterrupts();
     bool firstHalf = transport.sampleInBeat < transport.spb / 2;

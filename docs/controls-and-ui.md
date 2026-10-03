@@ -65,16 +65,16 @@ fill, unlit volume lines), 50% grey
 (`DIM`: inactive — muted clips, idle icons and text), white (`INK`: active,
 selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one constant: recording
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
-(`PX`), a 160×120 screen of chunky pixels. Selection: a grey frame on the
-selected cell only (75% grey while B alone is held); the selected track's button gets a grey panel behind its number (the button's
+(`PX`), a 160×120 screen of chunky pixels. Selection: a light grey frame on the
+selected cell only (50% grey while B alone is held); the selected track's button gets a light grey panel behind its number (the button's
 full height: two blocks of border above, left and below; the accent colour while A is held, with the
 action button, showing just the number then, in black).
 None while the status row is selected. The status
-button (the action button) is 50% grey with black icons, a block taller than the others (down to the status cells' bottom border), its top left corner cut;
+button (the action button) is light grey with black icons, a block taller than the others (down to the status cells' bottom border), its top left corner cut;
 the accent colour while A is held. A recording track's waveform cell is in the accent colour.
 
 * Waveform (`ui_wave.cpp`): 94 columns, the cell's full height (peaks up
-  to 5 blocks each way from a two-block centre, square-root scale); white inside the loop range, dark grey outside (muted:
+  to 5 blocks each way from a two-block centre, square-root scale); light grey inside the loop range (white on the selected cell), dark grey outside (muted:
   50% grey range, dark grey outside). The start position: a short line
   across the middle (inverting what's there), on every track. While B alone
   is held on the selected waveform cell, the range is in the accent colour,
@@ -96,12 +96,10 @@ the accent colour while A is held. A recording track's waveform cell is in the a
 * Icons (`ui_buttons.cpp`): bitmaps of blocks; "TAP" in the pixel font.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  Status row (labels white while playing, grey while stopped): the scene cell
+  Status row (labels light grey, white on the selected cell): the scene cell
   (an inverted SCN tag with the scene position,
-  flashing while a change waits), then the tempo cell (the same width) (the clock on its left, the tempo on its right, inverted
-  while the cell is selected), then the button. In the accent colour: the
-  scene's tag and number while SHIFT is held, or B alone on the scene cell;
-  the tempo while B alone is held on its cell. The clock: grey while stopped; running, in the accent colour on 1.1.1,
+  flashing while a change waits), then the tempo cell (the same width) (the clock on its left, the tempo on its right), then the button. In the accent colour: the
+  scene's number while SHIFT is held, or B alone on the scene cell. The clock: grey while stopped; running, in the accent colour on 1.1.1,
   white on each beat's first step, light grey on the others.
 * Track buttons: the track's number (tracks count from the bottom: 1 is
   just above the status row) — dark grey on an empty track; in a grey-outlined

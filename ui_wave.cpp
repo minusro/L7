@@ -106,8 +106,10 @@ void drawWave(int i, bool recordingHere) {
   if (tr.state != TrackState::Empty) trackRange(i, rs, rb);
   uint16_t bg = cellBackground(i, WAVE_CELL);
   uint64_t borders = bordersOf(i, WAVE_CELL);
-  bool editing = i == selected && selectedCell == WAVE_CELL && bAlone();
-  uint16_t rangeInk = editing ? ACCENT : tr.state == TrackState::Muted ? DIM : INK;
+  // The range: light grey, white on the selected cell, the accent colour while
+  // B alone is held on it (editing); muted: grey.
+  bool here = i == selected && selectedCell == WAVE_CELL, editing = here && bAlone();
+  uint16_t rangeInk = editing ? ACCENT : tr.state == TrackState::Muted ? DIM : here ? INK : LIGHT;
   if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.borders == borders &&
       v.rangeInk == rangeInk)

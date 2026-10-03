@@ -95,11 +95,11 @@ static int buttonIcon(int i) {
 }
 
 // Icons: bitmaps of blocks ('#'), centred in the button. On the action
-// button (50% grey; the accent colour while A is held) they're black;
+// button (light grey; the accent colour while A is held) they're black;
 // elsewhere the accent colour for a
 // recording, white for a track playing, grey otherwise. Track rows' are
-// smaller, left of centre (clear of the grey line along the selected track's
-// button's right edge, its left corners cut). An action with nothing to act
+// smaller, left of centre (on the selected track's panel, its left
+// corners cut). An action with nothing to act
 // on (paste, clipboard empty) is dark grey.
 struct Icon { int w, h; const char *rows[9]; };
 PROGMEM static const Icon ICONS[] = {
@@ -129,11 +129,11 @@ static bool unavailable(int i, int icon) {
   return i == STATUS_ROW && ((icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()));
 }
 
-// The action button (the status row's): 50% grey, the accent colour while A
+// The action button (the status row's): light grey, the accent colour while A
 // is held. The tracks' buttons: black.
 static uint16_t buttonBackground(int i, int icon) {
   (void)icon;
-  if (i == STATUS_ROW) return heldAction >= 0 ? ACCENT : DIM;
+  if (i == STATUS_ROW) return heldAction >= 0 ? ACCENT : LIGHT;
   return cellBackground(i, -1);
 }
 
@@ -146,9 +146,9 @@ static uint16_t iconColor(int i, int icon) {
   return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white
 }
 
-// The selected track's line: grey, as the selected cell's frame; in the
+// The selected track's panel: light grey, as the action button; in the
 // accent colour while A is held, with the action button (acting on the track).
-static uint16_t markColor() { return heldAction >= 0 ? ACCENT : DIM; }
+static uint16_t markColor() { return heldAction >= 0 ? ACCENT : LIGHT; }
 
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
@@ -164,7 +164,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   const int cols = BUTTON_W / PX, rows = ROW_BAND / PX;
   // The selected track's panel, under its number or icons: the button's whole
   // height, its left corners cut (a two-block border round the number on the
-  // left, top and bottom). Grey; the accent colour while A is held, showing
+  // left, top and bottom). Light grey; the accent colour while A is held, showing
   // just the track's number then, in black.
   uint16_t panel = i == selected && i != STATUS_ROW ? markColor() : BG;
   if (panel != BG) {
@@ -201,7 +201,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     if (badge != BADGE_EMPTY && badge != BADGE_LABEL) {
       // (On the panel: a muted one's outline black; a playing one's square
       // black, its number in the accent colour, on the panel in the accent colour.)
-      uint16_t fill = badge == BADGE_PLAYING ? (panel == ACCENT ? BG : ACCENT) : (panel == DIM ? BG : DIM);
+      uint16_t fill = badge == BADGE_PLAYING ? (panel == ACCENT ? BG : ACCENT) : (panel != BG ? BG : DIM);
       for (int r = 0; r < h; r++)
         for (int c = 0; c < w; c++) {
           bool side = c == 0 || c == w - 1, edge = r == 0 || r == h - 1;
@@ -211,7 +211,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     }
     const Glyph *g = glyphFor((char)('0' + trackNumber(i)));
     uint16_t ink = badge == BADGE_PLAYING ? (panel == ACCENT ? ACCENT : BG)
-                 : badge == BADGE_MUTED ? (panel == DIM ? BG : DIM) : badge == BADGE_LABEL ? BG : DARK;
+                 : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL ? BG : DARK;
     int gc = TRACK_ICON_CENTRE - glyphWidth(*g) / 2, gr = (rows - 5) / 2;
     for (int r = 0; r < 5; r++)
       for (int c = 0; c < glyphWidth(*g); c++)
