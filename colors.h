@@ -20,7 +20,7 @@ constexpr uint16_t DARK = rgb565(32, 32, 32);       // 12.5% grey: in the backgr
 constexpr uint16_t DIM = rgb565(128, 128, 128);     // 50% grey: inactive (muted clips, idle icons and text)
 constexpr uint16_t LIGHT = rgb565(192, 192, 192);   // 75% grey: the selection's markers while B or A is held
 constexpr uint16_t INK = rgb565(255, 255, 255);     // white: what's active, selected, playing
-constexpr uint16_t ACCENT = rgb565(255, 150, 0);    // amber: recording, and a scene change on its way
+constexpr uint16_t ACCENT = rgb565(48, 230, 170);   // green turquoise: recording, and a scene change on its way
 
 // ---- Roles
 constexpr uint16_t DIVIDER = DARK;           // line above the status row

@@ -22835,7 +22835,7 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
   return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white
     9322:	2300      	movs	r3, #0
   if (recordingOn(i) || recordQueued() == i) return ACCENT;
-    9324:	f64f 46a0 	movw	r6, #64672	@ 0xfca0
+    9324:	f243 7635 	movw	r6, #14133	@ 0x3735
   return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white
     9328:	9303      	str	r3, [sp, #12]
     932a:	e72e      	b.n	918a <drawCells(int)+0x72>
@@ -23174,7 +23174,7 @@ inline int bgTop(int i) { return i == 0 ? 0 : rowTop(i); }
     95f2:	b00f      	add	sp, #60	@ 0x3c
     95f4:	e8bd 8ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
   k.bg = buttonBackground(i, k.icon);
-    95f8:	f64f 43a0 	movw	r3, #64672	@ 0xfca0
+    95f8:	f243 7335 	movw	r3, #14133	@ 0x3735
   if (bg != BG) return BG;
     95fc:	2600      	movs	r6, #0
   k.bg = buttonBackground(i, k.icon);
@@ -23833,7 +23833,7 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
     9af6:	9303      	str	r3, [sp, #12]
     9af8:	0783      	lsls	r3, r0, #30
     9afa:	f140 8101 	bpl.w	9d00 <drawFilter(int)+0x3f8>
-    9afe:	f64f 47a0 	movw	r7, #64672	@ 0xfca0
+    9afe:	f243 7735 	movw	r7, #14133	@ 0x3735
     9b02:	e729      	b.n	9958 <drawFilter(int)+0x50>
 inline bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }
     9b04:	780b      	ldrb	r3, [r1, #0]
@@ -25853,7 +25853,7 @@ static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX 
     aac4:	d556      	bpl.n	ab74 <drawStatus()+0x2dc>
     aac6:	f04f 0801 	mov.w	r8, #1
   drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : live, BG);
-    aaca:	f64f 43a0 	movw	r3, #64672	@ 0xfca0
+    aaca:	f243 7335 	movw	r3, #14133	@ 0x3735
     aace:	2200      	movs	r2, #0
     aad0:	21d6      	movs	r1, #214	@ 0xd6
     aad2:	2004      	movs	r0, #4
@@ -25904,7 +25904,7 @@ static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX 
     ab32:	b662      	cpsie	i
     ink = firstHalf ? ACCENT : DIM;
     ab34:	ebb3 0f52 	cmp.w	r3, r2, lsr #1
-    ab38:	f64f 43a0 	movw	r3, #64672	@ 0xfca0
+    ab38:	f243 7335 	movw	r3, #14133	@ 0x3735
     ab3c:	f248 4510 	movw	r5, #33808	@ 0x8410
     ab40:	bf38      	it	cc
     ab42:	461d      	movcc	r5, r3
@@ -25966,7 +25966,7 @@ static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX 
   drawText(TEMPO_BOX.x + INSET, textY, text, running ? INK : DIM, BG, CLOCK_W);   // (its box clears longer text)
     abd4:	e769      	b.n	aaaa <drawStatus()+0x212>
   uint16_t ink = sceneAccent ? ACCENT : temporary ? DIM : live;
-    abd6:	f64f 45a0 	movw	r5, #64672	@ 0xfca0
+    abd6:	f243 7535 	movw	r5, #14133	@ 0x3735
   if (sceneHeld() || sceneChangeWaiting()) {
     abda:	f7f8 fe91 	bl	3900 <looper::sceneHeld()>
     abde:	2800      	cmp	r0, #0
@@ -26037,7 +26037,7 @@ static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX 
     ac62:	f00b faff 	bl	16264 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
     drawTag(right - w, tagY, text, editing ? TAG_INVERTED : TAG_PLAIN, editing || accent ? back : live, BG);
     ac66:	f5c9 7090 	rsb	r0, r9, #288	@ 0x120
-    ac6a:	f64f 43a0 	movw	r3, #64672	@ 0xfca0
+    ac6a:	f243 7335 	movw	r3, #14133	@ 0x3735
     ac6e:	e6dd      	b.n	aa2c <drawStatus()+0x194>
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
     ac70:	4831      	ldr	r0, [pc, #196]	@ (ad38 <drawStatus()+0x4a0>)
@@ -27109,7 +27109,7 @@ inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 inline bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }
     b4e0:	781a      	ldrb	r2, [r3, #0]
   return BG;
-    b4e2:	f64f 43a0 	movw	r3, #64672	@ 0xfca0
+    b4e2:	f243 7335 	movw	r3, #14133	@ 0x3735
     b4e6:	2a00      	cmp	r2, #0
     b4e8:	bf14      	ite	ne
     b4ea:	469a      	movne	sl, r3
@@ -27146,7 +27146,7 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
     b530:	9301      	str	r3, [sp, #4]
     b532:	f47f af02 	bne.w	b33a <drawWave(int, bool)+0x6a>
   uint16_t rangeInk = marks && bAlone() ? ACCENT : tr.state == TrackState::Muted ? DIM : INK;
-    b536:	f64f 4ca0 	movw	ip, #64672	@ 0xfca0
+    b536:	f243 7c35 	movw	ip, #14133	@ 0x3735
     b53a:	e70a      	b.n	b352 <drawWave(int, bool)+0x82>
   bool marks = i == selected && selectedCell == WAVE_CELL;
     b53c:	f8d9 3000 	ldr.w	r3, [r9]
@@ -27207,7 +27207,7 @@ void updatePlayheads() {
       col = min(WAVE_COLS - 1, (int)(loopBeat * WAVE_COLS / (tr.loopBars * BEATS_PER_BAR)));
     }
     movePlayhead(i, col, muted ? MUTED_HEAD : v.rangeInk == ACCENT ? INK : PLAYHEAD);
-    b5ac:	f64f 49a0 	movw	r9, #64672	@ 0xfca0
+    b5ac:	f243 7935 	movw	r9, #14133	@ 0x3735
 inline bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }
     b5b0:	f8d8 3004 	ldr.w	r3, [r8, #4]
     if (v.live != recordingOn(i)) drawTrack(i);

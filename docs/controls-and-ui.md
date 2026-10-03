@@ -55,14 +55,14 @@ Style (after Elektron's screens): five colours (`colors.h`) — black (`BG`),
 12.5% grey (`DARK`: background detail — outside the loop range, fills, unlit
 arcs, the selected row's other frames, the divider, bar ticks), 50% grey
 (`DIM`: inactive — muted clips, idle icons and text), white (`INK`: active,
-selected) and the accent (`ACCENT`, amber for now, one constant: recording
+selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one constant: recording
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
 (`PX`), a 160×120 screen of chunky pixels. Selection: a grey frame on the
 selected cell only (75% grey while B alone is held); the selected track also gets a grey line (4 px; 75% grey while A
 alone is held) down the
 screen's right edge, in its button (none for the status row). The status
-button is always inverted, with its corners cut (amber when A records, black
-while A is held). A recording track's waveform cell is amber.
+button is always inverted, with its corners cut (the accent when A records, black
+while A is held). A recording track's waveform cell is in the accent colour.
 
 * Waveform (`ui_wave.cpp`): 64 columns, a centre line with peaks up to 4
   blocks each way; white inside the loop range, dark grey outside (muted:
@@ -95,7 +95,7 @@ while A is held). A recording track's waveform cell is amber.
   (tap tempo). The divider
   above the status row runs the full width.
 * Track status icons: small (play 3×5 blocks, pause 3×5, record 4×4), play in
-  white, pause in grey (amber while recording); the status button's are full size.
+  white, pause in grey (the accent while recording); the status button's are full size.
 * Colours: all in `colors.h`.
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
