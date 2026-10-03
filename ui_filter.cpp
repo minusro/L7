@@ -44,8 +44,6 @@ void drawFilter(int i) {
     if (k.frame != BG) {
       if (c == 0 || c == CELL_COLS - 1) for (int r = 1; r < BAND_ROWS - 1; r++) blocks[r][c] = k.frame;
       else blocks[0][c] = blocks[BAND_ROWS - 1][c] = k.frame;
-    } else if (i == DIVIDER_ROW) {
-      blocks[BAND_ROWS - 1][c] = DIVIDER;
     }
   }
   if (k.clip) {
@@ -72,4 +70,5 @@ void drawFilter(int i) {
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(CELL[FILTER_CELL].x, bgTop(i), w, top - bgTop(i), BG);   // the first row's margin
   t.writeRect(CELL[FILTER_CELL].x, top, w, ROW_BAND, px);
+  drawDividerUnder(i, CELL[FILTER_CELL].x, w);
 }

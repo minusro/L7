@@ -144,6 +144,12 @@ int main(int argc, char **argv) {
   recording.startBeat = transport.beat - 9;
   selected = 5;
   render(out + "/ui_recording.png");
+  selected = 1;                                    // A held on track 7: its panel and the action button highlighted
+  selectedCell = WAVE_CELL;
+  board.heldKeys = m8::BTN_EDIT;
+  noteActionPress();
+  render(out + "/ui_action_held.png");
+  board.heldKeys = 0;
   selected = 1;                                    // the panel (B+A) over the screen
   render(out + "/ui_panel.png");
   board.tft().fillScreen(BG);

@@ -48,7 +48,8 @@ double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
 
 320×240, no frame buffer: everything is drawn over its own background and
 only what changed is redrawn (`uiGeneration` forces a full redraw, e.g. after
-the panel or splash). 9 rows of 26 px: 8 tracks + status row; cells
+the panel or splash). 9 rows of 26 px: 8 tracks from the top of the screen, a 2 px gap
+holding the divider, then the status row; cells
 waveform | filter | volume | button (square).
 
 Style (after Elektron's screens): five colours (`colors.h`) — black (`BG`),
@@ -58,9 +59,10 @@ arcs, the selected row's other frames, the divider, bar ticks), 50% grey
 selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one constant: recording
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
 (`PX`), a 160×120 screen of chunky pixels. Selection: a grey frame on the
-selected cell only (75% grey while B alone is held); the selected track also gets a grey line (4 px; the accent colour while A
-is held, with the action button) down the
-screen's right edge, in its button (none for the status row). The status
+selected cell only (75% grey while B alone is held); the selected track's button gets a grey panel behind its number (the button's
+full height: two blocks of border above, left and below; the accent colour while A is held, with the
+action button, showing just the number then, in black).
+None while the status row is selected. The status
 button (the action button) is 50% grey with black icons and its corners cut;
 the accent colour while A is held. A recording track's waveform cell is in the accent colour.
 

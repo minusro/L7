@@ -101,8 +101,6 @@ void drawMix(int i) {
         if (frame != BG) {
           bool side = c == 0 || c == CELL_COLS - 1, edge = r == 0 || r == BAND_ROWS - 1;
           if (side != edge) color = frame;                       // (corners cut)
-        } else if (i == DIVIDER_ROW && r == BAND_ROWS - 1) {
-          color = DIVIDER;
         }
         if (arcAt[r][c] >= 0) color = blockColor(looks[arcAt[r][c]], r, c);
         for (int dy = 0; dy < PX; dy++)
@@ -110,6 +108,7 @@ void drawMix(int i) {
       }
     if (bgTop(i) < top) t.fillRect(cell.x, bgTop(i), cell.w, top - bgTop(i), BG);   // the first row's margin
     t.writeRect(cell.x, top, cell.w, ROW_BAND, px);
+    drawDividerUnder(i, cell.x, cell.w);
     drawn[i] = uiGeneration;
     shownFrame[i] = frame;
     memcpy(shown[i], looks, sizeof looks);

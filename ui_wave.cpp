@@ -78,8 +78,6 @@ static void drawColumn(int i, int bc) {
     uint16_t frame = v.bg != BG ? BG : v.frame;
     if (bc == 0 || bc == BLOCK_COLS - 1) for (int r = 1; r < BAND_ROWS - 1; r++) col[r] = frame;
     else col[0] = col[BAND_ROWS - 1] = frame;
-  } else if (i == DIVIDER_ROW) {
-    col[BAND_ROWS - 1] = DIVIDER;
   }
   int c = bc - 1;                                  // waveform column
   if (c >= 0 && c < WAVE_COLS && v.visible) {
@@ -107,6 +105,7 @@ static void drawColumn(int i, int bc) {
   int x = WAVE_X + bc * PX, top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(x, bgTop(i), PX, top - bgTop(i), v.bg);   // the first row's margin
   t.writeRect(x, top, PX, ROW_BAND, px);
+  drawDividerUnder(i, x, PX);
 }
 
 void drawWave(int i, bool recordingHere) {
