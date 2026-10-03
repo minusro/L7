@@ -10,7 +10,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 |---|---|
 | UP/DOWN | Select row: tracks 1–8, status row (no wrapping) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: tempo) |
-| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute (unmute while stopped starts the clock). Status row: tap tempo on the tempo cell, the panel (as B+A) on the scene cell |
+| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: tap tempo on the tempo cell, the panel (as B+A) on the scene cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
 | B + A | Open the panel (A closes it) |
@@ -91,8 +91,7 @@ the accent colour while A is held. A recording track's waveform cell is in the a
   volume columns (the clock on its left, the tempo on its right, inverted
   while the cell is selected), then the button. In the accent colour: the
   scene's tag and number while SHIFT is held, or B alone on the scene cell;
-  the tempo while B alone is held on its cell, or A alone on the status row
-  (tap tempo); the clock while START is held. The divider
+  the tempo while B alone is held on its cell; the clock while START is held. The divider
   above the status row runs the full width.
 * Track status icons: small (play 3×5 blocks, pause 3×5, record 4×4), play in
   white, pause in grey (the accent while recording); the status button's are full size.

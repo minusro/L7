@@ -16,8 +16,7 @@
 //     accent colour while START is held), the
 //     tempo on the right (white while playing, grey while stopped; inverted
 //     while its cell is selected, on the accent colour while B is held there:
-//     B + arrows change it; in the accent colour while A alone is held on the
-//     status row: tapping it).
+//     B + arrows change it).
 // Text and tags are redrawn whole each pass (their boxes clear what was
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
@@ -72,9 +71,8 @@ void drawStatus() {
     int right = box.x + box.w - INSET;
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
     bool editing = cell == TEMPO_CELL;
-    // In the accent colour: B alone held on it (B + arrows change it), or A
-    // alone held on the status row (tapping it).
-    bool accent = (editing && bAlone()) || (selected == STATUS_ROW && board.keys() == m8::BTN_EDIT);
+    // In the accent colour: B alone held on it (B + arrows change it).
+    bool accent = editing && bAlone();
     uint16_t back = accent ? ACCENT : INK;
     int w = tagWidth(text);
     t.fillRect(right - tempoW, tagY, tempoW - w, TAG_H, BG);   // what longer text left
