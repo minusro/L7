@@ -7789,7 +7789,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     1e54:	2300      	movs	r3, #0
     1e56:	7013      	strb	r3, [r2, #0]
   if (panelOpen()) {                                 // the panel: only A, to close it
-    1e58:	f008 fbb8 	bl	a5cc <panelOpen()>
+    1e58:	f008 fbba 	bl	a5d0 <panelOpen()>
     1e5c:	2800      	cmp	r0, #0
     1e5e:	f040 808e 	bne.w	1f7e <onKeys(unsigned char, unsigned char, bool)+0x15a>
       noteActionPress();
@@ -7952,7 +7952,7 @@ inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
     1f28:	9b02      	ldr	r3, [sp, #8]
     1f2a:	2b00      	cmp	r3, #0
     1f2c:	f000 83e0 	beq.w	26f0 <onKeys(unsigned char, unsigned char, bool)+0x8cc>
-    1f30:	f008 fb52 	bl	a5d8 <openPanel()>
+    1f30:	f008 fb54 	bl	a5dc <openPanel()>
   }
   if (toggleTransport) {
     if (transport.running) transportStop();
@@ -8277,7 +8277,7 @@ inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !rec
     21d8:	b00d      	add	sp, #52	@ 0x34
     21da:	e8bd 4ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
       closePanel();
-    21de:	f008 ba8d 	b.w	a6fc <closePanel()>
+    21de:	f008 ba8f 	b.w	a700 <closePanel()>
     21e2:	4a5f      	ldr	r2, [pc, #380]	@ (2360 <onKeys(unsigned char, unsigned char, bool)+0x53c>)
     } else if ((int32_t)(millis() - edgeAt) >= 0) {
     21e4:	495f      	ldr	r1, [pc, #380]	@ (2364 <onKeys(unsigned char, unsigned char, bool)+0x540>)
@@ -8658,7 +8658,7 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
     24f8:	4681      	mov	r9, r0
     24fa:	e65c      	b.n	21b6 <onKeys(unsigned char, unsigned char, bool)+0x392>
     if (!shift) openPanel();
-    24fc:	f008 f86c 	bl	a5d8 <openPanel()>
+    24fc:	f008 f86e 	bl	a5dc <openPanel()>
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
     2500:	2c00      	cmp	r4, #0
     2502:	f47f ae2c 	bne.w	215e <onKeys(unsigned char, unsigned char, bool)+0x33a>
@@ -8683,7 +8683,7 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
     2528:	f43f ae72 	beq.w	2210 <onKeys(unsigned char, unsigned char, bool)+0x3ec>
     252c:	e5fe      	b.n	212c <onKeys(unsigned char, unsigned char, bool)+0x308>
     if (onScene) openPanel();                      // as B+A
-    252e:	f008 f853 	bl	a5d8 <openPanel()>
+    252e:	f008 f855 	bl	a5dc <openPanel()>
   if (edit && !onStatus) {
     2532:	e614      	b.n	215e <onKeys(unsigned char, unsigned char, bool)+0x33a>
         edgeKey = keys2[k];
@@ -9946,7 +9946,7 @@ static void handlePowerButton() {
     2f04:	4611      	mov	r1, r2
     2f06:	f013 f82f 	bl	15f68 <ILI9341_t3n::setTextSize(unsigned char, unsigned char)>
     t.setCursor(4, splashBottom() + 16);
-    2f0a:	f007 fc15 	bl	a738 <splashBottom()>
+    2f0a:	f007 fc17 	bl	a73c <splashBottom()>
     2f0e:	f100 0210 	add.w	r2, r0, #16
     2f12:	2104      	movs	r1, #4
     2f14:	4620      	mov	r0, r4
@@ -10468,7 +10468,7 @@ void setup() {
     3292:	68a8      	ldr	r0, [r5, #8]
     3294:	f012 fe8c 	bl	15fb0 <ILI9341_t3n::setTextWrap(bool)>
   showSplash();
-    3298:	f007 fa50 	bl	a73c <showSplash()>
+    3298:	f007 fa52 	bl	a740 <showSplash()>
   if (!storageBegin(progress))
     329c:	4863      	ldr	r0, [pc, #396]	@ (342c <setup+0x230>)
     329e:	f004 fd7d 	bl	7d9c <looper::storageBegin(void (*)(char const*))>
@@ -10486,7 +10486,7 @@ void setup() {
     32bc:	4611      	mov	r1, r2
     32be:	f012 fe53 	bl	15f68 <ILI9341_t3n::setTextSize(unsigned char, unsigned char)>
     t.setCursor(4, splashBottom() + 16);
-    32c2:	f007 fa39 	bl	a738 <splashBottom()>
+    32c2:	f007 fa3b 	bl	a73c <splashBottom()>
     32c6:	f100 0210 	add.w	r2, r0, #16
     32ca:	2300      	movs	r3, #0
     32cc:	2104      	movs	r1, #4
@@ -10607,7 +10607,7 @@ void setup() {
     3384:	b00d      	add	sp, #52	@ 0x34
     3386:	e8bd 43f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, lr}
   hideSplash();
-    338a:	f007 ba87 	b.w	a89c <hideSplash()>
+    338a:	f007 ba89 	b.w	a8a0 <hideSplash()>
 			uint32_t elapsed = systick_millis_count - millis_begin;
     338e:	682b      	ldr	r3, [r5, #0]
 			if (usb_configuration) {
@@ -10653,7 +10653,7 @@ void setup() {
     33e0:	4611      	mov	r1, r2
     33e2:	f012 fdc1 	bl	15f68 <ILI9341_t3n::setTextSize(unsigned char, unsigned char)>
   t.setCursor(4, splashBottom() + 16);           // under the logo
-    33e6:	f007 f9a7 	bl	a738 <splashBottom()>
+    33e6:	f007 f9a9 	bl	a73c <splashBottom()>
     33ea:	f100 0210 	add.w	r2, r0, #16
     33ee:	4633      	mov	r3, r6
     33f0:	2104      	movs	r1, #4
@@ -22290,7 +22290,7 @@ void drawTrack(int i) {
     8f54:	b082      	sub	sp, #8
     8f56:	4604      	mov	r4, r0
   if (i < 0 || i >= ROWS || panelOpen()) return;
-    8f58:	f001 fb38 	bl	a5cc <panelOpen()>
+    8f58:	f001 fb3a 	bl	a5d0 <panelOpen()>
     8f5c:	b9d0      	cbnz	r0, 8f94 <drawTrack(int)+0x48>
   drawCells(i);
     8f5e:	9001      	str	r0, [sp, #4]
@@ -22330,7 +22330,7 @@ void drawTrack(int i) {
     8f98:	b002      	add	sp, #8
     8f9a:	e8bd 4010 	ldmia.w	sp!, {r4, lr}
     drawStatus();
-    8f9e:	f001 bca3 	b.w	a8e8 <drawStatus()>
+    8f9e:	f001 bca5 	b.w	a8ec <drawStatus()>
     8fa2:	bf00      	nop
     8fa4:	20004328 	.word	0x20004328
 
@@ -22355,7 +22355,7 @@ void uiRefresh() {
     lastDraw = millis();
     8fbc:	6013      	str	r3, [r2, #0]
     if (panelOpen()) {                               // only the status row's button (its icon)
-    8fbe:	f001 fb05 	bl	a5cc <panelOpen()>
+    8fbe:	f001 fb07 	bl	a5d0 <panelOpen()>
     8fc2:	b9e0      	cbnz	r0, 8ffe <uiRefresh()+0x56>
       return;
     }
@@ -22374,7 +22374,7 @@ void uiRefresh() {
     for (int i = 0; i < NUM_TRACKS; i++) drawMix(i);   // the meters
     8fd2:	2400      	movs	r4, #0
     drawStatus();                                    // every pass: the clock shows steps
-    8fd4:	f001 fc88 	bl	a8e8 <drawStatus()>
+    8fd4:	f001 fc8a 	bl	a8ec <drawStatus()>
     updatePlayheads();
     8fd8:	f002 faea 	bl	b5b0 <updatePlayheads()>
     for (int i = 0; i < NUM_TRACKS; i++) drawMix(i);   // the meters
@@ -22423,7 +22423,7 @@ static int actionIcon() {
     901a:	f7f7 fbcd 	bl	7b8 <m8::Board::keys()>
     901e:	4604      	mov	r4, r0
   if (panelOpen()) return ICON_HOME;               // A closes the panel
-    9020:	f001 fad4 	bl	a5cc <panelOpen()>
+    9020:	f001 fad6 	bl	a5d0 <panelOpen()>
     9024:	bb40      	cbnz	r0, 9078 <actionIcon()+0x64>
   if (board.keys() & m8::BTN_OPT)                  // B+A: the panel; with SHIFT, the scene
     9026:	4833      	ldr	r0, [pc, #204]	@ (90f4 <actionIcon()+0xe0>)
@@ -22671,7 +22671,7 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
     91ce:	e883 0007 	stmia.w	r3, {r0, r1, r2}
   auto &t = board.tft();
   if (first && !panelOpen())                         // (the panel's dimming covers them meanwhile)
-    91d2:	f001 f9fb 	bl	a5cc <panelOpen()>
+    91d2:	f001 f9fd 	bl	a5d0 <panelOpen()>
     91d6:	2800      	cmp	r0, #0
     91d8:	f040 810c 	bne.w	93f4 <drawCells(int)+0x2dc>
 constexpr int sliceTop(int k) { return LAYOUT_TOP + k * SLICE_H; }
@@ -22799,7 +22799,7 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
     92dc:	e73c      	b.n	9158 <drawCells(int)+0x40>
   if (panelOpen() && heldAction != ICON_HOME) heldAction = -1;   // just opened: the house, at once
     92de:	4e36      	ldr	r6, [pc, #216]	@ (93b8 <drawCells(int)+0x2a0>)
-    92e0:	f001 f974 	bl	a5cc <panelOpen()>
+    92e0:	f001 f976 	bl	a5d0 <panelOpen()>
     92e4:	6833      	ldr	r3, [r6, #0]
     92e6:	bb08      	cbnz	r0, 932c <drawCells(int)+0x214>
   if (heldAction >= 0 && !(board.keys() & m8::BTN_EDIT)) heldAction = -1;   // A released
@@ -24559,18 +24559,19 @@ inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
   uint8_t looks[2 * MIX_ARCS];
   float gains[2] = {tr.levelL, tr.levelR};
     a0c8:	f44f 7330 	mov.w	r3, #704	@ 0x2c0
-  return i == selected && cell == selectedCell && (board.keys() & m8::BTN_OPT);
+  bool editing = i == selected && selectedCell == MIX_CELL && bAlone();
     a0cc:	42aa      	cmp	r2, r5
+  float gains[2] = {tr.levelL, tr.levelR};
     a0ce:	fb03 8305 	mla	r3, r3, r5, r8
     a0d2:	6b59      	ldr	r1, [r3, #52]	@ 0x34
     a0d4:	6b9b      	ldr	r3, [r3, #56]	@ 0x38
     a0d6:	910c      	str	r1, [sp, #48]	@ 0x30
     a0d8:	930d      	str	r3, [sp, #52]	@ 0x34
-    a0da:	f000 8262 	beq.w	a5a2 <drawMix(int)+0x59e>
-  bool editing = editingCell(i, MIX_CELL);
+  bool editing = i == selected && selectedCell == MIX_CELL && bAlone();
+    a0da:	f000 8264 	beq.w	a5a6 <drawMix(int)+0x5a2>
   uint8_t levelLook = editing ? ARC_LEVEL_EDIT : ARC_LEVEL, meterLook = editing ? ARC_METER_EDIT : ARC_METER;
-    a0de:	f04f 0a01 	mov.w	sl, #1
-    a0e2:	f04f 0b02 	mov.w	fp, #2
+    a0de:	f04f 0b01 	mov.w	fp, #1
+    a0e2:	f04f 0a02 	mov.w	sl, #2
   for (int ch = 0; ch < 2; ch++) {
     a0e6:	f10d 0930 	add.w	r9, sp, #48	@ 0x30
 inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !recordingOn(i); }
@@ -24625,14 +24626,14 @@ inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !rec
     a164:	b150      	cbz	r0, a17c <drawMix(int)+0x178>
 inline bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }
     a166:	9a03      	ldr	r2, [sp, #12]
-    a168:	4295      	cmp	r5, r2
+    a168:	42aa      	cmp	r2, r5
     a16a:	f000 80a4 	beq.w	a2b6 <drawMix(int)+0x2b2>
     a16e:	4573      	cmp	r3, lr
-    a170:	465a      	mov	r2, fp
+    a170:	4652      	mov	r2, sl
     a172:	db03      	blt.n	a17c <drawMix(int)+0x178>
     a174:	428b      	cmp	r3, r1
     a176:	bfb4      	ite	lt
-    a178:	4652      	movlt	r2, sl
+    a178:	465a      	movlt	r2, fp
     a17a:	2200      	movge	r2, #0
     for (int j = 0; j < MIX_ARCS; j++)
     a17c:	3301      	adds	r3, #1
@@ -24707,7 +24708,7 @@ constexpr int sliceTop(int k) { return LAYOUT_TOP + k * SLICE_H; }
     a1fa:	2300      	movs	r3, #0
     a1fc:	e01d      	b.n	a23a <drawMix(int)+0x236>
         uint16_t color = BG;
-    a1fe:	45ac      	cmp	ip, r5
+    a1fe:	4565      	cmp	r5, ip
     a200:	bf14      	ite	ne
     a202:	4620      	movne	r0, r4
     a204:	2000      	moveq	r0, #0
@@ -24873,11 +24874,11 @@ static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
     a37c:	2003ee00 	.word	0x2003ee00
     a380:	20008877 	.word	0x20008877
     a384:	20000818 	.word	0x20000818
-    a388:	4c87      	ldr	r4, [pc, #540]	@ (a5a8 <drawMix(int)+0x5a4>)
+    a388:	4c88      	ldr	r4, [pc, #544]	@ (a5ac <drawMix(int)+0x5a8>)
   for (int a = 0; a < 2 * MIX_ARCS; a++) {
     a38a:	2600      	movs	r6, #0
-    a38c:	f8df 9228 	ldr.w	r9, [pc, #552]	@ a5b8 <drawMix(int)+0x5b4>
-    a390:	f8df a234 	ldr.w	sl, [pc, #564]	@ a5c8 <drawMix(int)+0x5c4>
+    a38c:	f8df 922c 	ldr.w	r9, [pc, #556]	@ a5bc <drawMix(int)+0x5b8>
+    a390:	f8df a238 	ldr.w	sl, [pc, #568]	@ a5cc <drawMix(int)+0x5c8>
     a394:	eb04 05c5 	add.w	r5, r4, r5, lsl #3
     if (looks[a] == shown[i][a]) continue;
     a398:	ab0a      	add	r3, sp, #40	@ 0x28
@@ -24886,7 +24887,7 @@ static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
     a3a2:	4593      	cmp	fp, r2
     a3a4:	d02d      	beq.n	a402 <drawMix(int)+0x3fe>
     shown[i][a] = looks[a];
-    a3a6:	4b81      	ldr	r3, [pc, #516]	@ (a5ac <drawMix(int)+0x5a8>)
+    a3a6:	4b82      	ldr	r3, [pc, #520]	@ (a5b0 <drawMix(int)+0x5ac>)
     a3a8:	9905      	ldr	r1, [sp, #20]
     a3aa:	f805 bc01 	strb.w	fp, [r5, #-1]
     for (int r = 0; r < BAND_ROWS; r++)
@@ -24899,7 +24900,7 @@ static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
     a3ba:	e9cd 3103 	strd	r3, r1, [sp, #12]
         if (arcAt[r][c] == a) drawBlock(i, r, c, blockColor(looks[a], r, c));
     a3be:	f915 3f01 	ldrsb.w	r3, [r5, #1]!
-    a3c2:	429e      	cmp	r6, r3
+    a3c2:	42b3      	cmp	r3, r6
     a3c4:	d110      	bne.n	a3e8 <drawMix(int)+0x3e4>
   switch (look) {
     a3c6:	f1bb 0f05 	cmp.w	fp, #5
@@ -24921,7 +24922,7 @@ static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
     a3f0:	d1e5      	bne.n	a3be <drawMix(int)+0x3ba>
     for (int r = 0; r < BAND_ROWS; r++)
     a3f2:	e9dd 3103 	ldrd	r3, r1, [sp, #12]
-    a3f6:	4a6e      	ldr	r2, [pc, #440]	@ (a5b0 <drawMix(int)+0x5ac>)
+    a3f6:	4a6f      	ldr	r2, [pc, #444]	@ (a5b4 <drawMix(int)+0x5b0>)
     a3f8:	3327      	adds	r3, #39	@ 0x27
     a3fa:	3102      	adds	r1, #2
     a3fc:	4293      	cmp	r3, r2
@@ -24936,34 +24937,33 @@ static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
     a40a:	ecbd 8b0a 	vpop	{d8-d12}
     a40e:	e8bd 8ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
   return a < b ? std::forward<A>(a) : std::forward<B>(b);
-    a412:	4a68      	ldr	r2, [pc, #416]	@ (a5b4 <drawMix(int)+0x5b0>)
+    a412:	4a69      	ldr	r2, [pc, #420]	@ (a5b8 <drawMix(int)+0x5b4>)
   if (i != selected || cell != selectedCellIn(i)) return BG;
     a414:	6813      	ldr	r3, [r2, #0]
     a416:	2b01      	cmp	r3, #1
     a418:	f340 80ac 	ble.w	a574 <drawMix(int)+0x570>
   return board.keys() == m8::BTN_OPT ? LIGHT : DIM;
-    a41c:	4866      	ldr	r0, [pc, #408]	@ (a5b8 <drawMix(int)+0x5b4>)
+    a41c:	4867      	ldr	r0, [pc, #412]	@ (a5bc <drawMix(int)+0x5b8>)
     a41e:	f248 4410 	movw	r4, #33808	@ 0x8410
     a422:	f7f6 f9c9 	bl	7b8 <m8::Board::keys()>
     a426:	f24c 6318 	movw	r3, #50712	@ 0xc618
-  return i == selected && cell == selectedCell && (board.keys() & m8::BTN_OPT);
+  bool editing = i == selected && selectedCell == MIX_CELL && bAlone();
     a42a:	6832      	ldr	r2, [r6, #0]
-  return board.keys() == m8::BTN_OPT ? LIGHT : DIM;
     a42c:	2802      	cmp	r0, #2
     a42e:	bf08      	it	eq
     a430:	461c      	moveq	r4, r3
     a432:	e649      	b.n	a0c8 <drawMix(int)+0xc4>
-    a434:	f8df 8174 	ldr.w	r8, [pc, #372]	@ a5ac <drawMix(int)+0x5a8>
+    a434:	f8df 8178 	ldr.w	r8, [pc, #376]	@ a5b0 <drawMix(int)+0x5ac>
   for (int r = 0; r < BAND_ROWS; r++)
     a438:	ee0a 3a90 	vmov	s21, r3
       if (r == 0 || r == BAND_ROWS - 1 || c == 0 || c == CELL_COLS - 1) continue;   // the frame's
     a43c:	f241 0a01 	movw	sl, #4097	@ 0x1001
       float dx = c + 0.5f - cx, dy = r + 0.5f - cy;
-    a440:	ed9f ca5e 	vldr	s24, [pc, #376]	@ a5bc <drawMix(int)+0x5b8>
+    a440:	ed9f ca5f 	vldr	s24, [pc, #380]	@ a5c0 <drawMix(int)+0x5bc>
       if (fabsf(dy) > MIX_HALF_H || fabsf(dy) > fabsf(dx) * MIX_SLOPE) continue;
-    a444:	eddf ba5e 	vldr	s23, [pc, #376]	@ a5c0 <drawMix(int)+0x5bc>
+    a444:	eddf ba5f 	vldr	s23, [pc, #380]	@ a5c4 <drawMix(int)+0x5c0>
       if (j < 0 || j >= MIX_ARCS || fabsf(d - (MIX_R0 + j * MIX_DR)) > 0.55f) continue;
-    a448:	ed9f 9a5e 	vldr	s18, [pc, #376]	@ a5c4 <drawMix(int)+0x5c0>
+    a448:	ed9f 9a5f 	vldr	s18, [pc, #380]	@ a5c8 <drawMix(int)+0x5c4>
       if (r == 0 || r == BAND_ROWS - 1 || c == 0 || c == CELL_COLS - 1) continue;   // the frame's
     a44c:	ee1a 3a90 	vmov	r3, s21
       float dx = c + 0.5f - cx, dy = r + 0.5f - cy;
@@ -25108,1541 +25108,1543 @@ static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
     a57e:	6b9b      	ldr	r3, [r3, #56]	@ 0x38
     a580:	910c      	str	r1, [sp, #48]	@ 0x30
     a582:	930d      	str	r3, [sp, #52]	@ 0x34
-  return i == selected && cell == selectedCell && (board.keys() & m8::BTN_OPT);
+  bool editing = i == selected && selectedCell == MIX_CELL && bAlone();
     a584:	6813      	ldr	r3, [r2, #0]
     a586:	2b02      	cmp	r3, #2
     a588:	f47f ada9 	bne.w	a0de <drawMix(int)+0xda>
-    a58c:	480a      	ldr	r0, [pc, #40]	@ (a5b8 <drawMix(int)+0x5b4>)
+  uint8_t k = board.keys();
+    a58c:	480b      	ldr	r0, [pc, #44]	@ (a5bc <drawMix(int)+0x5b8>)
     a58e:	f7f6 f913 	bl	7b8 <m8::Board::keys()>
-    a592:	0783      	lsls	r3, r0, #30
-    a594:	f57f ada3 	bpl.w	a0de <drawMix(int)+0xda>
+  return (k & m8::BTN_OPT) && !(k & (m8::BTN_SHIFT | m8::BTN_EDIT | m8::BTN_PLAY));
+    a592:	f000 031b 	and.w	r3, r0, #27
+    a596:	2b02      	cmp	r3, #2
+    a598:	f47f ada1 	bne.w	a0de <drawMix(int)+0xda>
   uint8_t levelLook = editing ? ARC_LEVEL_EDIT : ARC_LEVEL, meterLook = editing ? ARC_METER_EDIT : ARC_METER;
-    a598:	f04f 0a04 	mov.w	sl, #4
-    a59c:	f04f 0b05 	mov.w	fp, #5
-    a5a0:	e5a1      	b.n	a0e6 <drawMix(int)+0xe2>
-    a5a2:	4a04      	ldr	r2, [pc, #16]	@ (a5b4 <drawMix(int)+0x5b0>)
-    a5a4:	e7ee      	b.n	a584 <drawMix(int)+0x580>
-    a5a6:	bf00      	nop
-    a5a8:	2003fdfc 	.word	0x2003fdfc
-    a5ac:	20008877 	.word	0x20008877
-    a5b0:	20008a72 	.word	0x20008a72
-    a5b4:	20040488 	.word	0x20040488
-    a5b8:	2000460c 	.word	0x2000460c
-    a5bc:	419c0000 	.word	0x419c0000
-    a5c0:	3f99999a 	.word	0x3f99999a
-    a5c4:	3f0ccccd 	.word	0x3f0ccccd
-    a5c8:	20000818 	.word	0x20000818
+    a59c:	f04f 0b04 	mov.w	fp, #4
+    a5a0:	f04f 0a05 	mov.w	sl, #5
+    a5a4:	e59f      	b.n	a0e6 <drawMix(int)+0xe2>
+    a5a6:	4a04      	ldr	r2, [pc, #16]	@ (a5b8 <drawMix(int)+0x5b4>)
+    a5a8:	e7ec      	b.n	a584 <drawMix(int)+0x580>
+    a5aa:	bf00      	nop
+    a5ac:	2003fdfc 	.word	0x2003fdfc
+    a5b0:	20008877 	.word	0x20008877
+    a5b4:	20008a72 	.word	0x20008a72
+    a5b8:	20040488 	.word	0x20040488
+    a5bc:	2000460c 	.word	0x2000460c
+    a5c0:	419c0000 	.word	0x419c0000
+    a5c4:	3f99999a 	.word	0x3f99999a
+    a5c8:	3f0ccccd 	.word	0x3f0ccccd
+    a5cc:	20000818 	.word	0x20000818
 
-0000a5cc <panelOpen()>:
+0000a5d0 <panelOpen()>:
 
 static constexpr int PANEL_W = 320 * 6 / 10, PANEL_H = 240 * 8 / 10;   // (on the block grid: even)
 static constexpr int PANEL_X = (320 - PANEL_W) / 2, PANEL_Y = (240 - PANEL_H) / 2;
 static bool shown = false;
 
 bool panelOpen() { return shown; }
-    a5cc:	4b01      	ldr	r3, [pc, #4]	@ (a5d4 <panelOpen()+0x8>)
-    a5ce:	7818      	ldrb	r0, [r3, #0]
-    a5d0:	4770      	bx	lr
-    a5d2:	bf00      	nop
-    a5d4:	200404cb 	.word	0x200404cb
+    a5d0:	4b01      	ldr	r3, [pc, #4]	@ (a5d8 <panelOpen()+0x8>)
+    a5d2:	7818      	ldrb	r0, [r3, #0]
+    a5d4:	4770      	bx	lr
+    a5d6:	bf00      	nop
+    a5d8:	200404cb 	.word	0x200404cb
 
-0000a5d8 <openPanel()>:
+0000a5dc <openPanel()>:
 static bool inButton(int x, int y) {
   return x >= BUTTON_X && y >= bgTop(STATUS_ROW);
 }
 
 void openPanel() {
   if (shown) return;
-    a5d8:	4b46      	ldr	r3, [pc, #280]	@ (a6f4 <openPanel()+0x11c>)
+    a5dc:	4b46      	ldr	r3, [pc, #280]	@ (a6f8 <openPanel()+0x11c>)
 void openPanel() {
-    a5da:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+    a5de:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
   if (shown) return;
-    a5de:	781d      	ldrb	r5, [r3, #0]
+    a5e2:	781d      	ldrb	r5, [r3, #0]
 void openPanel() {
-    a5e0:	b083      	sub	sp, #12
+    a5e4:	b083      	sub	sp, #12
   if (shown) return;
-    a5e2:	2d00      	cmp	r5, #0
-    a5e4:	d174      	bne.n	a6d0 <openPanel()+0xf8>
-    a5e6:	4944      	ldr	r1, [pc, #272]	@ (a6f8 <openPanel()+0x120>)
+    a5e6:	2d00      	cmp	r5, #0
+    a5e8:	d174      	bne.n	a6d4 <openPanel()+0xf8>
+    a5ea:	4944      	ldr	r1, [pc, #272]	@ (a6fc <openPanel()+0x120>)
   shown = true;
-    a5e8:	2201      	movs	r2, #1
-    a5ea:	f06f 0717 	mvn.w	r7, #23
+    a5ec:	2201      	movs	r2, #1
+    a5ee:	f06f 0717 	mvn.w	r7, #23
   return x >= BUTTON_X && y >= bgTop(STATUS_ROW);
-    a5ee:	f240 1b25 	movw	fp, #293	@ 0x125
-    a5f2:	f8d1 8008 	ldr.w	r8, [r1, #8]
+    a5f2:	f240 1b25 	movw	fp, #293	@ 0x125
+    a5f6:	f8d1 8008 	ldr.w	r8, [r1, #8]
   shown = true;
-    a5f6:	701a      	strb	r2, [r3, #0]
+    a5fa:	701a      	strb	r2, [r3, #0]
   return !(side && edge);
-    a5f8:	f1a5 061a 	sub.w	r6, r5, #26
+    a5fc:	f1a5 061a 	sub.w	r6, r5, #26
   return x >= BUTTON_X && y >= bgTop(STATUS_ROW);
-    a5fc:	2dd1      	cmp	r5, #209	@ 0xd1
+    a600:	2dd1      	cmp	r5, #209	@ 0xd1
   auto &t = board.tft();
   // The dimming, a row at a time: every other pixel, offset on alternate rows.
   for (int y = 0; y < 240; y++)
     for (int x = y & 1; x < 320; x += 2)
-    a5fe:	f005 0401 	and.w	r4, r5, #1
+    a602:	f005 0401 	and.w	r4, r5, #1
       if (!inPanel(x, y) && !inButton(x, y)) t.drawPixel(x, y, PANEL_SHADE);
-    a602:	fa0f fa85 	sxth.w	sl, r5
+    a606:	fa0f fa85 	sxth.w	sl, r5
   return x >= BUTTON_X && y >= bgTop(STATUS_ROW);
-    a606:	bfd4      	ite	le
-    a608:	f04f 0900 	movle.w	r9, #0
-    a60c:	f04f 0901 	movgt.w	r9, #1
+    a60a:	bfd4      	ite	le
+    a60c:	f04f 0900 	movle.w	r9, #0
+    a610:	f04f 0901 	movgt.w	r9, #1
   return !(side && edge);
-    a610:	2ebb      	cmp	r6, #187	@ 0xbb
-    a612:	bf8c      	ite	hi
-    a614:	2600      	movhi	r6, #0
-    a616:	2601      	movls	r6, #1
+    a614:	2ebb      	cmp	r6, #187	@ 0xbb
+    a616:	bf8c      	ite	hi
+    a618:	2600      	movhi	r6, #0
+    a61a:	2601      	movls	r6, #1
   if (x < PANEL_X || x >= PANEL_X + PANEL_W || y < PANEL_Y || y >= PANEL_Y + PANEL_H) return false;
-    a618:	f1a4 0340 	sub.w	r3, r4, #64	@ 0x40
-    a61c:	4622      	mov	r2, r4
-    a61e:	2bbf      	cmp	r3, #191	@ 0xbf
-    a620:	d81c      	bhi.n	a65c <openPanel()+0x84>
-    a622:	2fbf      	cmp	r7, #191	@ 0xbf
-    a624:	d90d      	bls.n	a642 <openPanel()+0x6a>
+    a61c:	f1a4 0340 	sub.w	r3, r4, #64	@ 0x40
+    a620:	4622      	mov	r2, r4
+    a622:	2bbf      	cmp	r3, #191	@ 0xbf
+    a624:	d81c      	bhi.n	a660 <openPanel()+0x84>
+    a626:	2fbf      	cmp	r7, #191	@ 0xbf
+    a628:	d90d      	bls.n	a646 <openPanel()+0x6a>
       if (!inPanel(x, y) && !inButton(x, y)) t.drawPixel(x, y, PANEL_SHADE);
-    a626:	b221      	sxth	r1, r4
+    a62a:	b221      	sxth	r1, r4
     for (int x = y & 1; x < 320; x += 2)
-    a628:	3402      	adds	r4, #2
+    a62c:	3402      	adds	r4, #2
       if (!inPanel(x, y) && !inButton(x, y)) t.drawPixel(x, y, PANEL_SHADE);
-    a62a:	2300      	movs	r3, #0
-    a62c:	4652      	mov	r2, sl
-    a62e:	4640      	mov	r0, r8
-    a630:	f00b fcd6 	bl	15fe0 <ILI9341_t3n::drawPixel(short, short, unsigned short)>
+    a62e:	2300      	movs	r3, #0
+    a630:	4652      	mov	r2, sl
+    a632:	4640      	mov	r0, r8
+    a634:	f00b fcd4 	bl	15fe0 <ILI9341_t3n::drawPixel(short, short, unsigned short)>
   if (x < PANEL_X || x >= PANEL_X + PANEL_W || y < PANEL_Y || y >= PANEL_Y + PANEL_H) return false;
-    a634:	f1a4 0340 	sub.w	r3, r4, #64	@ 0x40
-    a638:	4622      	mov	r2, r4
-    a63a:	2bbf      	cmp	r3, #191	@ 0xbf
-    a63c:	d80e      	bhi.n	a65c <openPanel()+0x84>
-    a63e:	2fbf      	cmp	r7, #191	@ 0xbf
-    a640:	d8f1      	bhi.n	a626 <openPanel()+0x4e>
+    a638:	f1a4 0340 	sub.w	r3, r4, #64	@ 0x40
+    a63c:	4622      	mov	r2, r4
+    a63e:	2bbf      	cmp	r3, #191	@ 0xbf
+    a640:	d80e      	bhi.n	a660 <openPanel()+0x84>
+    a642:	2fbf      	cmp	r7, #191	@ 0xbf
+    a644:	d8f1      	bhi.n	a62a <openPanel()+0x4e>
   return !(side && edge);
-    a642:	f1a2 0342 	sub.w	r3, r2, #66	@ 0x42
+    a646:	f1a2 0342 	sub.w	r3, r2, #66	@ 0x42
   if (x < PANEL_X || x >= PANEL_X + PANEL_W || y < PANEL_Y || y >= PANEL_Y + PANEL_H) return false;
-    a646:	f1a4 013e 	sub.w	r1, r4, #62	@ 0x3e
+    a64a:	f1a4 013e 	sub.w	r1, r4, #62	@ 0x3e
     for (int x = y & 1; x < 320; x += 2)
-    a64a:	1ca2      	adds	r2, r4, #2
+    a64e:	1ca2      	adds	r2, r4, #2
       if (!inPanel(x, y) && !inButton(x, y)) t.drawPixel(x, y, PANEL_SHADE);
-    a64c:	2bbb      	cmp	r3, #187	@ 0xbb
-    a64e:	d901      	bls.n	a654 <openPanel()+0x7c>
-    a650:	2e00      	cmp	r6, #0
-    a652:	d040      	beq.n	a6d6 <openPanel()+0xfe>
+    a650:	2bbb      	cmp	r3, #187	@ 0xbb
+    a652:	d901      	bls.n	a658 <openPanel()+0x7c>
+    a654:	2e00      	cmp	r6, #0
+    a656:	d040      	beq.n	a6da <openPanel()+0xfe>
   if (x < PANEL_X || x >= PANEL_X + PANEL_W || y < PANEL_Y || y >= PANEL_Y + PANEL_H) return false;
-    a654:	29bf      	cmp	r1, #191	@ 0xbf
-    for (int x = y & 1; x < 320; x += 2)
-    a656:	4614      	mov	r4, r2
-  if (x < PANEL_X || x >= PANEL_X + PANEL_W || y < PANEL_Y || y >= PANEL_Y + PANEL_H) return false;
-    a658:	d9f3      	bls.n	a642 <openPanel()+0x6a>
+    a658:	29bf      	cmp	r1, #191	@ 0xbf
     for (int x = y & 1; x < 320; x += 2)
     a65a:	4614      	mov	r4, r2
-  return x >= BUTTON_X && y >= bgTop(STATUS_ROW);
-    a65c:	455c      	cmp	r4, fp
-    a65e:	dd42      	ble.n	a6e6 <openPanel()+0x10e>
-    a660:	f1b9 0f00 	cmp.w	r9, #0
-    a664:	d03f      	beq.n	a6e6 <openPanel()+0x10e>
+  if (x < PANEL_X || x >= PANEL_X + PANEL_W || y < PANEL_Y || y >= PANEL_Y + PANEL_H) return false;
+    a65c:	d9f3      	bls.n	a646 <openPanel()+0x6a>
     for (int x = y & 1; x < 320; x += 2)
-    a666:	3402      	adds	r4, #2
-    a668:	f5b4 7fa0 	cmp.w	r4, #320	@ 0x140
-    a66c:	dbd4      	blt.n	a618 <openPanel()+0x40>
+    a65e:	4614      	mov	r4, r2
+  return x >= BUTTON_X && y >= bgTop(STATUS_ROW);
+    a660:	455c      	cmp	r4, fp
+    a662:	dd42      	ble.n	a6ea <openPanel()+0x10e>
+    a664:	f1b9 0f00 	cmp.w	r9, #0
+    a668:	d03f      	beq.n	a6ea <openPanel()+0x10e>
+    for (int x = y & 1; x < 320; x += 2)
+    a66a:	3402      	adds	r4, #2
+    a66c:	f5b4 7fa0 	cmp.w	r4, #320	@ 0x140
+    a670:	dbd4      	blt.n	a61c <openPanel()+0x40>
   for (int y = 0; y < 240; y++)
-    a66e:	3501      	adds	r5, #1
-    a670:	3701      	adds	r7, #1
-    a672:	2df0      	cmp	r5, #240	@ 0xf0
-    a674:	d1c0      	bne.n	a5f8 <openPanel()+0x20>
+    a672:	3501      	adds	r5, #1
+    a674:	3701      	adds	r7, #1
+    a676:	2df0      	cmp	r5, #240	@ 0xf0
+    a678:	d1c0      	bne.n	a5fc <openPanel()+0x20>
   // A border one block wide, its corner blocks cut, round the panel's background.
   t.fillRect(PANEL_X + PX, PANEL_Y, PANEL_W - 2 * PX, PX, PANEL_BORDER);
-    a676:	f64f 75ff 	movw	r5, #65535	@ 0xffff
-    a67a:	2602      	movs	r6, #2
+    a67a:	f64f 75ff 	movw	r5, #65535	@ 0xffff
+    a67e:	2602      	movs	r6, #2
   t.fillRect(PANEL_X + PX, PANEL_Y + PANEL_H - PX, PANEL_W - 2 * PX, PX, PANEL_BORDER);
   t.fillRect(PANEL_X, PANEL_Y + PX, PX, PANEL_H - 2 * PX, PANEL_BORDER);
-    a67c:	24bc      	movs	r4, #188	@ 0xbc
+    a680:	24bc      	movs	r4, #188	@ 0xbc
   t.fillRect(PANEL_X + PX, PANEL_Y, PANEL_W - 2 * PX, PX, PANEL_BORDER);
-    a67e:	23bc      	movs	r3, #188	@ 0xbc
-    a680:	2218      	movs	r2, #24
-    a682:	2142      	movs	r1, #66	@ 0x42
-    a684:	4640      	mov	r0, r8
-    a686:	e9cd 6500 	strd	r6, r5, [sp]
-    a68a:	f00b fe13 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a682:	23bc      	movs	r3, #188	@ 0xbc
+    a684:	2218      	movs	r2, #24
+    a686:	2142      	movs	r1, #66	@ 0x42
+    a688:	4640      	mov	r0, r8
+    a68a:	e9cd 6500 	strd	r6, r5, [sp]
+    a68e:	f00b fe11 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
   t.fillRect(PANEL_X + PX, PANEL_Y + PANEL_H - PX, PANEL_W - 2 * PX, PX, PANEL_BORDER);
-    a68e:	23bc      	movs	r3, #188	@ 0xbc
-    a690:	22d6      	movs	r2, #214	@ 0xd6
-    a692:	2142      	movs	r1, #66	@ 0x42
-    a694:	4640      	mov	r0, r8
-    a696:	e9cd 6500 	strd	r6, r5, [sp]
-    a69a:	f00b fe0b 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a692:	23bc      	movs	r3, #188	@ 0xbc
+    a694:	22d6      	movs	r2, #214	@ 0xd6
+    a696:	2142      	movs	r1, #66	@ 0x42
+    a698:	4640      	mov	r0, r8
+    a69a:	e9cd 6500 	strd	r6, r5, [sp]
+    a69e:	f00b fe09 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
   t.fillRect(PANEL_X, PANEL_Y + PX, PX, PANEL_H - 2 * PX, PANEL_BORDER);
-    a69e:	4633      	mov	r3, r6
-    a6a0:	221a      	movs	r2, #26
-    a6a2:	2140      	movs	r1, #64	@ 0x40
-    a6a4:	4640      	mov	r0, r8
-    a6a6:	e9cd 4500 	strd	r4, r5, [sp]
-    a6aa:	f00b fe03 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a6a2:	4633      	mov	r3, r6
+    a6a4:	221a      	movs	r2, #26
+    a6a6:	2140      	movs	r1, #64	@ 0x40
+    a6a8:	4640      	mov	r0, r8
+    a6aa:	e9cd 4500 	strd	r4, r5, [sp]
+    a6ae:	f00b fe01 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
   t.fillRect(PANEL_X + PANEL_W - PX, PANEL_Y + PX, PX, PANEL_H - 2 * PX, PANEL_BORDER);
-    a6ae:	221a      	movs	r2, #26
-    a6b0:	4633      	mov	r3, r6
-    a6b2:	21fe      	movs	r1, #254	@ 0xfe
-    a6b4:	4640      	mov	r0, r8
-    a6b6:	e9cd 4500 	strd	r4, r5, [sp]
-    a6ba:	f00b fdfb 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a6b2:	221a      	movs	r2, #26
+    a6b4:	4633      	mov	r3, r6
+    a6b6:	21fe      	movs	r1, #254	@ 0xfe
+    a6b8:	4640      	mov	r0, r8
+    a6ba:	e9cd 4500 	strd	r4, r5, [sp]
+    a6be:	f00b fdf9 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
   t.fillRect(PANEL_X + PX, PANEL_Y + PX, PANEL_W - 2 * PX, PANEL_H - 2 * PX, PANEL_BG);
-    a6be:	2100      	movs	r1, #0
-    a6c0:	4623      	mov	r3, r4
-    a6c2:	221a      	movs	r2, #26
-    a6c4:	4640      	mov	r0, r8
-    a6c6:	e9cd 4100 	strd	r4, r1, [sp]
-    a6ca:	2142      	movs	r1, #66	@ 0x42
-    a6cc:	f00b fdf2 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a6c2:	2100      	movs	r1, #0
+    a6c4:	4623      	mov	r3, r4
+    a6c6:	221a      	movs	r2, #26
+    a6c8:	4640      	mov	r0, r8
+    a6ca:	e9cd 4100 	strd	r4, r1, [sp]
+    a6ce:	2142      	movs	r1, #66	@ 0x42
+    a6d0:	f00b fdf0 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
 }
-    a6d0:	b003      	add	sp, #12
-    a6d2:	e8bd 8ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
+    a6d4:	b003      	add	sp, #12
+    a6d6:	e8bd 8ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
       if (!inPanel(x, y) && !inButton(x, y)) t.drawPixel(x, y, PANEL_SHADE);
-    a6d6:	b221      	sxth	r1, r4
-    a6d8:	4633      	mov	r3, r6
-    a6da:	b22a      	sxth	r2, r5
-    a6dc:	4640      	mov	r0, r8
+    a6da:	b221      	sxth	r1, r4
+    a6dc:	4633      	mov	r3, r6
+    a6de:	b22a      	sxth	r2, r5
+    a6e0:	4640      	mov	r0, r8
     for (int x = y & 1; x < 320; x += 2)
-    a6de:	3402      	adds	r4, #2
+    a6e2:	3402      	adds	r4, #2
       if (!inPanel(x, y) && !inButton(x, y)) t.drawPixel(x, y, PANEL_SHADE);
-    a6e0:	f00b fc7e 	bl	15fe0 <ILI9341_t3n::drawPixel(short, short, unsigned short)>
+    a6e4:	f00b fc7c 	bl	15fe0 <ILI9341_t3n::drawPixel(short, short, unsigned short)>
     for (int x = y & 1; x < 320; x += 2)
-    a6e4:	e798      	b.n	a618 <openPanel()+0x40>
+    a6e8:	e798      	b.n	a61c <openPanel()+0x40>
       if (!inPanel(x, y) && !inButton(x, y)) t.drawPixel(x, y, PANEL_SHADE);
-    a6e6:	2300      	movs	r3, #0
-    a6e8:	b22a      	sxth	r2, r5
-    a6ea:	b221      	sxth	r1, r4
-    a6ec:	4640      	mov	r0, r8
-    a6ee:	f00b fc77 	bl	15fe0 <ILI9341_t3n::drawPixel(short, short, unsigned short)>
-    a6f2:	e7b8      	b.n	a666 <openPanel()+0x8e>
-    a6f4:	200404cb 	.word	0x200404cb
-    a6f8:	2000460c 	.word	0x2000460c
+    a6ea:	2300      	movs	r3, #0
+    a6ec:	b22a      	sxth	r2, r5
+    a6ee:	b221      	sxth	r1, r4
+    a6f0:	4640      	mov	r0, r8
+    a6f2:	f00b fc75 	bl	15fe0 <ILI9341_t3n::drawPixel(short, short, unsigned short)>
+    a6f6:	e7b8      	b.n	a66a <openPanel()+0x8e>
+    a6f8:	200404cb 	.word	0x200404cb
+    a6fc:	2000460c 	.word	0x2000460c
 
-0000a6fc <closePanel()>:
+0000a700 <closePanel()>:
 
 void closePanel() {
   if (!shown) return;
-    a6fc:	4b0b      	ldr	r3, [pc, #44]	@ (a72c <closePanel()+0x30>)
-    a6fe:	781a      	ldrb	r2, [r3, #0]
-    a700:	b902      	cbnz	r2, a704 <closePanel()+0x8>
-    a702:	4770      	bx	lr
-    a704:	4a0a      	ldr	r2, [pc, #40]	@ (a730 <closePanel()+0x34>)
+    a700:	4b0b      	ldr	r3, [pc, #44]	@ (a730 <closePanel()+0x30>)
+    a702:	781a      	ldrb	r2, [r3, #0]
+    a704:	b902      	cbnz	r2, a708 <closePanel()+0x8>
+    a706:	4770      	bx	lr
+    a708:	4a0a      	ldr	r2, [pc, #40]	@ (a734 <closePanel()+0x34>)
 void closePanel() {
-    a706:	b510      	push	{r4, lr}
+    a70a:	b510      	push	{r4, lr}
   shown = false;
-    a708:	2400      	movs	r4, #0
+    a70c:	2400      	movs	r4, #0
   board.tft().fillScreen(BG);
-    a70a:	6890      	ldr	r0, [r2, #8]
-    a70c:	4621      	mov	r1, r4
+    a70e:	6890      	ldr	r0, [r2, #8]
+    a710:	4621      	mov	r1, r4
   shown = false;
-    a70e:	701c      	strb	r4, [r3, #0]
+    a712:	701c      	strb	r4, [r3, #0]
   board.tft().fillScreen(BG);
-    a710:	f00c f84e 	bl	167b0 <ILI9341_t3n::fillScreen(unsigned short)>
+    a714:	f00c f84c 	bl	167b0 <ILI9341_t3n::fillScreen(unsigned short)>
   uiGeneration++;                                // everything redraws in full
-    a714:	4a07      	ldr	r2, [pc, #28]	@ (a734 <closePanel()+0x38>)
-    a716:	6813      	ldr	r3, [r2, #0]
-    a718:	3301      	adds	r3, #1
-    a71a:	6013      	str	r3, [r2, #0]
+    a718:	4a07      	ldr	r2, [pc, #28]	@ (a738 <closePanel()+0x38>)
+    a71a:	6813      	ldr	r3, [r2, #0]
+    a71c:	3301      	adds	r3, #1
+    a71e:	6013      	str	r3, [r2, #0]
   for (int i = 0; i < ROWS; i++) drawTrack(i);
-    a71c:	4620      	mov	r0, r4
-    a71e:	3401      	adds	r4, #1
-    a720:	f7fe fc14 	bl	8f4c <drawTrack(int)>
-    a724:	2c09      	cmp	r4, #9
-    a726:	d1f9      	bne.n	a71c <closePanel()+0x20>
+    a720:	4620      	mov	r0, r4
+    a722:	3401      	adds	r4, #1
+    a724:	f7fe fc12 	bl	8f4c <drawTrack(int)>
+    a728:	2c09      	cmp	r4, #9
+    a72a:	d1f9      	bne.n	a720 <closePanel()+0x20>
 }
-    a728:	bd10      	pop	{r4, pc}
-    a72a:	bf00      	nop
-    a72c:	200404cb 	.word	0x200404cb
-    a730:	2000460c 	.word	0x2000460c
-    a734:	20004678 	.word	0x20004678
+    a72c:	bd10      	pop	{r4, pc}
+    a72e:	bf00      	nop
+    a730:	200404cb 	.word	0x200404cb
+    a734:	2000460c 	.word	0x2000460c
+    a738:	20004678 	.word	0x20004678
 
-0000a738 <splashBottom()>:
+0000a73c <splashBottom()>:
   }
 }
 
 static constexpr int TEXT_Y_SPLASH = LOGO_Y + LOGO_ROWS * LOGO_PIXEL + TEXT_GAP;
 
 int splashBottom() { return TEXT_Y_SPLASH + 6 * LOGO_PIXEL; }   // (the copyright sign's last row)
-    a738:	20ac      	movs	r0, #172	@ 0xac
-    a73a:	4770      	bx	lr
+    a73c:	20ac      	movs	r0, #172	@ 0xac
+    a73e:	4770      	bx	lr
 
-0000a73c <showSplash()>:
-    a73c:	4b51      	ldr	r3, [pc, #324]	@ (a884 <showSplash()+0x148>)
+0000a740 <showSplash()>:
+    a740:	4b51      	ldr	r3, [pc, #324]	@ (a888 <showSplash()+0x148>)
 
 void showSplash() {
   auto &t = board.tft();
   t.fillScreen(BG);
-    a73e:	2100      	movs	r1, #0
+    a742:	2100      	movs	r1, #0
 void showSplash() {
-    a740:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
-    a744:	f8d3 8008 	ldr.w	r8, [r3, #8]
+    a744:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+    a748:	f8d3 8008 	ldr.w	r8, [r3, #8]
   t.fillScreen(BG);
-    a748:	f04f 0b54 	mov.w	fp, #84	@ 0x54
-    a74c:	f8df a148 	ldr.w	sl, [pc, #328]	@ a898 <showSplash()+0x15c>
+    a74c:	f04f 0b54 	mov.w	fp, #84	@ 0x54
+    a750:	f8df a148 	ldr.w	sl, [pc, #328]	@ a89c <showSplash()+0x15c>
   for (int r = 0; r < LOGO_ROWS; r++)
     for (int c = 0; c < LOGO_COLS; c++)
       if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, LOGO_COLOR);
-    a750:	f64f 79ff 	movw	r9, #65535	@ 0xffff
+    a754:	f64f 79ff 	movw	r9, #65535	@ 0xffff
 void showSplash() {
-    a754:	b087      	sub	sp, #28
+    a758:	b087      	sub	sp, #28
   t.fillScreen(BG);
-    a756:	4640      	mov	r0, r8
-    a758:	f00c f82a 	bl	167b0 <ILI9341_t3n::fillScreen(unsigned short)>
+    a75a:	4640      	mov	r0, r8
+    a75c:	f00c f828 	bl	167b0 <ILI9341_t3n::fillScreen(unsigned short)>
       if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, LOGO_COLOR);
-    a75c:	fa0f f78b 	sxth.w	r7, fp
-    a760:	4655      	mov	r5, sl
-    a762:	2475      	movs	r4, #117	@ 0x75
-    a764:	2602      	movs	r6, #2
-    a766:	e003      	b.n	a770 <showSplash()+0x34>
+    a760:	fa0f f78b 	sxth.w	r7, fp
+    a764:	4655      	mov	r5, sl
+    a766:	2475      	movs	r4, #117	@ 0x75
+    a768:	2602      	movs	r6, #2
+    a76a:	e003      	b.n	a774 <showSplash()+0x34>
     for (int c = 0; c < LOGO_COLS; c++)
-    a768:	3402      	adds	r4, #2
-    a76a:	b2a4      	uxth	r4, r4
-    a76c:	2ccb      	cmp	r4, #203	@ 0xcb
-    a76e:	d00f      	beq.n	a790 <showSplash()+0x54>
+    a76c:	3402      	adds	r4, #2
+    a76e:	b2a4      	uxth	r4, r4
+    a770:	2ccb      	cmp	r4, #203	@ 0xcb
+    a772:	d00f      	beq.n	a794 <showSplash()+0x54>
       if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, LOGO_COLOR);
-    a770:	f815 3f01 	ldrb.w	r3, [r5, #1]!
-    a774:	2b23      	cmp	r3, #35	@ 0x23
-    a776:	d1f7      	bne.n	a768 <showSplash()+0x2c>
-    a778:	b221      	sxth	r1, r4
+    a774:	f815 3f01 	ldrb.w	r3, [r5, #1]!
+    a778:	2b23      	cmp	r3, #35	@ 0x23
+    a77a:	d1f7      	bne.n	a76c <showSplash()+0x2c>
+    a77c:	b221      	sxth	r1, r4
     for (int c = 0; c < LOGO_COLS; c++)
-    a77a:	3402      	adds	r4, #2
+    a77e:	3402      	adds	r4, #2
       if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, LOGO_COLOR);
-    a77c:	2302      	movs	r3, #2
-    a77e:	463a      	mov	r2, r7
+    a780:	2302      	movs	r3, #2
+    a782:	463a      	mov	r2, r7
     for (int c = 0; c < LOGO_COLS; c++)
-    a780:	b2a4      	uxth	r4, r4
+    a784:	b2a4      	uxth	r4, r4
       if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, LOGO_COLOR);
-    a782:	4640      	mov	r0, r8
-    a784:	e9cd 6900 	strd	r6, r9, [sp]
-    a788:	f00b fd94 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a786:	4640      	mov	r0, r8
+    a788:	e9cd 6900 	strd	r6, r9, [sp]
+    a78c:	f00b fd92 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
     for (int c = 0; c < LOGO_COLS; c++)
-    a78c:	2ccb      	cmp	r4, #203	@ 0xcb
-    a78e:	d1ef      	bne.n	a770 <showSplash()+0x34>
+    a790:	2ccb      	cmp	r4, #203	@ 0xcb
+    a792:	d1ef      	bne.n	a774 <showSplash()+0x34>
   for (int r = 0; r < LOGO_ROWS; r++)
-    a790:	f10a 0a2c 	add.w	sl, sl, #44	@ 0x2c
-    a794:	4b3c      	ldr	r3, [pc, #240]	@ (a888 <showSplash()+0x14c>)
-    a796:	f10b 0b02 	add.w	fp, fp, #2
-    a79a:	459a      	cmp	sl, r3
-    a79c:	d1de      	bne.n	a75c <showSplash()+0x20>
+    a794:	f10a 0a2c 	add.w	sl, sl, #44	@ 0x2c
+    a798:	4b3c      	ldr	r3, [pc, #240]	@ (a88c <showSplash()+0x14c>)
+    a79a:	f10b 0b02 	add.w	fp, fp, #2
+    a79e:	459a      	cmp	sl, r3
+    a7a0:	d1de      	bne.n	a760 <showSplash()+0x20>
   int cols = 0;
-    a79e:	f04f 0800 	mov.w	r8, #0
+    a7a2:	f04f 0800 	mov.w	r8, #0
   for (const char *p = text; *p; p++)
-    a7a2:	4c3a      	ldr	r4, [pc, #232]	@ (a88c <showSplash()+0x150>)
-    a7a4:	20a9      	movs	r0, #169	@ 0xa9
-    a7a6:	e009      	b.n	a7bc <showSplash()+0x80>
+    a7a6:	4c3a      	ldr	r4, [pc, #232]	@ (a890 <showSplash()+0x150>)
+    a7a8:	20a9      	movs	r0, #169	@ 0xa9
+    a7aa:	e009      	b.n	a7c0 <showSplash()+0x80>
     if (const Glyph *g = glyphFor(*p)) cols += glyphWidth(*g) + (p[1] ? 1 : 0);
-    a7a8:	f7ff fb38 	bl	9e1c <glyphWidth(Glyph const&)>
-    a7ac:	4603      	mov	r3, r0
-    a7ae:	7860      	ldrb	r0, [r4, #1]
+    a7ac:	f7ff fb36 	bl	9e1c <glyphWidth(Glyph const&)>
+    a7b0:	4603      	mov	r3, r0
+    a7b2:	7860      	ldrb	r0, [r4, #1]
   for (const char *p = text; *p; p++)
-    a7b0:	3401      	adds	r4, #1
+    a7b4:	3401      	adds	r4, #1
     if (const Glyph *g = glyphFor(*p)) cols += glyphWidth(*g) + (p[1] ? 1 : 0);
-    a7b2:	2800      	cmp	r0, #0
-    a7b4:	bf18      	it	ne
-    a7b6:	3301      	addne	r3, #1
-    a7b8:	4498      	add	r8, r3
+    a7b6:	2800      	cmp	r0, #0
+    a7b8:	bf18      	it	ne
+    a7ba:	3301      	addne	r3, #1
+    a7bc:	4498      	add	r8, r3
   for (const char *p = text; *p; p++)
-    a7ba:	b138      	cbz	r0, a7cc <showSplash()+0x90>
+    a7be:	b138      	cbz	r0, a7d0 <showSplash()+0x90>
     if (const Glyph *g = glyphFor(*p)) cols += glyphWidth(*g) + (p[1] ? 1 : 0);
-    a7bc:	f7ff fb1c 	bl	9df8 <glyphFor(char)>
-    a7c0:	2800      	cmp	r0, #0
-    a7c2:	d1f1      	bne.n	a7a8 <showSplash()+0x6c>
+    a7c0:	f7ff fb1a 	bl	9df8 <glyphFor(char)>
+    a7c4:	2800      	cmp	r0, #0
+    a7c6:	d1f1      	bne.n	a7ac <showSplash()+0x6c>
   for (const char *p = text; *p; p++)
-    a7c4:	7860      	ldrb	r0, [r4, #1]
-    a7c6:	3401      	adds	r4, #1
-    a7c8:	2800      	cmp	r0, #0
-    a7ca:	d1f7      	bne.n	a7bc <showSplash()+0x80>
-    a7cc:	4b2d      	ldr	r3, [pc, #180]	@ (a884 <showSplash()+0x148>)
+    a7c8:	7860      	ldrb	r0, [r4, #1]
+    a7ca:	3401      	adds	r4, #1
+    a7cc:	2800      	cmp	r0, #0
+    a7ce:	d1f7      	bne.n	a7c0 <showSplash()+0x80>
+    a7d0:	4b2d      	ldr	r3, [pc, #180]	@ (a888 <showSplash()+0x148>)
   drawLine((320 - textCols(COPYRIGHT) * LOGO_PIXEL) / 2, TEXT_Y_SPLASH, COPYRIGHT, LOGO_COLOR);
-    a7ce:	f1c8 08a0 	rsb	r8, r8, #160	@ 0xa0
+    a7d2:	f1c8 08a0 	rsb	r8, r8, #160	@ 0xa0
   for (const char *p = text; *p; p++) {
-    a7d2:	20a9      	movs	r0, #169	@ 0xa9
+    a7d6:	20a9      	movs	r0, #169	@ 0xa9
           t.fillRect(x + c * LOGO_PIXEL, y + (g->top + r) * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, color);
-    a7d4:	f64f 7aff 	movw	sl, #65535	@ 0xffff
-    a7d8:	689b      	ldr	r3, [r3, #8]
-    a7da:	f8df b0b0 	ldr.w	fp, [pc, #176]	@ a88c <showSplash()+0x150>
-    a7de:	9303      	str	r3, [sp, #12]
+    a7d8:	f64f 7aff 	movw	sl, #65535	@ 0xffff
+    a7dc:	689b      	ldr	r3, [r3, #8]
+    a7de:	f8df b0b0 	ldr.w	fp, [pc, #176]	@ a890 <showSplash()+0x150>
+    a7e2:	9303      	str	r3, [sp, #12]
   for (const char *p = text; *p; p++) {
-    a7e0:	e003      	b.n	a7ea <showSplash()+0xae>
-    a7e2:	f81b 0f01 	ldrb.w	r0, [fp, #1]!
-    a7e6:	2800      	cmp	r0, #0
-    a7e8:	d044      	beq.n	a874 <showSplash()+0x138>
+    a7e4:	e003      	b.n	a7ee <showSplash()+0xae>
+    a7e6:	f81b 0f01 	ldrb.w	r0, [fp, #1]!
+    a7ea:	2800      	cmp	r0, #0
+    a7ec:	d044      	beq.n	a878 <showSplash()+0x138>
     const Glyph *g = glyphFor(*p);
-    a7ea:	f7ff fb05 	bl	9df8 <glyphFor(char)>
-    a7ee:	4605      	mov	r5, r0
+    a7ee:	f7ff fb03 	bl	9df8 <glyphFor(char)>
+    a7f2:	4605      	mov	r5, r0
     if (!g) continue;
-    a7f0:	2800      	cmp	r0, #0
-    a7f2:	d0f6      	beq.n	a7e2 <showSplash()+0xa6>
+    a7f4:	2800      	cmp	r0, #0
+    a7f6:	d0f6      	beq.n	a7e6 <showSplash()+0xa6>
     int w = glyphWidth(*g);
-    a7f4:	f7ff fb12 	bl	9e1c <glyphWidth(Glyph const&)>
+    a7f8:	f7ff fb10 	bl	9e1c <glyphWidth(Glyph const&)>
     for (int r = 0; r < 7 && g->rows[r]; r++)
-    a7f8:	686b      	ldr	r3, [r5, #4]
+    a7fc:	686b      	ldr	r3, [r5, #4]
     int w = glyphWidth(*g);
-    a7fa:	4607      	mov	r7, r0
+    a7fe:	4607      	mov	r7, r0
     for (int r = 0; r < 7 && g->rows[r]; r++)
-    a7fc:	1d2e      	adds	r6, r5, #4
-    a7fe:	b393      	cbz	r3, a866 <showSplash()+0x12a>
+    a800:	1d2e      	adds	r6, r5, #4
+    a802:	b393      	cbz	r3, a86a <showSplash()+0x12a>
       for (int c = 0; c < w; c++)
-    a800:	2f00      	cmp	r7, #0
-    a802:	f105 001c 	add.w	r0, r5, #28
-    a806:	dd2e      	ble.n	a866 <showSplash()+0x12a>
-    a808:	f04f 0900 	mov.w	r9, #0
+    a804:	2f00      	cmp	r7, #0
+    a806:	f105 001c 	add.w	r0, r5, #28
+    a80a:	dd2e      	ble.n	a86a <showSplash()+0x12a>
+    a80c:	f04f 0900 	mov.w	r9, #0
           t.fillRect(x + c * LOGO_PIXEL, y + (g->top + r) * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, color);
-    a80c:	2402      	movs	r4, #2
-    a80e:	e9cd 0b04 	strd	r0, fp, [sp, #16]
+    a810:	2402      	movs	r4, #2
+    a812:	e9cd 0b04 	strd	r0, fp, [sp, #16]
       for (int c = 0; c < w; c++)
-    a812:	f04f 0b00 	mov.w	fp, #0
-    a816:	e004      	b.n	a822 <showSplash()+0xe6>
-    a818:	f10b 0b01 	add.w	fp, fp, #1
-    a81c:	455f      	cmp	r7, fp
-    a81e:	d017      	beq.n	a850 <showSplash()+0x114>
+    a816:	f04f 0b00 	mov.w	fp, #0
+    a81a:	e004      	b.n	a826 <showSplash()+0xe6>
+    a81c:	f10b 0b01 	add.w	fp, fp, #1
+    a820:	455f      	cmp	r7, fp
+    a822:	d017      	beq.n	a854 <showSplash()+0x114>
         if (g->rows[r][c] == '#')
-    a820:	6833      	ldr	r3, [r6, #0]
-    a822:	f813 300b 	ldrb.w	r3, [r3, fp]
-    a826:	2b23      	cmp	r3, #35	@ 0x23
-    a828:	d1f6      	bne.n	a818 <showSplash()+0xdc>
+    a824:	6833      	ldr	r3, [r6, #0]
+    a826:	f813 300b 	ldrb.w	r3, [r3, fp]
+    a82a:	2b23      	cmp	r3, #35	@ 0x23
+    a82c:	d1f6      	bne.n	a81c <showSplash()+0xdc>
           t.fillRect(x + c * LOGO_PIXEL, y + (g->top + r) * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, color);
-    a82a:	f995 2020 	ldrsb.w	r2, [r5, #32]
-    a82e:	eb08 014b 	add.w	r1, r8, fp, lsl #1
+    a82e:	f995 2020 	ldrsb.w	r2, [r5, #32]
+    a832:	eb08 014b 	add.w	r1, r8, fp, lsl #1
       for (int c = 0; c < w; c++)
-    a832:	f10b 0b01 	add.w	fp, fp, #1
+    a836:	f10b 0b01 	add.w	fp, fp, #1
           t.fillRect(x + c * LOGO_PIXEL, y + (g->top + r) * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, color);
-    a836:	2302      	movs	r3, #2
-    a838:	444a      	add	r2, r9
-    a83a:	9803      	ldr	r0, [sp, #12]
-    a83c:	b209      	sxth	r1, r1
-    a83e:	0052      	lsls	r2, r2, #1
-    a840:	32a0      	adds	r2, #160	@ 0xa0
-    a842:	e9cd 4a00 	strd	r4, sl, [sp]
-    a846:	b212      	sxth	r2, r2
-    a848:	f00b fd34 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a83a:	2302      	movs	r3, #2
+    a83c:	444a      	add	r2, r9
+    a83e:	9803      	ldr	r0, [sp, #12]
+    a840:	b209      	sxth	r1, r1
+    a842:	0052      	lsls	r2, r2, #1
+    a844:	32a0      	adds	r2, #160	@ 0xa0
+    a846:	e9cd 4a00 	strd	r4, sl, [sp]
+    a84a:	b212      	sxth	r2, r2
+    a84c:	f00b fd32 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
       for (int c = 0; c < w; c++)
-    a84c:	455f      	cmp	r7, fp
-    a84e:	d1e7      	bne.n	a820 <showSplash()+0xe4>
+    a850:	455f      	cmp	r7, fp
+    a852:	d1e7      	bne.n	a824 <showSplash()+0xe4>
     for (int r = 0; r < 7 && g->rows[r]; r++)
-    a850:	9b04      	ldr	r3, [sp, #16]
-    a852:	429e      	cmp	r6, r3
-    a854:	d005      	beq.n	a862 <showSplash()+0x126>
-    a856:	f856 3f04 	ldr.w	r3, [r6, #4]!
-    a85a:	f109 0901 	add.w	r9, r9, #1
-    a85e:	2b00      	cmp	r3, #0
-    a860:	d1d7      	bne.n	a812 <showSplash()+0xd6>
-    a862:	f8dd b014 	ldr.w	fp, [sp, #20]
+    a854:	9b04      	ldr	r3, [sp, #16]
+    a856:	429e      	cmp	r6, r3
+    a858:	d005      	beq.n	a866 <showSplash()+0x126>
+    a85a:	f856 3f04 	ldr.w	r3, [r6, #4]!
+    a85e:	f109 0901 	add.w	r9, r9, #1
+    a862:	2b00      	cmp	r3, #0
+    a864:	d1d7      	bne.n	a816 <showSplash()+0xd6>
+    a866:	f8dd b014 	ldr.w	fp, [sp, #20]
     x += (w + 1) * LOGO_PIXEL;
-    a866:	3701      	adds	r7, #1
+    a86a:	3701      	adds	r7, #1
   for (const char *p = text; *p; p++) {
-    a868:	f81b 0f01 	ldrb.w	r0, [fp, #1]!
+    a86c:	f81b 0f01 	ldrb.w	r0, [fp, #1]!
     x += (w + 1) * LOGO_PIXEL;
-    a86c:	eb08 0847 	add.w	r8, r8, r7, lsl #1
+    a870:	eb08 0847 	add.w	r8, r8, r7, lsl #1
   for (const char *p = text; *p; p++) {
-    a870:	2800      	cmp	r0, #0
-    a872:	d1ba      	bne.n	a7ea <showSplash()+0xae>
-    a874:	4a06      	ldr	r2, [pc, #24]	@ (a890 <showSplash()+0x154>)
+    a874:	2800      	cmp	r0, #0
+    a876:	d1ba      	bne.n	a7ee <showSplash()+0xae>
+    a878:	4a06      	ldr	r2, [pc, #24]	@ (a894 <showSplash()+0x154>)
   shownAt = millis();
-    a876:	4b07      	ldr	r3, [pc, #28]	@ (a894 <showSplash()+0x158>)
-    a878:	6812      	ldr	r2, [r2, #0]
-    a87a:	601a      	str	r2, [r3, #0]
+    a87a:	4b07      	ldr	r3, [pc, #28]	@ (a898 <showSplash()+0x158>)
+    a87c:	6812      	ldr	r2, [r2, #0]
+    a87e:	601a      	str	r2, [r3, #0]
 }
-    a87c:	b007      	add	sp, #28
-    a87e:	e8bd 8ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
-    a882:	bf00      	nop
-    a884:	2000460c 	.word	0x2000460c
-    a888:	60003c5b 	.word	0x60003c5b
-    a88c:	20001ca4 	.word	0x20001ca4
-    a890:	20040490 	.word	0x20040490
-    a894:	20008a9c 	.word	0x20008a9c
-    a898:	600037e3 	.word	0x600037e3
+    a880:	b007      	add	sp, #28
+    a882:	e8bd 8ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
+    a886:	bf00      	nop
+    a888:	2000460c 	.word	0x2000460c
+    a88c:	60003c5b 	.word	0x60003c5b
+    a890:	20001ca4 	.word	0x20001ca4
+    a894:	20040490 	.word	0x20040490
+    a898:	20008a9c 	.word	0x20008a9c
+    a89c:	600037e3 	.word	0x600037e3
 
-0000a89c <hideSplash()>:
+0000a8a0 <hideSplash()>:
 
 void hideSplash() {
-    a89c:	b538      	push	{r3, r4, r5, lr}
-    a89e:	4d0e      	ldr	r5, [pc, #56]	@ (a8d8 <hideSplash()+0x3c>)
+    a8a0:	b538      	push	{r3, r4, r5, lr}
+    a8a2:	4d0e      	ldr	r5, [pc, #56]	@ (a8dc <hideSplash()+0x3c>)
   while (millis() - shownAt < SPLASH_MIN_MS) delay(10);
-    a8a0:	4c0e      	ldr	r4, [pc, #56]	@ (a8dc <hideSplash()+0x40>)
-    a8a2:	e002      	b.n	a8aa <hideSplash()+0xe>
-    a8a4:	200a      	movs	r0, #10
-    a8a6:	f011 f955 	bl	1bb54 <delay>
-    a8aa:	682b      	ldr	r3, [r5, #0]
-    a8ac:	6822      	ldr	r2, [r4, #0]
-    a8ae:	1a9b      	subs	r3, r3, r2
-    a8b0:	f5b3 6ffa 	cmp.w	r3, #2000	@ 0x7d0
-    a8b4:	d3f6      	bcc.n	a8a4 <hideSplash()+0x8>
-    a8b6:	4b0a      	ldr	r3, [pc, #40]	@ (a8e0 <hideSplash()+0x44>)
+    a8a4:	4c0e      	ldr	r4, [pc, #56]	@ (a8e0 <hideSplash()+0x40>)
+    a8a6:	e002      	b.n	a8ae <hideSplash()+0xe>
+    a8a8:	200a      	movs	r0, #10
+    a8aa:	f011 f953 	bl	1bb54 <delay>
+    a8ae:	682b      	ldr	r3, [r5, #0]
+    a8b0:	6822      	ldr	r2, [r4, #0]
+    a8b2:	1a9b      	subs	r3, r3, r2
+    a8b4:	f5b3 6ffa 	cmp.w	r3, #2000	@ 0x7d0
+    a8b8:	d3f6      	bcc.n	a8a8 <hideSplash()+0x8>
+    a8ba:	4b0a      	ldr	r3, [pc, #40]	@ (a8e4 <hideSplash()+0x44>)
   board.tft().fillScreen(BG);
-    a8b8:	2100      	movs	r1, #0
+    a8bc:	2100      	movs	r1, #0
   uiGeneration++;                                // everything redraws in full
   for (int i = 0; i < ROWS; i++) drawTrack(i);
-    a8ba:	2400      	movs	r4, #0
+    a8be:	2400      	movs	r4, #0
   board.tft().fillScreen(BG);
-    a8bc:	6898      	ldr	r0, [r3, #8]
-    a8be:	f00b ff77 	bl	167b0 <ILI9341_t3n::fillScreen(unsigned short)>
+    a8c0:	6898      	ldr	r0, [r3, #8]
+    a8c2:	f00b ff75 	bl	167b0 <ILI9341_t3n::fillScreen(unsigned short)>
   uiGeneration++;                                // everything redraws in full
-    a8c2:	4a08      	ldr	r2, [pc, #32]	@ (a8e4 <hideSplash()+0x48>)
-    a8c4:	6813      	ldr	r3, [r2, #0]
-    a8c6:	3301      	adds	r3, #1
-    a8c8:	6013      	str	r3, [r2, #0]
+    a8c6:	4a08      	ldr	r2, [pc, #32]	@ (a8e8 <hideSplash()+0x48>)
+    a8c8:	6813      	ldr	r3, [r2, #0]
+    a8ca:	3301      	adds	r3, #1
+    a8cc:	6013      	str	r3, [r2, #0]
   for (int i = 0; i < ROWS; i++) drawTrack(i);
-    a8ca:	4620      	mov	r0, r4
-    a8cc:	3401      	adds	r4, #1
-    a8ce:	f7fe fb3d 	bl	8f4c <drawTrack(int)>
-    a8d2:	2c09      	cmp	r4, #9
-    a8d4:	d1f9      	bne.n	a8ca <hideSplash()+0x2e>
+    a8ce:	4620      	mov	r0, r4
+    a8d0:	3401      	adds	r4, #1
+    a8d2:	f7fe fb3b 	bl	8f4c <drawTrack(int)>
+    a8d6:	2c09      	cmp	r4, #9
+    a8d8:	d1f9      	bne.n	a8ce <hideSplash()+0x2e>
 }
-    a8d6:	bd38      	pop	{r3, r4, r5, pc}
-    a8d8:	20040490 	.word	0x20040490
-    a8dc:	20008a9c 	.word	0x20008a9c
-    a8e0:	2000460c 	.word	0x2000460c
-    a8e4:	20004678 	.word	0x20004678
+    a8da:	bd38      	pop	{r3, r4, r5, pc}
+    a8dc:	20040490 	.word	0x20040490
+    a8e0:	20008a9c 	.word	0x20008a9c
+    a8e4:	2000460c 	.word	0x2000460c
+    a8e8:	20004678 	.word	0x20004678
 
-0000a8e8 <drawStatus()>:
+0000a8ec <drawStatus()>:
 void drawStatus() {
   static uint16_t shownFrame[STATUS_CELLS];
   static uint32_t drawn = 0;                       // uiGeneration when the cells were last cleared
   auto &t = board.tft();
   int top = rowTop(STATUS_ROW);
   if (drawn != uiGeneration) {
-    a8e8:	4aba      	ldr	r2, [pc, #744]	@ (abd4 <drawStatus()+0x2ec>)
-    a8ea:	4bbb      	ldr	r3, [pc, #748]	@ (abd8 <drawStatus()+0x2f0>)
-    a8ec:	6812      	ldr	r2, [r2, #0]
-    a8ee:	6819      	ldr	r1, [r3, #0]
-    a8f0:	48ba      	ldr	r0, [pc, #744]	@ (abdc <drawStatus()+0x2f4>)
-    a8f2:	4291      	cmp	r1, r2
+    a8ec:	4aba      	ldr	r2, [pc, #744]	@ (abd8 <drawStatus()+0x2ec>)
+    a8ee:	4bbb      	ldr	r3, [pc, #748]	@ (abdc <drawStatus()+0x2f0>)
+    a8f0:	6812      	ldr	r2, [r2, #0]
+    a8f2:	6819      	ldr	r1, [r3, #0]
+    a8f4:	48ba      	ldr	r0, [pc, #744]	@ (abe0 <drawStatus()+0x2f4>)
+    a8f6:	4291      	cmp	r1, r2
 void drawStatus() {
-    a8f4:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
-    a8f8:	6887      	ldr	r7, [r0, #8]
-    a8fa:	b08d      	sub	sp, #52	@ 0x34
+    a8f8:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+    a8fc:	6887      	ldr	r7, [r0, #8]
+    a8fe:	b08d      	sub	sp, #52	@ 0x34
   if (drawn != uiGeneration) {
-    a8fc:	d015      	beq.n	a92a <drawStatus()+0x42>
+    a900:	d015      	beq.n	a92e <drawStatus()+0x42>
     drawn = uiGeneration;
     for (int c = 0; c < STATUS_CELLS; c++) {
       t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, BG);
-    a8fe:	2400      	movs	r4, #0
-    a900:	261e      	movs	r6, #30
+    a902:	2400      	movs	r4, #0
+    a904:	261e      	movs	r6, #30
       shownFrame[c] = BG;
-    a902:	4db7      	ldr	r5, [pc, #732]	@ (abe0 <drawStatus()+0x2f8>)
+    a906:	4db7      	ldr	r5, [pc, #732]	@ (abe4 <drawStatus()+0x2f8>)
       t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, BG);
-    a904:	4638      	mov	r0, r7
+    a908:	4638      	mov	r0, r7
     drawn = uiGeneration;
-    a906:	601a      	str	r2, [r3, #0]
+    a90a:	601a      	str	r2, [r3, #0]
       t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, BG);
-    a908:	4621      	mov	r1, r4
-    a90a:	2384      	movs	r3, #132	@ 0x84
-    a90c:	22d2      	movs	r2, #210	@ 0xd2
-    a90e:	e9cd 6400 	strd	r6, r4, [sp]
-    a912:	f00b fccf 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
-    a916:	239e      	movs	r3, #158	@ 0x9e
-    a918:	22d2      	movs	r2, #210	@ 0xd2
-    a91a:	2186      	movs	r1, #134	@ 0x86
-    a91c:	4638      	mov	r0, r7
-    a91e:	e9cd 6400 	strd	r6, r4, [sp]
+    a90c:	4621      	mov	r1, r4
+    a90e:	2384      	movs	r3, #132	@ 0x84
+    a910:	22d2      	movs	r2, #210	@ 0xd2
+    a912:	e9cd 6400 	strd	r6, r4, [sp]
+    a916:	f00b fccd 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a91a:	239e      	movs	r3, #158	@ 0x9e
+    a91c:	22d2      	movs	r2, #210	@ 0xd2
+    a91e:	2186      	movs	r1, #134	@ 0x86
+    a920:	4638      	mov	r0, r7
+    a922:	e9cd 6400 	strd	r6, r4, [sp]
       shownFrame[c] = BG;
-    a922:	802c      	strh	r4, [r5, #0]
+    a926:	802c      	strh	r4, [r5, #0]
       t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, BG);
-    a924:	f00b fcc6 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a928:	f00b fcc4 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
       shownFrame[c] = BG;
-    a928:	806c      	strh	r4, [r5, #2]
+    a92c:	806c      	strh	r4, [r5, #2]
     }
   }
   for (int c = 0; c < STATUS_CELLS; c++) {
-    a92a:	4ead      	ldr	r6, [pc, #692]	@ (abe0 <drawStatus()+0x2f8>)
+    a92e:	4ead      	ldr	r6, [pc, #692]	@ (abe4 <drawStatus()+0x2f8>)
 void drawStatus() {
-    a92c:	2500      	movs	r5, #0
-    a92e:	f8df a2d8 	ldr.w	sl, [pc, #728]	@ ac08 <drawStatus()+0x320>
-    a932:	f8df b2d8 	ldr.w	fp, [pc, #728]	@ ac0c <drawStatus()+0x324>
-    a936:	9705      	str	r7, [sp, #20]
+    a930:	2500      	movs	r5, #0
+    a932:	f8df a2d8 	ldr.w	sl, [pc, #728]	@ ac0c <drawStatus()+0x320>
+    a936:	f8df b2d8 	ldr.w	fp, [pc, #728]	@ ac10 <drawStatus()+0x324>
+    a93a:	9705      	str	r7, [sp, #20]
   if (i != selected || cell != selectedCellIn(i)) return BG;
-    a938:	f8da 3000 	ldr.w	r3, [sl]
-    a93c:	2b08      	cmp	r3, #8
-    a93e:	d107      	bne.n	a950 <drawStatus()+0x68>
-    a940:	f8db 3000 	ldr.w	r3, [fp]
-    a944:	2b01      	cmp	r3, #1
-    a946:	bfa8      	it	ge
-    a948:	2301      	movge	r3, #1
-    a94a:	42ab      	cmp	r3, r5
-    a94c:	f000 81d8 	beq.w	ad00 <drawStatus()+0x418>
-    a950:	2400      	movs	r4, #0
+    a93c:	f8da 3000 	ldr.w	r3, [sl]
+    a940:	2b08      	cmp	r3, #8
+    a942:	d107      	bne.n	a954 <drawStatus()+0x68>
+    a944:	f8db 3000 	ldr.w	r3, [fp]
+    a948:	2b01      	cmp	r3, #1
+    a94a:	bfa8      	it	ge
+    a94c:	2301      	movge	r3, #1
+    a94e:	42ab      	cmp	r3, r5
+    a950:	f000 81d8 	beq.w	ad04 <drawStatus()+0x418>
+    a954:	2400      	movs	r4, #0
     uint16_t f = cellFrame(STATUS_ROW, c);
     if (f != shownFrame[c]) drawFrame(c, shownFrame[c] = f);
-    a952:	f836 3b02 	ldrh.w	r3, [r6], #2
-    a956:	42a3      	cmp	r3, r4
-    a958:	d036      	beq.n	a9c8 <drawStatus()+0xe0>
-    a95a:	4ba0      	ldr	r3, [pc, #640]	@ (abdc <drawStatus()+0x2f4>)
-    a95c:	f826 4c02 	strh.w	r4, [r6, #-2]
-    a960:	f8d3 9008 	ldr.w	r9, [r3, #8]
+    a956:	f836 3b02 	ldrh.w	r3, [r6], #2
+    a95a:	42a3      	cmp	r3, r4
+    a95c:	d036      	beq.n	a9cc <drawStatus()+0xe0>
+    a95e:	4ba0      	ldr	r3, [pc, #640]	@ (abe0 <drawStatus()+0x2f4>)
+    a960:	f826 4c02 	strh.w	r4, [r6, #-2]
+    a964:	f8d3 9008 	ldr.w	r9, [r3, #8]
 static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX : CELL[cell]; }
-    a964:	2d00      	cmp	r5, #0
-    a966:	f040 81c7 	bne.w	acf8 <drawStatus()+0x410>
-    a96a:	2380      	movs	r3, #128	@ 0x80
-    a96c:	2102      	movs	r1, #2
-    a96e:	4f9d      	ldr	r7, [pc, #628]	@ (abe4 <drawStatus()+0x2fc>)
+    a968:	2d00      	cmp	r5, #0
+    a96a:	f040 81c7 	bne.w	acfc <drawStatus()+0x410>
+    a96e:	2380      	movs	r3, #128	@ 0x80
+    a970:	2102      	movs	r1, #2
+    a972:	4f9d      	ldr	r7, [pc, #628]	@ (abe8 <drawStatus()+0x2fc>)
   t.fillRect(c.x + PX, top, c.w - 2 * PX, PX, color);
-    a970:	f04f 0802 	mov.w	r8, #2
-    a974:	22d2      	movs	r2, #210	@ 0xd2
-    a976:	4648      	mov	r0, r9
-    a978:	9401      	str	r4, [sp, #4]
-    a97a:	f8cd 8000 	str.w	r8, [sp]
-    a97e:	f00b fc99 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a974:	f04f 0802 	mov.w	r8, #2
+    a978:	22d2      	movs	r2, #210	@ 0xd2
+    a97a:	4648      	mov	r0, r9
+    a97c:	9401      	str	r4, [sp, #4]
+    a97e:	f8cd 8000 	str.w	r8, [sp]
+    a982:	f00b fc97 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
   t.fillRect(c.x + PX, top + ROW_BAND - PX, c.w - 2 * PX, PX, color);
-    a982:	687b      	ldr	r3, [r7, #4]
-    a984:	6839      	ldr	r1, [r7, #0]
-    a986:	22ea      	movs	r2, #234	@ 0xea
-    a988:	3b04      	subs	r3, #4
-    a98a:	4648      	mov	r0, r9
-    a98c:	4441      	add	r1, r8
-    a98e:	b21b      	sxth	r3, r3
-    a990:	b209      	sxth	r1, r1
-    a992:	e9cd 8400 	strd	r8, r4, [sp]
-    a996:	f00b fc8d 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a986:	687b      	ldr	r3, [r7, #4]
+    a988:	6839      	ldr	r1, [r7, #0]
+    a98a:	22ea      	movs	r2, #234	@ 0xea
+    a98c:	3b04      	subs	r3, #4
+    a98e:	4648      	mov	r0, r9
+    a990:	4441      	add	r1, r8
+    a992:	b21b      	sxth	r3, r3
+    a994:	b209      	sxth	r1, r1
+    a996:	e9cd 8400 	strd	r8, r4, [sp]
+    a99a:	f00b fc8b 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
   t.fillRect(c.x, top + PX, PX, ROW_BAND - 2 * PX, color);
-    a99a:	2316      	movs	r3, #22
-    a99c:	f9b7 1000 	ldrsh.w	r1, [r7]
-    a9a0:	22d4      	movs	r2, #212	@ 0xd4
-    a9a2:	4648      	mov	r0, r9
-    a9a4:	9401      	str	r4, [sp, #4]
-    a9a6:	9300      	str	r3, [sp, #0]
-    a9a8:	4643      	mov	r3, r8
-    a9aa:	f00b fc83 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a99e:	2316      	movs	r3, #22
+    a9a0:	f9b7 1000 	ldrsh.w	r1, [r7]
+    a9a4:	22d4      	movs	r2, #212	@ 0xd4
+    a9a6:	4648      	mov	r0, r9
+    a9a8:	9401      	str	r4, [sp, #4]
+    a9aa:	9300      	str	r3, [sp, #0]
+    a9ac:	4643      	mov	r3, r8
+    a9ae:	f00b fc81 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
   t.fillRect(c.x + c.w - PX, top + PX, PX, ROW_BAND - 2 * PX, color);
-    a9ae:	4643      	mov	r3, r8
-    a9b0:	4648      	mov	r0, r9
-    a9b2:	e9d7 1200 	ldrd	r1, r2, [r7]
-    a9b6:	9401      	str	r4, [sp, #4]
-    a9b8:	2416      	movs	r4, #22
-    a9ba:	4411      	add	r1, r2
-    a9bc:	22d4      	movs	r2, #212	@ 0xd4
-    a9be:	9400      	str	r4, [sp, #0]
-    a9c0:	3902      	subs	r1, #2
-    a9c2:	b209      	sxth	r1, r1
-    a9c4:	f00b fc76 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    a9b2:	4643      	mov	r3, r8
+    a9b4:	4648      	mov	r0, r9
+    a9b6:	e9d7 1200 	ldrd	r1, r2, [r7]
+    a9ba:	9401      	str	r4, [sp, #4]
+    a9bc:	2416      	movs	r4, #22
+    a9be:	4411      	add	r1, r2
+    a9c0:	22d4      	movs	r2, #212	@ 0xd4
+    a9c2:	9400      	str	r4, [sp, #0]
+    a9c4:	3902      	subs	r1, #2
+    a9c6:	b209      	sxth	r1, r1
+    a9c8:	f00b fc74 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
   for (int c = 0; c < STATUS_CELLS; c++) {
-    a9c8:	1c6b      	adds	r3, r5, #1
-    a9ca:	2501      	movs	r5, #1
-    a9cc:	2b02      	cmp	r3, #2
-    a9ce:	d1b3      	bne.n	a938 <drawStatus()+0x50>
+    a9cc:	1c6b      	adds	r3, r5, #1
+    a9ce:	2501      	movs	r5, #1
+    a9d0:	2b02      	cmp	r3, #2
+    a9d2:	d1b3      	bne.n	a93c <drawStatus()+0x50>
   }
 
   char text[24];
   // The tempo. A scene's tempo waiting for its switch point: the one playing until then.
   noInterrupts();
-    a9d0:	9f05      	ldr	r7, [sp, #20]
-    a9d2:	b672      	cpsid	i
+    a9d4:	9f05      	ldr	r7, [sp, #20]
+    a9d6:	b672      	cpsid	i
   bool tempoWaiting = transport.pendingSpb && transport.spbAtBeat >= 0;
-    a9d4:	4c84      	ldr	r4, [pc, #528]	@ (abe8 <drawStatus()+0x300>)
-    a9d6:	68a3      	ldr	r3, [r4, #8]
-    a9d8:	b17b      	cbz	r3, a9fa <drawStatus()+0x112>
-    a9da:	68e3      	ldr	r3, [r4, #12]
-    a9dc:	2b00      	cmp	r3, #0
-    a9de:	db0c      	blt.n	a9fa <drawStatus()+0x112>
+    a9d8:	4c84      	ldr	r4, [pc, #528]	@ (abec <drawStatus()+0x300>)
+    a9da:	68a3      	ldr	r3, [r4, #8]
+    a9dc:	b17b      	cbz	r3, a9fe <drawStatus()+0x112>
+    a9de:	68e3      	ldr	r3, [r4, #12]
+    a9e0:	2b00      	cmp	r3, #0
+    a9e2:	db0c      	blt.n	a9fe <drawStatus()+0x112>
   uint32_t playingSpb = transport.spb;
-    a9e0:	6860      	ldr	r0, [r4, #4]
+    a9e4:	6860      	ldr	r0, [r4, #4]
   interrupts();
-    a9e2:	b662      	cpsie	i
+    a9e6:	b662      	cpsie	i
   float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
-    a9e4:	f7f6 fa1a 	bl	e1c <looper::bpmForSpb(unsigned long)>
-    a9e8:	eef2 7a04 	vmov.f32	s15, #36	@ 0x41200000  10.0
-    a9ec:	ee20 0a27 	vmul.f32	s0, s0, s15
-    a9f0:	feb8 0a40 	vrinta.f32	s0, s0
-    a9f4:	ee80 7a27 	vdiv.f32	s14, s0, s15
-    a9f8:	e004      	b.n	aa04 <drawStatus()+0x11c>
+    a9e8:	f7f6 fa18 	bl	e1c <looper::bpmForSpb(unsigned long)>
+    a9ec:	eef2 7a04 	vmov.f32	s15, #36	@ 0x41200000  10.0
+    a9f0:	ee20 0a27 	vmul.f32	s0, s0, s15
+    a9f4:	feb8 0a40 	vrinta.f32	s0, s0
+    a9f8:	ee80 7a27 	vdiv.f32	s14, s0, s15
+    a9fc:	e004      	b.n	aa08 <drawStatus()+0x11c>
   uint32_t playingSpb = transport.spb;
-    a9fa:	6863      	ldr	r3, [r4, #4]
+    a9fe:	6863      	ldr	r3, [r4, #4]
   interrupts();
-    a9fc:	b662      	cpsie	i
+    aa00:	b662      	cpsie	i
   float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
-    a9fe:	4b7b      	ldr	r3, [pc, #492]	@ (abec <drawStatus()+0x304>)
-    aa00:	ed93 7a00 	vldr	s14, [r3]
+    aa02:	4b7b      	ldr	r3, [pc, #492]	@ (abf0 <drawStatus()+0x304>)
+    aa04:	ed93 7a00 	vldr	s14, [r3]
   snprintf(text, sizeof text, "%.1f BPM", shown);
-    aa04:	eeb7 7ac7 	vcvt.f64.f32	d7, s14
-    aa08:	2118      	movs	r1, #24
-    aa0a:	4a79      	ldr	r2, [pc, #484]	@ (abf0 <drawStatus()+0x308>)
-    aa0c:	eb0d 0001 	add.w	r0, sp, r1
-    aa10:	ed8d 7b00 	vstr	d7, [sp]
-    aa14:	f016 fa0e 	bl	20e34 <snprintf>
+    aa08:	eeb7 7ac7 	vcvt.f64.f32	d7, s14
+    aa0c:	2118      	movs	r1, #24
+    aa0e:	4a79      	ldr	r2, [pc, #484]	@ (abf4 <drawStatus()+0x308>)
+    aa10:	eb0d 0001 	add.w	r0, sp, r1
+    aa14:	ed8d 7b00 	vstr	d7, [sp]
+    aa18:	f016 fa0c 	bl	20e34 <snprintf>
   int cell = selected == STATUS_ROW ? selectedCellIn(STATUS_ROW) : -1;
-    aa18:	f8da 3000 	ldr.w	r3, [sl]
-    aa1c:	2b08      	cmp	r3, #8
-    aa1e:	f000 810f 	beq.w	ac40 <drawStatus()+0x358>
+    aa1c:	f8da 3000 	ldr.w	r3, [sl]
+    aa20:	2b08      	cmp	r3, #8
+    aa22:	f000 810f 	beq.w	ac44 <drawStatus()+0x358>
   uint16_t live = playing ? INK : DIM;
   int tagY = top + (ROW_BAND - TAG_H) / 2, textY = top + (ROW_BAND - FONT_H) / 2;
   {
     const Cell &box = TEMPO_BOX;
     int right = box.x + box.w - INSET;
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    aa22:	4d74      	ldr	r5, [pc, #464]	@ (abf4 <drawStatus()+0x30c>)
+    aa26:	4d74      	ldr	r5, [pc, #464]	@ (abf8 <drawStatus()+0x30c>)
   bool playing = transport.running;                // labels: white while playing, grey while stopped
-    aa24:	7823      	ldrb	r3, [r4, #0]
+    aa28:	7823      	ldrb	r3, [r4, #0]
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    aa26:	682e      	ldr	r6, [r5, #0]
+    aa2a:	682e      	ldr	r6, [r5, #0]
   uint16_t live = playing ? INK : DIM;
-    aa28:	2b00      	cmp	r3, #0
-    aa2a:	f040 80c4 	bne.w	abb6 <drawStatus()+0x2ce>
+    aa2c:	2b00      	cmp	r3, #0
+    aa2e:	f040 80c4 	bne.w	abba <drawStatus()+0x2ce>
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    aa2e:	f016 0601 	ands.w	r6, r6, #1
-    aa32:	f000 818c 	beq.w	ad4e <drawStatus()+0x466>
+    aa32:	f016 0601 	ands.w	r6, r6, #1
+    aa36:	f000 818c 	beq.w	ad52 <drawStatus()+0x466>
   uint16_t live = playing ? INK : DIM;
-    aa36:	f248 4510 	movw	r5, #33808	@ 0x8410
+    aa3a:	f248 4510 	movw	r5, #33808	@ 0x8410
   int cell = selected == STATUS_ROW ? selectedCellIn(STATUS_ROW) : -1;
-    aa3a:	f04f 38ff 	mov.w	r8, #4294967295	@ 0xffffffff
-    aa3e:	2600      	movs	r6, #0
-    aa40:	f8df b1cc 	ldr.w	fp, [pc, #460]	@ ac10 <drawStatus()+0x328>
+    aa3e:	f04f 38ff 	mov.w	r8, #4294967295	@ 0xffffffff
+    aa42:	2600      	movs	r6, #0
+    aa44:	f8df b1cc 	ldr.w	fp, [pc, #460]	@ ac14 <drawStatus()+0x328>
     bool editing = cell == TEMPO_CELL;
     // In the accent colour: B alone held on it (B + arrows change it), or A
     // alone held on the status row (tapping it).
     bool accent = (editing && bAlone()) || (selected == STATUS_ROW && board.keys() == m8::BTN_EDIT);
     uint16_t back = accent ? ACCENT : INK;
     int w = tagWidth(text);
-    aa44:	a806      	add	r0, sp, #24
-    aa46:	f7ff fa4f 	bl	9ee8 <tagWidth(char const*)>
+    aa48:	a806      	add	r0, sp, #24
+    aa4a:	f7ff fa4d 	bl	9ee8 <tagWidth(char const*)>
     t.fillRect(right - tempoW, tagY, tempoW - w, TAG_H, BG);   // what longer text left
-    aa4a:	f8db 1000 	ldr.w	r1, [fp]
+    aa4e:	f8db 1000 	ldr.w	r1, [fp]
     int w = tagWidth(text);
-    aa4e:	4681      	mov	r9, r0
+    aa52:	4681      	mov	r9, r0
     t.fillRect(right - tempoW, tagY, tempoW - w, TAG_H, BG);   // what longer text left
-    aa50:	2300      	movs	r3, #0
-    aa52:	2212      	movs	r2, #18
-    aa54:	4638      	mov	r0, r7
-    aa56:	9301      	str	r3, [sp, #4]
-    aa58:	eba1 0309 	sub.w	r3, r1, r9
-    aa5c:	f5c1 7190 	rsb	r1, r1, #288	@ 0x120
-    aa60:	9200      	str	r2, [sp, #0]
-    aa62:	b21b      	sxth	r3, r3
-    aa64:	22d6      	movs	r2, #214	@ 0xd6
-    aa66:	b209      	sxth	r1, r1
-    aa68:	f00b fc24 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    aa54:	2300      	movs	r3, #0
+    aa56:	2212      	movs	r2, #18
+    aa58:	4638      	mov	r0, r7
+    aa5a:	9301      	str	r3, [sp, #4]
+    aa5c:	eba1 0309 	sub.w	r3, r1, r9
+    aa60:	f5c1 7190 	rsb	r1, r1, #288	@ 0x120
+    aa64:	9200      	str	r2, [sp, #0]
+    aa66:	b21b      	sxth	r3, r3
+    aa68:	22d6      	movs	r2, #214	@ 0xd6
+    aa6a:	b209      	sxth	r1, r1
+    aa6c:	f00b fc22 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
     drawTag(right - w, tagY, text, editing ? TAG_INVERTED : TAG_PLAIN, editing || accent ? back : live, BG);
-    aa6c:	f64f 73ff 	movw	r3, #65535	@ 0xffff
-    aa70:	f5c9 7090 	rsb	r0, r9, #288	@ 0x120
-    aa74:	f1b8 0f01 	cmp.w	r8, #1
-    aa78:	bf18      	it	ne
-    aa7a:	462b      	movne	r3, r5
-    aa7c:	2200      	movs	r2, #0
-    aa7e:	9300      	str	r3, [sp, #0]
-    aa80:	21d6      	movs	r1, #214	@ 0xd6
-    aa82:	4633      	mov	r3, r6
-    aa84:	e9cd 2201 	strd	r2, r2, [sp, #4]
-    aa88:	aa06      	add	r2, sp, #24
-    aa8a:	f7ff fa33 	bl	9ef4 <drawTag(int, int, char const*, TagStyle, unsigned short, unsigned short, int)>
+    aa70:	f64f 73ff 	movw	r3, #65535	@ 0xffff
+    aa74:	f5c9 7090 	rsb	r0, r9, #288	@ 0x120
+    aa78:	f1b8 0f01 	cmp.w	r8, #1
+    aa7c:	bf18      	it	ne
+    aa7e:	462b      	movne	r3, r5
+    aa80:	2200      	movs	r2, #0
+    aa82:	9300      	str	r3, [sp, #0]
+    aa84:	21d6      	movs	r1, #214	@ 0xd6
+    aa86:	4633      	mov	r3, r6
+    aa88:	e9cd 2201 	strd	r2, r2, [sp, #4]
+    aa8c:	aa06      	add	r2, sp, #24
+    aa8e:	f7ff fa31 	bl	9ef4 <drawTag(int, int, char const*, TagStyle, unsigned short, unsigned short, int)>
   }
 
   // The clock.
   noInterrupts();
-    aa8e:	b672      	cpsid	i
+    aa92:	b672      	cpsid	i
   int32_t beat = transport.beat;
-    aa90:	6926      	ldr	r6, [r4, #16]
+    aa94:	6926      	ldr	r6, [r4, #16]
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
-    aa92:	6961      	ldr	r1, [r4, #20]
-    aa94:	6862      	ldr	r2, [r4, #4]
+    aa96:	6961      	ldr	r1, [r4, #20]
+    aa98:	6862      	ldr	r2, [r4, #4]
   bool running = transport.running;
-    aa96:	7823      	ldrb	r3, [r4, #0]
-    aa98:	b2db      	uxtb	r3, r3
+    aa9a:	7823      	ldrb	r3, [r4, #0]
+    aa9c:	b2db      	uxtb	r3, r3
   interrupts();
-    aa9a:	b662      	cpsie	i
+    aa9e:	b662      	cpsie	i
   if (running)
-    aa9c:	2b00      	cmp	r3, #0
-    aa9e:	f000 80b9 	beq.w	ac14 <drawStatus()+0x32c>
+    aaa0:	2b00      	cmp	r3, #0
+    aaa2:	f000 80b9 	beq.w	ac18 <drawStatus()+0x32c>
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
-    aaa2:	2e00      	cmp	r6, #0
-    aaa4:	4637      	mov	r7, r6
+    aaa6:	2e00      	cmp	r6, #0
+    aaa8:	4637      	mov	r7, r6
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
-    aaa6:	f04f 0300 	mov.w	r3, #0
-    aaaa:	ea4f 0081 	mov.w	r0, r1, lsl #2
+    aaaa:	f04f 0300 	mov.w	r3, #0
+    aaae:	ea4f 0081 	mov.w	r0, r1, lsl #2
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
-    aaae:	bfb8      	it	lt
-    aab0:	1cf7      	addlt	r7, r6, #3
+    aab2:	bfb8      	it	lt
+    aab4:	1cf7      	addlt	r7, r6, #3
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
-    aab2:	0f89      	lsrs	r1, r1, #30
+    aab6:	0f89      	lsrs	r1, r1, #30
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
-    aab4:	10bf      	asrs	r7, r7, #2
-    aab6:	ebb3 0c07 	subs.w	ip, r3, r7
-    aaba:	b2ff      	uxtb	r7, r7
-    aabc:	fa5f fc8c 	uxtb.w	ip, ip
-    aac0:	bf58      	it	pl
-    aac2:	f1cc 0700 	rsbpl	r7, ip, #0
+    aab8:	10bf      	asrs	r7, r7, #2
+    aaba:	ebb3 0c07 	subs.w	ip, r3, r7
+    aabe:	b2ff      	uxtb	r7, r7
+    aac0:	fa5f fc8c 	uxtb.w	ip, ip
+    aac4:	bf58      	it	pl
+    aac6:	f1cc 0700 	rsbpl	r7, ip, #0
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
-    aac6:	f014 fb35 	bl	1f134 <__aeabi_uldivmod>
+    aaca:	f014 fb33 	bl	1f134 <__aeabi_uldivmod>
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
-    aaca:	4272      	negs	r2, r6
-    aacc:	f006 0603 	and.w	r6, r6, #3
-    aad0:	f100 0001 	add.w	r0, r0, #1
-    aad4:	f04f 0118 	mov.w	r1, #24
-    aad8:	f002 0203 	and.w	r2, r2, #3
-    aadc:	f107 0701 	add.w	r7, r7, #1
-    aae0:	9001      	str	r0, [sp, #4]
-    aae2:	eb0d 0001 	add.w	r0, sp, r1
-    aae6:	bf58      	it	pl
-    aae8:	4256      	negpl	r6, r2
-    aaea:	463b      	mov	r3, r7
-    aaec:	4a42      	ldr	r2, [pc, #264]	@ (abf8 <drawStatus()+0x310>)
-    aaee:	3601      	adds	r6, #1
-    aaf0:	9600      	str	r6, [sp, #0]
-    aaf2:	f016 f99f 	bl	20e34 <snprintf>
+    aace:	4272      	negs	r2, r6
+    aad0:	f006 0603 	and.w	r6, r6, #3
+    aad4:	f100 0001 	add.w	r0, r0, #1
+    aad8:	f04f 0118 	mov.w	r1, #24
+    aadc:	f002 0203 	and.w	r2, r2, #3
+    aae0:	f107 0701 	add.w	r7, r7, #1
+    aae4:	9001      	str	r0, [sp, #4]
+    aae6:	eb0d 0001 	add.w	r0, sp, r1
+    aaea:	bf58      	it	pl
+    aaec:	4256      	negpl	r6, r2
+    aaee:	463b      	mov	r3, r7
+    aaf0:	4a42      	ldr	r2, [pc, #264]	@ (abfc <drawStatus()+0x310>)
+    aaf2:	3601      	adds	r6, #1
+    aaf4:	9600      	str	r6, [sp, #0]
+    aaf6:	f016 f99d 	bl	20e34 <snprintf>
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
   drawText(TEMPO_BOX.x + INSET, textY, text, running ? INK : DIM, BG, CLOCK_W);   // (its box clears longer text)
-    aaf6:	f64f 73ff 	movw	r3, #65535	@ 0xffff
-    aafa:	2200      	movs	r2, #0
-    aafc:	2130      	movs	r1, #48	@ 0x30
-    aafe:	208a      	movs	r0, #138	@ 0x8a
-    ab00:	e9cd 2100 	strd	r2, r1, [sp]
-    ab04:	aa06      	add	r2, sp, #24
-    ab06:	21da      	movs	r1, #218	@ 0xda
-    ab08:	f7ff f9b2 	bl	9e70 <drawText(int, int, char const*, unsigned short, unsigned short, int)>
+    aafa:	f64f 73ff 	movw	r3, #65535	@ 0xffff
+    aafe:	2200      	movs	r2, #0
+    ab00:	2130      	movs	r1, #48	@ 0x30
+    ab02:	208a      	movs	r0, #138	@ 0x8a
+    ab04:	e9cd 2100 	strd	r2, r1, [sp]
+    ab08:	aa06      	add	r2, sp, #24
+    ab0a:	21da      	movs	r1, #218	@ 0xda
+    ab0c:	f7ff f9b0 	bl	9e70 <drawText(int, int, char const*, unsigned short, unsigned short, int)>
   // The scene. Its box reaches the cell's inner edge: the position's text
   // (up to "250*/250") always fits, and clears any longer text before it.
   const Cell &box = CELL[SCENE_CELL];
   // In the accent colour: SHIFT held (SHIFT + UP/DOWN step through the
   // scenes), or B alone on the cell (B + UP/DOWN do).
   bool sceneAccent = (board.keys() & m8::BTN_SHIFT) || (cell == SCENE_CELL && bAlone());
-    ab0c:	4833      	ldr	r0, [pc, #204]	@ (abdc <drawStatus()+0x2f4>)
-    ab0e:	f7f5 fe53 	bl	7b8 <m8::Board::keys()>
-    ab12:	06c0      	lsls	r0, r0, #27
-    ab14:	d556      	bpl.n	abc4 <drawStatus()+0x2dc>
-    ab16:	f04f 0801 	mov.w	r8, #1
+    ab10:	4833      	ldr	r0, [pc, #204]	@ (abe0 <drawStatus()+0x2f4>)
+    ab12:	f7f5 fe51 	bl	7b8 <m8::Board::keys()>
+    ab16:	06c0      	lsls	r0, r0, #27
+    ab18:	d556      	bpl.n	abc8 <drawStatus()+0x2dc>
+    ab1a:	f04f 0801 	mov.w	r8, #1
   drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : live, BG);
-    ab1a:	f243 7335 	movw	r3, #14133	@ 0x3735
-    ab1e:	2200      	movs	r2, #0
-    ab20:	21d6      	movs	r1, #214	@ 0xd6
-    ab22:	2004      	movs	r0, #4
-    ab24:	9300      	str	r3, [sp, #0]
-    ab26:	2302      	movs	r3, #2
-    ab28:	e9cd 2201 	strd	r2, r2, [sp, #4]
-    ab2c:	4a33      	ldr	r2, [pc, #204]	@ (abfc <drawStatus()+0x314>)
-    ab2e:	f7ff f9e1 	bl	9ef4 <drawTag(int, int, char const*, TagStyle, unsigned short, unsigned short, int)>
+    ab1e:	f243 7335 	movw	r3, #14133	@ 0x3735
+    ab22:	2200      	movs	r2, #0
+    ab24:	21d6      	movs	r1, #214	@ 0xd6
+    ab26:	2004      	movs	r0, #4
+    ab28:	9300      	str	r3, [sp, #0]
+    ab2a:	2302      	movs	r3, #2
+    ab2c:	e9cd 2201 	strd	r2, r2, [sp, #4]
+    ab30:	4a33      	ldr	r2, [pc, #204]	@ (ac00 <drawStatus()+0x314>)
+    ab32:	f7ff f9df 	bl	9ef4 <drawTag(int, int, char const*, TagStyle, unsigned short, unsigned short, int)>
   int scene = sceneCurrent(), count = sceneCount();
-    ab32:	f7f8 fed9 	bl	38e8 <looper::sceneCurrent()>
-    ab36:	4607      	mov	r7, r0
-    ab38:	f7f8 feea 	bl	3910 <looper::sceneCount()>
+    ab36:	f7f8 fed7 	bl	38e8 <looper::sceneCurrent()>
+    ab3a:	4607      	mov	r7, r0
+    ab3c:	f7f8 fee8 	bl	3910 <looper::sceneCount()>
   bool temporary = scene == 0 || scene > count;
-    ab3c:	4287      	cmp	r7, r0
-    ab3e:	bfd4      	ite	le
-    ab40:	2600      	movle	r6, #0
-    ab42:	2601      	movgt	r6, #1
-    ab44:	2f00      	cmp	r7, #0
-    ab46:	bf08      	it	eq
-    ab48:	f046 0601 	orreq.w	r6, r6, #1
+    ab40:	4287      	cmp	r7, r0
+    ab42:	bfd4      	ite	le
+    ab44:	2600      	movle	r6, #0
+    ab46:	2601      	movgt	r6, #1
+    ab48:	2f00      	cmp	r7, #0
+    ab4a:	bf08      	it	eq
+    ab4c:	f046 0601 	orreq.w	r6, r6, #1
   snprintf(text, sizeof text, "%d%s/%d", scene, temporary ? "*" : "", count);
-    ab4c:	2e00      	cmp	r6, #0
-    ab4e:	d075      	beq.n	ac3c <drawStatus()+0x354>
-    ab50:	4b2b      	ldr	r3, [pc, #172]	@ (ac00 <drawStatus()+0x318>)
-    ab52:	2118      	movs	r1, #24
-    ab54:	4a2b      	ldr	r2, [pc, #172]	@ (ac04 <drawStatus()+0x31c>)
-    ab56:	e9cd 3000 	strd	r3, r0, [sp]
-    ab5a:	463b      	mov	r3, r7
-    ab5c:	eb0d 0001 	add.w	r0, sp, r1
-    ab60:	f016 f968 	bl	20e34 <snprintf>
+    ab50:	2e00      	cmp	r6, #0
+    ab52:	d075      	beq.n	ac40 <drawStatus()+0x354>
+    ab54:	4b2b      	ldr	r3, [pc, #172]	@ (ac04 <drawStatus()+0x318>)
+    ab56:	2118      	movs	r1, #24
+    ab58:	4a2b      	ldr	r2, [pc, #172]	@ (ac08 <drawStatus()+0x31c>)
+    ab5a:	e9cd 3000 	strd	r3, r0, [sp]
+    ab5e:	463b      	mov	r3, r7
+    ab60:	eb0d 0001 	add.w	r0, sp, r1
+    ab64:	f016 f966 	bl	20e34 <snprintf>
   uint16_t ink = sceneAccent ? ACCENT : temporary ? DIM : live;
-    ab64:	f1b8 0f00 	cmp.w	r8, #0
-    ab68:	d15d      	bne.n	ac26 <drawStatus()+0x33e>
-    ab6a:	f248 4310 	movw	r3, #33808	@ 0x8410
-    ab6e:	4546      	cmp	r6, r8
-    ab70:	bf18      	it	ne
-    ab72:	461d      	movne	r5, r3
+    ab68:	f1b8 0f00 	cmp.w	r8, #0
+    ab6c:	d15d      	bne.n	ac2a <drawStatus()+0x33e>
+    ab6e:	f248 4310 	movw	r3, #33808	@ 0x8410
+    ab72:	4546      	cmp	r6, r8
+    ab74:	bf18      	it	ne
+    ab76:	461d      	movne	r5, r3
   if (sceneHeld() || sceneChangeWaiting()) {
-    ab74:	f7f8 fec4 	bl	3900 <looper::sceneHeld()>
-    ab78:	2800      	cmp	r0, #0
-    ab7a:	d05a      	beq.n	ac32 <drawStatus()+0x34a>
+    ab78:	f7f8 fec2 	bl	3900 <looper::sceneHeld()>
+    ab7c:	2800      	cmp	r0, #0
+    ab7e:	d05a      	beq.n	ac36 <drawStatus()+0x34a>
     noInterrupts();
-    ab7c:	b672      	cpsid	i
+    ab80:	b672      	cpsid	i
     bool firstHalf = transport.sampleInBeat < transport.spb / 2;
-    ab7e:	6963      	ldr	r3, [r4, #20]
-    ab80:	6862      	ldr	r2, [r4, #4]
+    ab82:	6963      	ldr	r3, [r4, #20]
+    ab84:	6862      	ldr	r2, [r4, #4]
     interrupts();
-    ab82:	b662      	cpsie	i
+    ab86:	b662      	cpsie	i
     ink = firstHalf ? ACCENT : DIM;
-    ab84:	ebb3 0f52 	cmp.w	r3, r2, lsr #1
-    ab88:	f243 7335 	movw	r3, #14133	@ 0x3735
-    ab8c:	f248 4510 	movw	r5, #33808	@ 0x8410
-    ab90:	bf38      	it	cc
-    ab92:	461d      	movcc	r5, r3
+    ab88:	ebb3 0f52 	cmp.w	r3, r2, lsr #1
+    ab8c:	f243 7335 	movw	r3, #14133	@ 0x3735
+    ab90:	f248 4510 	movw	r5, #33808	@ 0x8410
+    ab94:	bf38      	it	cc
+    ab96:	461d      	movcc	r5, r3
   }
   int x = box.x + INSET + tagWidth("SCN") + PX;
-    ab94:	4819      	ldr	r0, [pc, #100]	@ (abfc <drawStatus()+0x314>)
-    ab96:	f7ff f9a7 	bl	9ee8 <tagWidth(char const*)>
+    ab98:	4819      	ldr	r0, [pc, #100]	@ (ac00 <drawStatus()+0x314>)
+    ab9a:	f7ff f9a5 	bl	9ee8 <tagWidth(char const*)>
   drawText(x, textY, text, ink, BG, box.x + box.w - INSET - x);
-    ab9a:	2100      	movs	r1, #0
-    ab9c:	f1c0 047a 	rsb	r4, r0, #122	@ 0x7a
-    aba0:	462b      	mov	r3, r5
-    aba2:	9100      	str	r1, [sp, #0]
-    aba4:	aa06      	add	r2, sp, #24
-    aba6:	3006      	adds	r0, #6
-    aba8:	21da      	movs	r1, #218	@ 0xda
-    abaa:	9401      	str	r4, [sp, #4]
-    abac:	f7ff f960 	bl	9e70 <drawText(int, int, char const*, unsigned short, unsigned short, int)>
+    ab9e:	2100      	movs	r1, #0
+    aba0:	f1c0 047a 	rsb	r4, r0, #122	@ 0x7a
+    aba4:	462b      	mov	r3, r5
+    aba6:	9100      	str	r1, [sp, #0]
+    aba8:	aa06      	add	r2, sp, #24
+    abaa:	3006      	adds	r0, #6
+    abac:	21da      	movs	r1, #218	@ 0xda
+    abae:	9401      	str	r4, [sp, #4]
+    abb0:	f7ff f95e 	bl	9e70 <drawText(int, int, char const*, unsigned short, unsigned short, int)>
 }
-    abb0:	b00d      	add	sp, #52	@ 0x34
-    abb2:	e8bd 8ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
+    abb4:	b00d      	add	sp, #52	@ 0x34
+    abb6:	e8bd 8ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    abb6:	f016 0601 	ands.w	r6, r6, #1
-    abba:	f000 80b5 	beq.w	ad28 <drawStatus()+0x440>
+    abba:	f016 0601 	ands.w	r6, r6, #1
+    abbe:	f000 80b5 	beq.w	ad2c <drawStatus()+0x440>
   uint16_t live = playing ? INK : DIM;
-    abbe:	f64f 75ff 	movw	r5, #65535	@ 0xffff
-    abc2:	e73a      	b.n	aa3a <drawStatus()+0x152>
+    abc2:	f64f 75ff 	movw	r5, #65535	@ 0xffff
+    abc6:	e73a      	b.n	aa3e <drawStatus()+0x152>
   bool sceneAccent = (board.keys() & m8::BTN_SHIFT) || (cell == SCENE_CELL && bAlone());
-    abc4:	f1b8 0f00 	cmp.w	r8, #0
-    abc8:	f000 80a5 	beq.w	ad16 <drawStatus()+0x42e>
+    abc8:	f1b8 0f00 	cmp.w	r8, #0
+    abcc:	f000 80a5 	beq.w	ad1a <drawStatus()+0x42e>
   drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : live, BG);
-    abcc:	462b      	mov	r3, r5
+    abd0:	462b      	mov	r3, r5
   bool sceneAccent = (board.keys() & m8::BTN_SHIFT) || (cell == SCENE_CELL && bAlone());
-    abce:	f04f 0800 	mov.w	r8, #0
-    abd2:	e7a4      	b.n	ab1e <drawStatus()+0x236>
-    abd4:	20004678 	.word	0x20004678
-    abd8:	2003edc8 	.word	0x2003edc8
-    abdc:	2000460c 	.word	0x2000460c
-    abe0:	2003edc4 	.word	0x2003edc4
-    abe4:	20001bb8 	.word	0x20001bb8
-    abe8:	20004348 	.word	0x20004348
-    abec:	20004624 	.word	0x20004624
-    abf0:	20000e2c 	.word	0x20000e2c
-    abf4:	20008794 	.word	0x20008794
-    abf8:	20000e44 	.word	0x20000e44
-    abfc:	20000e58 	.word	0x20000e58
-    ac00:	20000e28 	.word	0x20000e28
-    ac04:	20000e5c 	.word	0x20000e5c
-    ac08:	20040484 	.word	0x20040484
-    ac0c:	20040488 	.word	0x20040488
-    ac10:	2003edcc 	.word	0x2003edcc
+    abd2:	f04f 0800 	mov.w	r8, #0
+    abd6:	e7a4      	b.n	ab22 <drawStatus()+0x236>
+    abd8:	20004678 	.word	0x20004678
+    abdc:	2003edc8 	.word	0x2003edc8
+    abe0:	2000460c 	.word	0x2000460c
+    abe4:	2003edc4 	.word	0x2003edc4
+    abe8:	20001bb8 	.word	0x20001bb8
+    abec:	20004348 	.word	0x20004348
+    abf0:	20004624 	.word	0x20004624
+    abf4:	20000e2c 	.word	0x20000e2c
+    abf8:	20008794 	.word	0x20008794
+    abfc:	20000e44 	.word	0x20000e44
+    ac00:	20000e58 	.word	0x20000e58
+    ac04:	20000e28 	.word	0x20000e28
+    ac08:	20000e5c 	.word	0x20000e5c
+    ac0c:	20040484 	.word	0x20040484
+    ac10:	20040488 	.word	0x20040488
+    ac14:	2003edcc 	.word	0x2003edcc
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
-    ac14:	4a57      	ldr	r2, [pc, #348]	@ (ad74 <drawStatus()+0x48c>)
+    ac18:	4a57      	ldr	r2, [pc, #348]	@ (ad78 <drawStatus()+0x48c>)
   drawText(TEMPO_BOX.x + INSET, textY, text, running ? INK : DIM, BG, CLOCK_W);   // (its box clears longer text)
-    ac16:	f248 4310 	movw	r3, #33808	@ 0x8410
+    ac1a:	f248 4310 	movw	r3, #33808	@ 0x8410
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
-    ac1a:	e892 0003 	ldmia.w	r2, {r0, r1}
-    ac1e:	9006      	str	r0, [sp, #24]
-    ac20:	f8ad 101c 	strh.w	r1, [sp, #28]
+    ac1e:	e892 0003 	ldmia.w	r2, {r0, r1}
+    ac22:	9006      	str	r0, [sp, #24]
+    ac24:	f8ad 101c 	strh.w	r1, [sp, #28]
   drawText(TEMPO_BOX.x + INSET, textY, text, running ? INK : DIM, BG, CLOCK_W);   // (its box clears longer text)
-    ac24:	e769      	b.n	aafa <drawStatus()+0x212>
+    ac28:	e769      	b.n	aafe <drawStatus()+0x212>
   uint16_t ink = sceneAccent ? ACCENT : temporary ? DIM : live;
-    ac26:	f243 7535 	movw	r5, #14133	@ 0x3735
+    ac2a:	f243 7535 	movw	r5, #14133	@ 0x3735
   if (sceneHeld() || sceneChangeWaiting()) {
-    ac2a:	f7f8 fe69 	bl	3900 <looper::sceneHeld()>
-    ac2e:	2800      	cmp	r0, #0
-    ac30:	d1a4      	bne.n	ab7c <drawStatus()+0x294>
-    ac32:	f7fb fbe7 	bl	6404 <looper::sceneChangeWaiting()>
-    ac36:	2800      	cmp	r0, #0
-    ac38:	d1a0      	bne.n	ab7c <drawStatus()+0x294>
-    ac3a:	e7ab      	b.n	ab94 <drawStatus()+0x2ac>
+    ac2e:	f7f8 fe67 	bl	3900 <looper::sceneHeld()>
+    ac32:	2800      	cmp	r0, #0
+    ac34:	d1a4      	bne.n	ab80 <drawStatus()+0x294>
+    ac36:	f7fb fbe5 	bl	6404 <looper::sceneChangeWaiting()>
+    ac3a:	2800      	cmp	r0, #0
+    ac3c:	d1a0      	bne.n	ab80 <drawStatus()+0x294>
+    ac3e:	e7ab      	b.n	ab98 <drawStatus()+0x2ac>
   snprintf(text, sizeof text, "%d%s/%d", scene, temporary ? "*" : "", count);
-    ac3c:	4b4e      	ldr	r3, [pc, #312]	@ (ad78 <drawStatus()+0x490>)
-    ac3e:	e788      	b.n	ab52 <drawStatus()+0x26a>
-    ac40:	4b4e      	ldr	r3, [pc, #312]	@ (ad7c <drawStatus()+0x494>)
+    ac40:	4b4e      	ldr	r3, [pc, #312]	@ (ad7c <drawStatus()+0x490>)
+    ac42:	e788      	b.n	ab56 <drawStatus()+0x26a>
+    ac44:	4b4e      	ldr	r3, [pc, #312]	@ (ad80 <drawStatus()+0x494>)
   uint16_t live = playing ? INK : DIM;
-    ac42:	f64f 72ff 	movw	r2, #65535	@ 0xffff
+    ac46:	f64f 72ff 	movw	r2, #65535	@ 0xffff
   bool playing = transport.running;                // labels: white while playing, grey while stopped
-    ac46:	7821      	ldrb	r1, [r4, #0]
+    ac4a:	7821      	ldrb	r1, [r4, #0]
   uint16_t live = playing ? INK : DIM;
-    ac48:	f248 4510 	movw	r5, #33808	@ 0x8410
-    ac4c:	f8d3 9000 	ldr.w	r9, [r3]
+    ac4c:	f248 4510 	movw	r5, #33808	@ 0x8410
+    ac50:	f8d3 9000 	ldr.w	r9, [r3]
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    ac50:	4b4b      	ldr	r3, [pc, #300]	@ (ad80 <drawStatus()+0x498>)
+    ac54:	4b4b      	ldr	r3, [pc, #300]	@ (ad84 <drawStatus()+0x498>)
     bool editing = cell == TEMPO_CELL;
-    ac52:	f1b9 0f00 	cmp.w	r9, #0
-    ac56:	46c8      	mov	r8, r9
-    ac58:	bfd4      	ite	le
-    ac5a:	2600      	movle	r6, #0
-    ac5c:	2601      	movgt	r6, #1
+    ac56:	f1b9 0f00 	cmp.w	r9, #0
+    ac5a:	46c8      	mov	r8, r9
+    ac5c:	bfd4      	ite	le
+    ac5e:	2600      	movle	r6, #0
+    ac60:	2601      	movgt	r6, #1
   uint16_t live = playing ? INK : DIM;
-    ac5e:	2900      	cmp	r1, #0
-    ac60:	bf18      	it	ne
-    ac62:	4615      	movne	r5, r2
-    ac64:	f1b9 0f01 	cmp.w	r9, #1
+    ac62:	2900      	cmp	r1, #0
+    ac64:	bf18      	it	ne
+    ac66:	4615      	movne	r5, r2
+    ac68:	f1b9 0f01 	cmp.w	r9, #1
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    ac68:	681a      	ldr	r2, [r3, #0]
+    ac6c:	681a      	ldr	r2, [r3, #0]
     drawTag(right - w, tagY, text, editing ? TAG_INVERTED : TAG_PLAIN, editing || accent ? back : live, BG);
-    ac6a:	ea4f 0646 	mov.w	r6, r6, lsl #1
-    ac6e:	bfa8      	it	ge
-    ac70:	f04f 0801 	movge.w	r8, #1
+    ac6e:	ea4f 0646 	mov.w	r6, r6, lsl #1
+    ac72:	bfa8      	it	ge
+    ac74:	f04f 0801 	movge.w	r8, #1
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    ac74:	07d3      	lsls	r3, r2, #31
-    ac76:	d523      	bpl.n	acc0 <drawStatus()+0x3d8>
+    ac78:	07d3      	lsls	r3, r2, #31
+    ac7a:	d523      	bpl.n	acc4 <drawStatus()+0x3d8>
     bool accent = (editing && bAlone()) || (selected == STATUS_ROW && board.keys() == m8::BTN_EDIT);
-    ac78:	f1b9 0f00 	cmp.w	r9, #0
-    ac7c:	f8df b110 	ldr.w	fp, [pc, #272]	@ ad90 <drawStatus()+0x4a8>
-    ac80:	dc2b      	bgt.n	acda <drawStatus()+0x3f2>
-    ac82:	4840      	ldr	r0, [pc, #256]	@ (ad84 <drawStatus()+0x49c>)
-    ac84:	f7f5 fd98 	bl	7b8 <m8::Board::keys()>
-    ac88:	2801      	cmp	r0, #1
-    ac8a:	f47f aedb 	bne.w	aa44 <drawStatus()+0x15c>
+    ac7c:	f1b9 0f00 	cmp.w	r9, #0
+    ac80:	f8df b110 	ldr.w	fp, [pc, #272]	@ ad94 <drawStatus()+0x4a8>
+    ac84:	dc2b      	bgt.n	acde <drawStatus()+0x3f2>
+    ac86:	4840      	ldr	r0, [pc, #256]	@ (ad88 <drawStatus()+0x49c>)
+    ac88:	f7f5 fd96 	bl	7b8 <m8::Board::keys()>
+    ac8c:	2801      	cmp	r0, #1
+    ac8e:	f47f aedb 	bne.w	aa48 <drawStatus()+0x15c>
     int w = tagWidth(text);
-    ac8e:	a806      	add	r0, sp, #24
-    ac90:	f7ff f92a 	bl	9ee8 <tagWidth(char const*)>
+    ac92:	a806      	add	r0, sp, #24
+    ac94:	f7ff f928 	bl	9ee8 <tagWidth(char const*)>
     t.fillRect(right - tempoW, tagY, tempoW - w, TAG_H, BG);   // what longer text left
-    ac94:	f8db 1000 	ldr.w	r1, [fp]
+    ac98:	f8db 1000 	ldr.w	r1, [fp]
     int w = tagWidth(text);
-    ac98:	4681      	mov	r9, r0
+    ac9c:	4681      	mov	r9, r0
     t.fillRect(right - tempoW, tagY, tempoW - w, TAG_H, BG);   // what longer text left
-    ac9a:	2300      	movs	r3, #0
-    ac9c:	2212      	movs	r2, #18
-    ac9e:	4638      	mov	r0, r7
-    aca0:	9301      	str	r3, [sp, #4]
-    aca2:	eba1 0309 	sub.w	r3, r1, r9
-    aca6:	f5c1 7190 	rsb	r1, r1, #288	@ 0x120
-    acaa:	9200      	str	r2, [sp, #0]
-    acac:	b21b      	sxth	r3, r3
-    acae:	22d6      	movs	r2, #214	@ 0xd6
-    acb0:	b209      	sxth	r1, r1
-    acb2:	f00b faff 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    ac9e:	2300      	movs	r3, #0
+    aca0:	2212      	movs	r2, #18
+    aca2:	4638      	mov	r0, r7
+    aca4:	9301      	str	r3, [sp, #4]
+    aca6:	eba1 0309 	sub.w	r3, r1, r9
+    acaa:	f5c1 7190 	rsb	r1, r1, #288	@ 0x120
+    acae:	9200      	str	r2, [sp, #0]
+    acb0:	b21b      	sxth	r3, r3
+    acb2:	22d6      	movs	r2, #214	@ 0xd6
+    acb4:	b209      	sxth	r1, r1
+    acb6:	f00b fafd 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
     drawTag(right - w, tagY, text, editing ? TAG_INVERTED : TAG_PLAIN, editing || accent ? back : live, BG);
-    acb6:	f5c9 7090 	rsb	r0, r9, #288	@ 0x120
-    acba:	f243 7335 	movw	r3, #14133	@ 0x3735
-    acbe:	e6dd      	b.n	aa7c <drawStatus()+0x194>
+    acba:	f5c9 7090 	rsb	r0, r9, #288	@ 0x120
+    acbe:	f243 7335 	movw	r3, #14133	@ 0x3735
+    acc2:	e6dd      	b.n	aa80 <drawStatus()+0x194>
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    acc0:	4831      	ldr	r0, [pc, #196]	@ (ad88 <drawStatus()+0x4a0>)
-    acc2:	f7ff f911 	bl	9ee8 <tagWidth(char const*)>
-    acc6:	f8df b0c8 	ldr.w	fp, [pc, #200]	@ ad90 <drawStatus()+0x4a8>
-    acca:	2201      	movs	r2, #1
-    accc:	4b2c      	ldr	r3, [pc, #176]	@ (ad80 <drawStatus()+0x498>)
+    acc4:	4831      	ldr	r0, [pc, #196]	@ (ad8c <drawStatus()+0x4a0>)
+    acc6:	f7ff f90f 	bl	9ee8 <tagWidth(char const*)>
+    acca:	f8df b0c8 	ldr.w	fp, [pc, #200]	@ ad94 <drawStatus()+0x4a8>
+    acce:	2201      	movs	r2, #1
+    acd0:	4b2c      	ldr	r3, [pc, #176]	@ (ad84 <drawStatus()+0x498>)
     bool accent = (editing && bAlone()) || (selected == STATUS_ROW && board.keys() == m8::BTN_EDIT);
-    acce:	f1b9 0f00 	cmp.w	r9, #0
+    acd2:	f1b9 0f00 	cmp.w	r9, #0
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    acd2:	f8cb 0000 	str.w	r0, [fp]
-    acd6:	601a      	str	r2, [r3, #0]
+    acd6:	f8cb 0000 	str.w	r0, [fp]
+    acda:	601a      	str	r2, [r3, #0]
     bool accent = (editing && bAlone()) || (selected == STATUS_ROW && board.keys() == m8::BTN_EDIT);
-    acd8:	dd08      	ble.n	acec <drawStatus()+0x404>
+    acdc:	dd08      	ble.n	acf0 <drawStatus()+0x404>
   uint8_t k = board.keys();
-    acda:	482a      	ldr	r0, [pc, #168]	@ (ad84 <drawStatus()+0x49c>)
-    acdc:	f04f 0801 	mov.w	r8, #1
-    ace0:	f7f5 fd6a 	bl	7b8 <m8::Board::keys()>
+    acde:	482a      	ldr	r0, [pc, #168]	@ (ad88 <drawStatus()+0x49c>)
+    ace0:	f04f 0801 	mov.w	r8, #1
+    ace4:	f7f5 fd68 	bl	7b8 <m8::Board::keys()>
   return (k & m8::BTN_OPT) && !(k & (m8::BTN_SHIFT | m8::BTN_EDIT | m8::BTN_PLAY));
-    ace4:	f000 001b 	and.w	r0, r0, #27
-    ace8:	2802      	cmp	r0, #2
-    acea:	d0d0      	beq.n	ac8e <drawStatus()+0x3a6>
-    acec:	f8da 3000 	ldr.w	r3, [sl]
-    acf0:	2b08      	cmp	r3, #8
-    acf2:	f47f aea7 	bne.w	aa44 <drawStatus()+0x15c>
-    acf6:	e7c4      	b.n	ac82 <drawStatus()+0x39a>
+    ace8:	f000 001b 	and.w	r0, r0, #27
+    acec:	2802      	cmp	r0, #2
+    acee:	d0d0      	beq.n	ac92 <drawStatus()+0x3a6>
+    acf0:	f8da 3000 	ldr.w	r3, [sl]
+    acf4:	2b08      	cmp	r3, #8
+    acf6:	f47f aea7 	bne.w	aa48 <drawStatus()+0x15c>
+    acfa:	e7c4      	b.n	ac86 <drawStatus()+0x39a>
 static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX : CELL[cell]; }
-    acf8:	239a      	movs	r3, #154	@ 0x9a
-    acfa:	2188      	movs	r1, #136	@ 0x88
-    acfc:	4f23      	ldr	r7, [pc, #140]	@ (ad8c <drawStatus()+0x4a4>)
-    acfe:	e637      	b.n	a970 <drawStatus()+0x88>
+    acfc:	239a      	movs	r3, #154	@ 0x9a
+    acfe:	2188      	movs	r1, #136	@ 0x88
+    ad00:	4f23      	ldr	r7, [pc, #140]	@ (ad90 <drawStatus()+0x4a4>)
+    ad02:	e637      	b.n	a974 <drawStatus()+0x88>
   return board.keys() == m8::BTN_OPT ? LIGHT : DIM;
-    ad00:	4820      	ldr	r0, [pc, #128]	@ (ad84 <drawStatus()+0x49c>)
-    ad02:	f24c 6418 	movw	r4, #50712	@ 0xc618
-    ad06:	f7f5 fd57 	bl	7b8 <m8::Board::keys()>
-    ad0a:	f248 4310 	movw	r3, #33808	@ 0x8410
-    ad0e:	2802      	cmp	r0, #2
-    ad10:	bf18      	it	ne
-    ad12:	461c      	movne	r4, r3
-    ad14:	e61d      	b.n	a952 <drawStatus()+0x6a>
+    ad04:	4820      	ldr	r0, [pc, #128]	@ (ad88 <drawStatus()+0x49c>)
+    ad06:	f24c 6418 	movw	r4, #50712	@ 0xc618
+    ad0a:	f7f5 fd55 	bl	7b8 <m8::Board::keys()>
+    ad0e:	f248 4310 	movw	r3, #33808	@ 0x8410
+    ad12:	2802      	cmp	r0, #2
+    ad14:	bf18      	it	ne
+    ad16:	461c      	movne	r4, r3
+    ad18:	e61d      	b.n	a956 <drawStatus()+0x6a>
   uint8_t k = board.keys();
-    ad16:	481b      	ldr	r0, [pc, #108]	@ (ad84 <drawStatus()+0x49c>)
-    ad18:	f7f5 fd4e 	bl	7b8 <m8::Board::keys()>
+    ad1a:	481b      	ldr	r0, [pc, #108]	@ (ad88 <drawStatus()+0x49c>)
+    ad1c:	f7f5 fd4c 	bl	7b8 <m8::Board::keys()>
   return (k & m8::BTN_OPT) && !(k & (m8::BTN_SHIFT | m8::BTN_EDIT | m8::BTN_PLAY));
-    ad1c:	f000 001b 	and.w	r0, r0, #27
-    ad20:	2802      	cmp	r0, #2
-    ad22:	f47f af53 	bne.w	abcc <drawStatus()+0x2e4>
-    ad26:	e6f6      	b.n	ab16 <drawStatus()+0x22e>
+    ad20:	f000 001b 	and.w	r0, r0, #27
+    ad24:	2802      	cmp	r0, #2
+    ad26:	f47f af53 	bne.w	abd0 <drawStatus()+0x2e4>
+    ad2a:	e6f6      	b.n	ab1a <drawStatus()+0x22e>
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    ad28:	4817      	ldr	r0, [pc, #92]	@ (ad88 <drawStatus()+0x4a0>)
+    ad2c:	4817      	ldr	r0, [pc, #92]	@ (ad8c <drawStatus()+0x4a0>)
   int cell = selected == STATUS_ROW ? selectedCellIn(STATUS_ROW) : -1;
-    ad2a:	f04f 38ff 	mov.w	r8, #4294967295	@ 0xffffffff
+    ad2e:	f04f 38ff 	mov.w	r8, #4294967295	@ 0xffffffff
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    ad2e:	f7ff f8db 	bl	9ee8 <tagWidth(char const*)>
-    ad32:	2301      	movs	r3, #1
-    ad34:	f8df b058 	ldr.w	fp, [pc, #88]	@ ad90 <drawStatus()+0x4a8>
-    ad38:	602b      	str	r3, [r5, #0]
+    ad32:	f7ff f8d9 	bl	9ee8 <tagWidth(char const*)>
+    ad36:	2301      	movs	r3, #1
+    ad38:	f8df b058 	ldr.w	fp, [pc, #88]	@ ad94 <drawStatus()+0x4a8>
+    ad3c:	602b      	str	r3, [r5, #0]
   uint16_t live = playing ? INK : DIM;
-    ad3a:	f64f 75ff 	movw	r5, #65535	@ 0xffff
+    ad3e:	f64f 75ff 	movw	r5, #65535	@ 0xffff
     bool accent = (editing && bAlone()) || (selected == STATUS_ROW && board.keys() == m8::BTN_EDIT);
-    ad3e:	f8da 3000 	ldr.w	r3, [sl]
+    ad42:	f8da 3000 	ldr.w	r3, [sl]
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    ad42:	f8cb 0000 	str.w	r0, [fp]
+    ad46:	f8cb 0000 	str.w	r0, [fp]
     bool accent = (editing && bAlone()) || (selected == STATUS_ROW && board.keys() == m8::BTN_EDIT);
-    ad46:	2b08      	cmp	r3, #8
-    ad48:	f47f ae7c 	bne.w	aa44 <drawStatus()+0x15c>
-    ad4c:	e799      	b.n	ac82 <drawStatus()+0x39a>
+    ad4a:	2b08      	cmp	r3, #8
+    ad4c:	f47f ae7c 	bne.w	aa48 <drawStatus()+0x15c>
+    ad50:	e799      	b.n	ac86 <drawStatus()+0x39a>
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    ad4e:	480e      	ldr	r0, [pc, #56]	@ (ad88 <drawStatus()+0x4a0>)
+    ad52:	480e      	ldr	r0, [pc, #56]	@ (ad8c <drawStatus()+0x4a0>)
   int cell = selected == STATUS_ROW ? selectedCellIn(STATUS_ROW) : -1;
-    ad50:	f04f 38ff 	mov.w	r8, #4294967295	@ 0xffffffff
+    ad54:	f04f 38ff 	mov.w	r8, #4294967295	@ 0xffffffff
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    ad54:	f7ff f8c8 	bl	9ee8 <tagWidth(char const*)>
-    ad58:	2301      	movs	r3, #1
-    ad5a:	f8df b034 	ldr.w	fp, [pc, #52]	@ ad90 <drawStatus()+0x4a8>
-    ad5e:	602b      	str	r3, [r5, #0]
+    ad58:	f7ff f8c6 	bl	9ee8 <tagWidth(char const*)>
+    ad5c:	2301      	movs	r3, #1
+    ad5e:	f8df b034 	ldr.w	fp, [pc, #52]	@ ad94 <drawStatus()+0x4a8>
+    ad62:	602b      	str	r3, [r5, #0]
   uint16_t live = playing ? INK : DIM;
-    ad60:	f248 4510 	movw	r5, #33808	@ 0x8410
+    ad64:	f248 4510 	movw	r5, #33808	@ 0x8410
     bool accent = (editing && bAlone()) || (selected == STATUS_ROW && board.keys() == m8::BTN_EDIT);
-    ad64:	f8da 3000 	ldr.w	r3, [sl]
+    ad68:	f8da 3000 	ldr.w	r3, [sl]
     static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    ad68:	f8cb 0000 	str.w	r0, [fp]
+    ad6c:	f8cb 0000 	str.w	r0, [fp]
     bool accent = (editing && bAlone()) || (selected == STATUS_ROW && board.keys() == m8::BTN_EDIT);
-    ad6c:	2b08      	cmp	r3, #8
-    ad6e:	f47f ae69 	bne.w	aa44 <drawStatus()+0x15c>
-    ad72:	e786      	b.n	ac82 <drawStatus()+0x39a>
-    ad74:	20000e50 	.word	0x20000e50
-    ad78:	20000f04 	.word	0x20000f04
-    ad7c:	20040488 	.word	0x20040488
-    ad80:	20008794 	.word	0x20008794
-    ad84:	2000460c 	.word	0x2000460c
-    ad88:	20000e38 	.word	0x20000e38
-    ad8c:	20001cbc 	.word	0x20001cbc
-    ad90:	2003edcc 	.word	0x2003edcc
+    ad70:	2b08      	cmp	r3, #8
+    ad72:	f47f ae69 	bne.w	aa48 <drawStatus()+0x15c>
+    ad76:	e786      	b.n	ac86 <drawStatus()+0x39a>
+    ad78:	20000e50 	.word	0x20000e50
+    ad7c:	20000f04 	.word	0x20000f04
+    ad80:	20040488 	.word	0x20040488
+    ad84:	20008794 	.word	0x20008794
+    ad88:	2000460c 	.word	0x2000460c
+    ad8c:	20000e38 	.word	0x20000e38
+    ad90:	20001cbc 	.word	0x20001cbc
+    ad94:	2003edcc 	.word	0x2003edcc
 
-0000ad94 <columnLevel(unsigned char const*, int)>:
+0000ad98 <columnLevel(unsigned char const*, int)>:
 }
 
 // Level shown in column c: the peak of the stored overview columns
 // (OVERVIEW_COLS of them) that it covers.
 static uint8_t columnLevel(const uint8_t *src, int c) {
   int a = c * OVERVIEW_COLS / WAVE_COLS, b = max(a + 1, (c + 1) * OVERVIEW_COLS / WAVE_COLS);
-    ad94:	b209      	sxth	r1, r1
-    ad96:	eb01 03c1 	add.w	r3, r1, r1, lsl #3
-    ad9a:	ebc1 1303 	rsb	r3, r1, r3, lsl #4
-    ad9e:	005a      	lsls	r2, r3, #1
-    ada0:	115b      	asrs	r3, r3, #5
-    ada2:	f502 728f 	add.w	r2, r2, #286	@ 0x11e
-    ada6:	1c59      	adds	r1, r3, #1
-    ada8:	1192      	asrs	r2, r2, #6
+    ad98:	b209      	sxth	r1, r1
+    ad9a:	eb01 03c1 	add.w	r3, r1, r1, lsl #3
+    ad9e:	ebc1 1303 	rsb	r3, r1, r3, lsl #4
+    ada2:	005a      	lsls	r2, r3, #1
+    ada4:	115b      	asrs	r3, r3, #5
+    ada6:	f502 728f 	add.w	r2, r2, #286	@ 0x11e
+    adaa:	1c59      	adds	r1, r3, #1
+    adac:	1192      	asrs	r2, r2, #6
   return a >= b ? std::forward<A>(a) : std::forward<B>(b);
-    adaa:	428a      	cmp	r2, r1
-    adac:	bfb8      	it	lt
-    adae:	460a      	movlt	r2, r1
+    adae:	428a      	cmp	r2, r1
+    adb0:	bfb8      	it	lt
+    adb2:	460a      	movlt	r2, r1
   uint8_t m = 0;
   for (int k = a; k < b; k++) m = max(m, src[k]);
-    adb0:	4293      	cmp	r3, r2
-    adb2:	da0b      	bge.n	adcc <columnLevel(unsigned char const*, int)+0x38>
-    adb4:	1e41      	subs	r1, r0, #1
-    adb6:	2000      	movs	r0, #0
-    adb8:	440b      	add	r3, r1
-    adba:	440a      	add	r2, r1
-    adbc:	f813 1f01 	ldrb.w	r1, [r3, #1]!
-    adc0:	4288      	cmp	r0, r1
-    adc2:	bf38      	it	cc
-    adc4:	4608      	movcc	r0, r1
-    adc6:	429a      	cmp	r2, r3
-    adc8:	d1f8      	bne.n	adbc <columnLevel(unsigned char const*, int)+0x28>
-    adca:	4770      	bx	lr
-    adcc:	2000      	movs	r0, #0
+    adb4:	4293      	cmp	r3, r2
+    adb6:	da0b      	bge.n	add0 <columnLevel(unsigned char const*, int)+0x38>
+    adb8:	1e41      	subs	r1, r0, #1
+    adba:	2000      	movs	r0, #0
+    adbc:	440b      	add	r3, r1
+    adbe:	440a      	add	r2, r1
+    adc0:	f813 1f01 	ldrb.w	r1, [r3, #1]!
+    adc4:	4288      	cmp	r0, r1
+    adc6:	bf38      	it	cc
+    adc8:	4608      	movcc	r0, r1
+    adca:	429a      	cmp	r2, r3
+    adcc:	d1f8      	bne.n	adc0 <columnLevel(unsigned char const*, int)+0x28>
+    adce:	4770      	bx	lr
+    add0:	2000      	movs	r0, #0
   return m;
 }
-    adce:	4770      	bx	lr
+    add2:	4770      	bx	lr
 
-0000add0 <drawColumn(int, int) [clone .part.0]>:
+0000add4 <drawColumn(int, int) [clone .part.0]>:
 
 // Block column bc (0 and BLOCK_COLS - 1: the frame's), drawn whole.
 static void drawColumn(int i, int bc) {
-    add0:	e92d 43f0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, lr}
+    add4:	e92d 43f0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, lr}
   if (bc < 0 || bc >= BLOCK_COLS) return;
   const Track &tr = tracks[i];
   const WaveView &v = views[i];
   uint16_t col[BAND_ROWS];
   for (auto &c : col) c = v.bg;
-    add4:	f44f 73ac 	mov.w	r3, #344	@ 0x158
-    add8:	4eb6      	ldr	r6, [pc, #728]	@ (b0b4 <drawColumn(int, int) [clone .part.0]+0x2e4>)
+    add8:	f44f 73ac 	mov.w	r3, #344	@ 0x158
+    addc:	4eb6      	ldr	r6, [pc, #728]	@ (b0b8 <drawColumn(int, int) [clone .part.0]+0x2e4>)
 static void drawColumn(int i, int bc) {
-    adda:	460a      	mov	r2, r1
-    addc:	4605      	mov	r5, r0
+    adde:	460a      	mov	r2, r1
+    ade0:	4605      	mov	r5, r0
   for (auto &c : col) c = v.bg;
-    adde:	fb03 6300 	mla	r3, r3, r0, r6
+    ade2:	fb03 6300 	mla	r3, r3, r0, r6
 static void drawColumn(int i, int bc) {
-    ade2:	b08d      	sub	sp, #52	@ 0x34
+    ade6:	b08d      	sub	sp, #52	@ 0x34
   for (auto &c : col) c = v.bg;
-    ade4:	885c      	ldrh	r4, [r3, #2]
+    ade8:	885c      	ldrh	r4, [r3, #2]
   if (v.frame != BG) {                             // the frame, its corners cut (black on a coloured cell)
-    ade6:	8899      	ldrh	r1, [r3, #4]
-    ade8:	2300      	movs	r3, #0
+    adea:	8899      	ldrh	r1, [r3, #4]
+    adec:	2300      	movs	r3, #0
   for (auto &c : col) c = v.bg;
-    adea:	f8ad 4028 	strh.w	r4, [sp, #40]	@ 0x28
-    adee:	4618      	mov	r0, r3
-    adf0:	f364 030f 	bfi	r3, r4, #0, #16
-    adf4:	f364 000f 	bfi	r0, r4, #0, #16
-    adf8:	f364 431f 	bfi	r3, r4, #16, #16
-    adfc:	f364 401f 	bfi	r0, r4, #16, #16
-    ae00:	9304      	str	r3, [sp, #16]
-    ae02:	9306      	str	r3, [sp, #24]
-    ae04:	9308      	str	r3, [sp, #32]
-    ae06:	9005      	str	r0, [sp, #20]
-    ae08:	9007      	str	r0, [sp, #28]
-    ae0a:	9009      	str	r0, [sp, #36]	@ 0x24
+    adee:	f8ad 4028 	strh.w	r4, [sp, #40]	@ 0x28
+    adf2:	4618      	mov	r0, r3
+    adf4:	f364 030f 	bfi	r3, r4, #0, #16
+    adf8:	f364 000f 	bfi	r0, r4, #0, #16
+    adfc:	f364 431f 	bfi	r3, r4, #16, #16
+    ae00:	f364 401f 	bfi	r0, r4, #16, #16
+    ae04:	9304      	str	r3, [sp, #16]
+    ae06:	9306      	str	r3, [sp, #24]
+    ae08:	9308      	str	r3, [sp, #32]
+    ae0a:	9005      	str	r0, [sp, #20]
+    ae0c:	9007      	str	r0, [sp, #28]
+    ae0e:	9009      	str	r0, [sp, #36]	@ 0x24
   if (v.frame != BG) {                             // the frame, its corners cut (black on a coloured cell)
-    ae0c:	2900      	cmp	r1, #0
-    ae0e:	d06c      	beq.n	aeea <drawColumn(int, int) [clone .part.0]+0x11a>
+    ae10:	2900      	cmp	r1, #0
+    ae12:	d06c      	beq.n	aeee <drawColumn(int, int) [clone .part.0]+0x11a>
     uint16_t frame = v.bg != BG ? BG : v.frame;
-    ae10:	2c00      	cmp	r4, #0
-    ae12:	bf18      	it	ne
-    ae14:	2100      	movne	r1, #0
+    ae14:	2c00      	cmp	r4, #0
+    ae16:	bf18      	it	ne
+    ae18:	2100      	movne	r1, #0
     if (bc == 0 || bc == BLOCK_COLS - 1) for (int r = 1; r < BAND_ROWS - 1; r++) col[r] = frame;
-    ae16:	2a00      	cmp	r2, #0
-    ae18:	d05d      	beq.n	aed6 <drawColumn(int, int) [clone .part.0]+0x106>
-    ae1a:	2a41      	cmp	r2, #65	@ 0x41
-    ae1c:	d05b      	beq.n	aed6 <drawColumn(int, int) [clone .part.0]+0x106>
+    ae1a:	2a00      	cmp	r2, #0
+    ae1c:	d05d      	beq.n	aeda <drawColumn(int, int) [clone .part.0]+0x106>
+    ae1e:	2a41      	cmp	r2, #65	@ 0x41
+    ae20:	d05b      	beq.n	aeda <drawColumn(int, int) [clone .part.0]+0x106>
     else col[0] = col[BAND_ROWS - 1] = frame;
-    ae1e:	f8ad 1028 	strh.w	r1, [sp, #40]	@ 0x28
-    ae22:	f8ad 1010 	strh.w	r1, [sp, #16]
+    ae22:	f8ad 1028 	strh.w	r1, [sp, #40]	@ 0x28
+    ae26:	f8ad 1010 	strh.w	r1, [sp, #16]
   } else if (i == DIVIDER_ROW) {
     col[BAND_ROWS - 1] = DIVIDER;
   }
   int c = bc - 1;                                  // waveform column
-    ae26:	1e51      	subs	r1, r2, #1
+    ae2a:	1e51      	subs	r1, r2, #1
   if (c >= 0 && c < WAVE_COLS && v.visible) {
-    ae28:	f44f 73ac 	mov.w	r3, #344	@ 0x158
-    ae2c:	fb05 f303 	mul.w	r3, r5, r3
-    ae30:	5cf0      	ldrb	r0, [r6, r3]
-    ae32:	eb06 0c03 	add.w	ip, r6, r3
-    ae36:	2800      	cmp	r0, #0
-    ae38:	d060      	beq.n	aefc <drawColumn(int, int) [clone .part.0]+0x12c>
+    ae2c:	f44f 73ac 	mov.w	r3, #344	@ 0x158
+    ae30:	fb05 f303 	mul.w	r3, r5, r3
+    ae34:	5cf0      	ldrb	r0, [r6, r3]
+    ae36:	eb06 0c03 	add.w	ip, r6, r3
+    ae3a:	2800      	cmp	r0, #0
+    ae3c:	d060      	beq.n	af00 <drawColumn(int, int) [clone .part.0]+0x12c>
     bool muted = !v.live && tr.state == TrackState::Muted;
-    ae3a:	f89c 0001 	ldrb.w	r0, [ip, #1]
-    ae3e:	4680      	mov	r8, r0
-    ae40:	2800      	cmp	r0, #0
-    ae42:	d05e      	beq.n	af02 <drawColumn(int, int) [clone .part.0]+0x132>
+    ae3e:	f89c 0001 	ldrb.w	r0, [ip, #1]
+    ae42:	4680      	mov	r8, r0
+    ae44:	2800      	cmp	r0, #0
+    ae46:	d05e      	beq.n	af06 <drawColumn(int, int) [clone .part.0]+0x132>
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
     if (!v.live || c < v.liveFilled) {
-    ae44:	f8dc 0024 	ldr.w	r0, [ip, #36]	@ 0x24
-    ae48:	4288      	cmp	r0, r1
-    ae4a:	f300 80dc 	bgt.w	b006 <drawColumn(int, int) [clone .part.0]+0x236>
-    ae4e:	f10d 0c10 	add.w	ip, sp, #16
+    ae48:	f8dc 0024 	ldr.w	r0, [ip, #36]	@ 0x24
+    ae4c:	4288      	cmp	r0, r1
+    ae4e:	f300 80dc 	bgt.w	b00a <drawColumn(int, int) [clone .part.0]+0x236>
+    ae52:	f10d 0c10 	add.w	ip, sp, #16
         col[r] = ink;
     }
     if (v.marks && !v.live && isBarColumn(tr.loopBars, c)) col[TICK_ROW] = DARK;   // bar ticks
     if (!v.live && c == v.markCol)                                // the start position: inverting
       for (int r = MID_ROW - 2; r <= MID_ROW + 2; r++) col[r] = col[r] == v.bg ? (muted ? DIM : INK) : v.bg;
     if (c == v.playCol) {                                         // on top: the playhead
-    ae52:	f44f 73ac 	mov.w	r3, #344	@ 0x158
-    ae56:	fb03 6305 	mla	r3, r3, r5, r6
-    ae5a:	6958      	ldr	r0, [r3, #20]
-    ae5c:	4288      	cmp	r0, r1
-    ae5e:	d10c      	bne.n	ae7a <drawColumn(int, int) [clone .part.0]+0xaa>
+    ae56:	f44f 73ac 	mov.w	r3, #344	@ 0x158
+    ae5a:	fb03 6305 	mla	r3, r3, r5, r6
+    ae5e:	6958      	ldr	r0, [r3, #20]
+    ae60:	4288      	cmp	r0, r1
+    ae62:	d10c      	bne.n	ae7e <drawColumn(int, int) [clone .part.0]+0xaa>
       for (int r = 1; r < BAND_ROWS - 1; r++)
         col[r] = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
-    ae60:	8b18      	ldrh	r0, [r3, #24]
-    ae62:	f10d 0726 	add.w	r7, sp, #38	@ 0x26
-    ae66:	4663      	mov	r3, ip
-    ae68:	2801      	cmp	r0, #1
-    ae6a:	d102      	bne.n	ae72 <drawColumn(int, int) [clone .part.0]+0xa2>
-    ae6c:	e0eb      	b.n	b046 <drawColumn(int, int) [clone .part.0]+0x276>
-    ae6e:	f823 0f04 	strh.w	r0, [r3, #4]!
-    ae72:	1c99      	adds	r1, r3, #2
-    ae74:	8058      	strh	r0, [r3, #2]
+    ae64:	8b18      	ldrh	r0, [r3, #24]
+    ae66:	f10d 0726 	add.w	r7, sp, #38	@ 0x26
+    ae6a:	4663      	mov	r3, ip
+    ae6c:	2801      	cmp	r0, #1
+    ae6e:	d102      	bne.n	ae76 <drawColumn(int, int) [clone .part.0]+0xa2>
+    ae70:	e0eb      	b.n	b04a <drawColumn(int, int) [clone .part.0]+0x276>
+    ae72:	f823 0f04 	strh.w	r0, [r3, #4]!
+    ae76:	1c99      	adds	r1, r3, #2
+    ae78:	8058      	strh	r0, [r3, #2]
       for (int r = 1; r < BAND_ROWS - 1; r++)
-    ae76:	42b9      	cmp	r1, r7
-    ae78:	d1f9      	bne.n	ae6e <drawColumn(int, int) [clone .part.0]+0x9e>
+    ae7a:	42b9      	cmp	r1, r7
+    ae7c:	d1f9      	bne.n	ae72 <drawColumn(int, int) [clone .part.0]+0x9e>
                : col[r] == v.bg ? (v.bg == BG ? INK : BG) : v.bg;
     }
   }
   static uint16_t px[ROW_BAND * PX];
   for (int r = 0; r < BAND_ROWS; r++)
-    ae7a:	4c8f      	ldr	r4, [pc, #572]	@ (b0b8 <drawColumn(int, int) [clone .part.0]+0x2e8>)
-    ae7c:	4623      	mov	r3, r4
-    ae7e:	f104 0e68 	add.w	lr, r4, #104	@ 0x68
+    ae7e:	4c8f      	ldr	r4, [pc, #572]	@ (b0bc <drawColumn(int, int) [clone .part.0]+0x2e8>)
+    ae80:	4623      	mov	r3, r4
+    ae82:	f104 0e68 	add.w	lr, r4, #104	@ 0x68
     for (int y = 0; y < PX; y++) px[(r * PX + y) * PX] = px[(r * PX + y) * PX + 1] = col[r];
-    ae82:	f83c 0b02 	ldrh.w	r0, [ip], #2
-    ae86:	2100      	movs	r1, #0
+    ae86:	f83c 0b02 	ldrh.w	r0, [ip], #2
+    ae8a:	2100      	movs	r1, #0
   for (int r = 0; r < BAND_ROWS; r++)
-    ae88:	3308      	adds	r3, #8
-    ae8a:	f360 010f 	bfi	r1, r0, #0, #16
-    ae8e:	459e      	cmp	lr, r3
-    ae90:	f360 411f 	bfi	r1, r0, #16, #16
+    ae8c:	3308      	adds	r3, #8
+    ae8e:	f360 010f 	bfi	r1, r0, #0, #16
+    ae92:	459e      	cmp	lr, r3
+    ae94:	f360 411f 	bfi	r1, r0, #16, #16
     for (int y = 0; y < PX; y++) px[(r * PX + y) * PX] = px[(r * PX + y) * PX + 1] = col[r];
-    ae94:	e943 1102 	strd	r1, r1, [r3, #-8]
+    ae98:	e943 1102 	strd	r1, r1, [r3, #-8]
   for (int r = 0; r < BAND_ROWS; r++)
-    ae98:	d1f3      	bne.n	ae82 <drawColumn(int, int) [clone .part.0]+0xb2>
+    ae9c:	d1f3      	bne.n	ae86 <drawColumn(int, int) [clone .part.0]+0xb2>
 constexpr int sliceTop(int k) { return LAYOUT_TOP + k * SLICE_H; }
-    ae9a:	271a      	movs	r7, #26
-    ae9c:	4b87      	ldr	r3, [pc, #540]	@ (b0bc <drawColumn(int, int) [clone .part.0]+0x2ec>)
+    ae9e:	271a      	movs	r7, #26
+    aea0:	4b87      	ldr	r3, [pc, #540]	@ (b0c0 <drawColumn(int, int) [clone .part.0]+0x2ec>)
   auto &t = board.tft();
   int x = WAVE_X + bc * PX, top = rowTop(i);
-    ae9e:	0052      	lsls	r2, r2, #1
-    aea0:	fb05 f707 	mul.w	r7, r5, r7
-    aea4:	6898      	ldr	r0, [r3, #8]
+    aea2:	0052      	lsls	r2, r2, #1
+    aea4:	fb05 f707 	mul.w	r7, r5, r7
+    aea8:	6898      	ldr	r0, [r3, #8]
   if (bgTop(i) < top) t.fillRect(x, bgTop(i), PX, top - bgTop(i), v.bg);   // the first row's margin
-    aea6:	b211      	sxth	r1, r2
-    aea8:	3702      	adds	r7, #2
+    aeaa:	b211      	sxth	r1, r2
+    aeac:	3702      	adds	r7, #2
 inline int bgTop(int i) { return i == 0 ? 0 : rowTop(i); }
-    aeaa:	b955      	cbnz	r5, aec2 <drawColumn(int, int) [clone .part.0]+0xf2>
-    aeac:	8873      	ldrh	r3, [r6, #2]
-    aeae:	462a      	mov	r2, r5
-    aeb0:	9301      	str	r3, [sp, #4]
-    aeb2:	2302      	movs	r3, #2
-    aeb4:	9300      	str	r3, [sp, #0]
-    aeb6:	e9cd 0102 	strd	r0, r1, [sp, #8]
-    aeba:	f00b f9fb 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
-    aebe:	e9dd 0102 	ldrd	r0, r1, [sp, #8]
+    aeae:	b955      	cbnz	r5, aec6 <drawColumn(int, int) [clone .part.0]+0xf2>
+    aeb0:	8873      	ldrh	r3, [r6, #2]
+    aeb2:	462a      	mov	r2, r5
+    aeb4:	9301      	str	r3, [sp, #4]
+    aeb6:	2302      	movs	r3, #2
+    aeb8:	9300      	str	r3, [sp, #0]
+    aeba:	e9cd 0102 	strd	r0, r1, [sp, #8]
+    aebe:	f00b f9f9 	bl	162b4 <ILI9341_t3n::fillRect(short, short, short, short, unsigned short)>
+    aec2:	e9dd 0102 	ldrd	r0, r1, [sp, #8]
   t.writeRect(x, top, PX, ROW_BAND, px);
-    aec2:	231a      	movs	r3, #26
-    aec4:	b23a      	sxth	r2, r7
-    aec6:	e9cd 3400 	strd	r3, r4, [sp]
-    aeca:	2302      	movs	r3, #2
-    aecc:	f00e fa0e 	bl	192ec <ILI9341_t3n::writeRect(short, short, short, short, unsigned short const*)>
+    aec6:	231a      	movs	r3, #26
+    aec8:	b23a      	sxth	r2, r7
+    aeca:	e9cd 3400 	strd	r3, r4, [sp]
+    aece:	2302      	movs	r3, #2
+    aed0:	f00e fa0c 	bl	192ec <ILI9341_t3n::writeRect(short, short, short, short, unsigned short const*)>
 }
-    aed0:	b00d      	add	sp, #52	@ 0x34
-    aed2:	e8bd 83f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, pc}
-    aed6:	f10d 0c10 	add.w	ip, sp, #16
-    aeda:	f10d 0026 	add.w	r0, sp, #38	@ 0x26
-    aede:	4663      	mov	r3, ip
+    aed4:	b00d      	add	sp, #52	@ 0x34
+    aed6:	e8bd 83f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, pc}
+    aeda:	f10d 0c10 	add.w	ip, sp, #16
+    aede:	f10d 0026 	add.w	r0, sp, #38	@ 0x26
+    aee2:	4663      	mov	r3, ip
     if (bc == 0 || bc == BLOCK_COLS - 1) for (int r = 1; r < BAND_ROWS - 1; r++) col[r] = frame;
-    aee0:	f823 1f02 	strh.w	r1, [r3, #2]!
-    aee4:	4298      	cmp	r0, r3
-    aee6:	d1fb      	bne.n	aee0 <drawColumn(int, int) [clone .part.0]+0x110>
-    aee8:	e7c7      	b.n	ae7a <drawColumn(int, int) [clone .part.0]+0xaa>
+    aee4:	f823 1f02 	strh.w	r1, [r3, #2]!
+    aee8:	4298      	cmp	r0, r3
+    aeea:	d1fb      	bne.n	aee4 <drawColumn(int, int) [clone .part.0]+0x110>
+    aeec:	e7c7      	b.n	ae7e <drawColumn(int, int) [clone .part.0]+0xaa>
   } else if (i == DIVIDER_ROW) {
-    aeea:	2d07      	cmp	r5, #7
-    aeec:	d103      	bne.n	aef6 <drawColumn(int, int) [clone .part.0]+0x126>
+    aeee:	2d07      	cmp	r5, #7
+    aef0:	d103      	bne.n	aefa <drawColumn(int, int) [clone .part.0]+0x126>
     col[BAND_ROWS - 1] = DIVIDER;
-    aeee:	f242 1304 	movw	r3, #8452	@ 0x2104
-    aef2:	f8ad 3028 	strh.w	r3, [sp, #40]	@ 0x28
+    aef2:	f242 1304 	movw	r3, #8452	@ 0x2104
+    aef6:	f8ad 3028 	strh.w	r3, [sp, #40]	@ 0x28
   int c = bc - 1;                                  // waveform column
-    aef6:	1e51      	subs	r1, r2, #1
+    aefa:	1e51      	subs	r1, r2, #1
   if (c >= 0 && c < WAVE_COLS && v.visible) {
-    aef8:	293f      	cmp	r1, #63	@ 0x3f
-    aefa:	d995      	bls.n	ae28 <drawColumn(int, int) [clone .part.0]+0x58>
-    aefc:	f10d 0c10 	add.w	ip, sp, #16
-    af00:	e7bb      	b.n	ae7a <drawColumn(int, int) [clone .part.0]+0xaa>
+    aefc:	293f      	cmp	r1, #63	@ 0x3f
+    aefe:	d995      	bls.n	ae2c <drawColumn(int, int) [clone .part.0]+0x58>
+    af00:	f10d 0c10 	add.w	ip, sp, #16
+    af04:	e7bb      	b.n	ae7e <drawColumn(int, int) [clone .part.0]+0xaa>
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
-    af02:	f8dc 3008 	ldr.w	r3, [ip, #8]
+    af06:	f8dc 3008 	ldr.w	r3, [ip, #8]
     bool muted = !v.live && tr.state == TrackState::Muted;
-    af06:	f44f 7e30 	mov.w	lr, #704	@ 0x2c0
-    af0a:	486d      	ldr	r0, [pc, #436]	@ (b0c0 <drawColumn(int, int) [clone .part.0]+0x2f0>)
+    af0a:	f44f 7e30 	mov.w	lr, #704	@ 0x2c0
+    af0e:	486d      	ldr	r0, [pc, #436]	@ (b0c4 <drawColumn(int, int) [clone .part.0]+0x2f0>)
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
-    af0c:	1acf      	subs	r7, r1, r3
+    af10:	1acf      	subs	r7, r1, r3
     bool muted = !v.live && tr.state == TrackState::Muted;
-    af0e:	fb0e fe05 	mul.w	lr, lr, r5
+    af12:	fb0e fe05 	mul.w	lr, lr, r5
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
-    af12:	3740      	adds	r7, #64	@ 0x40
+    af16:	3740      	adds	r7, #64	@ 0x40
     bool muted = !v.live && tr.state == TrackState::Muted;
-    af14:	f810 300e 	ldrb.w	r3, [r0, lr]
-    af18:	f1a3 0902 	sub.w	r9, r3, #2
+    af18:	f810 300e 	ldrb.w	r3, [r0, lr]
+    af1c:	f1a3 0902 	sub.w	r9, r3, #2
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
-    af1c:	427b      	negs	r3, r7
-    af1e:	f007 073f 	and.w	r7, r7, #63	@ 0x3f
-    af22:	f003 033f 	and.w	r3, r3, #63	@ 0x3f
+    af20:	427b      	negs	r3, r7
+    af22:	f007 073f 	and.w	r7, r7, #63	@ 0x3f
+    af26:	f003 033f 	and.w	r3, r3, #63	@ 0x3f
     bool muted = !v.live && tr.state == TrackState::Muted;
-    af26:	fab9 f989 	clz	r9, r9
+    af2a:	fab9 f989 	clz	r9, r9
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
-    af2a:	bf58      	it	pl
-    af2c:	425f      	negpl	r7, r3
-    af2e:	f8dc 300c 	ldr.w	r3, [ip, #12]
+    af2e:	bf58      	it	pl
+    af30:	425f      	negpl	r7, r3
+    af32:	f8dc 300c 	ldr.w	r3, [ip, #12]
     bool muted = !v.live && tr.state == TrackState::Muted;
-    af32:	ea4f 1959 	mov.w	r9, r9, lsr #5
+    af36:	ea4f 1959 	mov.w	r9, r9, lsr #5
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
-    af36:	429f      	cmp	r7, r3
-    af38:	da6b      	bge.n	b012 <drawColumn(int, int) [clone .part.0]+0x242>
+    af3a:	429f      	cmp	r7, r3
+    af3c:	da6b      	bge.n	b016 <drawColumn(int, int) [clone .part.0]+0x242>
       uint16_t ink = v.live ? BG : !in ? DARK : v.rangeInk;   // (live: on the coloured cell)
-    af3a:	f8bc 701c 	ldrh.w	r7, [ip, #28]
+    af3e:	f8bc 701c 	ldrh.w	r7, [ip, #28]
       int h = (columnLevel(v.live ? v.liveData : tr.overview, c) * WAVE_REACH + 127) / 255;
-    af3e:	f44f 7330 	mov.w	r3, #704	@ 0x2c0
-    af42:	fb03 0005 	mla	r0, r3, r5, r0
-    af46:	3094      	adds	r0, #148	@ 0x94
-    af48:	e9cd 1202 	strd	r1, r2, [sp, #8]
-    af4c:	f7ff ff22 	bl	ad94 <columnLevel(unsigned char const*, int)>
-    af50:	f04f 0c7f 	mov.w	ip, #127	@ 0x7f
-    af54:	b203      	sxth	r3, r0
-    af56:	a807      	add	r0, sp, #28
-    af58:	eb0c 0c83 	add.w	ip, ip, r3, lsl #2
-    af5c:	4b59      	ldr	r3, [pc, #356]	@ (b0c4 <drawColumn(int, int) [clone .part.0]+0x2f4>)
-    af5e:	fba3 3c0c 	umull	r3, ip, r3, ip
-    af62:	f10d 030e 	add.w	r3, sp, #14
-    af66:	ea4f 1cdc 	mov.w	ip, ip, lsr #7
+    af42:	f44f 7330 	mov.w	r3, #704	@ 0x2c0
+    af46:	fb03 0005 	mla	r0, r3, r5, r0
+    af4a:	3094      	adds	r0, #148	@ 0x94
+    af4c:	e9cd 1202 	strd	r1, r2, [sp, #8]
+    af50:	f7ff ff22 	bl	ad98 <columnLevel(unsigned char const*, int)>
+    af54:	f04f 0c7f 	mov.w	ip, #127	@ 0x7f
+    af58:	b203      	sxth	r3, r0
+    af5a:	a807      	add	r0, sp, #28
+    af5c:	eb0c 0c83 	add.w	ip, ip, r3, lsl #2
+    af60:	4b59      	ldr	r3, [pc, #356]	@ (b0c8 <drawColumn(int, int) [clone .part.0]+0x2f4>)
+    af62:	fba3 3c0c 	umull	r3, ip, r3, ip
+    af66:	f10d 030e 	add.w	r3, sp, #14
+    af6a:	ea4f 1cdc 	mov.w	ip, ip, lsr #7
       for (int r = MID_ROW - h; r <= MID_ROW + h; r++)
-    af6a:	eb00 004c 	add.w	r0, r0, ip, lsl #1
-    af6e:	f1cc 0c06 	rsb	ip, ip, #6
-    af72:	e9dd 1202 	ldrd	r1, r2, [sp, #8]
-    af76:	eb03 034c 	add.w	r3, r3, ip, lsl #1
-    af7a:	f10d 0c10 	add.w	ip, sp, #16
+    af6e:	eb00 004c 	add.w	r0, r0, ip, lsl #1
+    af72:	f1cc 0c06 	rsb	ip, ip, #6
+    af76:	e9dd 1202 	ldrd	r1, r2, [sp, #8]
+    af7a:	eb03 034c 	add.w	r3, r3, ip, lsl #1
+    af7e:	f10d 0c10 	add.w	ip, sp, #16
         col[r] = ink;
-    af7e:	f823 7f02 	strh.w	r7, [r3, #2]!
+    af82:	f823 7f02 	strh.w	r7, [r3, #2]!
       for (int r = MID_ROW - h; r <= MID_ROW + h; r++)
-    af82:	4298      	cmp	r0, r3
-    af84:	d1fb      	bne.n	af7e <drawColumn(int, int) [clone .part.0]+0x1ae>
+    af86:	4298      	cmp	r0, r3
+    af88:	d1fb      	bne.n	af82 <drawColumn(int, int) [clone .part.0]+0x1ae>
     if (v.marks && !v.live && isBarColumn(tr.loopBars, c)) col[TICK_ROW] = DARK;   // bar ticks
-    af86:	f44f 73ac 	mov.w	r3, #344	@ 0x158
-    af8a:	fb03 6305 	mla	r3, r3, r5, r6
-    af8e:	7e9b      	ldrb	r3, [r3, #26]
-    af90:	b3ab      	cbz	r3, affe <drawColumn(int, int) [clone .part.0]+0x22e>
-    af92:	4647      	mov	r7, r8
-    af94:	2f00      	cmp	r7, #0
-    af96:	f47f af5c 	bne.w	ae52 <drawColumn(int, int) [clone .part.0]+0x82>
-    af9a:	f44f 7030 	mov.w	r0, #704	@ 0x2c0
-    af9e:	4b48      	ldr	r3, [pc, #288]	@ (b0c0 <drawColumn(int, int) [clone .part.0]+0x2f0>)
-    afa0:	fb00 3305 	mla	r3, r0, r5, r3
+    af8a:	f44f 73ac 	mov.w	r3, #344	@ 0x158
+    af8e:	fb03 6305 	mla	r3, r3, r5, r6
+    af92:	7e9b      	ldrb	r3, [r3, #26]
+    af94:	b3ab      	cbz	r3, b002 <drawColumn(int, int) [clone .part.0]+0x22e>
+    af96:	4647      	mov	r7, r8
+    af98:	2f00      	cmp	r7, #0
+    af9a:	f47f af5c 	bne.w	ae56 <drawColumn(int, int) [clone .part.0]+0x82>
+    af9e:	f44f 7030 	mov.w	r0, #704	@ 0x2c0
+    afa2:	4b48      	ldr	r3, [pc, #288]	@ (b0c4 <drawColumn(int, int) [clone .part.0]+0x2f0>)
+    afa4:	fb00 3305 	mla	r3, r0, r5, r3
   uint32_t b0 = ((uint64_t)c * bars + WAVE_COLS - 1) / WAVE_COLS;   // first boundary >= column start
-    afa4:	203f      	movs	r0, #63	@ 0x3f
+    afa8:	203f      	movs	r0, #63	@ 0x3f
     if (v.marks && !v.live && isBarColumn(tr.loopBars, c)) col[TICK_ROW] = DARK;   // bar ticks
-    afa6:	689b      	ldr	r3, [r3, #8]
+    afaa:	689b      	ldr	r3, [r3, #8]
   uint32_t b0 = ((uint64_t)c * bars + WAVE_COLS - 1) / WAVE_COLS;   // first boundary >= column start
-    afa8:	fbe1 0703 	umlal	r0, r7, r1, r3
-    afac:	ea4f 1e90 	mov.w	lr, r0, lsr #6
+    afac:	fbe1 0703 	umlal	r0, r7, r1, r3
+    afb0:	ea4f 1e90 	mov.w	lr, r0, lsr #6
   return b0 > 0 && b0 < bars && (uint64_t)b0 * WAVE_COLS < (uint64_t)(c + 1) * bars;
-    afb0:	ea5e 6e87 	orrs.w	lr, lr, r7, lsl #26
-    afb4:	d00f      	beq.n	afd6 <drawColumn(int, int) [clone .part.0]+0x206>
-    afb6:	4573      	cmp	r3, lr
-    afb8:	d90d      	bls.n	afd6 <drawColumn(int, int) [clone .part.0]+0x206>
-    afba:	fba3 3e02 	umull	r3, lr, r3, r2
-    afbe:	f020 003f 	bic.w	r0, r0, #63	@ 0x3f
-    afc2:	f007 073f 	and.w	r7, r7, #63	@ 0x3f
-    afc6:	4298      	cmp	r0, r3
-    afc8:	eb77 070e 	sbcs.w	r7, r7, lr
-    afcc:	d203      	bcs.n	afd6 <drawColumn(int, int) [clone .part.0]+0x206>
+    afb4:	ea5e 6e87 	orrs.w	lr, lr, r7, lsl #26
+    afb8:	d00f      	beq.n	afda <drawColumn(int, int) [clone .part.0]+0x206>
+    afba:	4573      	cmp	r3, lr
+    afbc:	d90d      	bls.n	afda <drawColumn(int, int) [clone .part.0]+0x206>
+    afbe:	fba3 3e02 	umull	r3, lr, r3, r2
+    afc2:	f020 003f 	bic.w	r0, r0, #63	@ 0x3f
+    afc6:	f007 073f 	and.w	r7, r7, #63	@ 0x3f
+    afca:	4298      	cmp	r0, r3
+    afcc:	eb77 070e 	sbcs.w	r7, r7, lr
+    afd0:	d203      	bcs.n	afda <drawColumn(int, int) [clone .part.0]+0x206>
     if (v.marks && !v.live && isBarColumn(tr.loopBars, c)) col[TICK_ROW] = DARK;   // bar ticks
-    afce:	f242 1304 	movw	r3, #8452	@ 0x2104
-    afd2:	f8ad 3026 	strh.w	r3, [sp, #38]	@ 0x26
+    afd2:	f242 1304 	movw	r3, #8452	@ 0x2104
+    afd6:	f8ad 3026 	strh.w	r3, [sp, #38]	@ 0x26
     if (!v.live && c == v.markCol)                                // the start position: inverting
-    afd6:	f44f 73ac 	mov.w	r3, #344	@ 0x158
-    afda:	fb03 6305 	mla	r3, r3, r5, r6
-    afde:	691b      	ldr	r3, [r3, #16]
-    afe0:	428b      	cmp	r3, r1
-    afe2:	f47f af36 	bne.w	ae52 <drawColumn(int, int) [clone .part.0]+0x82>
-    afe6:	f10c 0306 	add.w	r3, ip, #6
-    afea:	f10c 0010 	add.w	r0, ip, #16
+    afda:	f44f 73ac 	mov.w	r3, #344	@ 0x158
+    afde:	fb03 6305 	mla	r3, r3, r5, r6
+    afe2:	691b      	ldr	r3, [r3, #16]
+    afe4:	428b      	cmp	r3, r1
+    afe6:	f47f af36 	bne.w	ae56 <drawColumn(int, int) [clone .part.0]+0x82>
+    afea:	f10c 0306 	add.w	r3, ip, #6
+    afee:	f10c 0010 	add.w	r0, ip, #16
       for (int r = MID_ROW - 2; r <= MID_ROW + 2; r++) col[r] = col[r] == v.bg ? (muted ? DIM : INK) : v.bg;
-    afee:	f833 7f02 	ldrh.w	r7, [r3, #2]!
-    aff2:	42a7      	cmp	r7, r4
-    aff4:	d010      	beq.n	b018 <drawColumn(int, int) [clone .part.0]+0x248>
-    aff6:	4283      	cmp	r3, r0
-    aff8:	801c      	strh	r4, [r3, #0]
-    affa:	d1f8      	bne.n	afee <drawColumn(int, int) [clone .part.0]+0x21e>
-    affc:	e729      	b.n	ae52 <drawColumn(int, int) [clone .part.0]+0x82>
+    aff2:	f833 7f02 	ldrh.w	r7, [r3, #2]!
+    aff6:	42a7      	cmp	r7, r4
+    aff8:	d010      	beq.n	b01c <drawColumn(int, int) [clone .part.0]+0x248>
+    affa:	4283      	cmp	r3, r0
+    affc:	801c      	strh	r4, [r3, #0]
+    affe:	d1f8      	bne.n	aff2 <drawColumn(int, int) [clone .part.0]+0x21e>
+    b000:	e729      	b.n	ae56 <drawColumn(int, int) [clone .part.0]+0x82>
     if (!v.live && c == v.markCol)                                // the start position: inverting
-    affe:	f1b8 0f00 	cmp.w	r8, #0
-    b002:	d0e8      	beq.n	afd6 <drawColumn(int, int) [clone .part.0]+0x206>
-    b004:	e725      	b.n	ae52 <drawColumn(int, int) [clone .part.0]+0x82>
+    b002:	f1b8 0f00 	cmp.w	r8, #0
+    b006:	d0e8      	beq.n	afda <drawColumn(int, int) [clone .part.0]+0x206>
+    b008:	e725      	b.n	ae56 <drawColumn(int, int) [clone .part.0]+0x82>
       int h = (columnLevel(v.live ? v.liveData : tr.overview, c) * WAVE_REACH + 127) / 255;
-    b006:	3328      	adds	r3, #40	@ 0x28
-    b008:	f04f 0900 	mov.w	r9, #0
-    b00c:	2700      	movs	r7, #0
-    b00e:	18f0      	adds	r0, r6, r3
-    b010:	e79a      	b.n	af48 <drawColumn(int, int) [clone .part.0]+0x178>
-    b012:	f242 1704 	movw	r7, #8452	@ 0x2104
-    b016:	e792      	b.n	af3e <drawColumn(int, int) [clone .part.0]+0x16e>
+    b00a:	3328      	adds	r3, #40	@ 0x28
+    b00c:	f04f 0900 	mov.w	r9, #0
+    b010:	2700      	movs	r7, #0
+    b012:	18f0      	adds	r0, r6, r3
+    b014:	e79a      	b.n	af4c <drawColumn(int, int) [clone .part.0]+0x178>
+    b016:	f242 1704 	movw	r7, #8452	@ 0x2104
+    b01a:	e792      	b.n	af42 <drawColumn(int, int) [clone .part.0]+0x16e>
       for (int r = MID_ROW - 2; r <= MID_ROW + 2; r++) col[r] = col[r] == v.bg ? (muted ? DIM : INK) : v.bg;
-    b018:	464f      	mov	r7, r9
-    b01a:	b387      	cbz	r7, b07e <drawColumn(int, int) [clone .part.0]+0x2ae>
-    b01c:	f248 4810 	movw	r8, #33808	@ 0x8410
-    b020:	4298      	cmp	r0, r3
-    b022:	f103 0e02 	add.w	lr, r3, #2
-    b026:	f8a3 8000 	strh.w	r8, [r3]
-    b02a:	f43f af12 	beq.w	ae52 <drawColumn(int, int) [clone .part.0]+0x82>
-    b02e:	885f      	ldrh	r7, [r3, #2]
-    b030:	42a7      	cmp	r7, r4
-    b032:	d039      	beq.n	b0a8 <drawColumn(int, int) [clone .part.0]+0x2d8>
-    b034:	4586      	cmp	lr, r0
-    b036:	805c      	strh	r4, [r3, #2]
-    b038:	f43f af0b 	beq.w	ae52 <drawColumn(int, int) [clone .part.0]+0x82>
-    b03c:	f833 ef04 	ldrh.w	lr, [r3, #4]!
-    b040:	45a6      	cmp	lr, r4
-    b042:	d1d8      	bne.n	aff6 <drawColumn(int, int) [clone .part.0]+0x226>
-    b044:	e7ec      	b.n	b020 <drawColumn(int, int) [clone .part.0]+0x250>
+    b01c:	464f      	mov	r7, r9
+    b01e:	b387      	cbz	r7, b082 <drawColumn(int, int) [clone .part.0]+0x2ae>
+    b020:	f248 4810 	movw	r8, #33808	@ 0x8410
+    b024:	4298      	cmp	r0, r3
+    b026:	f103 0e02 	add.w	lr, r3, #2
+    b02a:	f8a3 8000 	strh.w	r8, [r3]
+    b02e:	f43f af12 	beq.w	ae56 <drawColumn(int, int) [clone .part.0]+0x82>
+    b032:	885f      	ldrh	r7, [r3, #2]
+    b034:	42a7      	cmp	r7, r4
+    b036:	d039      	beq.n	b0ac <drawColumn(int, int) [clone .part.0]+0x2d8>
+    b038:	4586      	cmp	lr, r0
+    b03a:	805c      	strh	r4, [r3, #2]
+    b03c:	f43f af0b 	beq.w	ae56 <drawColumn(int, int) [clone .part.0]+0x82>
+    b040:	f833 ef04 	ldrh.w	lr, [r3, #4]!
+    b044:	45a6      	cmp	lr, r4
+    b046:	d1d8      	bne.n	affa <drawColumn(int, int) [clone .part.0]+0x226>
+    b048:	e7ec      	b.n	b024 <drawColumn(int, int) [clone .part.0]+0x250>
         col[r] = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
-    b046:	fab4 f084 	clz	r0, r4
-    b04a:	0940      	lsrs	r0, r0, #5
-    b04c:	4240      	negs	r0, r0
-    b04e:	8859      	ldrh	r1, [r3, #2]
-    b050:	42a1      	cmp	r1, r4
-    b052:	d007      	beq.n	b064 <drawColumn(int, int) [clone .part.0]+0x294>
-    b054:	f823 4f02 	strh.w	r4, [r3, #2]!
+    b04a:	fab4 f084 	clz	r0, r4
+    b04e:	0940      	lsrs	r0, r0, #5
+    b050:	4240      	negs	r0, r0
+    b052:	8859      	ldrh	r1, [r3, #2]
+    b054:	42a1      	cmp	r1, r4
+    b056:	d007      	beq.n	b068 <drawColumn(int, int) [clone .part.0]+0x294>
+    b058:	f823 4f02 	strh.w	r4, [r3, #2]!
       for (int r = 1; r < BAND_ROWS - 1; r++)
-    b058:	42bb      	cmp	r3, r7
-    b05a:	f43f af0e 	beq.w	ae7a <drawColumn(int, int) [clone .part.0]+0xaa>
+    b05c:	42bb      	cmp	r3, r7
+    b05e:	f43f af0e 	beq.w	ae7e <drawColumn(int, int) [clone .part.0]+0xaa>
         col[r] = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
-    b05e:	8859      	ldrh	r1, [r3, #2]
-    b060:	42a1      	cmp	r1, r4
-    b062:	d1f7      	bne.n	b054 <drawColumn(int, int) [clone .part.0]+0x284>
-    b064:	1c99      	adds	r1, r3, #2
-    b066:	8058      	strh	r0, [r3, #2]
+    b062:	8859      	ldrh	r1, [r3, #2]
+    b064:	42a1      	cmp	r1, r4
+    b066:	d1f7      	bne.n	b058 <drawColumn(int, int) [clone .part.0]+0x284>
+    b068:	1c99      	adds	r1, r3, #2
+    b06a:	8058      	strh	r0, [r3, #2]
       for (int r = 1; r < BAND_ROWS - 1; r++)
-    b068:	42b9      	cmp	r1, r7
-    b06a:	f43f af06 	beq.w	ae7a <drawColumn(int, int) [clone .part.0]+0xaa>
+    b06c:	42b9      	cmp	r1, r7
+    b06e:	f43f af06 	beq.w	ae7e <drawColumn(int, int) [clone .part.0]+0xaa>
         col[r] = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
-    b06e:	8899      	ldrh	r1, [r3, #4]
-    b070:	42a1      	cmp	r1, r4
-    b072:	d02e      	beq.n	b0d2 <drawColumn(int, int) [clone .part.0]+0x302>
-    b074:	f823 4f04 	strh.w	r4, [r3, #4]!
+    b072:	8899      	ldrh	r1, [r3, #4]
+    b074:	42a1      	cmp	r1, r4
+    b076:	d02e      	beq.n	b0d6 <drawColumn(int, int) [clone .part.0]+0x302>
+    b078:	f823 4f04 	strh.w	r4, [r3, #4]!
       for (int r = 1; r < BAND_ROWS - 1; r++)
-    b078:	429f      	cmp	r7, r3
-    b07a:	d1e8      	bne.n	b04e <drawColumn(int, int) [clone .part.0]+0x27e>
-    b07c:	e6fd      	b.n	ae7a <drawColumn(int, int) [clone .part.0]+0xaa>
+    b07c:	429f      	cmp	r7, r3
+    b07e:	d1e8      	bne.n	b052 <drawColumn(int, int) [clone .part.0]+0x27e>
+    b080:	e6fd      	b.n	ae7e <drawColumn(int, int) [clone .part.0]+0xaa>
       for (int r = MID_ROW - 2; r <= MID_ROW + 2; r++) col[r] = col[r] == v.bg ? (muted ? DIM : INK) : v.bg;
-    b07e:	f64f 78ff 	movw	r8, #65535	@ 0xffff
-    b082:	4298      	cmp	r0, r3
-    b084:	f103 0e02 	add.w	lr, r3, #2
-    b088:	f8a3 8000 	strh.w	r8, [r3]
-    b08c:	f43f aee1 	beq.w	ae52 <drawColumn(int, int) [clone .part.0]+0x82>
-    b090:	885f      	ldrh	r7, [r3, #2]
-    b092:	42a7      	cmp	r7, r4
-    b094:	d018      	beq.n	b0c8 <drawColumn(int, int) [clone .part.0]+0x2f8>
-    b096:	4586      	cmp	lr, r0
-    b098:	805c      	strh	r4, [r3, #2]
-    b09a:	f43f aeda 	beq.w	ae52 <drawColumn(int, int) [clone .part.0]+0x82>
-    b09e:	f833 ef04 	ldrh.w	lr, [r3, #4]!
-    b0a2:	45a6      	cmp	lr, r4
-    b0a4:	d1a7      	bne.n	aff6 <drawColumn(int, int) [clone .part.0]+0x226>
-    b0a6:	e7ec      	b.n	b082 <drawColumn(int, int) [clone .part.0]+0x2b2>
-    b0a8:	4586      	cmp	lr, r0
-    b0aa:	f8a3 8002 	strh.w	r8, [r3, #2]
-    b0ae:	d1c5      	bne.n	b03c <drawColumn(int, int) [clone .part.0]+0x26c>
-    b0b0:	e6cf      	b.n	ae52 <drawColumn(int, int) [clone .part.0]+0x82>
-    b0b2:	bf00      	nop
-    b0b4:	20002c00 	.word	0x20002c00
-    b0b8:	2003ff38 	.word	0x2003ff38
-    b0bc:	2000460c 	.word	0x2000460c
-    b0c0:	20006380 	.word	0x20006380
-    b0c4:	80808081 	.word	0x80808081
-    b0c8:	4586      	cmp	lr, r0
-    b0ca:	f8a3 8002 	strh.w	r8, [r3, #2]
-    b0ce:	d1e6      	bne.n	b09e <drawColumn(int, int) [clone .part.0]+0x2ce>
-    b0d0:	e6bf      	b.n	ae52 <drawColumn(int, int) [clone .part.0]+0x82>
+    b082:	f64f 78ff 	movw	r8, #65535	@ 0xffff
+    b086:	4298      	cmp	r0, r3
+    b088:	f103 0e02 	add.w	lr, r3, #2
+    b08c:	f8a3 8000 	strh.w	r8, [r3]
+    b090:	f43f aee1 	beq.w	ae56 <drawColumn(int, int) [clone .part.0]+0x82>
+    b094:	885f      	ldrh	r7, [r3, #2]
+    b096:	42a7      	cmp	r7, r4
+    b098:	d018      	beq.n	b0cc <drawColumn(int, int) [clone .part.0]+0x2f8>
+    b09a:	4586      	cmp	lr, r0
+    b09c:	805c      	strh	r4, [r3, #2]
+    b09e:	f43f aeda 	beq.w	ae56 <drawColumn(int, int) [clone .part.0]+0x82>
+    b0a2:	f833 ef04 	ldrh.w	lr, [r3, #4]!
+    b0a6:	45a6      	cmp	lr, r4
+    b0a8:	d1a7      	bne.n	affa <drawColumn(int, int) [clone .part.0]+0x226>
+    b0aa:	e7ec      	b.n	b086 <drawColumn(int, int) [clone .part.0]+0x2b2>
+    b0ac:	4586      	cmp	lr, r0
+    b0ae:	f8a3 8002 	strh.w	r8, [r3, #2]
+    b0b2:	d1c5      	bne.n	b040 <drawColumn(int, int) [clone .part.0]+0x26c>
+    b0b4:	e6cf      	b.n	ae56 <drawColumn(int, int) [clone .part.0]+0x82>
+    b0b6:	bf00      	nop
+    b0b8:	20002c00 	.word	0x20002c00
+    b0bc:	2003ff38 	.word	0x2003ff38
+    b0c0:	2000460c 	.word	0x2000460c
+    b0c4:	20006380 	.word	0x20006380
+    b0c8:	80808081 	.word	0x80808081
+    b0cc:	4586      	cmp	lr, r0
+    b0ce:	f8a3 8002 	strh.w	r8, [r3, #2]
+    b0d2:	d1e6      	bne.n	b0a2 <drawColumn(int, int) [clone .part.0]+0x2ce>
+    b0d4:	e6bf      	b.n	ae56 <drawColumn(int, int) [clone .part.0]+0x82>
         col[r] = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
-    b0d2:	f823 0f04 	strh.w	r0, [r3, #4]!
+    b0d6:	f823 0f04 	strh.w	r0, [r3, #4]!
       for (int r = 1; r < BAND_ROWS - 1; r++)
-    b0d6:	42bb      	cmp	r3, r7
-    b0d8:	d1b9      	bne.n	b04e <drawColumn(int, int) [clone .part.0]+0x27e>
-    b0da:	e6ce      	b.n	ae7a <drawColumn(int, int) [clone .part.0]+0xaa>
+    b0da:	42bb      	cmp	r3, r7
+    b0dc:	d1b9      	bne.n	b052 <drawColumn(int, int) [clone .part.0]+0x27e>
+    b0de:	e6ce      	b.n	ae7e <drawColumn(int, int) [clone .part.0]+0xaa>
 
-0000b0dc <movePlayhead(int, int, unsigned short)>:
+0000b0e0 <movePlayhead(int, int, unsigned short)>:
   for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
 }
 
 // Moves a view's playhead (or record head) to col with the given look,
 // redrawing only the columns it leaves and covers.
 static void movePlayhead(int i, int col, uint16_t color) {
-    b0dc:	b538      	push	{r3, r4, r5, lr}
-    b0de:	460c      	mov	r4, r1
+    b0e0:	b538      	push	{r3, r4, r5, lr}
+    b0e2:	460c      	mov	r4, r1
   WaveView &v = views[i];
   if (col == v.playCol && color == v.headColor) return;
-    b0e0:	4b0f      	ldr	r3, [pc, #60]	@ (b120 <movePlayhead(int, int, unsigned short)+0x44>)
-    b0e2:	f44f 71ac 	mov.w	r1, #344	@ 0x158
+    b0e4:	4b0f      	ldr	r3, [pc, #60]	@ (b124 <movePlayhead(int, int, unsigned short)+0x44>)
+    b0e6:	f44f 71ac 	mov.w	r1, #344	@ 0x158
 static void movePlayhead(int i, int col, uint16_t color) {
-    b0e6:	4605      	mov	r5, r0
+    b0ea:	4605      	mov	r5, r0
   if (col == v.playCol && color == v.headColor) return;
-    b0e8:	fb01 3300 	mla	r3, r1, r0, r3
-    b0ec:	6959      	ldr	r1, [r3, #20]
-    b0ee:	42a1      	cmp	r1, r4
-    b0f0:	d011      	beq.n	b116 <movePlayhead(int, int, unsigned short)+0x3a>
+    b0ec:	fb01 3300 	mla	r3, r1, r0, r3
+    b0f0:	6959      	ldr	r1, [r3, #20]
+    b0f2:	42a1      	cmp	r1, r4
+    b0f4:	d011      	beq.n	b11a <movePlayhead(int, int, unsigned short)+0x3a>
   int old = v.playCol;
   v.playCol = col;
   v.headColor = color;
   if (old >= 0 && old != col) drawColumn(i, old + 1);
-    b0f2:	2900      	cmp	r1, #0
+    b0f6:	2900      	cmp	r1, #0
   v.headColor = color;
-    b0f4:	831a      	strh	r2, [r3, #24]
+    b0f8:	831a      	strh	r2, [r3, #24]
   v.playCol = col;
-    b0f6:	615c      	str	r4, [r3, #20]
+    b0fa:	615c      	str	r4, [r3, #20]
   if (old >= 0 && old != col) drawColumn(i, old + 1);
-    b0f8:	db04      	blt.n	b104 <movePlayhead(int, int, unsigned short)+0x28>
-    b0fa:	3101      	adds	r1, #1
+    b0fc:	db04      	blt.n	b108 <movePlayhead(int, int, unsigned short)+0x28>
+    b0fe:	3101      	adds	r1, #1
   if (bc < 0 || bc >= BLOCK_COLS) return;
-    b0fc:	2941      	cmp	r1, #65	@ 0x41
-    b0fe:	dc01      	bgt.n	b104 <movePlayhead(int, int, unsigned short)+0x28>
-    b100:	f7ff fe66 	bl	add0 <drawColumn(int, int) [clone .part.0]>
+    b100:	2941      	cmp	r1, #65	@ 0x41
+    b102:	dc01      	bgt.n	b108 <movePlayhead(int, int, unsigned short)+0x28>
+    b104:	f7ff fe66 	bl	add4 <drawColumn(int, int) [clone .part.0]>
   if (col >= 0) drawColumn(i, col + 1);
-    b104:	2c00      	cmp	r4, #0
-    b106:	db05      	blt.n	b114 <movePlayhead(int, int, unsigned short)+0x38>
+    b108:	2c00      	cmp	r4, #0
+    b10a:	db05      	blt.n	b118 <movePlayhead(int, int, unsigned short)+0x38>
   if (bc < 0 || bc >= BLOCK_COLS) return;
-    b108:	1c61      	adds	r1, r4, #1
-    b10a:	4628      	mov	r0, r5
+    b10c:	1c61      	adds	r1, r4, #1
+    b10e:	4628      	mov	r0, r5
 }
-    b10c:	e8bd 4038 	ldmia.w	sp!, {r3, r4, r5, lr}
-    b110:	f7ff be5e 	b.w	add0 <drawColumn(int, int) [clone .part.0]>
-    b114:	bd38      	pop	{r3, r4, r5, pc}
+    b110:	e8bd 4038 	ldmia.w	sp!, {r3, r4, r5, lr}
+    b114:	f7ff be5e 	b.w	add4 <drawColumn(int, int) [clone .part.0]>
+    b118:	bd38      	pop	{r3, r4, r5, pc}
   if (col == v.playCol && color == v.headColor) return;
-    b116:	8b19      	ldrh	r1, [r3, #24]
-    b118:	4291      	cmp	r1, r2
-    b11a:	d0fb      	beq.n	b114 <movePlayhead(int, int, unsigned short)+0x38>
+    b11a:	8b19      	ldrh	r1, [r3, #24]
+    b11c:	4291      	cmp	r1, r2
+    b11e:	d0fb      	beq.n	b118 <movePlayhead(int, int, unsigned short)+0x38>
   v.headColor = color;
-    b11c:	831a      	strh	r2, [r3, #24]
+    b120:	831a      	strh	r2, [r3, #24]
   if (old >= 0 && old != col) drawColumn(i, old + 1);
-    b11e:	e7f1      	b.n	b104 <movePlayhead(int, int, unsigned short)+0x28>
-    b120:	20002c00 	.word	0x20002c00
-    b124:	00000000 	.word	0x00000000
+    b122:	e7f1      	b.n	b108 <movePlayhead(int, int, unsigned short)+0x28>
+    b124:	20002c00 	.word	0x20002c00
 
 0000b128 <updateLive(int)>:
 
@@ -26755,7 +26757,7 @@ static void updateLive(int i) {
     for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
     b1de:	3401      	adds	r4, #1
     b1e0:	4630      	mov	r0, r6
-    b1e2:	f7ff fdf5 	bl	add0 <drawColumn(int, int) [clone .part.0]>
+    b1e2:	f7ff fdf7 	bl	add4 <drawColumn(int, int) [clone .part.0]>
     b1e6:	2c42      	cmp	r4, #66	@ 0x42
     b1e8:	d1f8      	bne.n	b1dc <updateLive(int)+0xb4>
   int oldFilled = v.liveFilled;
@@ -26781,7 +26783,7 @@ static void updateLive(int i) {
     b20c:	1ae4      	subs	r4, r4, r3
     b20e:	eb04 010a 	add.w	r1, r4, sl
     b212:	4628      	mov	r0, r5
-    b214:	f7ff fdbe 	bl	ad94 <columnLevel(unsigned char const*, int)>
+    b214:	f7ff fdc0 	bl	ad98 <columnLevel(unsigned char const*, int)>
     b218:	f80a 0f01 	strb.w	r0, [sl, #1]!
     b21c:	45c2      	cmp	sl, r8
     b21e:	d1f6      	bne.n	b20e <updateLive(int)+0xe6>
@@ -26803,7 +26805,7 @@ static void updateLive(int i) {
     if (columnLevel(v.liveData, c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c + 1);
     b242:	4621      	mov	r1, r4
     b244:	4628      	mov	r0, r5
-    b246:	f7ff fda5 	bl	ad94 <columnLevel(unsigned char const*, int)>
+    b246:	f7ff fda7 	bl	ad98 <columnLevel(unsigned char const*, int)>
     b24a:	f817 2f01 	ldrb.w	r2, [r7, #1]!
     b24e:	46a0      	mov	r8, r4
   if (bc < 0 || bc >= BLOCK_COLS) return;
@@ -26823,7 +26825,7 @@ static void updateLive(int i) {
     b26a:	f04f 0801 	movgt.w	r8, #1
     b26e:	4543      	cmp	r3, r8
     b270:	d001      	beq.n	b276 <updateLive(int)+0x14e>
-    b272:	f7ff fdad 	bl	add0 <drawColumn(int, int) [clone .part.0]>
+    b272:	f7ff fdaf 	bl	add4 <drawColumn(int, int) [clone .part.0]>
   for (int c = 0; c < WAVE_COLS; c++)
     b276:	2c40      	cmp	r4, #64	@ 0x40
     b278:	d1e3      	bne.n	b242 <updateLive(int)+0x11a>
@@ -26831,7 +26833,7 @@ static void updateLive(int i) {
     b27a:	2201      	movs	r2, #1
     b27c:	4659      	mov	r1, fp
     b27e:	4630      	mov	r0, r6
-    b280:	f7ff ff2c 	bl	b0dc <movePlayhead(int, int, unsigned short)>
+    b280:	f7ff ff2e 	bl	b0e0 <movePlayhead(int, int, unsigned short)>
 }
     b284:	b05f      	add	sp, #380	@ 0x17c
     b286:	e8bd 8ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
@@ -27077,7 +27079,7 @@ inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
   for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
     b472:	3501      	adds	r5, #1
     b474:	4620      	mov	r0, r4
-    b476:	f7ff fcab 	bl	add0 <drawColumn(int, int) [clone .part.0]>
+    b476:	f7ff fcad 	bl	add4 <drawColumn(int, int) [clone .part.0]>
     b47a:	2d42      	cmp	r5, #66	@ 0x42
     b47c:	d1f8      	bne.n	b470 <drawWave(int, bool)+0x150>
 }
@@ -27287,7 +27289,7 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
     b63a:	bf18      	it	ne
     b63c:	464a      	movne	r2, r9
     b63e:	4620      	mov	r0, r4
-    b640:	f7ff fd4c 	bl	b0dc <movePlayhead(int, int, unsigned short)>
+    b640:	f7ff fd4e 	bl	b0e0 <movePlayhead(int, int, unsigned short)>
   for (int i = 0; i < NUM_TRACKS; i++) {
     b644:	3401      	adds	r4, #1
     b646:	f505 75ac 	add.w	r5, r5, #344	@ 0x158

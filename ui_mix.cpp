@@ -8,8 +8,9 @@
 // side (up to the mono sum, +6 dB) or takes away from it. The meter (the
 // channel's actual output, with peak hold falling at METER_FALL_DB_PER_S)
 // lights them white on the same scale. Arcs above both: dark grey; up to the
-// level: 50% grey. While B is held on the cell (B + arrows change volume and
-// balance) those are in the accent colour, the meter's midway between it and white. An arc is only redrawn when its look changes.
+// level: 50% grey. While B alone is held on the cell (B + arrows change volume
+// and balance) the meter is in the accent colour, the level's arcs in it at
+// half brightness. An arc is only redrawn when its look changes.
 static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = ROW_BAND / PX;   // 39 x 13
 static constexpr int MIX_ARCS = 4;
 static constexpr float MIX_R0 = 4, MIX_DR = 3.5f, MIX_HALF_H = 5, MIX_SLOPE = 1.2f;   // in blocks
@@ -38,15 +39,16 @@ static int arcsForDb(float db) {
 }
 static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
 
-// An arc's look: off (dark grey), up to the level (50% grey; the accent while edited), the meter (white).
+// An arc's look: off (dark grey), up to the level (50% grey; the accent at half brightness while edited),
+// the meter (white; the accent while edited).
 enum : uint8_t { ARC_OFF, ARC_LEVEL, ARC_METER, ARC_NONE, ARC_LEVEL_EDIT, ARC_METER_EDIT };
 
 static uint16_t blockColor(uint8_t look, int r, int c) {
   switch (look) {
     case ARC_METER: return INK;
-    case ARC_METER_EDIT: return blend565(ACCENT, INK, 128);   // midway between the accent and white
+    case ARC_METER_EDIT: return ACCENT;
     case ARC_LEVEL: return DIM;
-    case ARC_LEVEL_EDIT: return ACCENT;
+    case ARC_LEVEL_EDIT: return blend565(ACCENT, BG, 128);   // the accent at half brightness
     case ARC_OFF:   return DARK;
     default:        return BG;
   }
@@ -79,7 +81,7 @@ void drawMix(int i) {
   uint16_t frame = cellFrame(i, MIX_CELL);
   uint8_t looks[2 * MIX_ARCS];
   float gains[2] = {tr.levelL, tr.levelR};
-  bool editing = editingCell(i, MIX_CELL);
+  bool editing = i == selected && selectedCell == MIX_CELL && bAlone();
   uint8_t levelLook = editing ? ARC_LEVEL_EDIT : ARC_LEVEL, meterLook = editing ? ARC_METER_EDIT : ARC_METER;
   for (int ch = 0; ch < 2; ch++) {
     int level = arcsForDb(gainDb(gains[ch])), meter = arcsForDb(meterDb[i][ch]);

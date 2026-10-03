@@ -79,8 +79,8 @@ while A is held). A recording track's waveform cell is in the accent colour.
 * Volume (`ui_mix.cpp`): `((( )))`, 4 arcs a side: dark grey above the level,
   50% grey up to it, white for the meter.
 * Editing (B held on the selected cell, so B + arrows change it): the loop
-  range (B alone), the filter line and the volume arcs lit by the level turn to the
-  accent colour, the volume meter midway between it and white
+  range (B alone), the filter line, and the volume meter (B alone; its level
+  arcs in the accent at half brightness) turn to the accent colour
   (`editingCell()` in ui.h).
 * Icons (`ui_buttons.cpp`): bitmaps of blocks; "TAP" in the pixel font.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
