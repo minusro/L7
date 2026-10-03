@@ -70,5 +70,6 @@ void drawFilter(int i) {
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(CELL[FILTER_CELL].x, bgTop(i), w, top - bgTop(i), BG);   // the first row's margin
   t.writeRect(CELL[FILTER_CELL].x, top, w, ROW_BAND, px);
-  drawDividerUnder(i, CELL[FILTER_CELL].x, w);
+  int bottom = top + ROW_BAND, end = bgTop(i) + bgHeight(i);
+  if (bottom < end) t.fillRect(CELL[FILTER_CELL].x, bottom, w, end - bottom, BG);   // the gap below the last track
 }

@@ -4,17 +4,15 @@
 // ---- Waveforms
 // Each track's whole loop in WAVE_COLS columns of blocks, inside the cell's
 // frame column on either side. Rows of blocks (13 in the band):
-//   0, 12   the frame (selected row); on the last track row 12 is the
-//           divider when there's no frame
-//   2 - 10  the waveform: a line along row 6, the peaks reaching up to 4
-//           blocks above and below it
-//   11      bar ticks
+//   0, 12   the frame (selected cell)
+//   1 - 11  the waveform: a line along row 6, the peaks reaching up to 5
+//           blocks above and below it. Heights go with the square root of
+//           the peak level (as the overview stores it).
 // The waveform is white inside the loop range and dark grey outside; on a
 // muted clip the range is 50% grey (the rest dark grey too). While B alone is
 // held on the selected waveform cell (B + arrows change the range), the range
 // is in the accent colour, muted or not. The start position: a short line
-// across the middle, inverting what's there, on every track. The bar ticks
-// (dark grey) only show while the waveform cell is selected. The playhead is an accent-coloured line (white
+// across the middle, inverting what's there, on every track. The playhead is an accent-coloured line (white
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
 // A recording track's cell is in the accent colour, its waveform growing in
@@ -25,8 +23,11 @@
 static constexpr int BLOCK_COLS = WAVE_W / PX;                  // 66, the frame's included
 static constexpr int WAVE_COLS = BLOCK_COLS - 2;               // 64 waveform columns
 static constexpr int BAND_ROWS = ROW_BAND / PX;                // 13
-static constexpr int MID_ROW = 6, WAVE_REACH = 4;              // rows 2-10
-static constexpr int TICK_ROW = MID_ROW + WAVE_REACH + 1;      // 11
+static constexpr int MID_ROW = 6, WAVE_REACH = 5;              // rows 1-11
+
+// Waveform height (blocks each way) for a stored overview level (the square
+// root of the peak, 0-255): in proportion.
+static uint8_t reachFor(uint8_t level) { return (uint8_t)((level * WAVE_REACH + 127) / 255); }
 
 struct WaveView {
   bool visible = false;                            // something is shown (not an empty track)
@@ -36,7 +37,6 @@ struct WaveView {
   int markCol = -1;                                // the start position's column; -1: none
   int playCol = -1;                                // playhead / record head; -1: none
   uint16_t headColor = 0;                          // a line this colour; INVERT_HEAD: the column inverted
-  bool marks = false;                              // the start position and bar ticks shown
   uint16_t rangeInk = INK;                         // the waveform inside the loop range
   // live view
   uint32_t liveBars = 0;
@@ -51,12 +51,6 @@ struct WaveView {
 static WaveView views[NUM_TRACKS];
 // The record head's look (not a colour the playheads use): its column inverted.
 static constexpr uint16_t INVERT_HEAD = 0x0001;
-
-// A column holds a bar tick if a bar boundary (other than the start) falls in it.
-static bool isBarColumn(uint32_t bars, int c) {
-  uint32_t b0 = ((uint64_t)c * bars + WAVE_COLS - 1) / WAVE_COLS;   // first boundary >= column start
-  return b0 > 0 && b0 < bars && (uint64_t)b0 * WAVE_COLS < (uint64_t)(c + 1) * bars;
-}
 
 // Level shown in column c: the peak of the stored overview columns
 // (OVERVIEW_COLS of them) that it covers.
@@ -85,11 +79,10 @@ static void drawColumn(int i, int bc) {
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
     if (!v.live || c < v.liveFilled) {
       uint16_t ink = v.live ? BG : !in ? DARK : v.rangeInk;   // (live: on the coloured cell)
-      int h = (columnLevel(v.live ? v.liveData : tr.overview, c) * WAVE_REACH + 127) / 255;
+      int h = reachFor(columnLevel(v.live ? v.liveData : tr.overview, c));
       for (int r = MID_ROW - h; r <= MID_ROW + h; r++)
         col[r] = ink;
     }
-    if (v.marks && !v.live && isBarColumn(tr.loopBars, c)) col[TICK_ROW] = DARK;   // bar ticks
     if (!v.live && c == v.markCol)                                // the start position: inverting
       for (int r = MID_ROW - 2; r <= MID_ROW + 2; r++) col[r] = col[r] == v.bg ? (muted ? DIM : INK) : v.bg;
     if (c == v.playCol) {                                         // on top: the playhead
@@ -105,7 +98,8 @@ static void drawColumn(int i, int bc) {
   int x = WAVE_X + bc * PX, top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(x, bgTop(i), PX, top - bgTop(i), v.bg);   // the first row's margin
   t.writeRect(x, top, PX, ROW_BAND, px);
-  drawDividerUnder(i, x, PX);
+  int bottom = top + ROW_BAND, end = bgTop(i) + bgHeight(i);
+  if (bottom < end) t.fillRect(x, bottom, PX, end - bottom, BG);   // the gap below the last track
 }
 
 void drawWave(int i, bool recordingHere) {
@@ -114,11 +108,11 @@ void drawWave(int i, bool recordingHere) {
   uint32_t rs = 0, rb = 0;
   if (tr.state != TrackState::Empty) trackRange(i, rs, rb);
   uint16_t bg = cellBackground(i, WAVE_CELL), frame = cellFrame(i, WAVE_CELL);
-  bool marks = i == selected && selectedCell == WAVE_CELL;
-  uint16_t rangeInk = marks && bAlone() ? ACCENT : tr.state == TrackState::Muted ? DIM : INK;
+  bool editing = i == selected && selectedCell == WAVE_CELL && bAlone();
+  uint16_t rangeInk = editing ? ACCENT : tr.state == TrackState::Muted ? DIM : INK;
   if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.frame == frame &&
-      v.marks == marks && v.rangeInk == rangeInk)
+      v.rangeInk == rangeInk)
     return;
   v.drawn = uiGeneration;
   v.version = tr.overviewVersion;
@@ -128,7 +122,6 @@ void drawWave(int i, bool recordingHere) {
   v.rb = rb;
   v.bg = bg;
   v.frame = frame;
-  v.marks = marks;
   v.rangeInk = rangeInk;
   v.live = recordingHere;
   v.visible = recordingHere || tr.state != TrackState::Empty;

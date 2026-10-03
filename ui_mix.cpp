@@ -108,7 +108,8 @@ void drawMix(int i) {
       }
     if (bgTop(i) < top) t.fillRect(cell.x, bgTop(i), cell.w, top - bgTop(i), BG);   // the first row's margin
     t.writeRect(cell.x, top, cell.w, ROW_BAND, px);
-    drawDividerUnder(i, cell.x, cell.w);
+    int bottom = top + ROW_BAND, end = bgTop(i) + bgHeight(i);
+    if (bottom < end) t.fillRect(cell.x, bottom, cell.w, end - bottom, BG);   // the gap below the last track
     drawn[i] = uiGeneration;
     shownFrame[i] = frame;
     memcpy(shown[i], looks, sizeof looks);

@@ -53,8 +53,8 @@ holding the divider, then the status row; cells
 waveform | filter | volume | button (square).
 
 Style (after Elektron's screens): five colours (`colors.h`) — black (`BG`),
-12.5% grey (`DARK`: background detail — outside the loop range, fills, unlit
-arcs, the selected row's other frames, the divider, bar ticks), 50% grey
+12.5% grey (`DARK`: background detail — outside the loop range, the filter
+fill, unlit arcs), 50% grey
 (`DIM`: inactive — muted clips, idle icons and text), white (`INK`: active,
 selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one constant: recording
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
@@ -69,9 +69,9 @@ the accent colour while A is held. A recording track's waveform cell is in the a
 * Waveform (`ui_wave.cpp`): 64 columns, a centre line with peaks up to 4
   blocks each way; white inside the loop range, dark grey outside (muted:
   50% grey range, dark grey outside). The start position: a short line
-  across the middle (inverting what's there), on every track. While the
-  waveform cell is selected: bar ticks along the bottom; while B alone is held
-  on it, the range is in the accent colour, muted or not. Playheads are accent-coloured lines (white while the
+  across the middle (inverting what's there), on every track. While B alone
+  is held on the selected waveform cell, the range is in the accent colour,
+  muted or not. Playheads are accent-coloured lines (white while the
   range is in the accent colour); on muted clips black lines cutting through
   the waveform. A
   recording's record head inverts its column.

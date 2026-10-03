@@ -225,7 +225,6 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   t.writeRect(BUTTON_X, top, BUTTON_W, ROW_BAND, px);
   int bottom = top + ROW_BAND, end = bgTop(i) + bgHeight(i);
   if (bottom < end) t.fillRect(BUTTON_X, bottom, BUTTON_W, end - bottom, BG);   // the margin below
-  drawDividerUnder(i, BUTTON_X, BUTTON_W);
 }
 
 // The row's gaps and button (the cells: drawWave(), drawFilter(), drawMix(),
@@ -251,7 +250,6 @@ void drawCells(int i) {
       if (i == STATUS_ROW && c == TEMPO_CELL) continue;   // (inside the tempo's cell there)
       int from = CELL[c].x + CELL[c].w, to = c + 1 < CELLS ? CELL[c + 1].x : BUTTON_X;
       t.fillRect(from, bgTop(i), to - from, bgHeight(i), BG);
-      if (i == DIVIDER_ROW) t.fillRect(from, dividerY(), to - from, PX, DIVIDER);   // the divider runs on
     }
   drawButton(i, k.icon, k.iconColor, k.bg, k.badge);
 }

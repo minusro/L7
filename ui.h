@@ -11,8 +11,7 @@
 // pixel font, and the selection shown by frames and inverted boxes.
 constexpr int PX = 2;
 // Vertical layout: 9 rows of 26 px (13 blocks): the 8 tracks from the top
-// of the screen, a block's gap holding the divider, the status row, and 4 px
-// below.
+// of the screen, a block's gap, the status row, and 4 px below.
 constexpr int ROW_BAND = 26;
 constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2;    // 210
 // Each track row: three cells, then the button (a square), separated by
@@ -39,16 +38,10 @@ inline int selectedCellIn(int i) { return min(selectedCell, cellCount(i) - 1); }
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : i * ROW_BAND; }
 // A row's backgrounds: its band; the last track row's also the gap below it,
 // the status row's out to the screen's bottom edge.
-constexpr int DIVIDER_ROW = NUM_TRACKS - 1;
+constexpr int LAST_TRACK_ROW = NUM_TRACKS - 1;
 inline int bgTop(int i) { return rowTop(i); }
 inline int bgHeight(int i) {
-  return (i == STATUS_ROW ? 240 : i == DIVIDER_ROW ? STATUS_TOP : rowTop(i) + ROW_BAND) - bgTop(i);
-}
-// The divider above the status row: a dark line filling the gap under the
-// last track row. Each part of that row draws it under itself (x, w).
-inline int dividerY() { return STATUS_TOP - PX; }
-inline void drawDividerUnder(int i, int x, int w) {
-  if (i == DIVIDER_ROW) board.tft().fillRect(x, dividerY(), w, PX, DIVIDER);
+  return (i == STATUS_ROW ? 240 : i == LAST_TRACK_ROW ? STATUS_TOP : rowTop(i) + ROW_BAND) - bgTop(i);
 }
 
 inline bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }

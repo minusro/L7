@@ -23,7 +23,6 @@ constexpr uint16_t INK = rgb565(255, 255, 255);     // white: what's active, sel
 constexpr uint16_t ACCENT = rgb565(48, 230, 170);   // green turquoise: recording, and a scene change on its way
 
 // ---- Roles
-constexpr uint16_t DIVIDER = DARK;           // line above the status row
 constexpr uint16_t PLAYHEAD = ACCENT;        // playing clips
 constexpr uint16_t MUTED_HEAD = BG;          // the selected muted clip (a cut through its waveform)
 
