@@ -21,9 +21,13 @@ A scene is a snapshot of the looper: the 8 track units and the tempo
 
 * B + UP/DOWN on the status row's scene cell works exactly like SHIFT + UP/DOWN
   (B held counts as SHIFT held below).
-* **SHIFT held** (clock running): SHIFT+UP/DOWN only moves the target shown in
-  the label (`sceneHold`, `sceneHeld()`); nothing loads. Letting go of SHIFT
-  goes there.
+* **SHIFT held** (clock running): SHIFT+UP/DOWN moves the target shown in the
+  label (`sceneHold`, `sceneHeld()`), and the target is **prepared**: its
+  samples' files are opened in the background, one per loop pass
+  (`prepareUnits()`, `unitsPrepared()`). Letting go of SHIFT launches the
+  change at once if it's prepared, otherwise as soon as it is; the label
+  flashes until the change happens. A prepared change needs only ~60 ms of
+  lead before its switch point instead of 150 ms.
 * A normal change then takes effect on the **first bar line at least 150 ms
   ahead** (`beginSceneChange()`), all of it together: samples (gapless, see
   playback.md), mutes, filters, volumes, tracks starting or stopping, and the

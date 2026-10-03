@@ -28,9 +28,17 @@ bool setTrackUnit(int t, const TrackUnit &u);
 // before it reuses it (unless it's under ~50 ms away). quick: the next beat
 // instead (a change already waiting moves up to it). Returns that point's
 // transport beat (-1: stopped, at once).
-int32_t beginSceneChange(bool quick = false);
+// prepared: the scene's samples were opened ahead (prepareUnits()): a lead
+// of ~60 ms is enough.
+int32_t beginSceneChange(bool quick = false, bool prepared = false);
 void endSceneChange();
 bool sceneChangeWaiting();             // a scene change hasn't reached its switch point yet
+// Preparing a scene ahead (selected while SHIFT is held): the units' sample
+// files are opened in the background, one per pass, so the change can launch
+// sooner. nullptr: drop it. unitsPrepared(): all opened (false when nothing
+// is being prepared).
+void prepareUnits(const TrackUnit *units);
+bool unitsPrepared();
 // A write may go to the card now (stopped, or the playback buffers are full);
 // false also asks for the buffers to be topped up first.
 bool storageMayWrite();

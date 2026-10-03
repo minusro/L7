@@ -71,7 +71,14 @@ no dropouts or overruns
 - 80s lcd ui experiment V
 - switch tempo and clock labels V
 
+
+3oct26
+
+- when switching scenes, start preloading the selected scene as soon as pressing Up/Down but only launch it immediately after Shift is released (or when it's finished loading if it hasn't already). While the newly selected scene is loading, the scene label should flash. V
+- highlight clock label in accent color while Play is held (regardless of other keys' status)
+
 - [ Projects ]
+- figure out how to build resampling
 - crossfading between two scenes
 
 - add play icon to status row (?)

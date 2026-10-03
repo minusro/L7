@@ -141,8 +141,9 @@ static void commit() {
 // (quick: the next beat).
 static void apply(const SceneInfo &s, bool quick) {
   loading = true;
-  int32_t at = beginSceneChange(quick);
-  for (int t = 0; t < NUM_TRACKS; t++) setTrackUnit(t, s.units[t]);
+  int32_t at = beginSceneChange(quick, unitsPrepared());
+  for (int t = 0; t < NUM_TRACKS; t++) setTrackUnit(t, s.units[t]);   // (they take the prepared files)
+  prepareUnits(nullptr);
   if (s.tempo > 0) setTempo(s.tempo);
   // A tempo change on its way (this scene's, or one still waiting) goes with it.
   transport.spbAtBeat = transport.pendingSpb ? at : -1;
@@ -156,15 +157,18 @@ static bool busy() { return recording.mode != Recording::Idle; }
 // quick: then at once, switching on the next beat.
 static bool go(int pos, bool quick = false) {
   pos = constrain(pos, 0, list.count + 1);
-  if (holding && !quick) {                       // only the label moves for now
+  if (holding && !quick) {                       // only the label moves for now, the scene is prepared
     if (busy() || pos == sceneCurrent()) return false;
     target = pos == list.current ? -1 : pos;
+    if (target >= 0) prepareUnits(sceneAt(min(target, (int)list.count)).units);   // N+1*: a copy of N
+    else prepareUnits(nullptr);
     return true;
   }
   if (quick && target >= 0) {                   // a held selection: passed over
     if (busy()) return false;
     target = -1;
   }
+  if (quick) prepareUnits(nullptr);                // (files prepared for another scene: not these)
   commit();
   if (busy() || pos == list.current) return false;
   list.current = pos;
@@ -179,12 +183,18 @@ bool sceneStep(int dir) {
   return go(from + dir, from == end || from + dir == end);
 }
 
-bool sceneHold(bool on) {
-  holding = on;
-  if (on || target < 0) return false;
+// Let go: the held selection launches once its samples are open (at once if
+// they are; otherwise from serviceScenes(), the label flashing meanwhile).
+static bool launchHeld() {
+  if (holding || target < 0 || !unitsPrepared()) return false;
   int pos = target;
   target = -1;
   return go(pos);
+}
+
+bool sceneHold(bool on) {
+  holding = on;
+  return launchHeld();
 }
 
 // A held selection is taken first (cut, paste and duplicate act on it).
@@ -243,6 +253,7 @@ bool sceneDuplicate() {
 }
 
 void serviceScenes() {
+  launchHeld();                                    // let go before it was prepared: now it is
   commit();
   if (!file || (recordSlot < 0 && !listDirty) || !storageMayWrite()) return;
   if (recordSlot >= 0) {                          // one write per call

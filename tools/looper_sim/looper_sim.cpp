@@ -1123,6 +1123,27 @@ int main(int argc, char **argv) {
     check(at % 4 == 0 && at > released && at <= released + 4 && sceneCurrent() == from + 1, m);
   }
 
+  printf("a scene selected with SHIFT held is prepared; let go early, it launches once ready\n");
+  {
+    int from = sceneCurrent();
+    sceneHold(true);
+    check(sceneStep(-1) && sceneHeld() && !unitsPrepared(), "stepped while held: preparing (the label flashes)");
+    sceneHold(false);
+    check(sceneHeld() && !sceneChangeWaiting(), "let go at once: waits for its files");
+    for (int i = 0; i < 200 && sceneHeld(); i++) block();
+    check(!sceneHeld() && sceneChangeWaiting() && sceneCurrent() == from - 1, "files open: the change launches");
+    waitScene();
+    runBeats(2);
+    for (int t = 0; t < 2; t++)
+      if (tracks[t].state == TrackState::Playing) {
+        char m[64];
+        snprintf(m, sizeof m, "track %d after the prepared change", t + 1);
+        checkSync(t, m);
+      }
+    sceneStep(1);                                  // back (not held: the stopped/held logic aside)
+    waitScene();
+  }
+
   printf("quick scene changes: on the next beat, SHIFT held or not\n");
   {
     auto empty = [] { for (auto &x : tracks) if (x.state != TrackState::Empty) return false; return true; };

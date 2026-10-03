@@ -286,12 +286,67 @@ static bool openSample(uint32_t n, FsFile &f, SampleInfo &info, uint8_t *overvie
   return true;
 }
 
+// ---- Preparing a scene ahead (see storage.h): each track's sample file,
+// opened in the background, one per loop() pass.
+struct Prepared {
+  uint16_t want = 0;                               // the sample to open; 0: none
+  uint16_t sample = 0;                             // the one `file` holds; 0: none
+  FsFile file;
+  SampleInfo info;
+  uint8_t overview[OVERVIEW_COLS];
+};
+DMAMEM static Prepared prepared[NUM_TRACKS];       // (RAM2: only loop() uses them, never DMA)
+static bool preparing = false;
+
+void prepareUnits(const TrackUnit *units) {
+  preparing = units != nullptr;
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    Prepared &p = prepared[t];
+    p.want = units && units[t].sample != unitOf(t).sample ? units[t].sample : 0;   // (none for the same sample)
+    if (p.sample != p.want) {
+      p.file.close();
+      p.sample = 0;
+    }
+  }
+}
+
+bool unitsPrepared() {
+  if (!preparing) return false;
+  for (const auto &p : prepared) if (p.want && p.sample != p.want) return false;
+  return true;
+}
+
+// One file a pass, when the streams can afford it.
+static void servicePrepare() {
+  if (!preparing) return;
+  for (auto &p : prepared) {
+    if (!p.want || p.sample == p.want) continue;
+    if (!storageMayWrite()) return;                // (the streams topped up first, as for a write)
+    if (openSample(p.want, p.file, p.info, p.overview)) p.sample = p.want;
+    else p.want = 0;                               // can't be read: the switch finds out too
+    writePending = false;
+    return;
+  }
+}
+
+// Track t's prepared file for sample n, if there is one: moved to f.
+static bool takePrepared(int t, uint32_t n, FsFile &f, SampleInfo &info, uint8_t *overview) {
+  Prepared &p = prepared[t];
+  if (!n || p.sample != n || !p.file) return false;
+  f = std::move(p.file);                           // (SdFat copies: the copy left behind is let go)
+  p.file.close();
+  info = p.info;
+  memcpy(overview, p.overview, OVERVIEW_COLS);
+  p.sample = p.want = 0;
+  return true;
+}
+
 // Opens sample n for track t and takes on its recording (length, tempo,
 // overview). The track's settings are left to the caller.
 static bool loadSample(int t, uint32_t n) {
   Track &tr = tracks[t];
   SampleInfo info;
-  if (!openSample(n, tr.file, info, tr.overview)) return false;
+  if (!takePrepared(t, n, tr.file, info, tr.overview) && !openSample(n, tr.file, info, tr.overview)) return false;
   tr.sample = n;
   prerollFrames[t] = prerollOf(info);
   tr.spbNative = info.spb;
@@ -384,6 +439,7 @@ bool storageMayWrite() {
 // new samples and read their starts. A planned switch can still be changed
 // up to PLAN_LATE_MS before it.
 static constexpr uint32_t SWITCH_LEAD_MS = 150, PLAN_LATE_MS = 50;
+static constexpr uint32_t PREPARED_LEAD_MS = 60;     // a scene prepared ahead: only the samples' starts to read
 static constexpr int64_t msToSamples(uint32_t ms) { return (int64_t)ms * 441 / 10; }
 
 // Transport position in samples (at the current tempo), and the time of quarter beat q.
@@ -397,9 +453,9 @@ static int64_t nowSamples(int64_t &spb) {
 static int64_t quarterTime(int32_t q, int64_t spb) { return (int64_t)(q / 4) * spb + (q % 4) * spb / 4; }
 
 // The first quarter beat (grid > 0: start of a beat that's a multiple of
-// gridBeats) at least SWITCH_LEAD_MS ahead.
-static int32_t quarterAfterLead(int32_t gridBeats) {
-  int64_t spb, now = nowSamples(spb) + msToSamples(SWITCH_LEAD_MS);
+// gridBeats) at least leadMs ahead.
+static int32_t quarterAfterLead(int32_t gridBeats, uint32_t leadMs = SWITCH_LEAD_MS) {
+  int64_t spb, now = nowSamples(spb) + msToSamples(leadMs);
   if (!gridBeats) return (int32_t)(now * 4 / spb) + 1;
   int64_t grid = gridBeats * spb;
   return (int32_t)((now + grid - 1) / grid) * 4 * gridBeats;
@@ -466,7 +522,7 @@ static PlanResult planSwitch(int t, const TrackUnit &u, int32_t q) {
   } else if (!(p.on && p.file && p.u.sample == u.sample)) {
     FsFile f;
     SampleInfo info;
-    if (!openSample(u.sample, f, info, p.overview)) return FAILED;
+    if (!takePrepared(t, u.sample, f, info, p.overview) && !openSample(u.sample, f, info, p.overview)) return FAILED;
     p.file.close();
     p.file = std::move(f);
     p.spb = info.spb;
@@ -658,12 +714,12 @@ static bool sceneChangeOn() {
   return false;
 }
 
-int32_t beginSceneChange(bool quick) {
+int32_t beginSceneChange(bool quick, bool prepared) {
   inSceneChange = true;
   if (!transport.running) return -1;
   int64_t spb, now = nowSamples(spb);
   int32_t grid = quick ? 1 : BEATS_PER_BAR;
-  int32_t q = quarterAfterLead(grid);
+  int32_t q = quarterAfterLead(grid, prepared ? PREPARED_LEAD_MS : SWITCH_LEAD_MS);
   // Stepping on before the last one happened: the same point, if there's time
   // (and it isn't later than this one's would be).
   bool reuse = sceneChangeOn() && sceneQ >= 0 && quarterTime(sceneQ, spb) - now >= msToSamples(PLAN_LATE_MS) &&
@@ -1755,6 +1811,7 @@ void serviceStorage() {
   if (sdFailed) recoverSd();
   serviceFiles();
   serviceChanges();
+  servicePrepare();
   serviceRecorder();
   for (int t = 0; t < NUM_TRACKS; t++)
     if (tracks[t].needsRestart && transport.running) startTrack(t, transport.beat + 2, false);
