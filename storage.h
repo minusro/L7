@@ -17,6 +17,9 @@ struct TrackUnit {
   int8_t filterLo, filterHi, volume, balance;
 };
 TrackUnit unitOf(int t);
+// Units before version 2 kept volume 0-32 (unity 28, 1.5 dB steps) and
+// balance -16..16: brought to today's steps (config.h).
+void upgradeUnit(TrackUnit &u);
 // Puts unit u on track t. Stopped: at once. Playing: a track keeping its clip
 // and range plays on; one with another clip or range switches to it with no
 // gap on the next quarter beat with time to load (scene changes: see below).

@@ -10,25 +10,30 @@
 // PX x PX pixel blocks (a 160 x 120 screen of chunky pixels), a blocky
 // pixel font, and the selection shown by frames and inverted boxes.
 constexpr int PX = 2;
-// Vertical layout: 9 rows of 26 px (13 blocks): the 8 tracks from the top
-// of the screen, a block's gap, the status row, and 4 px below.
-constexpr int ROW_BAND = 26;
+// Vertical layout: rows every 26 px (13 blocks): the 8 tracks from the top
+// of the screen, then the status row 2 px lower.
+constexpr int ROW_BAND = 26;                             // a row's height (its button's)
 constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2;    // 210
-// Each track row: three cells, then the button (a square), separated by
-// one-block gaps: the waveform, the filter (its response curve), then volume
-// and balance. The selected cell gets a grey frame; the selected track a
-// grey panel in its button, behind its number (ui_buttons.cpp).
-//   waveform: x 0-131   filter: x 134-211   volume: x 214-291   button: x 294-319
+// Each track row: three cells, then the button (a square): the waveform, the
+// filter (its response curve), then volume and balance. A cell is its
+// content in a one-block border, shared with the cells next to it and those
+// above and below (a cell's rect is CELL_H tall: its row's band and the
+// block below, the next row's border): the selection frame is drawn there,
+// grey round the selected cell (ui.cpp, borderAt()). The selected track gets
+// a grey panel in its button, behind its number (ui_buttons.cpp).
+// Left of the buttons (146 blocks, 4 of them borders, then a block's space
+// before the buttons) the waveform takes about 2/3, filter and volume 1/6 each:
+//   waveform: x 0-191   filter: x 190-241   volume: x 240-291   button: x 294-319
 struct Cell { int x, w; };
+constexpr int CELL_H = ROW_BAND + PX;
 constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left to right
-constexpr Cell CELL[CELLS] = {{0, 132}, {134, 78}, {214, 78}};
+constexpr Cell CELL[CELLS] = {{0, 192}, {190, 52}, {240, 52}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
-// The status row below the tracks: its first cell, under the waveforms,
-// holds the scene; the second, spanning the filter and volume columns, the
-// clock (left) and the tempo (right).
+// The status row below the tracks: two cells of equal width, the scene, then
+// the clock (left) and the tempo (right).
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, SCENE_CELL = 0, TEMPO_CELL = 1;
-constexpr Cell TEMPO_BOX = {CELL[1].x, CELL[2].x + CELL[2].w - CELL[1].x};
+constexpr Cell SCENE_BOX = {0, 146}, TEMPO_BOX = {144, 148};   // (to the volume cells' edge)
 // The cells a row has (the status row two: the volume column is the tempo's).
 inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The selected cell in row i's terms (on the status row, the volume column
@@ -36,7 +41,7 @@ inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 inline int selectedCellIn(int i) { return min(selectedCell, cellCount(i) - 1); }
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : i * ROW_BAND; }
-// A row's backgrounds: its band; the last track row's also the gap below it,
+// A row's backgrounds: its band; the last track row's out to the status row,
 // the status row's out to the screen's bottom edge.
 constexpr int LAST_TRACK_ROW = NUM_TRACKS - 1;
 inline int bgTop(int i) { return rowTop(i); }
@@ -74,6 +79,12 @@ inline bool bAlone() {
 inline bool editingCell(int i, int cell) {
   return i == selected && cell == selectedCell && (board.keys() & m8::BTN_OPT);
 }
+// The colour of block (r, c) of row i's cell (rows x cols blocks, its border
+// included) if it's on the border (corners: always BG), from its own frame or
+// the neighbour's across that side; -1: not on the border (content).
+int borderAt(int i, int cell, int r, int c, int rows, int cols);
+// The four sides' colours together (a cell redraws when they change).
+uint64_t bordersOf(int i, int cell);
 // Does the frame (one block wide, corners cut) cover pixel (x, y) of a cell
 // w x h px? Corner blocks are left out, for rounded corners.
 inline bool onFrame(int x, int y, int w, int h) {

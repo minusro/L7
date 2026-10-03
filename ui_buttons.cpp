@@ -152,8 +152,11 @@ static uint16_t markColor() { return heldAction >= 0 ? ACCENT : DIM; }
 
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
-  static uint16_t px[BUTTON_W * ROW_BAND];
-  for (auto &p : px) p = bg;
+  // The action button reaches a block lower (to the status cells' bottom
+  // border); the icons stay where they are.
+  const int height = i == STATUS_ROW ? CELL_H : ROW_BAND;
+  static uint16_t px[BUTTON_W * CELL_H];
+  for (int p = 0; p < BUTTON_W * height; p++) px[p] = bg;
   auto blockIn = [&](int c, int r, uint16_t ink) {
     for (int dy = 0; dy < PX; dy++)
       for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * BUTTON_W + c * PX + dx] = ink;
@@ -214,21 +217,19 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
       for (int c = 0; c < glyphWidth(*g); c++)
         if (g->rows[r][c] == '#') blockIn(gc + c, gr + r, ink);
   }
-  if (i == STATUS_ROW && bg != BG)                 // the action button: its corners cut
+  if (i == STATUS_ROW && bg != BG)                 // the action button: its top left corner cut
     for (int y = 0; y < PX; y++)
-      for (int x = 0; x < PX; x++)
-        for (int cy : {y, ROW_BAND - 1 - y})
-          for (int cx : {x, BUTTON_W - 1 - x}) px[cy * BUTTON_W + cx] = BG;
+      for (int x = 0; x < PX; x++) px[y * BUTTON_W + x] = BG;
   auto &t = board.tft();
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(BUTTON_X, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin
-  t.writeRect(BUTTON_X, top, BUTTON_W, ROW_BAND, px);
-  int bottom = top + ROW_BAND, end = bgTop(i) + bgHeight(i);
+  t.writeRect(BUTTON_X, top, BUTTON_W, height, px);
+  int bottom = top + height, end = bgTop(i) + bgHeight(i);
   if (bottom < end) t.fillRect(BUTTON_X, bottom, BUTTON_W, end - bottom, BG);   // the margin below
 }
 
-// The row's gaps and button (the cells: drawWave(), drawFilter(), drawMix(),
-// drawStatus()). Redrawn only when they change.
+// The row's button (the cells: drawWave(), drawFilter(), drawMix(),
+// drawStatus()). Redrawn only when it changes.
 void drawCells(int i) {
   struct Key { int icon; uint16_t bg, iconColor, mark; uint8_t badge; };
   static Key shown[ROWS];
@@ -244,12 +245,5 @@ void drawCells(int i) {
   if (!first && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;
   shown[i] = k;
-  auto &t = board.tft();
-  if (first && !panelOpen())                         // (the panel's dimming covers them meanwhile)
-    for (int c = 0; c < CELLS; c++) {                // the gaps after each cell
-      if (i == STATUS_ROW && c == TEMPO_CELL) continue;   // (inside the tempo's cell there)
-      int from = CELL[c].x + CELL[c].w, to = c + 1 < CELLS ? CELL[c + 1].x : BUTTON_X;
-      t.fillRect(from, bgTop(i), to - from, bgHeight(i), BG);
-    }
   drawButton(i, k.icon, k.iconColor, k.bg, k.badge);
 }

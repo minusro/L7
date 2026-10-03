@@ -49,14 +49,16 @@ constexpr uint32_t PEAK_BIN_FRAMES = 4096;
 constexpr int FILTER_MAX = 32;
 constexpr float FILTER_MIN_HZ = 20.0f, FILTER_OCTAVES = 10.0f;
 
-// Per-track volume and balance. Volume step v is (v - VOLUME_UNITY) *
-// VOLUME_STEP_DB dB (off at 0): -40.5 dB to +6 dB. Balance -BALANCE_MAX..
-// BALANCE_MAX, centre 0 (the signal as it is): turning it towards one side
-// moves that share of the other channel over to this one (linearly), so at
-// the end this side carries the mono sum (L + R) and the other is silent.
-constexpr int VOLUME_MAX = 32, VOLUME_UNITY = 28;
-constexpr float VOLUME_STEP_DB = 1.5f;
-constexpr int BALANCE_MAX = 16;
+// Per-track volume and balance, in as many steps as the volume cell has lines
+// per channel (each step shows). Volume step v is (v - VOLUME_UNITY) *
+// VOLUME_STEP_DB dB (off at 0): -24 dB to +6 dB. Balance -BALANCE_MAX..
+// BALANCE_MAX (twice as many steps), centre 0 (the signal as it is): turning
+// it towards one side moves that share of the other channel over to this one
+// (linearly), so at the end this side carries the mono sum (L + R) and the
+// other is silent.
+constexpr int VOLUME_MAX = 6, VOLUME_UNITY = 5;
+constexpr float VOLUME_STEP_DB = 6.0f;
+constexpr int BALANCE_MAX = 6;
 
 // Declicking: loop and range edges, and clip switches, are crossfaded over
 // this many frames (~3 ms); track levels (mute, volume, start, stop) glide

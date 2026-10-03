@@ -256,7 +256,15 @@ static void trimSample(uint32_t n) {
 }
 
 // ---- Tracks and their unit files
-static constexpr uint32_t UNIT_VERSION = 1;
+static constexpr uint32_t UNIT_VERSION = 2;   // 2: volume and balance in today's steps
+
+void upgradeUnit(TrackUnit &u) {
+  if (u.version >= 2) return;
+  if (u.volume > 0)                                // (a quiet one stays audible: at least step 1)
+    u.volume = (int8_t)constrain((int)lroundf(VOLUME_UNITY + (u.volume - 28) * 1.5f / VOLUME_STEP_DB), 1, VOLUME_MAX);
+  u.balance = (int8_t)lroundf(u.balance * (float)BALANCE_MAX / 16);
+  u.version = 2;
+}
 
 static TrackUnit clipboard;                       // sample 0: empty
 static bool applyingUnit = false;                // setTrackUnit() at work: not a change of the scene
@@ -398,6 +406,7 @@ static void readUnit(int t) {
   if (!tr.unitFile.seekSet(0) || tr.unitFile.read(h, sizeof h) != (int)sizeof h) return;
   memcpy(&u, h, sizeof u);
   if (memcmp(u.magic, "M8TU", 4) || u.version < 1) return;
+  upgradeUnit(u);
   setTrackFilter(t, u.filterLo, u.filterHi);
   setTrackMix(t, u.volume, u.balance);
   if (u.sample && loadSample(t, u.sample)) applyUnit(t, u);
@@ -899,7 +908,12 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
   const uint32_t FILTER_AT = INFO_OFFSET + sizeof(LegacyInfo) + OVERVIEW_COLS, MIX_AT = FILTER_AT + 2;
   if (info.version >= 8) { u.filterLo = (int8_t)h[FILTER_AT]; u.filterHi = (int8_t)h[FILTER_AT + 1]; }
   else if (info.version == 7) { u.filterLo = h[FILTER_AT]; u.filterHi = h[FILTER_AT] + h[FILTER_AT + 1]; }
-  if (info.version >= 9) { u.volume = (int8_t)h[MIX_AT]; u.balance = (int8_t)h[MIX_AT + 1]; }
+  if (info.version >= 9) {                         // (in the old steps)
+    u.volume = (int8_t)h[MIX_AT];
+    u.balance = (int8_t)h[MIX_AT + 1];
+    u.version = 1;
+    upgradeUnit(u);
+  }
   writeSampleHeader(f, info.recordedFrames, info.spb, info.loopBars, tr.overview, lastOrder + 1);
   f.truncate(WAV_DATA_OFFSET + (uint64_t)info.recordedFrames * 4);
   f.close();

@@ -8,14 +8,14 @@
 // B is held (B + arrows change the filter; a muted clip's line shows only
 // then). Nothing on an empty track.
 // The cell is built in a buffer and sent at once (no flash).
-static constexpr int CELL_COLS = CELL[FILTER_CELL].w / PX;      // 39, the frame's included
+static constexpr int CELL_COLS = CELL[FILTER_CELL].w / PX;      // 41, the border's included
 static constexpr int GRAPH_COLS = CELL_COLS - 2;
-static constexpr int BAND_ROWS = ROW_BAND / PX;                 // 13
-static constexpr int TOP_ROW = 2, BOTTOM_ROW = 10;              // 0 dB, -CURVE_DB
+static constexpr int BAND_ROWS = CELL_H / PX;                   // 14
+static constexpr int TOP_ROW = 1, BOTTOM_ROW = 12;              // 0 dB, -CURVE_DB
 static constexpr float CURVE_DB = 30;
 
 void drawFilter(int i) {
-  struct Key { int8_t lo, hi; bool clip; uint16_t frame, line; };
+  struct Key { int8_t lo, hi; bool clip; uint16_t line; uint64_t borders; };
   static Key shown[NUM_TRACKS];
   static uint32_t drawn[NUM_TRACKS];               // uiGeneration when last drawn
   const Track &tr = tracks[i];
@@ -23,7 +23,7 @@ void drawFilter(int i) {
   memset(&k, 0, sizeof k);                         // padding too: compared with memcmp
   k.lo = tr.filterLo;
   k.hi = tr.filterHi;
-  k.frame = cellFrame(i, FILTER_CELL);
+  k.borders = bordersOf(i, FILTER_CELL);
   k.clip = hasClip(i);                             // empty (or still recording): nothing
   bool editing = editingCell(i, FILTER_CELL);
   k.line = !k.clip || i != selected || selectedCell != FILTER_CELL ? BG
@@ -39,13 +39,11 @@ void drawFilter(int i) {
     y[c] = TOP_ROW + -filterResponseDb(k.lo, k.hi, hz) / CURVE_DB * (BOTTOM_ROW - TOP_ROW);
   }
   uint16_t blocks[BAND_ROWS][CELL_COLS];
-  for (auto &row : blocks) for (auto &b : row) b = BG;
-  for (int c = 0; c < CELL_COLS; c++) {
-    if (k.frame != BG) {
-      if (c == 0 || c == CELL_COLS - 1) for (int r = 1; r < BAND_ROWS - 1; r++) blocks[r][c] = k.frame;
-      else blocks[0][c] = blocks[BAND_ROWS - 1][c] = k.frame;
+  for (int r = 0; r < BAND_ROWS; r++)             // the border (the frame), round the background
+    for (int c = 0; c < CELL_COLS; c++) {
+      int b = borderAt(i, FILTER_CELL, r, c, BAND_ROWS, CELL_COLS);
+      blocks[r][c] = b >= 0 ? (uint16_t)b : BG;
     }
-  }
   if (k.clip) {
     for (int c = 0; c < GRAPH_COLS; c++) {
       // The line: this column's row, stretched halfway to its neighbours'
@@ -60,7 +58,7 @@ void drawFilter(int i) {
       for (int r = max(under, TOP_ROW); r <= BOTTOM_ROW; r++) blocks[r][c + 1] = DARK;
     }
   }
-  static uint16_t px[ROW_BAND * CELL[FILTER_CELL].w];
+  static uint16_t px[CELL_H * CELL[FILTER_CELL].w];
   const int w = CELL[FILTER_CELL].w;
   for (int r = 0; r < BAND_ROWS; r++)
     for (int c = 0; c < CELL_COLS; c++)
@@ -68,8 +66,5 @@ void drawFilter(int i) {
         for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * w + c * PX + dx] = blocks[r][c];
   auto &t = board.tft();
   int top = rowTop(i);
-  if (bgTop(i) < top) t.fillRect(CELL[FILTER_CELL].x, bgTop(i), w, top - bgTop(i), BG);   // the first row's margin
-  t.writeRect(CELL[FILTER_CELL].x, top, w, ROW_BAND, px);
-  int bottom = top + ROW_BAND, end = bgTop(i) + bgHeight(i);
-  if (bottom < end) t.fillRect(CELL[FILTER_CELL].x, bottom, w, end - bottom, BG);   // the gap below the last track
+  t.writeRect(CELL[FILTER_CELL].x, top, w, CELL_H, px);
 }

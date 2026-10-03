@@ -364,7 +364,8 @@ int main(int argc, char **argv) {
              tr.sample, tr.recordedFrames, tr.loopBars, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted);
     check(tr.sample == 2 && tr.recordedFrames == legacyFrames && tr.loopBars == 1 && tr.rangeBeats == 2 &&
           tr.state == TrackState::Muted && tr.overview[10] == 100, m);
-    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 25 && tr.balance == -4, "its filter, volume and balance kept");
+    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 4 && tr.balance == -2,
+          "its filter kept, volume and balance in today's steps (25 -> 4, -4 -> -2)");
     check(wavLeft(4, 0) == -500 && wavLeft(4, 1234) == 1234 % 1000 - 500 && wavLeft(4, legacyFrames - 1) == (int16_t)((legacyFrames - 1) % 1000 - 500),
           "its audio is intact in samples/0002.wav");
     FILE *old = fopen((simRoot + "/looper/track5.wav").c_str(), "rb");
@@ -519,7 +520,7 @@ int main(int argc, char **argv) {
     Track &tr = tracks[7];
     uint32_t oldest = 0, newest = 0, count = 0;   // recordings are numbered in order now
     for (uint32_t n = 1; n <= 9999; n++) if (sampleExists(n)) { if (!oldest) oldest = n; newest = n; count++; }
-    setTrackMix(7, 20, 3);
+    setTrackMix(7, 3, 2);
     check(stepSample(7, 1) && tr.sample == oldest, "SHIFT+RIGHT on an empty track: the oldest recording");
     check(stepSample(7, 1) && tr.sample > oldest && sampleExists(tr.sample), "SHIFT+RIGHT: the one recorded next");
     uint32_t second = tr.sample;
@@ -527,7 +528,7 @@ int main(int argc, char **argv) {
     check(stepSample(7, -1) && tr.sample == newest, "SHIFT+LEFT on the oldest: wraps to the newest");
     check(stepSample(7, 1) && tr.sample == oldest, "SHIFT+RIGHT on the newest: wraps to the oldest");
     check(stepSample(7, 1) && tr.sample == second && tr.rangeStartBeat == 0 && tr.rangeBeats == tr.loopBars * 4 &&
-          tr.volume == 20 && tr.balance == 3, "range reset to the whole loop, volume and balance kept");
+          tr.volume == 3 && tr.balance == 2, "range reset to the whole loop, volume and balance kept");
     setTrackMix(7, VOLUME_UNITY, 0);               // the sync check compares at unity gain
     trackChanged(7);
     runBeats(4);
@@ -652,10 +653,10 @@ int main(int argc, char **argv) {
           "SHIFT+B twice: a copy as scene 3");
     check(sceneGoEnd() && waitScene() && sceneCurrent() == sceneCount() + 1, "SHIFT+UP twice: straight to N+1*");
     check(sceneGoEmpty() && waitScene() && sceneCurrent() == 0 && empty(), "SHIFT+DOWN twice: straight to 0*");
-    setTrackMix(7, 20, 0);                         // a change on 0*
+    setTrackMix(7, 3, 0);                          // a change on 0*
     trackChanged(7);
     block();
-    check(sceneCurrent() == 1 && sceneCount() == 4 && tracks[7].volume == 20, "changing 0* inserts a new scene 1");
+    check(sceneCurrent() == 1 && sceneCount() == 4 && tracks[7].volume == 3, "changing 0* inserts a new scene 1");
     check(sceneStep(1) && waitScene() && sceneCurrent() == 2 && tracks[0].sample == s1 && tracks[1].state == TrackState::Playing &&
           tracks[7].volume == VOLUME_UNITY, "the others moved up: old scene 1 is now 2");
     runBeats(4);
@@ -1069,14 +1070,14 @@ int main(int argc, char **argv) {
     int32_t anchorBefore[NUM_TRACKS];
     for (int t = 0; t < NUM_TRACKS; t++) { beatsBefore[t] = tracks[t].rangeBeats; anchorBefore[t] = tracks[t].rangeAnchorQ; }
     check(sceneStep(1), "to scene B");
-    setTrackMix(0, 30, 0);
+    setTrackMix(0, 3, 0);
     trackChanged(0);
     waitScene();
     for (int i = 0; i < 20; i++) block();
     afterAudio = nullptr;
     snprintf(m, sizeof m, "track 6 stops on the bar line (beat %d +%u), then empty", stop.beat, stop.sib);
     check(onBar(stop, AUDIO_BLOCK_SAMPLES) && tracks[5].state == TrackState::Empty, m);
-    check(tracks[0].volume == 30, "the volume set while waiting stayed");
+    check(tracks[0].volume == 3, "the volume set while waiting stayed");
     int kept = 0, jumped = 0;
     for (int t = 0; t < NUM_TRACKS; t++) {
       if (tracks[t].state == TrackState::Empty || tracks[t].rangeBeats != beatsBefore[t]) continue;

@@ -51,7 +51,7 @@ static SceneInfo emptyScene() {
   s.version = 1;
   for (auto &u : s.units) {
     memcpy(u.magic, "M8TU", 4);
-    u.version = 1;
+    u.version = 2;                                 // (volume and balance in today's steps)
     u.filterHi = FILTER_MAX;
     u.volume = VOLUME_UNITY;
   }
@@ -92,6 +92,7 @@ static SceneInfo sceneAt(int pos) {
   if (!file.seekSet((uint64_t)(1 + slot) * BLOCK) || file.read(&s, sizeof s) != (int)sizeof s ||
       memcmp(s.magic, "M8SC", 4))
     return emptyScene();
+  for (auto &u : s.units) upgradeUnit(u);          // (saved before volume's steps changed)
   return s;
 }
 
