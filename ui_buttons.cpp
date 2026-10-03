@@ -95,7 +95,7 @@ static int buttonIcon(int i) {
 }
 
 // Icons: bitmaps of blocks ('#'), centred in the button. On the action
-// button (light grey; the accent colour while A is held) they're black;
+// button they're black (in the accent colour while A is held);
 // elsewhere the accent colour for a
 // recording, white for a track playing, grey otherwise. Track rows' are
 // smaller, left of centre (on the selected track's panel, its left
@@ -129,26 +129,26 @@ static bool unavailable(int i, int icon) {
   return i == STATUS_ROW && ((icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()));
 }
 
-// The action button (the status row's): light grey, the accent colour while A
-// is held. The tracks' buttons: black.
+// The action button (the status row's): grey with black icons; dark grey
+// with icons in the accent colour while A is held. The tracks' buttons: black.
 static uint16_t buttonBackground(int i, int icon) {
   (void)icon;
-  if (i == STATUS_ROW) return heldAction >= 0 ? ACCENT : LIGHT;
+  if (i == STATUS_ROW) return heldAction >= 0 ? DARK : DIM;
   return cellBackground(i, -1);
 }
 
 static uint16_t iconColor(int i, int icon) {
   uint16_t bg = buttonBackground(i, icon);
+  if (i == STATUS_ROW) return heldAction >= 0 ? (unavailable(i, icon) ? BG : ACCENT) : unavailable(i, icon) ? DARK : BG;
   if (unavailable(i, icon)) return DARK;
-  if (i == STATUS_ROW) return BG;
   if (bg != BG) return BG;
   if (recordingOn(i) || recordQueued() == i) return ACCENT;
   return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white
 }
 
-// The selected track's panel: light grey, as the action button; in the
+// The selected track's panel: grey; in the
 // accent colour while A is held, with the action button (acting on the track).
-static uint16_t markColor() { return heldAction >= 0 ? ACCENT : LIGHT; }
+static uint16_t markColor() { return heldAction >= 0 ? ACCENT : DIM; }
 
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
@@ -164,7 +164,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   const int cols = BUTTON_W / PX, rows = ROW_BAND / PX;
   // The selected track's panel, under its number or icons: the button's whole
   // height, its left corners cut (a two-block border round the number on the
-  // left, top and bottom). Light grey; the accent colour while A is held, showing
+  // left, top and bottom). Grey; the accent colour while A is held, showing
   // just the track's number then, in black.
   uint16_t panel = i == selected && i != STATUS_ROW ? markColor() : BG;
   if (panel != BG) {

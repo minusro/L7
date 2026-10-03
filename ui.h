@@ -55,19 +55,19 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
 // cells and button show it as empty (and its controls don't act).
 inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !recordingOn(i); }
 
-// Background of a cell in row i (cell -1: the button): black, but light grey
+// Background of a cell in row i (cell -1: the button): black, but grey
 // for the status row's button (the action button; ui_buttons.cpp has its
 // colours) and the accent colour for a recording track's waveform cell.
 inline uint16_t cellBackground(int i, int cell) {
   if (cell == WAVE_CELL && recordingOn(i)) return ACCENT;
-  if (cell == -1 && i == STATUS_ROW) return LIGHT;
+  if (cell == -1 && i == STATUS_ROW) return DIM;
   return BG;
 }
-// Its frame: light grey round the selected cell (grey while B alone is held:
+// Its frame: grey round the selected cell (dark grey while B alone is held:
 // B + arrows edit it), none elsewhere (BG).
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != selectedCellIn(i)) return BG;
-  return board.keys() == m8::BTN_OPT ? DIM : LIGHT;
+  return board.keys() == m8::BTN_OPT ? DARK : DIM;
 }
 // B held as a modifier on its own (no SHIFT, A or START; arrows may be down).
 inline bool bAlone() {

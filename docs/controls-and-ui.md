@@ -59,19 +59,18 @@ x 0–145, tempo 144–291). Cells share a one-block border
 with their neighbours (left, right, above and below): the selection frame is
 drawn there (`borderAt()` in ui.cpp), so content uses the cell's full size.
 
-Style (after Elektron's screens): five colours (`colors.h`) — black (`BG`),
-12.5% grey (`DARK`: background detail — outside the loop range, the filter
-fill, unlit volume lines), 50% grey
-(`DIM`: inactive — muted clips, idle icons and text), white (`INK`: active,
+Style (after Elektron's screens): six colours (`colors.h`) — black (`BG`),
+12.5% grey (`DARK`: background detail — outside the loop range, unlit volume lines, the selection frame while B is held), 50% grey
+(`DIM`: inactive — muted clips, idle icons and text; the filter fill, the selection frame), light grey (`LIGHT`, 81%: unselected waveforms, labels, the selected filter), white (`INK`: active,
 selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one constant: recording
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
-(`PX`), a 160×120 screen of chunky pixels. Selection: a light grey frame on the
-selected cell only (50% grey while B alone is held); the selected track's button gets a light grey panel behind its number (the button's
+(`PX`), a 160×120 screen of chunky pixels. Selection: a grey frame on the
+selected cell only (dark grey while B alone is held); the selected track's button gets a grey panel behind its number (the button's
 full height: two blocks of border above, left and below; the accent colour while A is held, with the
 action button, showing just the number then, in black).
 None while the status row is selected. The status
-button (the action button) is light grey with black icons, a block taller than the others (down to the status cells' bottom border), its top left corner cut;
-the accent colour while A is held. A recording track's waveform cell is in the accent colour.
+button (the action button) is grey with black icons (dark grey with icons in the accent colour while A is held), a block taller than the others (down to the status cells' bottom border), its top left corner cut.
+A recording track's waveform cell is in the accent colour.
 
 * Waveform (`ui_wave.cpp`): 94 columns, the cell's full height (peaks up
   to 5 blocks each way from a two-block centre, square-root scale); light grey inside the loop range (white on the selected cell), dark grey outside (muted:
@@ -82,15 +81,15 @@ the accent colour while A is held. A recording track's waveform cell is in the a
   range is in the accent colour); on muted clips black lines cutting through
   the waveform. A
   recording's record head inverts its column.
-* Filter (`ui_filter.cpp`): the response filled dark grey; the line itself
-  only while the filter cell is selected and the clip plays (muted: only while
-  B is held, in the accent colour).
+* Filter (`ui_filter.cpp`): the response filled from the curve down, no
+  line: grey, light grey while the cell is selected, the accent colour while
+  B is held on it.
 * Volume (`ui_mix.cpp`): 6 straight vertical lines a side, every other
   column, filling the cell, longer further out: dark grey above the level,
   50% grey up to it, white for the meter. A channel's level in lines is the
   volume step minus its balance cut (one line per step of either).
 * Editing (B held on the selected cell, so B + arrows change it): the loop
-  range (B alone), the filter line, and the volume meter (B alone; its level
+  range (B alone), the filter fill, and the volume meter (B alone; its level
   lines in the accent at half brightness) turn to the accent colour
   (`editingCell()` in ui.h).
 * Icons (`ui_buttons.cpp`): bitmaps of blocks; "TAP" in the pixel font.

@@ -18,7 +18,7 @@ constexpr uint16_t BG = rgb565(0, 0, 0);            // black: the background
 constexpr uint16_t DARK = rgb565(32, 32, 32);       // 12.5% grey: in the background (outside the loop range,
                                                     //   the row's other frames, fills, unlit arcs)
 constexpr uint16_t DIM = rgb565(128, 128, 128);     // 50% grey: inactive (muted clips, idle icons and text)
-constexpr uint16_t LIGHT = rgb565(192, 192, 192);   // 75% grey: the selection's markers while B or A is held
+constexpr uint16_t LIGHT = rgb565(208, 208, 208);   // 81% grey: light grey (unselected waveforms, labels, the selected filter)
 constexpr uint16_t INK = rgb565(255, 255, 255);     // white: what's active, selected, playing
 constexpr uint16_t ACCENT = rgb565(48, 230, 170);   // green turquoise: recording, and a scene change on its way
 
