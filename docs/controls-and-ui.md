@@ -10,7 +10,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 |---|---|
 | UP/DOWN | Select row: tracks 1–8, status row (no wrapping) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: tempo) |
-| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute (unmute while stopped starts the clock). Status row: tap tempo |
+| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute (unmute while stopped starts the clock). Status row: tap tempo on the tempo cell, the panel (as B+A) on the scene cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
 | B + A | Open the panel (A closes it) |
@@ -69,8 +69,10 @@ while A is held). A recording track's waveform cell is amber.
   50% grey range, dark grey outside). The start position: a short line
   across the middle (inverting what's there), on every track. While the
   waveform cell is selected: bar ticks along the bottom; while B alone is held
-  on it, the range is in the accent colour, muted or not. Playheads invert their column (muted: a dim line,
-  only when selected).
+  on it, the range is in the accent colour, muted or not. Playheads are accent-coloured lines (white while the
+  range is in the accent colour); on muted clips black lines cutting through
+  the waveform. A
+  recording's record head inverts its column.
 * Filter (`ui_filter.cpp`): the response filled dark grey; the line itself
   only while the filter cell is selected and the clip plays (muted: only while
   B is held, in the accent colour).

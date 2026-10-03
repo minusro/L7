@@ -14,10 +14,11 @@
 // held on the selected waveform cell (B + arrows change the range), the range
 // is in the accent colour, muted or not. The start position: a short line
 // across the middle, inverting what's there, on every track. The bar ticks
-// (dark grey) only show while the waveform cell is selected. The playhead inverts its column (white on black,
-// black on white); on a muted clip, only when selected, it's a grey line. A
-// recording track's cell is in the accent colour, its waveform growing in
-// black (live view), the record head inverting its column too.
+// (dark grey) only show while the waveform cell is selected. The playhead is an accent-coloured line (white
+// while the range is in the accent colour); on a muted clip a black one
+// (cutting through its waveform).
+// A recording track's cell is in the accent colour, its waveform growing in
+// black (live view), the record head inverting its column.
 // Full redraws only happen when something changes; the playhead moves by
 // redrawing just its columns.
 
@@ -34,7 +35,7 @@ struct WaveView {
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
   int markCol = -1;                                // the start position's column; -1: none
   int playCol = -1;                                // playhead / record head; -1: none
-  uint16_t headColor = 0;                          // PLAYHEAD: inverts the column; else a line this colour
+  uint16_t headColor = 0;                          // a line this colour; INVERT_HEAD: the column inverted
   bool marks = false;                              // the start position and bar ticks shown
   uint16_t rangeInk = INK;                         // the waveform inside the loop range
   // live view
@@ -48,6 +49,8 @@ struct WaveView {
   uint32_t rs = 0, rb = 0;
 };
 static WaveView views[NUM_TRACKS];
+// The record head's look (not a colour the playheads use): its column inverted.
+static constexpr uint16_t INVERT_HEAD = 0x0001;
 
 // A column holds a bar tick if a bar boundary (other than the start) falls in it.
 static bool isBarColumn(uint32_t bars, int c) {
@@ -93,7 +96,7 @@ static void drawColumn(int i, int bc) {
       for (int r = MID_ROW - 2; r <= MID_ROW + 2; r++) col[r] = col[r] == v.bg ? (muted ? DIM : INK) : v.bg;
     if (c == v.playCol) {                                         // on top: the playhead
       for (int r = 1; r < BAND_ROWS - 1; r++)
-        col[r] = v.headColor != PLAYHEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
+        col[r] = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
                : col[r] == v.bg ? (v.bg == BG ? INK : BG) : v.bg;
     }
   }
@@ -187,7 +190,7 @@ static void updateLive(int i) {
     v.liveFilled = filled;
     memcpy(v.liveData, cols, OVERVIEW_COLS);
     v.playCol = head;
-    v.headColor = PLAYHEAD;
+    v.headColor = INVERT_HEAD;
     for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
     return;
   }
@@ -198,7 +201,7 @@ static void updateLive(int i) {
   v.liveFilled = filled;
   for (int c = 0; c < WAVE_COLS; c++)
     if (columnLevel(v.liveData, c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c + 1);
-  movePlayhead(i, head, PLAYHEAD);
+  movePlayhead(i, head, INVERT_HEAD);              // (on the coloured cell)
 }
 
 // Playhead column for each track from the transport position and the
@@ -215,15 +218,15 @@ void updatePlayheads() {
     // not on its next turn.
     if (v.live != recordingOn(i)) drawTrack(i);
     if (v.live) { updateLive(i); continue; }
-    // Unmuted: inverting. Muted: none, but a dim line on the selected track.
+    // The accent colour (white on a range in the accent colour); muted: black.
     bool muted = tr.state == TrackState::Muted;
     int col = -1;
-    if (v.visible && running && tr.live && (!muted || i == selected)) {
+    if (v.visible && running && tr.live) {
       double inRange = fmod(pos - tr.rangeAnchorQ / 4.0, (double)tr.rangeBeats);
       if (inRange < 0) inRange += tr.rangeBeats;
       double loopBeat = fmod(tr.rangeStartBeat + inRange, (double)(tr.loopBars * BEATS_PER_BAR));
       col = min(WAVE_COLS - 1, (int)(loopBeat * WAVE_COLS / (tr.loopBars * BEATS_PER_BAR)));
     }
-    movePlayhead(i, col, muted ? MUTED_HEAD : PLAYHEAD);
+    movePlayhead(i, col, muted ? MUTED_HEAD : v.rangeInk == ACCENT ? INK : PLAYHEAD);
   }
 }

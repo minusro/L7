@@ -54,7 +54,8 @@
 //   SHIFT+OPT twice  insert a copy of the current scene after it
 //   PLAY             start from 1.1.1 / stop
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
-//   EDIT (status)    tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
+//   EDIT (scene cell) open the panel (as OPT+EDIT)
+//   EDIT (tempo cell) tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
 //                      tap starts from 1.1.1 (running: snaps to the nearest bar start)
 //   power (hold)     switch off
 //

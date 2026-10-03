@@ -66,8 +66,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   bool onStatus = selected == STATUS_ROW;
   int prevSel = selected;
-  // Any press but a lone A on the status row (a tap): the next tap starts a new count.
-  if (pressed && !(onStatus && pressed == m8::BTN_EDIT && keys == m8::BTN_EDIT)) tapCount = 0;
+  // A on the status row's scene cell: as B+A (the panel).
+  bool onScene = onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL;
+  // Any press but a lone A on the tempo cell (a tap): the next tap starts a new count.
+  if (pressed && !(onStatus && !onScene && pressed == m8::BTN_EDIT && keys == m8::BTN_EDIT)) tapCount = 0;
   bool sceneChanged = false;                         // every row to redraw
   // The scene keys' modifier: SHIFT, or B on the status row's scene cell.
   bool sceneMod = shift || (opt && onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL);
@@ -291,7 +293,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
-  if (edit && onStatus && !shift) tapTempo();
+  if (edit && onStatus && !shift) {
+    if (onScene) openPanel();                      // as B+A
+    else tapTempo();
+  }
   if (edit && !onStatus) {
     Track &tr = tracks[selected];
     if (shift) {

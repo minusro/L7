@@ -24,8 +24,8 @@ constexpr uint16_t ACCENT = rgb565(255, 150, 0);    // amber: recording, and a s
 
 // ---- Roles
 constexpr uint16_t DIVIDER = DARK;           // line above the status row
-constexpr uint16_t PLAYHEAD = INK;           // playing clips (drawn inverted over the waveform)
-constexpr uint16_t MUTED_HEAD = DIM;         // the selected muted clip
+constexpr uint16_t PLAYHEAD = ACCENT;        // playing clips
+constexpr uint16_t MUTED_HEAD = BG;          // the selected muted clip (a cut through its waveform)
 
 // ---- Panel (B+A)
 constexpr uint16_t PANEL_SHADE = BG;         // every other pixel of the screen behind it

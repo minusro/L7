@@ -16,7 +16,8 @@
 // held: open the panel (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the panel is open: a house (A closes it). On the status row itself:
-// tap tempo ("TAP"); with SHIFT, start from 1.1.1 (play).
+// tap tempo ("TAP") on the tempo cell, the panel (menu, as B+A) on the
+// scene cell; with SHIFT, start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, white on black.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
 enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE };
@@ -38,7 +39,8 @@ static int actionIcon() {
   if (panelOpen()) return ICON_HOME;               // A closes the panel
   if (board.keys() & m8::BTN_OPT)                  // B+A: the panel; with SHIFT, the scene
     return !shift ? ICON_MENU : optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
-  if (selected == STATUS_ROW) return shift ? ICON_PLAY : ICON_TAP;   // restart / tap tempo
+  if (selected == STATUS_ROW)                      // restart / the panel (scene cell, as B+A) / tap tempo
+    return shift ? ICON_PLAY : selectedCellIn(STATUS_ROW) == SCENE_CELL ? ICON_MENU : ICON_TAP;
   const Track &tr = tracks[selected];
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) ? ICON_NONE : ICON_PASTE;
   if (recordQueued() == selected) return ICON_DELETE;   // takes it out of the queue
