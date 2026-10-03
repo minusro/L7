@@ -22,7 +22,8 @@
 //   * MIDI clock + start/stop go out on serial MIDI port 2
 //
 // Keys:
-//   UP/DOWN          select a row: tracks 1-8, then the status row
+//   UP/DOWN          select a row: tracks 8 (top) to 1 (just above the status row),
+//                      then the status row; it starts on track 1
 //   LEFT/RIGHT       select a cell: waveform, filter, volume (on the status row: scene, tempo)
 //   OPT twice        reset the current cell (waveform: whole loop; filter: open;
 //                      volume: unity, balance centred)

@@ -70,10 +70,22 @@ static int trackIcon(int i) {
       default:                 return flashOn() ? ICON_PLAY : ICON_NONE;
     }
   }
-  if (!hasClip(i)) return ICON_NONE;
-  if (tracks[i].state == TrackState::Muted) return ICON_NONE;
-  return transport.running ? ICON_PLAY : ICON_PAUSE;
+  return ICON_NONE;                                // (the track's number shows its state)
 }
+
+// A track row's number badge: the track's number (counted from the bottom),
+// dark grey on an empty track; in a square outlined grey (number grey) on a
+// muted one; in a square filled with the accent colour (number black) on one
+// playing. Hidden on the recording (or queued) track, whose icons show instead.
+enum : uint8_t { BADGE_NONE, BADGE_EMPTY, BADGE_MUTED, BADGE_PLAYING };
+
+static uint8_t trackBadge(int i) {
+  if (i == STATUS_ROW || recordingOn(i) || recordQueued() == i) return BADGE_NONE;
+  if (!hasClip(i)) return BADGE_EMPTY;
+  return tracks[i].state == TrackState::Muted ? BADGE_MUTED : BADGE_PLAYING;
+}
+
+int trackNumber(int i) { return NUM_TRACKS - i; }
 
 static int buttonIcon(int i) {
   if (i != STATUS_ROW) return trackIcon(i);
@@ -139,13 +151,14 @@ static uint16_t iconColor(int i, int icon) {
 static uint16_t markColor() { return heldAction >= 0 ? ACCENT : DIM; }
 
 // The button, built whole in a buffer and sent at once.
-static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {
+static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
   static uint16_t px[BUTTON_W * ROW_BAND];
   for (auto &p : px) p = bg;
-  auto block = [&](int c, int r) {
+  auto blockIn = [&](int c, int r, uint16_t ink) {
     for (int dy = 0; dy < PX; dy++)
-      for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * BUTTON_W + c * PX + dx] = color;
+      for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * BUTTON_W + c * PX + dx] = ink;
   };
+  auto block = [&](int c, int r) { blockIn(c, r, color); };
   const int cols = BUTTON_W / PX, rows = ROW_BAND / PX;
   if (icon == ICON_TAP) {
     const char *text = "TAP";
@@ -165,6 +178,26 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);
+  }
+  if (badge != BADGE_NONE) {                       // the track's number, maybe in a square
+    // The square: 7 x 9 blocks (a block of edge, a block of space round the
+    // digit), corners cut, centred on the icons' column.
+    const int w = 7, h = 9, c0 = TRACK_ICON_CENTRE - w / 2, r0 = (rows - h) / 2;
+    if (badge != BADGE_EMPTY) {
+      uint16_t fill = badge == BADGE_PLAYING ? ACCENT : DIM;
+      for (int r = 0; r < h; r++)
+        for (int c = 0; c < w; c++) {
+          bool side = c == 0 || c == w - 1, edge = r == 0 || r == h - 1;
+          if (side && edge) continue;                // (corners cut)
+          if (badge == BADGE_PLAYING || side || edge) blockIn(c0 + c, r0 + r, fill);
+        }
+    }
+    const Glyph *g = glyphFor((char)('0' + trackNumber(i)));
+    uint16_t ink = badge == BADGE_PLAYING ? BG : badge == BADGE_MUTED ? DIM : DARK;
+    int gc = TRACK_ICON_CENTRE - glyphWidth(*g) / 2, gr = (rows - 5) / 2;
+    for (int r = 0; r < 5; r++)
+      for (int c = 0; c < glyphWidth(*g); c++)
+        if (g->rows[r][c] == '#') blockIn(gc + c, gr + r, ink);
   }
   if (i == STATUS_ROW && bg != BG)                 // the action button: its corners cut
     for (int y = 0; y < PX; y++)
@@ -191,7 +224,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {
 // The row's gaps and button (the cells: drawWave(), drawFilter(), drawMix(),
 // drawStatus()). Redrawn only when they change.
 void drawCells(int i) {
-  struct Key { int icon; uint16_t bg, iconColor, mark; };
+  struct Key { int icon; uint16_t bg, iconColor, mark; uint8_t badge; };
   static Key shown[ROWS];
   static uint32_t drawn[ROWS];                     // uiGeneration when last drawn whole
   Key k;
@@ -200,6 +233,7 @@ void drawCells(int i) {
   k.bg = buttonBackground(i, k.icon);
   k.iconColor = iconColor(i, k.icon);
   k.mark = i == selected ? markColor() : BG;
+  k.badge = trackBadge(i);
   bool first = drawn[i] != uiGeneration;
   if (!first && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;
@@ -212,5 +246,5 @@ void drawCells(int i) {
       t.fillRect(from, bgTop(i), to - from, bgHeight(i), BG);
       if (i == DIVIDER_ROW) t.fillRect(from, dividerY(), to - from, PX, DIVIDER);   // the divider runs on
     }
-  drawButton(i, k.icon, k.iconColor, k.bg);
+  drawButton(i, k.icon, k.iconColor, k.bg, k.badge);
 }

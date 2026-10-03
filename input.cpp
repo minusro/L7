@@ -324,12 +324,13 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
 }
 
 // After a recording finishes on the selected track, move on: to the next
-// empty track (in order, wrapping), else the next muted one, else stay.
+// empty track (in their numbering, from the bottom up, wrapping), else the
+// next muted one, else stay.
 static void selectAfterRecording(int t) {
   if (selected != t) return;                       // the user has moved on already
   for (TrackState want : {TrackState::Empty, TrackState::Muted}) {
     for (int k = 1; k < NUM_TRACKS; k++) {
-      int i = (t + k) % NUM_TRACKS;
+      int i = (t - k + NUM_TRACKS) % NUM_TRACKS;   // (the track numbered next: the row above)
       if (tracks[i].state == want) {
         selected = i;
         drawTrack(i);

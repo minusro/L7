@@ -8,7 +8,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 1–8, status row (no wrapping) |
+| UP/DOWN | Select row: tracks 8 (top) to 1 (bottom), status row (no wrapping); starts on track 1 |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: tempo) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: tap tempo on the tempo cell, the panel (as B+A) on the scene cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
@@ -93,8 +93,12 @@ the accent colour while A is held. A recording track's waveform cell is in the a
   scene's tag and number while SHIFT is held, or B alone on the scene cell;
   the tempo while B alone is held on its cell; the clock while START is held. The divider
   above the status row runs the full width.
-* Track status icons: small (play 3×5 blocks, pause 3×5, record 4×4), play in
-  white, pause in grey (the accent while recording); the status button's are full size.
+* Track buttons: the track's number (tracks count from the bottom: 1 is
+  just above the status row) — dark grey on an empty track; in a grey-outlined
+  square on a muted one (number grey); in a square filled with the accent
+  colour on one playing (number black). The recording (or queued) track shows
+  its recording icons instead (small, in the accent colour). After a recording
+  the selection moves on to the next empty track up.
 * Colours: all in `colors.h`.
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).

@@ -79,9 +79,10 @@ no dropouts or overruns
 - invert record action button color selection (accent color circle on white now) V
 - make the action button background light gray instead of white (like the selection border) while A is not pressed and accent color while it's pressed V
 
-- tracks are numbered from bottom to top
-- program starts with the first track selected (the one right above the status row)
-- 
+- tracks are numbered from bottom to top V
+- program starts with the first track selected (the one right above the status row) V
+- instead of the muted / unmuted / recording track status icons, show the track number. if the track is not empty, the track number is inside a square. the square is only a gray outline if the track is muted, or an accent colour filled square if the track is unmuted. the track number label colour should be: dark gray if track is empty, gray if track is muted or black if track is unmuted. while awaiting recording, recording or awaiting recording to finish, the number label on the recording track is hidden so it doesn't overlap with the remaining status icons V
+
 
 - [ Projects ]
 - figure out how to build resampling
