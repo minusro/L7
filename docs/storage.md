@@ -9,7 +9,7 @@ SdFat through `SD.sdfs` (SDIO, DMA mode). Everything lives in `/looper`.
 | `samples/0001.wav` … `9999.wav` | Every recording, kept when no track uses it. 16-bit stereo WAV; a 512-byte header whose JUNK chunk holds `SampleInfo` {magic `M8SM`, version 3, frames, spb, loopBars, order, preroll} and the waveform overview (`OVERVIEW_COLS` = 286 peaks). Audio starts at byte 512 (`WAV_DATA_OFFSET`). After the loop's `frames` come `preroll` (128) frames: the input just before the recording's first frame, used to crossfade the loop's end into its start (version 3; trimming keeps them). |
 | `track1.unit` … `track8.unit` | 512 bytes each: the track's `TrackUnit` {magic `M8TU`, version, sample, rangeStart, rangeLen, rangePhase, muted, filterLo, filterHi, volume, balance}. Overwritten in place. |
 | `scenes.dat` | Created once at full size: block 0 the scene list, blocks 1… one scene record each (see scenes.md). Overwritten in place. |
-| `session.txt` | The tempo (`bpm=…`). Rewritten only while stopped. |
+| `session.txt` | The session: tempo and selected row and cell (`bpm=…`, `row=…`, `cell=…`; none saved: track 1's waveform cell). Rewritten only while stopped, ~2 s after a change, and at power-off. |
 
 Samples are ordered by recording order (the `order` field; version-1 samples
 by number) — this is what SHIFT+LEFT/RIGHT steps through.

@@ -17,8 +17,11 @@ extern int selectedCell;                           // cell in the row (ui.h: FIL
 // In tenths of a BPM, limited to MIN_BPM-MAX_BPM. false (and no change)
 // while recording.
 bool setTempo(float b);
-// The tempo is saved a while after it last changed, and only while stopped
-// (saving rewrites a file, which can stall the card).
-void saveTempoWhenIdle();
-// Saves it now if it changed (power off).
-void saveTempoNow();
+// The session: the tempo and the selected row and cell, kept in session.txt.
+// beginSession() loads it (none saved: 120 BPM, track 1's waveform cell).
+// It's saved a while after it last changed, and only while stopped (saving
+// rewrites a file, which can stall the card); saveSessionNow() saves it at
+// once if it changed (power off).
+void beginSession();
+void saveSessionWhenIdle();
+void saveSessionNow();

@@ -89,8 +89,10 @@ void trackRange(int t, uint32_t &startBeat, uint32_t &beats);
 // plays each track from here.
 uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats);
 
-float loadTempo();                   // saved tempo, or 120
-void saveTempo(float bpm);           // creates/rewrites a file: only while stopped
+// The session: the tempo and the selection (row, cell), in session.txt.
+struct Session { float bpm = 120.0f; int row = -1, cell = -1; };   // row/cell -1: none saved
+Session loadSession();
+void saveSession(const Session &s);  // creates/rewrites a file: only while stopped
 void trackChanged(int t);            // settings changed: header saved when buffers allow
 // Mute (a change on its way to the track included).
 void setTrackMuted(int t, bool muted);

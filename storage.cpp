@@ -951,22 +951,25 @@ bool stepSample(int t, int dir) {
   return true;
 }
 
-float loadTempo() {
+Session loadSession() {
+  Session s;
   FsFile f = SD.sdfs.open("/looper/session.txt", O_RDONLY);
-  float bpm = 120.0f;
   char line[32];
-  if (f) {
-    // (Parsed by hand: sscanf would pull ~26 KB of Unicode tables into RAM.)
-    if (f.fgets(line, sizeof line) > 0 && !strncmp(line, "bpm=", 4)) bpm = strtof(line + 4, nullptr);
-    f.close();
+  // (Parsed by hand: sscanf would pull ~26 KB of Unicode tables into RAM.)
+  while (f && f.fgets(line, sizeof line) > 0) {
+    if (!strncmp(line, "bpm=", 4)) s.bpm = strtof(line + 4, nullptr);
+    else if (!strncmp(line, "row=", 4)) s.row = (int)strtol(line + 4, nullptr, 10);
+    else if (!strncmp(line, "cell=", 5)) s.cell = (int)strtol(line + 5, nullptr, 10);
   }
-  return constrain(bpm, MIN_BPM, MAX_BPM);
+  f.close();
+  s.bpm = constrain(s.bpm, MIN_BPM, MAX_BPM);
+  return s;
 }
 
-void saveTempo(float bpm) {
+void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/looper/session.txt", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\n", bpm);
+  f.printf("bpm=%.2f\nrow=%d\ncell=%d\n", s.bpm, s.row, s.cell);
   f.close();
 }
 

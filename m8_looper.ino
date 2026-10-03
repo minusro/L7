@@ -110,7 +110,7 @@ static void handlePowerButton() {
     if (millis() - start >= 1000) {
       codec.volume(0.0f);
       flushHeaders();
-      saveTempoNow();
+      saveSessionNow();
       board.powerOff();
     }
   }
@@ -150,7 +150,7 @@ void setup() {
   if (!storageBegin(progress))
     fatal("SD card missing or full: the looper needs ~100 MB free in /looper.");
   progress("");
-  bpm = roundf(loadTempo() * 10) / 10;
+  beginSession();                                  // the tempo and the selection
   transport.spb = spbForBpm(bpm);
   scenesBegin([] { return bpm; }, setTempo);
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
@@ -175,7 +175,7 @@ void loop() {
 
   debugStage = "keys (I2C)";
   pollKeys();
-  saveTempoWhenIdle();
+  saveSessionWhenIdle();
   serviceScenes();
 
   // Report dropouts with what the storage code was doing (debugging).
