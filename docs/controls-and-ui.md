@@ -102,5 +102,5 @@ while A is held). A recording track's waveform cell is amber.
 * Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
   into 43×26 blocks of 2×2 px (two tracks tall), white, with
   "© 2026 Daniel Stanciu" under it in a 3×5 block font (7×7 ©); at least
-  1.5 s; startup messages print below it.
+  2 s; startup messages print below it.
 * Headphones plugged in → speaker off (sense pin 22 < 300).

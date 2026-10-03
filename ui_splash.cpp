@@ -33,12 +33,17 @@ PROGMEM static const char LOGO[][44] = {          // (in flash: const data would
     "##################.....#################...",
 };
 static constexpr int LOGO_ROWS = sizeof LOGO / sizeof LOGO[0], LOGO_COLS = sizeof LOGO[0] - 1, LOGO_PIXEL = 2;
-static constexpr int LOGO_X = (320 - LOGO_COLS * LOGO_PIXEL) / 2, LOGO_Y = (240 - LOGO_ROWS * LOGO_PIXEL) / 2;
-static constexpr uint32_t SPLASH_MIN_MS = 1500;   // shown at least this long
+// The logo and the copyright line under it centred together (the logo
+// above the middle).
+static constexpr int TEXT_GAP = 24;               // logo to text, px
+static constexpr int GROUP_H = LOGO_ROWS * LOGO_PIXEL + TEXT_GAP + 6 * LOGO_PIXEL;   // logo, gap, text (to the copyright sign's bottom)
+static constexpr int GROUP_DOWN = 8;                 // the group sits this far below the middle, px
+static constexpr int LOGO_X = (320 - LOGO_COLS * LOGO_PIXEL) / 2,
+                     LOGO_Y = (240 - GROUP_H) / 2 / LOGO_PIXEL * LOGO_PIXEL + GROUP_DOWN;
+static constexpr uint32_t SPLASH_MIN_MS = 2000;   // shown at least this long
 static uint32_t shownAt = 0;
 
 static const char COPYRIGHT[] = "\xA9 2026 Daniel Stanciu";
-static constexpr int TEXT_GAP = 12;               // logo to text, px
 
 // Width of a line of text, in blocks.
 static int textCols(const char *text) {

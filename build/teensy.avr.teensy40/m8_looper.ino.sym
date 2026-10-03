@@ -321,11 +321,11 @@ SYMBOL TABLE:
 2003edcc l     O .bss	00000004 drawStatus()::tempoW
 20001cbc l     O .data	00000008 TEMPO_BOX
 00000000 l    df *ABS*	00000000 ui_wave.cpp
-0000ad48 l     F .text.itcm	0000003c columnLevel(unsigned char const*, int)
-0000ad84 l     F .text.itcm	0000030c drawColumn(int, int) [clone .part.0]
+0000ad44 l     F .text.itcm	0000003c columnLevel(unsigned char const*, int)
+0000ad80 l     F .text.itcm	0000030c drawColumn(int, int) [clone .part.0]
 20002c00 l     O .data	00000ac0 views
 2003ff38 l     O .bss	00000068 drawColumn(int, int)::px
-0000b090 l     F .text.itcm	00000048 movePlayhead(int, int, unsigned short)
+0000b08c l     F .text.itcm	00000048 movePlayhead(int, int, unsigned short)
 0000b0d8 l     F .text.itcm	000001f8 updateLive(int)
 00000000 l    df *ABS*	00000000 control_sgtl5000.cpp
 00000000 l    df *ABS*	00000000 memcpy_audio.S.o
@@ -1328,7 +1328,7 @@ aaaaafff g       *ABS*	00000000 _flexram_bank_config
 000064d8 g     F .text.itcm	00000010 looper::clipboardFull()
 200045fc g     O .data	0000000c __sglue
 00000558 g     F .text.itcm	00000070 m8::Board::headphonesChanged(bool&)
-0000a84c g     F .text.itcm	00000050 hideSplash()
+0000a84c g     F .text.itcm	0000004c hideSplash()
 20008b44 g     O .bss	00000008 AudioInputPDM::dma
 0001e338 g     F .text.itcm	00000100 usb_serial_configure
 00014e50 g     F .text.itcm	0000004c TwoWire::write(unsigned char const*, unsigned int)
@@ -1470,7 +1470,7 @@ aaaaafff g       *ABS*	00000000 _flexram_bank_config
 00008fa8 g     F .text.itcm	0000006c uiRefresh()
 0000356c  w    F .text.itcm	00000018 FsFile::~FsFile()
 0001d3c0 g     F .text.itcm	00000024 rtc_get
-0000a89c g     F .text.itcm	000004ac drawStatus()
+0000a898 g     F .text.itcm	000004ac drawStatus()
 0000e3f0 g     F .text.itcm	000000ae ExFatFile::remove()
 00026480 g     F .text.itcm	00000088 frexp
 0001c250 g     F .text.itcm	00000004 pendablesrvreq_isr
