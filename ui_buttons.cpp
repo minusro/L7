@@ -18,7 +18,7 @@
 // While the panel is open: a house (A closes it). On the status row itself:
 // tap tempo ("TAP") on the tempo cell, the panel (menu, as B+A) on the
 // scene cell; with SHIFT, start from 1.1.1 (play).
-// While A is held it keeps showing the command it ran, white on black.
+// While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
 enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE };
 
@@ -82,14 +82,13 @@ static int buttonIcon(int i) {
   return heldAction >= 0 ? heldAction : actionIcon();
 }
 
-// Icons: bitmaps of blocks ('#'), centred in the button. On the status row's
-// inverted button they're black; elsewhere the accent colour for a
+// Icons: bitmaps of blocks ('#'), centred in the button. On the action
+// button (50% grey; the accent colour while A is held) they're black;
+// elsewhere the accent colour for a
 // recording, white for a track playing, grey otherwise. Track rows' are
 // smaller, left of centre (clear of the grey line along the selected track's
-// button's right edge, its left corners cut). When A records, the
-// status button is in the accent colour. An action with nothing to act on
-// (paste, clipboard empty) is dark grey; while A is held the status button
-// turns back to black.
+// button's right edge, its left corners cut). An action with nothing to act
+// on (paste, clipboard empty) is dark grey.
 struct Icon { int w, h; const char *rows[9]; };
 PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // ICON_NONE
@@ -118,23 +117,26 @@ static bool unavailable(int i, int icon) {
   return i == STATUS_ROW && ((icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()));
 }
 
+// The action button (the status row's): 50% grey, the accent colour while A
+// is held. The tracks' buttons: black.
 static uint16_t buttonBackground(int i, int icon) {
-  if (i == STATUS_ROW && heldAction >= 0) return BG;   // A held: back to black
-  if (i == STATUS_ROW && icon == ICON_RECORD) return ACCENT;   // A records
+  (void)icon;
+  if (i == STATUS_ROW) return heldAction >= 0 ? ACCENT : DIM;
   return cellBackground(i, -1);
 }
 
 static uint16_t iconColor(int i, int icon) {
   uint16_t bg = buttonBackground(i, icon);
   if (unavailable(i, icon)) return DARK;
+  if (i == STATUS_ROW) return BG;
   if (bg != BG) return BG;
   if (recordingOn(i) || recordQueued() == i) return ACCENT;
   return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white
 }
 
-// The selected track's line: grey, as the selected cell's frame; light grey
-// while A alone is held (acting on the track).
-static uint16_t markColor() { return board.keys() == m8::BTN_EDIT ? LIGHT : DIM; }
+// The selected track's line: grey, as the selected cell's frame; in the
+// accent colour while A is held, with the action button (acting on the track).
+static uint16_t markColor() { return heldAction >= 0 ? ACCENT : DIM; }
 
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg) {

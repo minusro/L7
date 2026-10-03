@@ -54,12 +54,12 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
 // cells and button show it as empty (and its controls don't act).
 inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !recordingOn(i); }
 
-// Background of a cell in row i (cell -1: the button): black, but inverted
-// for the status row's button (white) and the waveform cell of a recording
-// track (the accent).
+// Background of a cell in row i (cell -1: the button): black, but 50% grey
+// for the status row's button (the action button; ui_buttons.cpp has its
+// colours) and the accent colour for a recording track's waveform cell.
 inline uint16_t cellBackground(int i, int cell) {
   if (cell == WAVE_CELL && recordingOn(i)) return ACCENT;
-  if (cell == -1 && i == STATUS_ROW) return INK;
+  if (cell == -1 && i == STATUS_ROW) return DIM;
   return BG;
 }
 // Its frame: grey round the selected cell (light grey while B alone is held:
