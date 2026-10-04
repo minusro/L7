@@ -25,7 +25,7 @@
 // cells' (frameColor()), corners cut, a block out from a card (the diagonal
 // too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
-// logo small, always the action button's backdrop colour.
+// logo small, always the action button's colour (not its pressed look).
 #include "ui.h"
 #include "ui_font.h"
 
@@ -226,8 +226,8 @@ void drawMenu() {
   // Unselected first: frames that touch a neighbour's space don't get wiped.
   // (Anything redrawn: the selected one again after it, its frame on top.)
   static uint16_t logo;                          // the corner logo's colour shown
-  if (all || logo != actionBackground()) {       // the logo, bottom left: the action button's colour, always
-    logo = actionBackground();
+  if (all || logo != menuActionColor()) {        // the logo, bottom left: the action button's colour (not its pressed look)
+    logo = menuActionColor();
     drawSmallLogo(LOGO_X, STATUS_TOP, logo);
   }
   bool redrawn = false;

@@ -215,9 +215,6 @@ static uint16_t iconColor(int i, int icon) {
   return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white
 }
 
-// The action button's backdrop (the menu's logo follows it).
-uint16_t actionBackground() { return buttonBackground(STATUS_ROW, buttonIcon(STATUS_ROW)); }
-
 // The selected track's panel: grey; in the
 // accent colour while A is held, with the action button (acting on the track).
 static uint16_t markColor() { return heldAction >= 0 && heldAction != ICON_MENU ? ACCENT : DIM; }   // (going to the menu: not the track)

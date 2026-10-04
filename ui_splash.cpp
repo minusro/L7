@@ -109,13 +109,31 @@ static void drawLogo(uint16_t color) {
       if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, color);
 }
 
-// The logo small, a pixel per block (55 x 26 px), its top left at (x, y):
-// the menu's corner.
+// The logo small, for the menu's corner: drawn again at 29 x 13 blocks (the
+// status row's height), not shrunk, so it stays in the UI's 2 x 2 blocks; the
+// cuts fewer (8 and 11) so the L keeps its foot.
+PROGMEM static const char SMALL_LOGO[][30] = {
+    "....####.......##############",
+    "...####.......##############.",
+    "...####.......#############..",
+    "...####.......############...",
+    "..####.............######....",
+    "..####............######.....",
+    "..####...........######......",
+    ".####...........######.......",
+    ".............................",
+    ".#########....######.........",
+    "#########....######..........",
+    ".............................",
+    "#########..######............",
+};
+static constexpr int SMALL_ROWS = sizeof SMALL_LOGO / sizeof SMALL_LOGO[0], SMALL_COLS = sizeof SMALL_LOGO[0] - 1;
+
 void drawSmallLogo(int x, int y, uint16_t color) {
   auto &t = board.tft();
-  for (int r = 0; r < LOGO_ROWS; r++)
-    for (int c = 0; c < LOGO_COLS; c++)
-      if (LOGO[r][c] == '#') t.drawPixel(x + c, y + r, color);
+  for (int r = 0; r < SMALL_ROWS; r++)
+    for (int c = 0; c < SMALL_COLS; c++)
+      if (SMALL_LOGO[r][c] == '#') t.fillRect(x + c * PX, y + r * PX, PX, PX, color);
 }
 
 static int copyrightX = 0;
