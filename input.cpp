@@ -361,20 +361,13 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // press, running or not. A on the status row: the menu (scene cell), START
   // (clock cell), tap tempo (tempo cell); with SHIFT, on any of them: the same
   // as SHIFT+START.
-  // B+A on a track: resample / overdub. With SHIFT too, the order they were pressed in:
+  // B+A on its own does nothing (B is for adjusting cells). With SHIFT too, the order they were pressed in:
   // B then SHIFT, +A: paste the scene clipboard after the scene; SHIFT then
   // B, +A: cut the scene to it.
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
   bool edit = (pressed & m8::BTN_EDIT) && !opt;
   if ((pressed & m8::BTN_EDIT) && opt) {
-    if (shift) {
-      sceneChanged = optFirst ? scenePaste() : sceneCut();
-    } else if (!onStatus && !recordingOn(selected) && recordQueued() != selected) {
-      // B+A on a track: an empty one resamples (records the app's output;
-      // queued behind a recording, as A records); one with a clip overdubs
-      // (to come).
-      if (tracks[selected].state == TrackState::Empty) recordPress(selected, true);
-    }
+    if (shift) sceneChanged = optFirst ? scenePaste() : sceneCut();
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;

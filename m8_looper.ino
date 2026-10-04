@@ -41,9 +41,6 @@
 //   SHIFT+LEFT/RIGHT the track's sample: previous / next on the card (empty track:
 //                      newest / oldest); keeps volume, filter, mute; whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
-//   OPT+EDIT         empty track: resample (record the output, from the next bar line);
-//                      then it moves to a new scene after this one (on the same
-//                      track). With a clip: overdub (not there yet)
 //   SHIFT+UP/DOWN    newer / older scene (0*: empty; after the last, a copy of it);
 //                    on the status row's scene cell B+UP/DOWN does the same
 //                    (while playing: on the next bar line after SHIFT is let go; SCN

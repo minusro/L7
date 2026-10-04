@@ -13,11 +13,10 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (on release; the clock stops) on the scene cell, start from 1.1.1 on the clock cell (as SHIFT+START; icon |>), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
-| B + A | On a track: resample / overdub (below). The menu opens with A on the scene cell, or by stopping the clock |
+| B (held) | On a cell it adjusts (B + arrows): the action button shows four small arrows in the accent colour, its backdrop as if A were held. B + A does nothing (SHIFT+B+A: the scene clipboard, below) |
 | A, B or START (menu, on a project slot) | Once let go: load its project and start the clock, from 1.1.1 (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
 | SHIFT + A or B (menu, on a slot) | On a project: the first A only asks (the icon turns into a question mark); a second A, SHIFT still held, cuts it once let go (letting go of SHIFT or moving cancels). Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Not while recording |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
-| B + A (on a track) | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while B is held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
 | SHIFT + UP/DOWN | Newer / older scene (see scenes.md); B + UP/DOWN does the same on the status row's scene cell (double taps and holding B included) |
 | SHIFT + UP/DOWN twice, second held | To N+1\* / 0\* |
@@ -136,7 +135,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent
   colour on one playing (number black). The recording (or queued) track shows
-  its recording icons instead (small, in the accent colour; the record dot 5×5, while resampling the action button's 10×7 cassette). After a recording
+  its recording icons instead (small, in the accent colour; the record dot 5×5, while resampling the record dot with a plus). After a recording
   the selection stays on the track (`SELECT_NEXT_AFTER_RECORDING` in config.h,
   off for now, moves it on to the next empty track up).
 * Colours: all in `colors.h`.

@@ -155,11 +155,8 @@ int main(int argc, char **argv) {
   render(out + "/ui_scene_paste.png");
   board.heldKeys = 0;
   selected = 2;
-  board.heldKeys = m8::BTN_OPT;                    // B held: overdub on a clip,
-  render(out + "/ui_overdub.png");
-  selected = 5;                                    // resample on an empty track
-  render(out + "/ui_resample.png");
-  selected = 2;
+  board.heldKeys = m8::BTN_OPT;                    // B held on a clip's cell: adjusting (four arrows)
+  render(out + "/ui_adjust.png");
   board.heldKeys = 0;
   // Track 6 recording, 2 bars and a bit in (its live view: no audio saved yet).
   recording.track = 5;
@@ -169,7 +166,7 @@ int main(int argc, char **argv) {
   recording.startBeat = transport.beat - 9;
   selected = 5;
   render(out + "/ui_recording.png");
-  recording.resample = true;                       // resampling: a cassette on its button
+  recording.resample = true;                       // resampling: the record dot with a plus on its button
   render(out + "/ui_resampling.png");
   recording.resample = false;
   selected = 1;                                    // A held on track 7: its panel and the action button highlighted

@@ -54,6 +54,5 @@
 
 ## Open ideas (not started)
 
-* Overdub with undo (agreed early on as required).
 * Master effects; what the menu's buttons do.
 * Possibly: shrink the input history to give the track rings more RAM.
