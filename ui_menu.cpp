@@ -162,7 +162,13 @@ static void drawItem(int k) {
     uint16_t letter = filled ? BG : color;
     if (filled) {
       fillRing(s, 0, -s.w, color);
-      if (k == projectCurrent()) fillRing(s, 0, -2, INK);   // the loaded one: outlined white, two blocks
+      if (k == projectCurrent()) {                 // the loaded one: outlined white, two blocks
+        fillRing(s, 0, -2, INK);
+        // (the diagonal a block thicker where it meets the right edge: two blocks inside its corner)
+        auto &tft = board.tft();
+        tft.fillRect((s.x + s.w - 3) * PX, (s.y + s.h - s.cut - 1) * PX, PX, PX, INK);
+        tft.fillRect((s.x + s.w - 4) * PX, (s.y + s.h - s.cut) * PX, PX, PX, INK);
+      }
     } else {                                      // empty: an outline (the shape's edge)
       fillRing(s, 0, -1, DIM);
       fillRing(s, -1, -s.w, BG);
