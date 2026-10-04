@@ -15,7 +15,7 @@
 // (an arrow up from a line), cancel a recording (X: thrown away at once) or,
 // on an empty track, paste (an arrow down to a line; dark grey while the
 // clipboard is empty). With B
-// held: open the menu (a gear); with SHIFT too, paste a scene (B pressed
+// held: open the menu (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open: the looper's rows (A closes it, back to them). On the status row itself:
 // the menu (as B+A) on the scene cell, start / stop (play / stop, as
@@ -129,9 +129,8 @@ PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // TAP (text)
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
-  {9, 9, {"...#.#...", "..#####..", ".##...##.", "##.....##", ".#.....#.", "##.....##", ".##...##.", "..#####..",
-          "...#.#..."}},                                                   // MENU (a gear: a ring, eight teeth)
-  {7, 7, {".......", "###.#.#", ".......", "###.#.#", ".......", "###.#.#", "......."}},   // HOME (the looper's rows: waveform, filter, volume)
+  {7, 7, {".......", "#######", ".......", "#######", ".......", "#######", "......."}},   // MENU
+  {7, 7, {".......", "###.#.#", ".......", "###.#.#", ".......", "###.#.#", "......."}},   // HOME (the looper's rows: waveform, filter, volume; as MENU's bars)
   {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
           "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
   {9, 9, {"#.#.#.#.#", "....#....", "#...#...#", "..#####..", "#..###..#",
