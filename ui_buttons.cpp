@@ -72,11 +72,13 @@ void noteActionPress() { heldAction = actionIcon(); }
 
 // The track's own state.
 static int trackIcon(int i) {
-  if (recordQueued() == i) return flashOn() ? ICON_RECORD : ICON_NONE;   // waiting, like WaitBar
+  // (Resampling: a cassette instead of the record dot.)
+  int rec = (recordQueued() == i ? recordQueuedResample() : recordingOn(i) && recording.resample) ? ICON_RESAMPLE : ICON_RECORD;
+  if (recordQueued() == i) return flashOn() ? rec : ICON_NONE;   // waiting, like WaitBar
   if (recordingOn(i)) {
     switch (recording.mode) {
-      case Recording::WaitBar: return flashOn() ? ICON_RECORD : ICON_NONE;
-      case Recording::Running: return ICON_RECORD;
+      case Recording::WaitBar: return flashOn() ? rec : ICON_NONE;
+      case Recording::Running: return rec;
       default:                 return flashOn() ? ICON_PLAY : ICON_NONE;
     }
   }
@@ -128,9 +130,9 @@ PROGMEM static const Icon ICONS[] = {
           "#.......#", "#########"}},                                                   // SCENE_CUT
   {9, 9, {"#########", "#.......#", "#..###..#", "#.#...#.#", "#.#.#.#.#", "#.#...#.#", "#.#####.#",
           "#.......#", "#########"}},                                                   // SCENE_PASTE
-  {11, 7, {".....#.....", "....##.....", "..####.#.#.", "..####..#..", "..####.#.#.", "....##.....", ".....#....."}},   // MUTE (a block right of UNMUTE)
+  {10, 7, {"....#.....", "...##.....", ".####.#.#.", ".####..#..", ".####.#.#.", "...##.....", "....#....."}},   // MUTE (a block right of UNMUTE)
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
-  {9, 7, {".#######.", "#.......#", "#.##.##.#", "#.##.##.#", "#.......#", "#.#####.#", ".#######."}},   // RESAMPLE (a cassette)
+  {10, 7, {".########.", "#........#", "#.##..##.#", "#.##..##.#", "#........#", "#.######.#", ".########."}},   // RESAMPLE (a cassette)
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // OVERDUB (record +)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
@@ -229,7 +231,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
-    int c0 = track ? TRACK_ICON_CENTRE - ic.w / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1), r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
+    int c0 = track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1), r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);

@@ -67,6 +67,7 @@ void transportSnapToBar();
 // stopped, the other tracks playing go quiet where its loop ends.
 bool recordPress(int t, bool resample = false);
 int recordQueued();                   // the track recording next, or -1
+bool recordQueuedResample();          // and it resamples
 // A resampling saved since the last call: its track (once), or -1. The other
 // tracks stay quiet until their clips change (the scene after it), or
 // endSilencing().

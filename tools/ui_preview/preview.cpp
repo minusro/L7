@@ -156,6 +156,9 @@ int main(int argc, char **argv) {
   recording.startBeat = transport.beat - 9;
   selected = 5;
   render(out + "/ui_recording.png");
+  recording.resample = true;                       // resampling: a cassette on its button
+  render(out + "/ui_resampling.png");
+  recording.resample = false;
   selected = 1;                                    // A held on track 7: its panel and the action button highlighted
   selectedCell = WAVE_CELL;
   board.heldKeys = m8::BTN_EDIT;

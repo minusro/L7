@@ -21,8 +21,8 @@
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
 // A recording track's waveform area is in the accent colour (a block of black
-// round it, inside the border), its waveform growing in
-// black (live view), the record head inverting its column.
+// round it, inside the border), its waveform growing in white (live view),
+// the bar lines in the dark accent, the record head inverting its column.
 // Full redraws only happen when something changes; the playhead moves by
 // redrawing just its columns.
 
@@ -105,7 +105,7 @@ static void drawColumn(int i, int bc) {
   if (c >= 0 && c < WAVE_COLS && v.visible) {
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
     if (!v.live || c < v.liveFilled) {
-      uint16_t ink = v.live ? BG : !in ? v.outInk : v.rangeInk;   // (live: on the coloured cell)
+      uint16_t ink = !in ? v.outInk : v.rangeInk;                // (live: all of it, on the coloured cell)
       int h = reachFor(columnLevel(v.live ? v.liveData : tr.overview, c));
       for (int r = MID_ROW - h; r <= MID_ROW + 1 + h; r++)
         col[r] = ink;
@@ -113,7 +113,7 @@ static void drawColumn(int i, int bc) {
     int bars = v.live ? (int)v.liveBars : (int)tr.loopBars;      // (recording: as it's shown so far)
     for (int b = 1; b < bars; b++)                                // bars 2 on: a black line just before each start
       if (edgeCol(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) == c + 1) {
-        for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) col[r] = BG;
+        for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) col[r] = v.live ? ACCENT_DARK : BG;   // (recording: the dark accent)
         break;
       }
     if (uint16_t ink = startInk(v, c); ink != BG)                 // the start position: a checkered line
@@ -145,6 +145,7 @@ void drawWave(int i, bool recordingHere) {
   bool muted = tr.state == TrackState::Muted, here = i == selected && selectedCell == WAVE_CELL;
   bool editing = here && bAlone();
   uint16_t rangeInk = editing ? ACCENT : muted ? DIM : here ? INK : LIGHT;
+  if (recordingHere) rangeInk = INK;                 // the recording's waveform: white
   uint16_t outInk = muted ? DARK : DIM;            // outside it: grey (muted: dark grey)
   if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.borders == borders &&

@@ -1626,6 +1626,7 @@ static void returnRecordingSample(int t) {
 }
 
 int recordQueued() { return queuedTrack; }
+bool recordQueuedResample() { return queuedTrack >= 0 && queuedResample; }
 
 // Starts track t's recording (its sample file taken) at input sample `from`,
 // bar line `beat`, if that is at most maxBehind samples ago (from the input

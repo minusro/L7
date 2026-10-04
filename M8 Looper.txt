@@ -89,10 +89,12 @@ no dropouts or overruns
 
 4oct26
 
+- figure out how to build resampling V
+- volume control
 - [ Projects ]
-- figure out how to build resampling
-- crossfading between two scenes
 
+
+- crossfading between two scenes
 - add play icon to status row (?)
 - animated splash screen (?)
 

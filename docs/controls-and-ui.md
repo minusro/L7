@@ -76,7 +76,7 @@ badge; the accent colour while A is held, with the
 action button, showing just the number then, in black).
 None while the status row is selected. The status
 button (the action button) is the accent colour with black icons (dark grey with icons in the accent colour while A is held), as tall as the status cells, a block in from the left like the track panels, its top left corner cut. On a track with a clip its icon is a speaker: crossed out while the track plays (A mutes it; a block right of the other), with sound waves while it's muted (A unmutes it).
-A recording track's waveform area is in the accent colour (a block of black between it and the cell's border).
+A recording track's waveform area is in the accent colour (a block of black between it and the cell's border), the waveform growing on it in white, its bar lines in the dark accent.
 
 * Waveform (`ui_wave.cpp`): 90 columns, inside a block of space within
   the frame (peaks up to 4 blocks each way from a two-block centre,
@@ -124,7 +124,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent
   colour on one playing (number black). The recording (or queued) track shows
-  its recording icons instead (small, in the accent colour; the record dot 5×5). After a recording
+  its recording icons instead (small, in the accent colour; the record dot 5×5, while resampling the action button's 10×7 cassette). After a recording
   the selection stays on the track (`SELECT_NEXT_AFTER_RECORDING` in config.h,
   off for now, moves it on to the next empty track up).
 * Colours: all in `colors.h`.
