@@ -25,8 +25,8 @@
 // (a question mark after the first A: a second A confirms) or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
-// the menu on the scene cell, start / stop (play / stop, as
-// START) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
+// the menu (a small hamburger) on the scene and clock cells, tap tempo
+// ("TAP") on the tempo cell; with SHIFT,
 // start from 1.1.1 (play).
 // B held on a track: resample (a cassette) on an empty track, overdub (the
 // record dot with a plus; not there yet: A does nothing) on one with a clip.
@@ -59,10 +59,10 @@ static int actionIcon() {
     if (selected == STATUS_ROW || recordingOn(selected) || recordQueued() == selected) return ICON_NONE;
     return tracks[selected].state == TrackState::Empty ? ICON_RESAMPLE : ICON_OVERDUB;
   }
-  if (selected == STATUS_ROW) {                    // restart / the menu / START / tap tempo
+  if (selected == STATUS_ROW) {                    // restart / the menu / tap tempo
     if (shift) return ICON_PLAY;
     int cell = selectedCellIn(STATUS_ROW);
-    return cell == SCENE_CELL ? (menuOpen() ? ICON_HOME : ICON_MENU) : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_TAP;
+    return cell == TEMPO_CELL ? ICON_TAP : ICON_MENU;   // the scene and clock cells: the menu
   }
   const Track &tr = tracks[selected];
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) || recordQueued() == selected ? ICON_DELETE : ICON_PASTE;

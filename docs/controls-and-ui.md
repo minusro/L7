@@ -10,7 +10,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 |---|---|
 | UP/DOWN | Select row: tracks 8 (top) to 1 (bottom), status row (no wrapping); starts on track 1 |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo) |
-| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu on the scene cell (on release), start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
+| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (on release; the clock stops) on the scene and clock cells, tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
 | B + A | On a track: resample / overdub (below). The menu opens with A on the scene cell, or by stopping the clock |
@@ -143,14 +143,14 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
 * Menu (`ui_menu.cpp`): opened with A on the scene cell, or by stopping the
-  clock (START, or A on the clock cell, once that key is let go), it takes
+  clock (START, once let go), or with A on the clock cell, it takes
   the place of the track rows and the status row's cells, across the whole
   width; of the status row only the action button shows. Opening it stops the
   clock. On its items A and B both act (SHIFT with them: cut and paste); on
   a project card START does too (load / new). Loading a project, or making a
   new one, starts the clock (from 1.1.1; a new, empty one plays the
   metronome). In the looper's view,
-  stopping the clock (START, or A on the clock cell) goes back to the menu
+  stopping the clock (START) goes back to the menu
   once that key is let go; SHIFT+START only restarts from 1.1.1. On its items A
   runs the action button's action when let go; B does nothing. The way out
   is loading a project (A on the loaded one: just back); with the dummy

@@ -67,8 +67,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
-  // A on the scene cell in the looper's view: the menu opens once A is let
-  // go; stopping the clock (START, A on the clock cell): once that key is.
+  // A on the scene or clock cell in the looper's view: the menu opens once A
+  // is let go; stopping the clock (START): once START is.
   static uint8_t menuOnRelease = 0;                  // the key to wait for
   if (menuOnRelease && !(keys & menuOnRelease)) {
     menuOnRelease = 0;
@@ -377,11 +377,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
   }
   bool transportKey = pressed & m8::BTN_PLAY;
-  bool toggleTransport = (transportKey || (edit && onClock)) && !shift;
+  bool toggleTransport = transportKey && !shift;
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onScene) menuOnRelease = m8::BTN_EDIT;      // the menu
-    else if (onTempo) tapTempo();                  // (the clock cell: as START, below)
+    if (onScene || onClock) menuOnRelease = m8::BTN_EDIT;   // the menu (the clock stops)
+    else if (onTempo) tapTempo();
   }
   if (edit && !onStatus) {
     Track &tr = tracks[selected];
@@ -400,7 +400,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (toggleTransport) {
     if (transport.running) {                         // stopped: back to the menu once that key is let go
       transportStop();
-      menuOnRelease = transportKey ? m8::BTN_PLAY : m8::BTN_EDIT;
+      menuOnRelease = m8::BTN_PLAY;
     } else {
       transportStart();
     }
