@@ -11,20 +11,21 @@
 //     UP/DOWN step through the scenes. The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
 //     it, or the change waiting for its switch point.
-//   second cell: the clock (bar.beat.step)
-//     on the left (a dark grey 1.1.1 while stopped; running: in the accent colour
-//     on 1.1.1, white on each beat's first step, light grey on the others), the
-//     tempo on the right, followed by an inverted "BPM" tag (both in the
+//   second cell: the clock (bar.beat.step), centred: stopped, 1.1.1 in dark
+//     grey (selected: grey); running, grey with light grey on each beat's
+//     first step (selected: light grey, white on the first step), in the
+//     accent colour on 1.1.1. Selected, A starts / stops the
+//     clock (as START; SHIFT+A as SHIFT+START).
+//   third cell: the tempo, followed by an inverted "BPM" tag (both in the
 //     accent colour while B alone is held there: B + arrows change it).
 // Text and tags are redrawn whole each pass (their boxes clear what was
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
-static constexpr int CLOCK_W = 24 * PX;           // its box (clearing longer text)
 
-// The status row's cells: the scene's and the tempo's, half the width each.
+// The status row's cells: the scene's, the clock's and the tempo's (ui.h).
 static constexpr int STATUS_CELLS = TEMPO_CELL + 1;
-static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX : SCENE_BOX; }
+static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX : cell == CLOCK_CELL ? CLOCK_BOX : SCENE_BOX; }
 
 // A cell's border (the frame), each side in its colour (borderAt(): the
 // two cells share the side between them).
@@ -48,7 +49,8 @@ void drawStatus() {
     for (int c = 0; c < STATUS_CELLS; c++) t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, BG);
     shownBorders = ~0ull;
   }
-  uint64_t borders = bordersOf(STATUS_ROW, SCENE_CELL) ^ bordersOf(STATUS_ROW, TEMPO_CELL) << 1;
+  uint64_t borders = 0;
+  for (int c = 0; c < STATUS_CELLS; c++) borders = borders * 31 + bordersOf(STATUS_ROW, c);
   if (borders != shownBorders) {
     shownBorders = borders;
     for (int c = 0; c < STATUS_CELLS; c++) drawFrame(c);
@@ -93,11 +95,20 @@ void drawStatus() {
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
-  // Dark grey while stopped; running: the accent colour on 1.1.1, white on each
-  // beat's first step (x.y.1), light grey on the others.
-  bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0;
-  uint16_t clockInk = !running ? DARK : first ? ACCENT : step == 0 ? INK : LIGHT;
-  drawText(TEMPO_BOX.x + INSET, textY, text, clockInk, BG, CLOCK_W);   // (its box clears longer text)
+  // Stopped: dark grey (selected: grey). Running: grey, light grey on each
+  // beat's first step (x.y.1) (selected: light grey, white on x.y.1); the
+  // accent colour on 1.1.1.
+  bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0, here = cell == CLOCK_CELL;
+  uint16_t clockInk = !running ? (here ? DIM : DARK) : first ? ACCENT
+                    : step == 0 ? (here ? INK : LIGHT) : (here ? LIGHT : DIM);
+  {
+    // Centred (on the block grid); what longer text left either side cleared.
+    int w = textWidth(text), inL = CLOCK_BOX.x + INSET, inR = CLOCK_BOX.x + CLOCK_BOX.w - INSET;
+    int x = CLOCK_BOX.x + (CLOCK_BOX.w - w) / 2 / PX * PX;
+    t.fillRect(inL, textY, x - inL, FONT_H, BG);
+    t.fillRect(x + w, textY, inR - x - w, FONT_H, BG);
+    drawText(x, textY, text, clockInk, BG);
+  }
 
   // The scene. Its box reaches the cell's inner edge: the position's text
   // (up to "250*/250") always fits, and clears any longer text before it.

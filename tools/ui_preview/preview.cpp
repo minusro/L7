@@ -127,6 +127,8 @@ int main(int argc, char **argv) {
   render(out + "/ui_status_scene_edit.png");
   board.heldKeys = 0;
   render(out + "/ui_status_scene.png");
+  selectedCell = CLOCK_CELL;                       // the clock: A starts / stops (as START)
+  render(out + "/ui_status_clock.png");
   selectedCell = TEMPO_CELL;
   bpm = 85.5f;                                     // a tempo below 100
   render(out + "/ui_status_slow.png");

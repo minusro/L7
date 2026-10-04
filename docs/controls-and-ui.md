@@ -9,8 +9,8 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | Keys | Action |
 |---|---|
 | UP/DOWN | Select row: tracks 8 (top) to 1 (bottom), status row (no wrapping); starts on track 1 |
-| LEFT/RIGHT | Select cell: waveform, filter, volume (status row: tempo) |
-| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: tap tempo on the tempo cell, the panel (as B+A) on the scene cell |
+| LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo) |
+| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the panel (as B+A) on the scene cell, start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
 | B + A | Open the panel (A closes it) |
@@ -53,8 +53,8 @@ only what changed is redrawn (`uiGeneration` forces a full redraw, e.g. after
 the panel or splash). 9 rows of 26 px: 8 tracks from the top of the screen, a 2 px gap, then
 the status row; cells waveform | filter | volume | button (square). Columns:
 waveform x 0–187, filter 186–245, volume 244–291, then a block's space
-before the buttons (x 294–319); the status row's two cells are half of
-x 0–291 each (scene x 0–145, tempo 144–291). Cells share a one-block border
+before the buttons (x 294–319); the status row's three cells share
+x 0–291 (scene x 0–109, clock 108–201, tempo 200–291). Cells share a one-block border
 with their neighbours (left, right, above and below; a cell only shares a
 side with one right next to it): the selection frame is drawn there (`borderAt()` in ui.cpp), so
 content uses the cell's full size.
@@ -103,11 +103,13 @@ A recording track's waveform cell is in the accent colour.
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the scene cell
   (an inverted SCN tag with the scene position,
-  flashing while a change waits), then the tempo cell (the same width) (the clock on its left, the tempo on its right followed by an
-  inverted BPM tag), then the button. In the accent colour: the scene's tag
+  flashing while a change waits), then the clock cell (the clock
+  centred), then the tempo cell (the tempo followed by an inverted BPM tag),
+  then the button. In the accent colour: the scene's tag
   and number while SHIFT is held, or B alone on the scene cell; the tempo and
-  its tag while B alone is held on its cell. The clock: dark grey while stopped; running, in the accent colour on 1.1.1,
-  white on each beat's first step, light grey on the others.
+  its tag while B alone is held on its cell. The clock: stopped, dark grey (selected: 50% grey); running, 50% grey with
+  light grey on each beat's first step (selected: light grey, white on the
+  first step), the accent colour on 1.1.1.
 * Track buttons: the track's number (tracks count from the bottom: 1 is
   just above the status row) — dark grey on an empty track; in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent

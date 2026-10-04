@@ -66,10 +66,13 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   bool onStatus = selected == STATUS_ROW;
   int prevSel = selected;
-  // A on the status row's scene cell: as B+A (the panel).
+  // A on the status row's scene cell: as B+A (the panel); on the clock cell:
+  // as START; on the tempo cell: tap tempo.
   bool onScene = onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL;
+  bool onClock = onStatus && selectedCellIn(STATUS_ROW) == CLOCK_CELL;
+  bool onTempo = onStatus && selectedCellIn(STATUS_ROW) == TEMPO_CELL;
   // Any press but a lone A on the tempo cell (a tap): the next tap starts a new count.
-  if (pressed && !(onStatus && !onScene && pressed == m8::BTN_EDIT && keys == m8::BTN_EDIT)) tapCount = 0;
+  if (pressed && !(onTempo && pressed == m8::BTN_EDIT && keys == m8::BTN_EDIT)) tapCount = 0;
   bool sceneChanged = false;                         // every row to redraw
   // The scene keys' modifier: SHIFT, or B on the status row's scene cell.
   bool sceneMod = shift || (opt && onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL);
@@ -139,7 +142,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if (onStatus) {
       if (selectedCellIn(STATUS_ROW) == SCENE_CELL) {   // scene: UP/DOWN as SHIFT+UP/DOWN
         sceneKeys();
-      } else {                                       // tempo: 0.1 BPM steps, or 1 BPM
+      } else if (onTempo) {                          // tempo: 0.1 BPM steps, or 1 BPM
         if (pressed & m8::BTN_LEFT) setTempo(bpm - 0.1f);
         if (pressed & m8::BTN_RIGHT) setTempo(bpm + 0.1f);
         // UP/DOWN: to the next whole BPM that way (120.5 up: 121; 135 down: 134).
@@ -273,14 +276,14 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   } else {
     if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
     if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
-    // (On the status row the volume column belongs to the tempo cell.)
     if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell = selectedCellIn(selected) - 1;
     if (pressed & m8::BTN_RIGHT && selectedCell < cellCount(selected) - 1) selectedCell++;
   }
 
   // START: start from 1.1.1 / stop. With SHIFT: start from 1.1.1 on every
-  // press, running or not. A on the status row: tap tempo (with SHIFT: the
-  // same as SHIFT+START).
+  // press, running or not. A on the status row: the panel (scene cell), START
+  // (clock cell), tap tempo (tempo cell); with SHIFT, on any of them: the same
+  // as SHIFT+START.
   // B+A: open the panel. With SHIFT too, the order they were pressed in:
   // B then SHIFT, +A: paste the scene clipboard after the scene; SHIFT then
   // B, +A: cut the scene to it.
@@ -291,11 +294,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     else sceneChanged = optFirst ? scenePaste() : sceneCut();
   }
   bool transportKey = pressed & m8::BTN_PLAY;
-  bool toggleTransport = transportKey && !shift;
+  bool toggleTransport = (transportKey || (edit && onClock)) && !shift;
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
     if (onScene) openPanel();                      // as B+A
-    else tapTempo();
+    else if (onTempo) tapTempo();                  // (the clock cell: as START, below)
   }
   if (edit && !onStatus) {
     Track &tr = tracks[selected];
