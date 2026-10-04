@@ -679,7 +679,7 @@ int main(int argc, char **argv) {
     check(sceneGoEnd() && waitScene() && sceneCurrent() == sceneCount() + 1, "SHIFT+UP twice: straight to N+1*");
     check(sceneGoEmpty() && waitScene() && sceneCurrent() == 0 && empty(), "SHIFT+DOWN twice: straight to 0*");
     setTrackMix(6, 3, 0);                          // a change on 0*
-    trackChanged(7);
+    trackChanged(6);
     block();
     check(sceneCurrent() == 1 && sceneCount() == 4 && tracks[6].volume == 3, "changing 0* inserts a new scene 1");
     check(sceneStep(1) && waitScene() && sceneCurrent() == 2 && tracks[0].sample == s1 && tracks[1].state == TrackState::Playing &&
@@ -961,7 +961,7 @@ int main(int argc, char **argv) {
     simSdLatency = nullptr;
   }
 
-  printf("switching all 8 tracks to other samples while playing (as a scene change does), slow card\n");
+  printf("switching all the tracks to other samples while playing (as a scene change does), slow card\n");
   {
     simSdLatency = realisticSd;
     srand(5);
@@ -972,14 +972,14 @@ int main(int argc, char **argv) {
     auto switchAll = [&](int set) {
       for (int t = 0; t < NUM_TRACKS; t++) {
         TrackUnit u = unitOf(t);
-        u.sample = samples[(t + 8 * set + 3) % samples.size()];
+        u.sample = samples[(t + NUM_TRACKS * set + 3) % samples.size()];
         u.rangeStart = 0; u.rangeLen = 0; u.rangePhase = 0; u.muted = 0;
         setTrackUnit(t, u);
       }
     };
     auto switched = [&](int set) {
       for (int t = 0; t < NUM_TRACKS; t++)
-        if (tracks[t].sample != samples[(t + 8 * set + 3) % samples.size()] || tracks[t].sampleSwitch || !tracks[t].live)
+        if (tracks[t].sample != samples[(t + NUM_TRACKS * set + 3) % samples.size()] || tracks[t].sampleSwitch || !tracks[t].live)
           return false;
       return true;
     };
@@ -1210,7 +1210,7 @@ int main(int argc, char **argv) {
   printf("declicking: loop and range wraps, mute, clip switch, stop\n");
   {
     if (!transport.running) transportStart();
-    for (int t = 6; t < 8; t++) clearTrack(t);
+    for (int t = 5; t < 7; t++) clearTrack(t);
     // Sines that don't fit their loops: every wrap would be a jump.
     auto recordSine = [&](int t, double hz, double beats) {
       feedRamp = false;

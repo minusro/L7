@@ -51,7 +51,7 @@ static constexpr int TEXT_GAP = 22;               // logo to text (the copyright
 static constexpr int TEXT_PX = 2, TEXT_ROWS = 7, TEXT_H = TEXT_ROWS * TEXT_PX;   // the app's font blocks; the text's block rows (the copyright sign's)
 static constexpr int GROUP_H = LOGO_H + TEXT_GAP + TEXT_H;   // logo, gap, text
 static constexpr int GROUP_DOWN = 8;                 // the group sits this far below the middle, px
-static constexpr int LOGO_RIGHT = 16;                // the logo this far right of the middle, px (the text stays centred)
+static constexpr int LOGO_RIGHT = 8;                 // the logo this far right of the middle, px (the text stays centred)
 static constexpr int LOGO_X = (320 - LOGO_W) / 2 + LOGO_RIGHT, LOGO_Y = (240 - GROUP_H) / 2 + GROUP_DOWN;
 // The splash's animation, in ms from showSplash(): the logo fades in from
 // black (0-500), then its colour goes once round the hues (500-2500); the
@@ -101,7 +101,8 @@ static void drawLine(int x, int y, const char *text, uint16_t color) {
   board.tft().writeRect(x, y, w, TEXT_H, px);
 }
 
-static constexpr int TEXT_Y_SPLASH = LOGO_Y + LOGO_H + TEXT_GAP;
+static constexpr int TEXT_DOWN = 4;                  // the text a little lower than the group's centring puts it, px
+static constexpr int TEXT_Y_SPLASH = LOGO_Y + LOGO_H + TEXT_GAP + TEXT_DOWN;
 
 int splashBottom() { return TEXT_Y_SPLASH + TEXT_H; }
 
