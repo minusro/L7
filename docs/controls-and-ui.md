@@ -124,9 +124,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   light grey on each beat's first step (selected: light grey, white on the
   first step), the accent colour on 1.1.1. While B alone is held on the clock
   cell it shows the master volume instead: 22 vertical lines across the cell
-  (one per step 0–21, 1.76 dB apart: 0 off, 19 100% — the default —, 21 150%): the volume's
+  (one per step 0–21, 1.5 dB apart: 0 off, 17 100% — the default —, 21 200%): the volume's
   line white, dark accent before it and dark grey after it; their upper halves meter the left output, the
-  lower halves the right (accent, line 19 0 dBFS — the two above it clipping —, falling back from
+  lower halves the right (accent, line 17 0 dBFS — the ones above it clipping —, falling back from
   peaks), from silence each time it shows.
 * Track buttons: the track's number (tracks count from the bottom: 1 is
   just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined

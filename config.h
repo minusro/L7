@@ -61,11 +61,11 @@ constexpr float FILTER_MIN_HZ = 20.0f, FILTER_OCTAVES = 10.0f;
 // Master volume: the final output (tracks and monitored input), steps
 // 0..MASTER_VOLUME_MAX, one per line of the clock cell's volume control
 // (ui_status.cpp). Step v is (v - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB:
-// MASTER_VOLUME_UNITY is 100% (the default), the top step 150% (two steps of
-// 1.76 dB above), 0 is off. Its meter has the same scale: line
-// MASTER_VOLUME_UNITY is 0 dBFS (the two above: clipping).
-constexpr int MASTER_VOLUME_MAX = 21, MASTER_VOLUME_UNITY = 19;
-constexpr float MASTER_STEP_DB = 1.7609126f;       // 20 log10(1.5) / 2
+// MASTER_VOLUME_UNITY is 100% (the default), the top step 200% (four steps of
+// 1.5 dB above), 0 is off. Its meter has the same scale: line
+// MASTER_VOLUME_UNITY is 0 dBFS (the ones above: clipping).
+constexpr int MASTER_VOLUME_MAX = 21, MASTER_VOLUME_UNITY = 17;
+constexpr float MASTER_STEP_DB = 1.5051500f;       // 20 log10(2) / 4
 
 // Per-track volume and balance, in as many steps as the volume cell has lines
 // per channel (each step shows). Volume step v is (v - VOLUME_UNITY) *
