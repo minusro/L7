@@ -157,10 +157,12 @@ A recording track's waveform area is in the accent colour (a block of black betw
   loaded, the splash's turquoise). A slot holding a project is filled with
   it, its letter (the project's name) black; the loaded one outlined white.
   An empty slot is a grey outline, its letter in the slot's colour. Under them
-  a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet). Four in
-  view at a time (an item
-  every 12 rows, the last place in the status row's, level with the action
-  button); moving, the list scrolls so the item past the selection that way
+  a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet). Three in
+  view at a time (an item every 12 rows); under them, in the status row's
+  place (the clock cell's), the master volume, always showing (no clock): B +
+  arrows change it, B twice turns it off or back to 100%, A starts / stops
+  (SHIFT+A from 1.1.1), all as on the clock cell (the same global volume). In
+  the list, moving, the list scrolls so the item past the selection that way
   stays in view where there is one, never past its ends (no empty places);
   with four or fewer, from the top of the room: a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
