@@ -1731,6 +1731,7 @@ int takeResampled() {
 }
 
 void endSilencing() { silencedTracks = 0; }
+void hearAgain(int t) { __atomic_fetch_and(&silencedTracks, (uint8_t)~(1 << t), __ATOMIC_RELAXED); }   // (the interrupt clears bits too)
 
 bool recordPress(int t, bool resample) {
   if (t == queuedTrack) {                        // pressed again: no longer queued

@@ -78,6 +78,7 @@ bool recordQueuedResample();          // and it resamples
 // endSilencing().
 int takeResampled();
 void endSilencing();
+void hearAgain(int t);                // track t no longer silenced (it keeps its clip in the scene after it)
 // Track t recording (or waiting to, or queued): stop at once and throw the
 // recording away (its sample file goes back to the pool of empty ones; a
 // queued recording starts from the next bar line instead).

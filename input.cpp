@@ -370,9 +370,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if (shift) {
       sceneChanged = optFirst ? scenePaste() : sceneCut();
     } else if (!onStatus && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
-               recordQueued() != selected) {
+               recordQueued() != selected && anyClipHeard()) {
       // An empty track resamples: records the app's output (queued behind a
-      // recording, as A records).
+      // recording, as A records), if there's anything to: a clip not muted.
       recordPress(selected, true);
     }
   }

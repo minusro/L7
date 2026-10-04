@@ -56,6 +56,13 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
 // cells and button show it as empty (and its controls don't act).
 inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !recordingOn(i); }
 
+// Something to resample: a clip on a track that isn't muted.
+inline bool anyClipHeard() {
+  for (int t = 0; t < NUM_TRACKS; t++)
+    if (hasClip(t) && tracks[t].state == TrackState::Playing) return true;
+  return false;
+}
+
 // Background of a cell in row i (cell -1: the button): black, but the accent colour
 // for the status row's button (the action button; ui_buttons.cpp has its
 // colours) and the accent colour for a recording track's waveform cell.

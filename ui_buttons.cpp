@@ -58,8 +58,8 @@ static int actionIcon() {
   if (board.keys() & m8::BTN_OPT) {                // B: adjusting the cell (B + arrows); with SHIFT, the scene
     if (shift) return optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
     if (selected != STATUS_ROW && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
-        recordQueued() != selected)
-      return ICON_RESAMPLE;                          // an empty track: B+A resamples
+        recordQueued() != selected && anyClipHeard())
+      return ICON_RESAMPLE;                          // an empty track: B+A resamples (something to: a clip not muted)
     if (board.keys() & m8::BTN_PLAY) return ICON_NONE;
     return selected == STATUS_ROW || hasClip(selected) ? ICON_ADJUST : ICON_NONE;
   }

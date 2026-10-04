@@ -56,14 +56,16 @@ ms to seconds and starves the streams. So:
   where the first ends (same sample, from the input history if needed —
   up to `INPUT_FRAMES - 2 * CHUNK_FRAMES` behind). Its file is taken at queue
   time.
-* **Resampling** (`recordPress(t, true)`, B+A on an empty track): records the
+* **Resampling** (`recordPress(t, true)`, B+A on an empty track, offered only
+  while a clip is playing unmuted): records the
   app's output instead of the input — the engine writes each output frame
   into `inputRing` while it's on (`recording.resample`), no latency shift.
   Always starts on a bar line (the history before the press holds input). A
   recording queued behind one of the other kind starts on the next bar line
   instead of where it ends. Stopped: the other playing tracks go quiet where
   the loop ends (`silencedTracks` from `silenceFrom`, in the interrupt; each
-  track's bit clears at its next clip switch, all on transport stop), so the
+  track's bit clears at its next clip switch, all on transport stop; a muted
+  clip carried into the new scene is cleared by `hearAgain()`), so the
   new loop takes over from what it recorded. Saved: `takeResampled()`
   reports it once, and the app makes the new scene (scenes.md).
 * **Cancel** (`cancelRecording(t)`, SHIFT+A): stops a recording at once,

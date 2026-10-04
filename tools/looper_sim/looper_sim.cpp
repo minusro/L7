@@ -1288,6 +1288,10 @@ int main(int argc, char **argv) {
     feedRamp = false;                              // no input: the output is the tracks
     for (int t = 1; t < NUM_TRACKS; t++) if (recording.mode == Recording::Idle) clearTrack(t);
     if (tracks[0].state != TrackState::Playing) recordTrack(0, 7.5, 2, "  (track 1 recorded to play under it)");
+    feedRamp = true;
+    recordTrack(1, 3.5, 1, "  (track 2 recorded, then muted: it comes along to the new scene)");
+    setTrackMuted(1, true);
+    uint32_t mutedSample = tracks[1].sample;
     feedRamp = false;
     runBeats(4);
     // The output, by transport sample, while it records.
@@ -1323,15 +1327,21 @@ int main(int argc, char **argv) {
     waitScene();
     runBeats(2);
     bool othersEmpty = true;
-    for (int t = 0; t < NUM_TRACKS; t++) if (t != 6 && tracks[t].state != TrackState::Empty) othersEmpty = false;
+    for (int t = 0; t < NUM_TRACKS; t++) if (t != 6 && t != 1 && tracks[t].state != TrackState::Empty) othersEmpty = false;
     check(tracks[6].sample == sample && tracks[6].state == TrackState::Playing && tracks[6].live && othersEmpty &&
-          silencedTracks == 0, "in it: just the resampling, on the same track");
+          silencedTracks == 0, "in it: the resampling, on the same track, and nothing unmuted");
+    check(tracks[1].sample == mutedSample && tracks[1].state == TrackState::Muted, "the muted clip came along, still muted");
+    setTrackMuted(1, false);
+    runBeats(2);
+    checkSync(1, "the muted clip unmuted: heard (not left silenced)");
+    setTrackMuted(1, true);
     checkSync(6, "the resampling, playing on");
     check(sceneStep(-1), "back to the scene before");
     waitScene();
     runBeats(2);
-    check(tracks[0].state == TrackState::Playing && tracks[6].state == TrackState::Empty,
-          "the scene before: as it was, without the resampling");
+    check(tracks[0].state == TrackState::Playing && tracks[6].state == TrackState::Empty &&
+          tracks[1].sample == mutedSample && tracks[1].state == TrackState::Muted,
+          "the scene before: as it was (the muted clip too), without the resampling");
     feedRamp = true;
   }
 

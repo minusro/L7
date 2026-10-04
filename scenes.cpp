@@ -312,6 +312,11 @@ bool sceneFromResample(int t) {
   to.tempo = from.tempo;
   to.units[t] = from.units[t];                     // (on the same track)
   from.units[t] = emptyScene().units[t];
+  for (int u = 0; u < NUM_TRACKS; u++)              // the muted clips come along, still muted (and stay here too)
+    if (u != t && from.units[u].sample && from.units[u].muted) {
+      to.units[u] = from.units[u];
+      hearAgain(u);                                  // (silenced with the others: its clip doesn't change, so it's heard once unmuted)
+    }
   int pos = list.current == list.count + 1 ? list.count + 1 : list.current + 1;
   if (list.count >= MAX_SCENES) return false;
   if (list.current >= 1 && list.current <= list.count) {   // the current scene, without it

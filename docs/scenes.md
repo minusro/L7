@@ -86,8 +86,9 @@ hold no audio: scenes name their samples. The first version's
 * No scene changes while recording.
 * **After a resampling** (`sceneFromResample(t)`, from `followRecording()`):
   a new scene with the same tempo is inserted after the current one, holding
-  just the resampled clip, on the same track; the clip leaves the current
-  scene. The new scene is selected and goes on on the next beat (the other
+  the resampled clip, on the same track, and the current scene's muted clips,
+  still muted (copied: they stay in the current scene too); the resampled
+  clip leaves the current scene. The new scene is selected and goes on on the next beat (the other
   tracks were already silenced where the loop ended), with that track
   selected. A recording
   queued behind the resampling carries on and is left out of the switch.
