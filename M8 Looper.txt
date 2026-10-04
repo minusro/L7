@@ -91,7 +91,7 @@ no dropouts or overruns
 
 - figure out how to build resampling V
 - volume control V
-- [ Projects ]
+- [ Projects ] V
 - ableton export
 - usb data mode
 - overdubbing

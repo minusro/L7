@@ -101,13 +101,15 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 }
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
-// Cards: 26 x 14, the cut 3 (about a fifth), 6 apart, centred (11 from the top).
-// The list: centred under them, an item every 12 rows from row 72, on down into the status row's place (its
+// Cards: 26 x 14, the cut 3 (about a fifth), 6 apart, centred (14 from the top).
+// The list: centred under them, an item every 12 rows from row 75, on down into the status row's place (its
 // cells are hidden in the menu; the action button is clear to the right), its frame
 // round its label with 3 blocks of space.
 static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6;
-static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 11;
-static constexpr int LIST_Y = 72, LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
+static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 14;
+static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
+// The last item's frame level with the action button (from the status row's top).
+static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST - 1) * LIST_PITCH;   // 75
 
 static Shape itemShape(int k) {
   if (k < CARDS)
