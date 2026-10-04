@@ -16,7 +16,8 @@
 // on an empty track, paste (an arrow down to a line; dark grey while the
 // clipboard is empty). With B
 // held alone on a cell it adjusts: four small arrows (B + arrows), in the
-// accent colour on the pressed-looking backdrop; with SHIFT too, paste a scene (B pressed
+// accent colour on the pressed-looking backdrop; on an empty track: resample
+// (the record dot with a plus: B+A); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A runs the action when let go; B does
 // nothing): on its
@@ -55,8 +56,11 @@ static int actionIcon() {
   }
   if (board.keys() & m8::BTN_OPT) {                // B: adjusting the cell (B + arrows); with SHIFT, the scene
     if (shift) return optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
+    if (selected != STATUS_ROW && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
+        recordQueued() != selected)
+      return ICON_RESAMPLE;                          // an empty track: B+A resamples
     if (board.keys() & (m8::BTN_EDIT | m8::BTN_PLAY)) return ICON_NONE;
-    return selected == STATUS_ROW || hasClip(selected) ? ICON_ADJUST : ICON_NONE;   // (an empty track's cells: nothing)
+    return selected == STATUS_ROW || hasClip(selected) ? ICON_ADJUST : ICON_NONE;
   }
   if (selected == STATUS_ROW) {                    // restart / the menu / tap tempo
     if (shift) return ICON_RESTART;

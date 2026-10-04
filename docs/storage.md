@@ -56,7 +56,7 @@ ms to seconds and starves the streams. So:
   where the first ends (same sample, from the input history if needed —
   up to `INPUT_FRAMES - 2 * CHUNK_FRAMES` behind). Its file is taken at queue
   time.
-* **Resampling** (`recordPress(t, true)`; no key starts it for now): records the
+* **Resampling** (`recordPress(t, true)`, B+A on an empty track): records the
   app's output instead of the input — the engine writes each output frame
   into `inputRing` while it's on (`recording.resample`), no latency shift.
   Always starts on a bar line (the history before the press holds input). A
