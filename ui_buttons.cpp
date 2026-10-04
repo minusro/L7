@@ -18,7 +18,7 @@
 // held: open the menu (a small arrow left); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A or B runs the action when let go;
-// both held together: the looper's rows, closing the menu): on its
+// both held together: a small arrow right, closing the menu): on its
 // list's items, export to ALS (a diskette) and USB data mode (the USB
 // trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project or
@@ -143,7 +143,7 @@ PROGMEM static const Icon ICONS[] = {
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
   {5, 5, {"..#..", ".##..", "#####", ".##..", "..#.."}},   // MENU (into the menu: a small arrow left)
-  {7, 7, {".......", "###.#.#", ".......", "###.#.#", ".......", "###.#.#", "......."}},   // HOME (the looper's rows: waveform, filter, volume)
+  {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // HOME (out of the menu: the small arrow right, as LOAD)
   {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
           "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
   {9, 9, {"#.#.#.#.#", "....#....", "#...#...#", "..#####..", "#..###..#",
