@@ -63,11 +63,11 @@ static constexpr uint32_t LOGO_FADE_MS = 500, HUE_MS = 2000, TEXT_FROM_MS = 1500
 // slowing down (cubic ease-out) until they're in place at 1 s.
 static constexpr uint32_t SLIDE_MS = 1000;
 static constexpr int SLIDE_PX = 600;
-// And the copyright line rises 16 px (8 blocks) into place as it fades in,
+// And the copyright line rises 8 px (4 blocks) into place as it fades in,
 // from level with the status row's text, slowing down the same way, in place
 // 1 s after its fade starts.
 static constexpr uint32_t RISE_MS = 1000;
-static constexpr int RISE_PX = 16;
+static constexpr int RISE_PX = 8;
 static constexpr uint32_t OUT_FROM_MS = 3500, OUT_MS = 500;
 static constexpr uint32_t SPLASH_MIN_MS = OUT_FROM_MS + OUT_MS;
 static uint32_t shownAt = 0;
