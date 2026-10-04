@@ -158,7 +158,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.
   Twelve project cards (three rows of four, 21×15 blocks, 6 apart across and 3 down, centred):
-  rectangles with a block missing from each corner but the bottom right, which is cut diagonally (3 blocks), lettered
+  rectangles with a block missing from the top left corner and the bottom right cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
   pastels, rose to blush, picked by the author; the loaded project's is the
   app's accent colour, `ACCENT_DARK` at half its brightness; before one is
