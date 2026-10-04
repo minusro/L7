@@ -13,14 +13,15 @@ constexpr uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
 // RGB565 from 8-bit red, green, blue.
 constexpr uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) { return (uint16_t)((r >> 3) << 11 | (g >> 2) << 5 | b >> 3); }
 
-// The palette: black, two greys, white, and one accent colour.
+// The palette: black, three greys, white, and the accent colour (and its dark version).
 constexpr uint16_t BG = rgb565(0, 0, 0);            // black: the background
 constexpr uint16_t DARK = rgb565(32, 32, 32);       // 12.5% grey: in the background (outside the loop range,
-                                                    //   the row's other frames, fills, unlit arcs)
+                                                    //   muted volume lines and filters)
 constexpr uint16_t DIM = rgb565(128, 128, 128);     // 50% grey: inactive (muted clips, idle icons and text)
 constexpr uint16_t LIGHT = rgb565(208, 208, 208);   // 81% grey: light grey (unselected waveforms, labels, the selected filter)
 constexpr uint16_t INK = rgb565(255, 255, 255);     // white: what's active, selected, playing
 constexpr uint16_t ACCENT = rgb565(48, 230, 170);   // green turquoise: recording, and a scene change on its way
+constexpr uint16_t ACCENT_DARK = blend565(ACCENT, BG, 128);   // the accent at half brightness: light grey's while editing
 
 // ---- Roles
 constexpr uint16_t PLAYHEAD = ACCENT;        // playing clips

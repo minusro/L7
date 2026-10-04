@@ -239,7 +239,7 @@ void drawCells(int i) {
   k.icon = buttonIcon(i);
   k.bg = buttonBackground(i, k.icon);
   k.iconColor = iconColor(i, k.icon);
-  k.mark = i == selected ? markColor() : BG;
+  k.mark = i == selected && i != STATUS_ROW ? markColor() : BG;
   k.badge = trackBadge(i);
   bool first = drawn[i] != uiGeneration;
   if (!first && !memcmp(&k, &shown[i], sizeof k)) return;

@@ -59,13 +59,13 @@ x 0–145, tempo 144–291). Cells share a one-block border
 with their neighbours (left, right, above and below): the selection frame is
 drawn there (`borderAt()` in ui.cpp), so content uses the cell's full size.
 
-Style (after Elektron's screens): six colours (`colors.h`) — black (`BG`),
-12.5% grey (`DARK`: background detail — outside the loop range, unlit volume lines, the selection frame while B is held), 50% grey
-(`DIM`: inactive — muted clips, idle icons and text; the filter fill, the selection frame), light grey (`LIGHT`, 81%: unselected waveforms, labels, the selected filter), white (`INK`: active,
-selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one constant: recording
+Style (after Elektron's screens): seven colours (`colors.h`) — black (`BG`),
+12.5% grey (`DARK`: background detail — outside the loop range, unlit volume lines, the selection frame while B is held, muted volume lines and filters), 50% grey
+(`DIM`: inactive — muted clips, idle icons and text; filter fills, the selection frame), light grey (`LIGHT`, 81%: unselected waveforms, labels, selected fills and lines), white (`INK`: active,
+selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one constant; `ACCENT_DARK` at half brightness, light grey's role while editing: recording
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
-(`PX`), a 160×120 screen of chunky pixels. Selection: a grey frame on the
-selected cell only (dark grey while B alone is held); the selected track's button gets a grey panel behind its number (the button's
+(`PX`), a 160×120 screen of chunky pixels. Selection: a 50% grey frame on the
+selected cell only (dark grey while B alone is held). The selected track's button gets a 50% grey panel behind its number (the button's
 full height: two blocks of border above, left and below; the accent colour while A is held, with the
 action button, showing just the number then, in black).
 None while the status row is selected. The status
@@ -76,29 +76,35 @@ A recording track's waveform cell is in the accent colour.
   to 5 blocks each way from a two-block centre, square-root scale); light grey inside the loop range (white on the selected cell), dark grey outside (muted:
   50% grey range, dark grey outside). The start position: a short line
   across the middle (inverting what's there), on every track. While B alone
-  is held on the selected waveform cell, the range is in the accent colour,
-  muted or not. Playheads are accent-coloured lines (white while the
+  is held on the selected waveform cell, the range is in the accent colour
+  (muted: it stays grey). Playheads are accent-coloured lines (white while the
   range is in the accent colour); on muted clips black lines cutting through
   the waveform. A
   recording's record head inverts its column.
-* Filter (`ui_filter.cpp`): the response filled from the curve down, no
-  line: grey, light grey while the cell is selected, the accent colour while
-  B is held on it.
+* Filter (`ui_filter.cpp`): the response filled from the curve down, under a
+  line one block thick. Fill / line: grey / light grey;
+  selected: light grey / white; muted: dark grey, no line; B held on an
+  unmuted one: the dark accent / the accent colour.
 * Volume (`ui_mix.cpp`): 6 straight vertical lines a side, every other
-  column, filling the cell, longer further out: dark grey above the level,
-  50% grey up to it, white for the meter. A channel's level in lines is the
-  volume step minus its balance cut (one line per step of either).
-* Editing (B held on the selected cell, so B + arrows change it): the loop
-  range (B alone), the filter fill, and the volume meter (B alone; its level
-  lines in the accent at half brightness) turn to the accent colour
-  (`editingCell()` in ui.h).
+  column, filling the cell, longer further out. A channel's level in lines is
+  the volume step minus its balance cut (one line per step of either). Up to
+  the level / the outer lines: grey / dark grey; selected: light grey / grey;
+  muted: dark grey / black. The meter: white. B alone held on an unmuted one:
+  the meter in the accent colour, the level in the dark accent.
+* Editing (B held on the selected cell, so B + arrows change it; volume and
+  waveform: B alone): white turns to the accent colour and light grey to the
+  dark accent (`ACCENT_DARK`, the same for the filter fill and the volume
+  level): the loop range, the filter line and fill, the volume meter and
+  level (`editingCell()` in ui.h).
 * Icons (`ui_buttons.cpp`): bitmaps of blocks; "TAP" in the pixel font.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels light grey, white on the selected cell): the scene cell
   (an inverted SCN tag with the scene position,
-  flashing while a change waits), then the tempo cell (the same width) (the clock on its left, the tempo on its right), then the button. In the accent colour: the
-  scene's number while SHIFT is held, or B alone on the scene cell. The clock: grey while stopped; running, in the accent colour on 1.1.1,
+  flashing while a change waits), then the tempo cell (the same width) (the clock on its left, the tempo on its right followed by an
+  inverted BPM tag), then the button. In the accent colour: the scene's tag
+  and number while SHIFT is held, or B alone on the scene cell; the tempo and
+  its tag while B alone is held on its cell. The clock: grey while stopped; running, in the accent colour on 1.1.1,
   white on each beat's first step, light grey on the others.
 * Track buttons: the track's number (tracks count from the bottom: 1 is
   just above the status row) — dark grey on an empty track; in a grey-outlined

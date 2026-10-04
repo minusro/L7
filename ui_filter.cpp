@@ -3,9 +3,12 @@
 
 // ---- Filter cell: the response of the track's highpass + lowpass pair over
 // 20 Hz - 20 kHz (log), 0 dB at the top to -CURVE_DB at the bottom, in
-// blocks: filled under it (no line): grey, light grey while the cell is
-// selected, the accent colour while B is held there (B + arrows change the
-// filter). Nothing on an empty track.
+// blocks: the line, one block thick, and filled under it. Fill / line:
+//   unselected: grey / light grey;  selected: light grey / white;
+//   muted: dark grey, no line;
+//   B held on the cell of a clip that isn't muted (B + arrows change the
+//   filter): the dark accent / the accent colour.
+// Nothing on an empty track.
 // The cell is built in a buffer and sent at once (no flash).
 static constexpr int CELL_COLS = CELL[FILTER_CELL].w / PX;      // 41, the border's included
 static constexpr int GRAPH_COLS = CELL_COLS - 2;
@@ -14,7 +17,7 @@ static constexpr int TOP_ROW = 1, BOTTOM_ROW = 12;              // 0 dB, -CURVE_
 static constexpr float CURVE_DB = 30;
 
 void drawFilter(int i) {
-  struct Key { int8_t lo, hi; bool clip; uint16_t fill; uint64_t borders; };
+  struct Key { int8_t lo, hi; bool clip; uint16_t fill, line; uint64_t borders; };
   static Key shown[NUM_TRACKS];
   static uint32_t drawn[NUM_TRACKS];               // uiGeneration when last drawn
   const Track &tr = tracks[i];
@@ -24,7 +27,10 @@ void drawFilter(int i) {
   k.hi = tr.filterHi;
   k.borders = bordersOf(i, FILTER_CELL);
   k.clip = hasClip(i);                             // empty (or still recording): nothing
-  k.fill = editingCell(i, FILTER_CELL) ? ACCENT : i == selected && selectedCell == FILTER_CELL ? LIGHT : DIM;
+  bool muted = tr.state == TrackState::Muted, here = i == selected && selectedCell == FILTER_CELL;
+  bool editing = here && editingCell(i, FILTER_CELL) && !muted;
+  k.fill = muted ? DARK : editing ? ACCENT_DARK : here ? LIGHT : DIM;
+  k.line = muted ? BG : editing ? ACCENT : here ? INK : LIGHT;   // (BG: none)
   if (drawn[i] == uiGeneration && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;
   shown[i] = k;
@@ -42,8 +48,18 @@ void drawFilter(int i) {
       blocks[r][c] = b >= 0 ? (uint16_t)b : BG;
     }
   if (k.clip) {
-    for (int c = 0; c < GRAPH_COLS; c++)            // the fill, from the curve down
-      for (int r = max((int)lroundf(y[c]), TOP_ROW); r <= BOTTOM_ROW; r++) blocks[r][c + 1] = k.fill;
+    for (int c = 0; c < GRAPH_COLS; c++) {
+      // The line: this column's row, stretched halfway to its neighbours'
+      // so it stays joined where it's steep.
+      float lo = y[c], hi = y[c];
+      if (c > 0) { lo = min(lo, (y[c] + y[c - 1]) / 2); hi = max(hi, (y[c] + y[c - 1]) / 2); }
+      if (c < GRAPH_COLS - 1) { lo = min(lo, (y[c] + y[c + 1]) / 2); hi = max(hi, (y[c] + y[c + 1]) / 2); }
+      int r0 = (int)lroundf(lo), r1 = (int)lroundf(hi);
+      if (k.line != BG)
+        for (int r = max(r0, TOP_ROW); r <= min(r1, BOTTOM_ROW); r++) blocks[r][c + 1] = k.line;
+      int under = k.line != BG ? r1 + 1 : (int)lroundf(y[c]);   // (no line: the fill from the curve down)
+      for (int r = max(under, TOP_ROW); r <= BOTTOM_ROW; r++) blocks[r][c + 1] = k.fill;
+    }
   }
   static uint16_t px[CELL_H * CELL[FILTER_CELL].w];
   const int w = CELL[FILTER_CELL].w;

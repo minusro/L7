@@ -3,18 +3,19 @@
 
 // Status row, in the pixel font, each cell framed like the tracks' when the
 // row is selected:
-// The labels (the "SCN" tag, the scene's position, the tempo) are light grey,
+// The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are light grey,
 // white on the selected cell.
 //   first cell: the scene, an inverted "SCN" tag and its position "3/7" (the
-//     empty scene "0/7" and the copy after the last "*/7" in grey; in the
+//     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
-//     UP/DOWN step through the scenes). The position flashes with the beat (the accent colour, then grey) while
+//     UP/DOWN step through the scenes. The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
 //     it, or the change waiting for its switch point.
 //   second cell: the clock (bar.beat.step)
 //     on the left (a grey 1.1.1 while stopped; running: in the accent colour
 //     on 1.1.1, white on each beat's first step, light grey on the others), the
-//     tempo on the right.
+//     tempo on the right, followed by an inverted "BPM" tag (both in the
+//     accent colour while B alone is held there: B + arrows change it).
 // Text and tags are redrawn whole each pass (their boxes clear what was
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
@@ -60,17 +61,26 @@ void drawStatus() {
   uint32_t playingSpb = transport.spb;
   interrupts();
   float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
-  snprintf(text, sizeof text, "%.1f BPM", shown);
+  snprintf(text, sizeof text, "%.1f", shown);
   int cell = selected == STATUS_ROW ? selectedCellIn(STATUS_ROW) : -1;
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? INK : LIGHT; };
   int tagY = top + (CELL_H - TAG_H) / 2, textY = top + (CELL_H - FONT_H) / 2;
   {
+    // The tempo, then an inverted "BPM" tag at the cell's right edge (like the
+    // scene's "SCN"): both in the accent colour while B alone is held on the
+    // cell (B + arrows change the tempo).
     const Cell &box = TEMPO_BOX;
     int right = box.x + box.w - INSET;
-    static const int tempoW = tagWidth("888.8 BPM");   // the widest tempo: what any other clears
-    int w = tagWidth(text);
-    t.fillRect(right - tempoW, tagY, tempoW - w, TAG_H, BG);   // what longer text left
-    drawTag(right - w, tagY, text, TAG_PLAIN, labelInk(TEMPO_CELL), BG);
+    uint16_t ink = cell == TEMPO_CELL && bAlone() ? ACCENT : labelInk(TEMPO_CELL);
+    int tagX = right - tagWidth("BPM");
+    drawTag(tagX, tagY, "BPM", TAG_INVERTED, ink, BG);
+    static const int tempoW = textWidth("888.8");  // the widest tempo: its box clears any other
+    int numRight = tagX - PX, numLeft = numRight - tempoW, w = textWidth(text);
+    t.fillRect(numLeft, tagY, numRight - numLeft + PX, textY - tagY, BG);   // round the text: what was there
+    t.fillRect(numLeft, textY + FONT_H, numRight - numLeft + PX, tagY + TAG_H - textY - FONT_H, BG);
+    t.fillRect(numLeft, textY, tempoW - w, FONT_H, BG);
+    t.fillRect(numRight, textY, PX, FONT_H, BG);
+    drawText(numRight - w, textY, text, ink, BG);
   }
 
   // The clock.
@@ -92,10 +102,10 @@ void drawStatus() {
   // The scene. Its box reaches the cell's inner edge: the position's text
   // (up to "250*/250") always fits, and clears any longer text before it.
   const Cell &box = SCENE_BOX;
-  // The position in the accent colour: SHIFT held (SHIFT + UP/DOWN step
-  // through the scenes), or B alone on the cell (B + UP/DOWN do).
+  // The tag and position in the accent colour: SHIFT held (SHIFT + UP/DOWN
+  // step through the scenes), or B alone on the cell (B + UP/DOWN do).
   bool sceneAccent = (board.keys() & m8::BTN_SHIFT) || (cell == SCENE_CELL && bAlone());
-  drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, labelInk(SCENE_CELL), BG);
+  drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : labelInk(SCENE_CELL), BG);
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
