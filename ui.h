@@ -155,6 +155,7 @@ void setMainSelection(int row, int cell);   // and set (the menu open: for when 
 void showSplash();
 void hideSplash();
 void splashTick();                       // the logo's colour cycle: call while starting up (hideSplash() finishes it)
+uint16_t hueCycle(float phase);          // the logo's hue at a phase (0-1) of one turn round the hues
 int splashBottom();                    // y just below the logo (for startup messages)
 void drawSmallLogo(int x, int y, uint16_t color);   // the logo small, 55 x 26 px (the menu's corner), top left at (x, y)
 

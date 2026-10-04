@@ -47,7 +47,7 @@ static constexpr uint64_t SAMPLE_FILE_BYTES = WAV_DATA_OFFSET + (uint64_t)MAX_RE
 static constexpr int POOL_SIZE = 16;             // empty sample files kept ready for recordings (~360 MB):
                                                  // making one takes ~0.7 s, so never while playing if it can be helped
 static constexpr uint32_t MAX_NUMBER = 9999;     // sample numbers: 0001-9999
-static constexpr int MAX_SAMPLES = 5000;          // recordings kept track of (sampleIds: 20 KB of RAM2)
+static constexpr int MAX_SAMPLES = 5000;          // recordings kept track of (sampleIds: 20 KB of RAM1)
 // A sample's id: its name tag (the project's letter and the track's number:
 // (letter - 'A' + 1) << 3 | track) and its number, tag << 14 | number:
 // "A30012.wav". Numbers count per tag (A13333, A23333 and B43333 can all be
@@ -214,8 +214,9 @@ static constexpr uint32_t SAMPLE_TAG_OFFSET = SAMPLE_OVERVIEW_OFFSET + OVERVIEW_
 static_assert(SAMPLE_TAG_OFFSET + 4 <= WAV_DATA_OFFSET - 8, "the overview and name must fit in the header");
 
 // The samples holding recordings: their ids, sorted (the order of their
-// names). In RAM2 (20 KB).
-DMAMEM static uint32_t sampleIds[MAX_SAMPLES];
+// names). In RAM1 (20 KB; RAM2 is left to the rings, and to the MTP buffers
+// of USB drive mode).
+static uint32_t sampleIds[MAX_SAMPLES];
 static int sampleTotal = 0;
 static uint32_t lastOrder = 0;                   // the latest recording's order (kept in its header)
 static uint32_t nextSample = 1;                  // number for the next new file without a tag (recording space)

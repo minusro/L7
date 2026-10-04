@@ -137,6 +137,10 @@ static uint16_t oklch565(float L, float C, float hDeg) {
 // The splash's logo, the L `shift` px left of its place and the 7 as far right
 // (sliding in): each row built across the screen's width and sent whole, so
 // what they moved off is cleared.
+// The splash's colour at a phase of its hue cycle (0-1: once round from the
+// logo's turquoise, back to it): for other screens that want the same hue.
+uint16_t hueCycle(float phase) { return oklch565(0.8238f, 0.1641f, 164.76f + 360 * phase); }
+
 static void drawLogo(uint16_t color, int shift) {
   static uint16_t row[320];
   auto &t = board.tft();

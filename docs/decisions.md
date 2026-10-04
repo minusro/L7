@@ -68,6 +68,24 @@
   `A13333`, `A23333` and `B43333` can all exist), and SHIFT + LEFT/RIGHT steps
   through them in name order.
 
+## USB drive mode (2026-10-05)
+
+* The Teensy 4 core has no USB mass-storage type, so the card is shared over
+  MTP: the sketch is built with USB type "Serial + MTP Disk (Experimental)"
+  (`usb=serialmtp`; the Arduino IDE's Tools > USB Type menu). The M8 then
+  always shows up on a computer as "Teensy MTP Disk"; the library answers the
+  host's basic requests from a timer, and only in drive mode does it touch the
+  card (`MTP.addFilesystem`). It keeps an index file, `/mtpindex.dat`, on the
+  card.
+* The app is stopped and written out first; leaving restarts it.
+* RAM: the MTP buffers need RAM2, so the recordings list (20 KB) moved to RAM1.
+* A mounted drive (USB mass storage) was tried and dropped (2026-10-05): the
+  core had to be patched with a new USB type and a SCSI engine
+  (`usb-drive-msc` branch), and the M8 froze as soon as the computer talked to
+  that interface (USB gone, torn graphics; cause not found, no debugger). A
+  watchdog left enabled by a test build also persists across resets until the
+  power is cycled.
+
 ## Ableton Live Set export (agreed 2026-10-04)
 
 * The loaded project, to `/Ableton/<app name> <letter><001-999>/`: the next

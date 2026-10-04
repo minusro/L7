@@ -73,6 +73,7 @@
 #include <SD.h>
 #include "app.h"
 #include "ui.h"
+#include "usb_drive.h"
 #include "input.h"
 
 AudioInputI2S        i2sIn;
@@ -168,6 +169,7 @@ void setup() {
   takeProjectSelection(false);
   deleteUnusedSamples();                           // recordings no project uses
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
+  usbDriveTick = [] { loopCount++; handlePowerButton(); };   // (USB drive mode's own loop)
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();

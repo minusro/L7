@@ -2,6 +2,7 @@
 #include "input.h"
 #include "ui.h"
 #include "ableton.h"
+#include "usb_drive.h"
 
 static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;   // held arrows
 static constexpr uint32_t DOUBLE_TAP_MS = 200;      // two taps of a key this close: a double tap
@@ -114,8 +115,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if (armed && !(keys & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY))) {   // all let go: act
       armed = false;
       int slot = armedSlot;
-      if (slot < 0) {                                // the list's items: export (USB drive mode: nothing yet)
+      if (slot < 0) {                                // the list's items: export, USB drive mode
         if (armedItem == 0 && !shifted && projectCurrent() >= 0 && projectHasClips()) exportToAbleton();
+        if (armedItem == 1 && !shifted) usbDriveMode();   // (it restarts the app when B is held; no MTP in this build: nothing)
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
         bool loaded = slot == projectCurrent();
         if (projectFilled(slot) && cutConfirm != slot) {   // the first tap: confirm with a second
