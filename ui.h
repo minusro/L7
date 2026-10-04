@@ -11,9 +11,9 @@
 // pixel font, and the selection shown by frames and inverted boxes.
 constexpr int PX = 2;
 // Vertical layout: rows every 26 px (13 blocks): the 8 tracks from the top
-// of the screen, then the status row 2 px lower.
+// of the screen, then the status row 4 px (two blocks) lower.
 constexpr int ROW_BAND = 26;                             // a row's height (its button's)
-constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2;    // 210
+constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2 * PX;   // 212
 // Each track row: three cells, then the button (a square): the waveform, the
 // filter (its response curve), then volume and balance. A cell is its
 // content in a one-block border, shared with the cells above and below (a
@@ -25,6 +25,9 @@ constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2;    // 210
 //   waveform: x 0-187   filter: x 186-245   volume: x 244-291   button: x 294-319
 struct Cell { int x, w; };
 constexpr int CELL_H = ROW_BAND + PX;
+// The status row's cells: a band tall, framed all round (no row below shares
+// their bottom border): the tags, 9 blocks, a block from the frame each way.
+constexpr int STATUS_H = ROW_BAND;                       // y 212-237
 constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left to right
 constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;

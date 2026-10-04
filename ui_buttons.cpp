@@ -10,8 +10,9 @@
 // length (in the accent colour). Nothing on muted or empty tracks.
 // The status row's button (always inverted) shows what A does now on the
 // selected row: record (red) on an empty track; finish recording (play);
-// cancel a recording still waiting for its bar (X); mute (stop) or unmute
-// (play); with SHIFT held, cut the clip (scissors) or, on an empty track,
+// cancel a recording still waiting for its bar (X); mute or unmute (the
+// track's badge, as its button shows it: filled while it plays, outlined
+// while muted, in line with the tracks' numbers); with SHIFT held, cut the clip (scissors) or, on an empty track,
 // paste (a clipboard; dark grey while the clipboard is empty). With B
 // held: open the panel (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
@@ -21,7 +22,7 @@
 // start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_TRACK_ON, ICON_TRACK_OFF };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -56,7 +57,7 @@ static int actionIcon() {
     }
   }
   if (tr.state == TrackState::Empty) return ICON_RECORD;
-  return tr.state == TrackState::Playing ? ICON_STOP : ICON_PLAY;   // mute / unmute
+  return tr.state == TrackState::Playing ? ICON_TRACK_ON : ICON_TRACK_OFF;   // mute / unmute                               // mute / unmute
 }
 
 // The command A ran, shown dimmed while A is still held (-1: none).
@@ -122,12 +123,15 @@ PROGMEM static const Icon ICONS[] = {
           "#.......#", "#########"}},                                                   // SCENE_CUT
   {9, 9, {"#########", "#.......#", "#..###..#", "#.#...#.#", "#.#.#.#.#", "#.#...#.#", "#.#####.#",
           "#.......#", "#########"}},                                                   // SCENE_PASTE
+  {0, 0, {}},                                                                  // TRACK_ON (the track's badge)
+  {0, 0, {}},                                                                  // TRACK_OFF
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {4, 4, {".##.", "####", "####", ".##."}};
 PROGMEM static const Icon SMALL_PLAY = {3, 5, {"#..", "##.", "###", "##.", "#.."}};
 PROGMEM static const Icon SMALL_PAUSE = {3, 5, {"#.#", "#.#", "#.#", "#.#", "#.#"}};
-static constexpr int TRACK_ICON_CENTRE = 5;       // the column track rows' icons and number centre on
+static constexpr int TRACK_ICON_CENTRE = 6;       // the column track rows' icons and number centre on
+static constexpr int PANEL_LEFT = 1;              // the selected track's panel's first column (a block in)
 
 static bool unavailable(int i, int icon) {
   return i == STATUS_ROW && ((icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()));
@@ -156,10 +160,9 @@ static uint16_t markColor() { return heldAction >= 0 ? ACCENT : DIM; }
 
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
-  // The action button reaches a block lower (to the status cells' bottom
-  // border); the icons stay where they are.
-  const int height = i == STATUS_ROW ? CELL_H : ROW_BAND;
-  static uint16_t px[BUTTON_W * CELL_H];
+  // The action button: as tall as the status cells.
+  const int height = i == STATUS_ROW ? STATUS_H : ROW_BAND;
+  static uint16_t px[BUTTON_W * max(STATUS_H, ROW_BAND)];
   for (int p = 0; p < BUTTON_W * height; p++) px[p] = bg;
   auto blockIn = [&](int c, int r, uint16_t ink) {
     for (int dy = 0; dy < PX; dy++)
@@ -167,28 +170,52 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   };
   const int cols = BUTTON_W / PX, rows = ROW_BAND / PX;
   // The selected track's panel, under its number or icons: the button's whole
-  // height, its left corners cut (a two-block border round the number on the
-  // left, top and bottom). Grey; the accent colour while A is held, showing
+  // height from a block in to the right edge, its left corners cut (a
+  // two-block border round the number on the left, top and bottom). Grey; the accent colour while A is held, showing
   // just the track's number then, in black.
   uint16_t panel = i == selected && i != STATUS_ROW ? markColor() : BG;
   if (panel != BG) {
     for (int r = 0; r < rows; r++)
-      for (int c = 0; c < cols; c++)
-        if (!(c == 0 && (r == 0 || r == rows - 1))) blockIn(c, r, panel);
+      for (int c = PANEL_LEFT; c < cols; c++)
+        if (!(c == PANEL_LEFT && (r == 0 || r == rows - 1))) blockIn(c, r, panel);
     if (color == panel) color = BG;                // (a recording icon in the accent colour, on it)
     if (panel == ACCENT && badge != BADGE_NONE) badge = BADGE_LABEL;   // highlighted: the number alone
   }
   auto block = [&](int c, int r) { blockIn(c, r, color); };
+  // A track's badge: its number, in a square (filled, or outlined) or alone.
+  // The square: 7 x 9 blocks (a block of edge, a block of space round the
+  // digit), corners cut, centred on the icons' column.
+  auto drawBadge = [&](int number, bool filled, bool square, uint16_t frame, uint16_t ink) {
+    const int w = 7, h = 9, c0 = TRACK_ICON_CENTRE - w / 2, r0 = (rows - h) / 2;
+    if (square)
+      for (int r = 0; r < h; r++)
+        for (int c = 0; c < w; c++) {
+          bool side = c == 0 || c == w - 1, edge = r == 0 || r == h - 1;
+          if (side && edge) continue;                // (corners cut)
+          if (filled || side || edge) blockIn(c0 + c, r0 + r, frame);
+        }
+    const Glyph *g = glyphFor((char)('0' + number));
+    int gc = TRACK_ICON_CENTRE - glyphWidth(*g) / 2, gr = (rows - 5) / 2;
+    for (int r = 0; r < 5; r++)
+      for (int c = 0; c < glyphWidth(*g); c++)
+        if (g->rows[r][c] == '#') blockIn(gc + c, gr + r, ink);
+  };
   if (icon == ICON_TAP) {
+    // Condensed: T and A touch (T's stem and A's point keep them apart), 10
+    // blocks, centred in the backdrop.
     const char *text = "TAP";
-    int c0 = (cols - textWidth(text) / PX) / 2, r0 = (rows - FONT_H / PX) / 2 + 1;   // (a block lower: level with the BPM text)
+    const int w = textWidth(text) / PX - 1;
+    int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, r0 = (rows - FONT_H / PX) / 2;   // (level with the status row's text)
     for (const char *p = text; *p; p++) {
       const Glyph *g = glyphFor(*p);
       for (int r = 0; r < 5; r++)
         for (int c = 0; c < glyphWidth(*g); c++)
           if (g->rows[r][c] == '#') block(c0 + c, r0 + r);
-      c0 += glyphWidth(*g) + 1;
+      c0 += glyphWidth(*g) + (*p == 'T' ? 0 : 1);
     }
+  } else if (icon == ICON_TRACK_ON || icon == ICON_TRACK_OFF) {   // the selected track's badge
+    bool on = icon == ICON_TRACK_ON;
+    if (selected < NUM_TRACKS) drawBadge(trackNumber(selected), on, true, color, on ? bg : color);
   } else if (icon != ICON_NONE) {
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
@@ -199,31 +226,16 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);
   }
   if (badge != BADGE_NONE) {                       // the track's number, maybe in a square
-    // The square: 7 x 9 blocks (a block of edge, a block of space round the
-    // digit), corners cut, centred on the icons' column.
-    const int w = 7, h = 9, c0 = TRACK_ICON_CENTRE - w / 2, r0 = (rows - h) / 2;
-    if (badge != BADGE_EMPTY && badge != BADGE_LABEL) {
-      // (On the panel: a muted one's outline black; a playing one's square
-      // black, its number in the accent colour, on the panel in the accent colour.)
-      uint16_t fill = badge == BADGE_PLAYING ? (panel == ACCENT ? BG : ACCENT) : (panel != BG ? BG : DIM);
-      for (int r = 0; r < h; r++)
-        for (int c = 0; c < w; c++) {
-          bool side = c == 0 || c == w - 1, edge = r == 0 || r == h - 1;
-          if (side && edge) continue;                // (corners cut)
-          if (badge == BADGE_PLAYING || side || edge) blockIn(c0 + c, r0 + r, fill);
-        }
-    }
-    const Glyph *g = glyphFor((char)('0' + trackNumber(i)));
+    // (On the panel: a muted one's outline black; a playing one's square
+    // black, its number in the accent colour, on the panel in the accent colour.)
+    uint16_t frame = badge == BADGE_PLAYING ? (panel == ACCENT ? BG : ACCENT) : (panel != BG ? BG : DIM);
     uint16_t ink = badge == BADGE_PLAYING ? (panel == ACCENT ? ACCENT : BG)
                  : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL ? BG : DARK;
-    int gc = TRACK_ICON_CENTRE - glyphWidth(*g) / 2, gr = (rows - 5) / 2;
-    for (int r = 0; r < 5; r++)
-      for (int c = 0; c < glyphWidth(*g); c++)
-        if (g->rows[r][c] == '#') blockIn(gc + c, gr + r, ink);
+    drawBadge(trackNumber(i), badge == BADGE_PLAYING, badge == BADGE_PLAYING || badge == BADGE_MUTED, frame, ink);
   }
-  if (i == STATUS_ROW && bg != BG)                 // the action button: its top left corner cut
-    for (int y = 0; y < PX; y++)
-      for (int x = 0; x < PX; x++) px[y * BUTTON_W + x] = BG;
+  if (i == STATUS_ROW && bg != BG)                 // the action button: from a block in (as the
+    for (int y = 0; y < height; y++)               // tracks' panels), its top left corner cut
+      for (int x = 0; x < (PANEL_LEFT + (y < PX)) * PX; x++) px[y * BUTTON_W + x] = BG;
   auto &t = board.tft();
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(BUTTON_X, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin
@@ -235,7 +247,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
 // The row's button (the cells: drawWave(), drawFilter(), drawMix(),
 // drawStatus()). Redrawn only when it changes.
 void drawCells(int i) {
-  struct Key { int icon; uint16_t bg, iconColor, mark; uint8_t badge; };
+  struct Key { int icon; uint16_t bg, iconColor, mark; uint8_t badge, track; };
   static Key shown[ROWS];
   static uint32_t drawn[ROWS];                     // uiGeneration when last drawn whole
   Key k;
@@ -245,6 +257,7 @@ void drawCells(int i) {
   k.iconColor = iconColor(i, k.icon);
   k.mark = i == selected && i != STATUS_ROW ? markColor() : BG;
   k.badge = trackBadge(i);
+  k.track = i == STATUS_ROW ? selected : 0;       // (the action button's badge: the selected track's)
   bool first = drawn[i] != uiGeneration;
   if (!first && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;

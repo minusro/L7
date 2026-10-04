@@ -32,11 +32,11 @@ static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX 
 static void drawFrame(int cell) {
   auto &t = board.tft();
   const Cell &c = statusCell(cell);
-  int top = rowTop(STATUS_ROW), rows = CELL_H / PX, cols = c.w / PX;
+  int top = rowTop(STATUS_ROW), rows = STATUS_H / PX, cols = c.w / PX;
   t.fillRect(c.x + PX, top, c.w - 2 * PX, PX, borderAt(STATUS_ROW, cell, 0, 1, rows, cols));
-  t.fillRect(c.x + PX, top + CELL_H - PX, c.w - 2 * PX, PX, borderAt(STATUS_ROW, cell, rows - 1, 1, rows, cols));
-  t.fillRect(c.x, top + PX, PX, CELL_H - 2 * PX, borderAt(STATUS_ROW, cell, 1, 0, rows, cols));
-  t.fillRect(c.x + c.w - PX, top + PX, PX, CELL_H - 2 * PX, borderAt(STATUS_ROW, cell, 1, cols - 1, rows, cols));
+  t.fillRect(c.x + PX, top + STATUS_H - PX, c.w - 2 * PX, PX, borderAt(STATUS_ROW, cell, rows - 1, 1, rows, cols));
+  t.fillRect(c.x, top + PX, PX, STATUS_H - 2 * PX, borderAt(STATUS_ROW, cell, 1, 0, rows, cols));
+  t.fillRect(c.x + c.w - PX, top + PX, PX, STATUS_H - 2 * PX, borderAt(STATUS_ROW, cell, 1, cols - 1, rows, cols));
 }
 
 void drawStatus() {
@@ -66,7 +66,7 @@ void drawStatus() {
   snprintf(text, sizeof text, "%.1f", shown);
   int cell = selected == STATUS_ROW ? selectedCellIn(STATUS_ROW) : -1;
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };
-  int tagY = top + (CELL_H - TAG_H) / 2, textY = top + (CELL_H - FONT_H) / 2;
+  int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the
     // scene's "SCN"): both in the accent colour while B alone is held on the

@@ -50,8 +50,8 @@ double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
 
 320×240, no frame buffer: everything is drawn over its own background and
 only what changed is redrawn (`uiGeneration` forces a full redraw, e.g. after
-the panel or splash). 9 rows of 26 px: 8 tracks from the top of the screen, a 2 px gap, then
-the status row; cells waveform | filter | volume | button (square). Columns:
+the panel or splash). 9 rows of 26 px: 8 tracks from the top of the screen, a 4 px (two-block) gap,
+then the status row (y 212–237: its cells a band tall, framed all round); cells waveform | filter | volume | button (square). Columns:
 waveform x 0–187, filter 186–245, volume 244–291, then a block's space
 before the buttons (x 294–319); the status row's three cells share
 x 0–291 (scene x 0–109, clock 108–201, tempo 200–291). Cells share a one-block border
@@ -69,7 +69,7 @@ selected cell only (dark grey while B alone is held). The selected track's butto
 full height: two blocks of border above, left and below; the accent colour while A is held, with the
 action button, showing just the number then, in black).
 None while the status row is selected. The status
-button (the action button) is grey with black icons (dark grey with icons in the accent colour while A is held), a block taller than the others (down to the status cells' bottom border), its top left corner cut.
+button (the action button) is grey with black icons (dark grey with icons in the accent colour while A is held), as tall as the status cells, a block in from the left like the track panels, its top left corner cut. On a track with a clip its icon is the track's badge (A mutes / unmutes): filled with the number knocked out while it plays, outlined while muted, on the same column as the tracks' numbers.
 A recording track's waveform cell is in the accent colour.
 
 * Waveform (`ui_wave.cpp`): 90 columns, inside a block of space within
