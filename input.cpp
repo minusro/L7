@@ -82,9 +82,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // at once) runs the action button's action. Loading (or adding) a project
   // waits until they're let go.
   static int loadOnRelease = -1;                     // the slot to load then, or -1
-  if (menuOpen() && !menuOnStatus()) {
+  if (!menuOpen()) loadOnRelease = -1;
+  if (menuOpen()) {
     uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
-    if (loadOnRelease >= 0 && !(keys & act)) {
+    if (loadOnRelease >= 0 && !(keys & act)) {       // (wherever the selection went meanwhile)
       int slot = loadOnRelease;
       loadOnRelease = -1;
       int row, cell;
@@ -97,6 +98,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         return;
       }
     }
+  }
+  if (menuOpen() && !menuOnStatus()) {
+    uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
     if ((pressed & act) && !((keys & ~pressed) & act)) {   // (the second of the two: nothing more)
       noteActionPress();
       int slot = menuSlot();
