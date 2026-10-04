@@ -23,8 +23,8 @@
 * Double-tap window 200 ms (100 ms was too short).
 * Comments in the code describe behaviour in plain sentences; match that
   style and keep the key list in `m8_looper.ino` up to date.
-* The author commits changes themselves (and sometimes reverts experiments);
-  don't commit unless asked.
+* The author sometimes reverts experiments through git. Commits: after each
+  successful upload (build-and-test.md).
 
 ## Known limits
 
@@ -37,6 +37,18 @@
   bar (input history too short to catch up).
 * B+arrow range edits are ignored on a track while a clip change waits.
 * A switch replanned < 50 ms before its point goes to the next one.
+
+## Planned: projects (agreed 2026-10-04, not started)
+
+* A project is a list of scenes plus the state that belongs to none of
+  them: which scene is selected, and the main screen's last selected cell
+  (more may come later).
+* The master volume is not part of a project: it stays global.
+* Projects can be saved separately (several on the card). A project file
+  holds no audio, only references to the sample files its scenes use.
+* The loaded project is autosaved.
+* Today's `scenes.dat` + the row/cell in `session.txt` are in effect one
+  unnamed project.
 
 ## Open ideas (not started)
 
