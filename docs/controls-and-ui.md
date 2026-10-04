@@ -196,8 +196,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   at boot (session.txt).
 * Splash (`ui_splash.cpp`): the "L7" logo (italic, the 7's right edge one
   45° line to a sharp corner, two equal cuts near the bottom; design options in
-  `docs/design/`), drawn in full resolution from its shape (`drawL7()`, 110×52 px;
-  the menu's corner: 55×26), fading in, its hue going once round, with
-  "© 2026 Daniel Stanciu" under it in light grey, in a 3×5 block font (7×7 ©); 3.5 s;
-  startup messages print below it.
+  `docs/design/`), drawn in full resolution from its shape (`drawL7()`, at any
+  scale: 138×65 px here, 16 px right of the middle; the menu's corner: 55×26),
+  fading in, its hue going once round, with "© 2026 Daniel Stanciu" centred under
+  it in light grey, in the 3×5 block font (7×7 ©) at 3/4 size (1.5 px blocks,
+  each pixel blended from the blocks it covers); 3.5 s; startup messages print
+  below it.
 * Headphones plugged in → speaker off (sense pin 22 < 300).
