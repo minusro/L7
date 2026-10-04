@@ -21,7 +21,7 @@
 // in its slot's colour (colors.h): the loaded project's
 // filled, its letter A-L (the project's name) black;
 // another project's a thick (two-block) outline, the letter in the
-// slot's colour; empty, a grey outline with the letter in the slot's colour. The selected item's frame looks and behaves as the looper's
+// slot's colour; empty, a grey outline with the letter light grey (white when selected). The selected item's frame looks and behaves as the looper's
 // cells' (frameColor()), corners cut, a block out from a card (following its
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
@@ -176,8 +176,8 @@ static void drawItem(int k) {
     }
     uint16_t color = PROJECT_COLORS[k];
     bool filled = projectFilled(k), loaded = k == projectCurrent();
-    // Its letter (the project's name): black on the loaded one, else in the slot's colour.
-    uint16_t letter = loaded ? BG : color;
+    // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
+    uint16_t letter = loaded ? BG : filled ? color : sel ? INK : LIGHT;   // (an empty slot's: light grey, white selected)
     if (loaded) {                                 // the loaded one: filled
       fillRing(s, 0, -s.w, color);
     } else if (filled) {                          // a project: a thick outline, two blocks
