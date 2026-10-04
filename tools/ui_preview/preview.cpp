@@ -26,6 +26,7 @@ bool optBeforeShift() { return true; }             // (input.cpp isn't built her
 static bool previewShiftTwice = false;
 bool shiftTwiceHeld() { return previewShiftTwice; }   // (SHIFT tapped twice and held)
 bool arrowsMoved() { return true; }
+int cutConfirmSlot() { return -1; }
 
 // A made-up waveform: a hit on every beat (louder on bar starts), decaying,
 // over some noise.
