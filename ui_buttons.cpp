@@ -17,7 +17,8 @@
 // clipboard is empty). With B
 // held: open the menu (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
-// While the menu is open (on its items A and B both run the action): on its
+// While the menu is open (on its items A or B runs the action when let go;
+// both held together: the looper's rows, closing the menu): on its
 // list's items, export to ALS (a diskette) and USB data mode (the USB
 // trident), nothing yet; on a project slot, load (a folder; the loaded one too: back to it) or, on an
 // empty slot, new (a plus), closing the menu; with SHIFT, cut the project or
@@ -48,6 +49,7 @@ static bool flashOn() {
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
   if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
+    if ((board.keys() & (m8::BTN_EDIT | m8::BTN_OPT)) == (m8::BTN_EDIT | m8::BTN_OPT)) return ICON_HOME;   // A+B: close it
     int slot = menuSlot();
     if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : ICON_USB;
     if (shift) return projectFilled(slot) ? ICON_CUT : ICON_PASTE;

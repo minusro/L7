@@ -78,43 +78,51 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       lastShiftTap = shiftTwice ? 0 : millis();
     }
   }
-  // The menu's items: the arrows move its selection; A or B (either, or both
-  // at once) runs the action button's action. Loading (or adding) a project
-  // waits until they're let go.
-  static int loadOnRelease = -1;                     // the slot to load then, or -1
-  if (!menuOpen()) loadOnRelease = -1;
-  if (menuOpen()) {
-    uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
-    if (loadOnRelease >= 0 && !(keys & act)) {       // (wherever the selection went meanwhile)
-      int slot = loadOnRelease;
-      loadOnRelease = -1;
-      int row, cell;
-      mainSelection(row, cell);
-      projectSetSelection(row, cell);                // (the project left keeps its selection)
-      if (projectLoad(slot)) {
+  // The menu's items: the arrows move its selection; A or B runs the action
+  // button's action once let go (on the item it was pressed on); A and B held
+  // together close the menu instead.
+  static bool armed = false, closing = false, shifted = false;   // A/B down: its action waits; both: close; SHIFT with it
+  static int armedSlot = -1;                         // the slot it was pressed on (-1: a list item)
+  if (!menuOpen()) armed = false;
+  if (menuOpen() && !menuOnStatus()) {
+    const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
+    if (pressed & act) {
+      if (!armed) {
+        armed = true;
+        closing = false;
+        armedSlot = menuSlot();
+        shifted = shift;
+      }
+      if ((keys & act) == act) closing = true;
+      noteActionPress();                             // (the icon: what letting go will do)
+    }
+    if (armed && !(keys & act)) {                    // let go: act
+      armed = false;
+      if (closing) {
         closeMenu();
-        takeProjectSelection();
-        for (int i = 0; i < ROWS; i++) drawTrack(i);
         return;
       }
-    }
-  }
-  if (menuOpen() && !menuOnStatus()) {
-    uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
-    if ((pressed & act) && !((keys & ~pressed) & act)) {   // (the second of the two: nothing more)
-      noteActionPress();
-      int slot = menuSlot();
+      int slot = armedSlot;
       if (slot < 0) {                                // the list's items: nothing yet
-      } else if (shift) {                            // SHIFT+A on a slot: cut its project, or paste one into it
+      } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
         bool loaded = slot == projectCurrent();
-        if (projectFilled(slot) ? projectCut(slot) : projectPaste(slot))   // (SHIFT+A or SHIFT+B)
+        if (projectFilled(slot) ? projectCut(slot) : projectPaste(slot))
           if (loaded) takeProjectSelection();          // the loaded one cut: the dummy project's (track 1's waveform)
         drawMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
-      } else {                                       // A: load it (an empty slot: a new project) once let go, back to the looper
-        loadOnRelease = slot;
+      } else {                                       // load it (an empty slot: a new project), back to the looper
+        int row, cell;
+        mainSelection(row, cell);
+        projectSetSelection(row, cell);              // (the project left keeps its selection)
+        if (projectLoad(slot)) {
+          closeMenu();
+          takeProjectSelection();
+          for (int i = 0; i < ROWS; i++) drawTrack(i);
+        }
       }
-    } else if (!(pressed & act)) {
+      return;
+    }
+    if (!(pressed & act)) {
       bool went = menuKeys(pressed);
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) moved = went;
     }
