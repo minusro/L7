@@ -41,8 +41,8 @@ bool sceneClipboardFull();
 bool sceneFromResample(int t);
 // While on (SHIFT held, playing), stepping only moves the selection shown;
 // turning it off goes there (on the next bar line, see beginSceneChange()).
-// Quick, at once and on the next beat: steps to and from N+1*, any step to
-// the empty scene 0* (from it: as usual), the jumps to the ends, cut, paste
+// Quick, at once and on the next beat: steps to and from N+1*, a step to the
+// empty scene 0* (SHIFT held: once it's let go; from it: as usual), the jumps to the ends, cut, paste
 // and duplicate.
 bool sceneHold(bool on);       // true: it went somewhere
 bool sceneHeld();              // a held selection not gone to yet

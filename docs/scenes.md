@@ -74,8 +74,9 @@ hold no audio: scenes name their samples. The first version's
 * **Quick operations** — switch on the **next beat** (≥ 150 ms ahead), ignore
   the SHIFT hold, and pull any waiting change forward to that beat:
   * steps to and from N+1\*,
-  * any step to the empty scene 0\* (leaving it waits as usual; changing
-    it makes it scene 1, as before),
+  * a step to the empty scene 0\* — but SHIFT held still holds it back:
+    on the next beat once SHIFT is let go (leaving 0\* waits as usual;
+    changing it makes it scene 1, as before),
   * the double-tap jumps to 0\* / N+1\* (second tap held `EDGE_HOLD_MS`),
   * scene cut, paste, duplicate (these first take a held target).
 * **Label**: flashes white/dim with the beat (first half of each beat white)
