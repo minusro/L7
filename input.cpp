@@ -115,6 +115,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         if (projectLoad(slot)) {
           closeMenu();
           takeProjectSelection();
+          metronomeOn = !projectHasClips();          // (now: its first beat clicks too)
           if (!transport.running) transportStart();  // it plays, from 1.1.1 (a new one: the metronome)
           for (int i = 0; i < ROWS; i++) drawTrack(i);
         }
