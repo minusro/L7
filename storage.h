@@ -92,17 +92,27 @@ void clearTrack(int t);               // its sample stays on the card
 bool cutTrack(int t);
 bool pasteTrack(int t);
 bool clipboardFull();
-// Deletes the recordings (samples) not marked in `used` (bit n: sample n;
-// (MAX 9999 + 8) / 8 bytes) and not on a track, the clipboard or recording.
-// Stopped only (file-system changes); returns how many.
-int deleteSamplesExcept(const uint8_t *used);
-// The track's sample: the one recorded next (dir 1) or before (-1), wrapping
-// around; an empty track takes the oldest (1) or newest (-1). Needs at least
+// Samples are known by an id: the name's tag (project letter, track) and
+// number ("A30012.wav"; older ones: the number alone, "0012.wav").
+// Marks on the samples in use (clearSampleMarks(), markSample() each), then
+// deleteUnmarkedSamples() deletes the recordings not marked and not on a
+// track, the clipboard or recording; stopped only (file-system changes);
+// returns how many (the marks cleared).
+void clearSampleMarks();
+void markSample(uint32_t id);
+bool sampleMarked(int i);             // sampleAt(i)'s mark
+int deleteUnmarkedSamples();
+// The track's sample: the next (dir 1) or previous (-1) in the order of their
+// names, wrapping around; an empty track takes the first (1) or last (-1) of
+// its own in the loaded project (or the name after / before). Needs at least
 // 2 samples on the card. Volume, balance, filter and mute stay; the range resets to
 // the whole loop. false: nothing changed.
 bool stepSample(int t, int dir);
-// Samples on the card holding recordings (0001-9999), including ones no
-// track plays now (until deleteUnusedSamples(), scenes.h: no project's).
+// Samples on the card holding recordings, including ones no track plays now
+// (until deleteUnusedSamples(), scenes.h: no project's), in the order of their
+// names: sampleAt(0 .. sampleCount() - 1).
+uint32_t sampleAt(int i);
+void sampleFile(uint32_t id, char *path, size_t size);   // its file now ("/L7/samples/A30012.wav"; tests)
 // For the Live Set export (ableton.cpp; stopped): sample n's details (its
 // name: "A30012", or "0012" for an older one) and a copy of its file.
 struct SampleDetails { uint32_t frames, spb, loopBars; uint64_t bytes; char name[12]; };

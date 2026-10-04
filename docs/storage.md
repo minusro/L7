@@ -10,18 +10,20 @@ Exports (Ableton Live Sets) go to `/Ableton/` (see ableton.h):
 
 | Path | Contents |
 |---|---|
-| `samples/A10001.wav` … | The recordings, named `XYNNNN.wav`: X the letter of the project loaded when it was recorded (A–L), Y the track's number on the screen (1–7), NNNN its number (0001–9999, one count for all; recordings from before: just `NNNN.wav`). A recording goes into recording space (`NNNN.wav`, made ahead) and gets its name when it's cut down to size, stopped (a rename; open handles on it are reopened at the same position). The letter and track are kept in the header too (after the overview), so one cut short by power-off is named at the next boot. One no project uses any more (no track of any scene in any project, the clipboards and the dummy project included, nor the tracks now) is deleted at boot and whenever the menu opens (`deleteUnusedSamples()`; stopped only). 16-bit stereo WAV; a 512-byte header whose JUNK chunk holds `SampleInfo` {magic `M8SM`, version 3, frames, spb, loopBars, order, preroll}, the waveform overview (`OVERVIEW_COLS` = 286 peaks) and the name's letter and track number (two bytes; zeros: none). Audio starts at byte 512 (`WAV_DATA_OFFSET`). After the loop's `frames` come `preroll` (128) frames: the input just before the recording's first frame, used to crossfade the loop's end into its start (version 3; trimming keeps them). |
+| `samples/A30012.wav` … | The recordings, named `XYZZZZ.wav`: X the letter of the project loaded when it was recorded (A–L), Y the track's number on the screen (1–7), ZZZZ its number (0001–9999) **counting per project and track**: `A13333`, `A23333` and `B43333` can all exist (recordings from before: just `NNNN.wav`; those named by the version before this one, `A10019.wav`, keep being known by their number, see `older` in storage.cpp). A recording is known (by the scenes) by this name from the moment it starts, but it goes into recording space (`NNNN.wav`, made ahead) and its file is renamed to it when it's cut down to size, stopped (open handles on it are reopened at the same position). The name is kept in the header too (after the overview), so one cut short by power-off is named at the next boot. One no project uses any more (no track of any scene in any project, the clipboards and the dummy project included, nor the tracks now) is deleted at boot and whenever the menu opens (`deleteUnusedSamples()`; stopped only). 16-bit stereo WAV; a 512-byte header whose JUNK chunk holds `SampleInfo` {magic `M8SM`, version 3, frames, spb, loopBars, order, preroll}, the waveform overview (`OVERVIEW_COLS` = 286 peaks) and the name (letter, track, 16-bit number; zeros: none). Audio starts at byte 512 (`WAV_DATA_OFFSET`). After the loop's `frames` come `preroll` (128) frames: the input just before the recording's first frame, used to crossfade the loop's end into its start (version 3; trimming keeps them). |
 | `track1.unit` … `track7.unit` | 512 bytes each: the track's `TrackUnit` {magic `M8TU`, version, sample, rangeStart, rangeLen, rangePhase, muted, filterLo, filterHi, volume, balance}. Overwritten in place. |
 | `projects/1.dat` … `12.dat`, `clip.dat` | The project slots and the project clipboard, each created once at full size: block 0 the scene list (with the selected row and cell; zeros: an empty slot), blocks 1… one scene record each (see scenes.md). Overwritten in place. |
 | `session.txt` | The session: tempo, the tempo last set by hand (new projects start with it; 120 before any), master volume, the master volume last set by hand (new projects start with it; 100% before any), loaded project, the menu (`bpm=…`, `newbpm=…`, `volume=…`, `newvolume=…`, `project=…` 1-12, `project=0`: the dummy project; `menu=…` the menu's selected item or 100 + a status cell, + 1000 if open; an older `row=`/`cell=` is read once, for a project without a selection). Rewritten only while stopped, ~2 s after a change, and at power-off. |
 
-SHIFT+LEFT/RIGHT steps through the samples in the order of their names
+A sample's id (what scenes store, `TrackUnit.sample`) is its tag (project
+letter and track) and number: `tag << 14 | number`; without a tag, the number
+alone. The card's recordings are a sorted list of ids (`sampleIds`, up to 5000
+in RAM2), so SHIFT+LEFT/RIGHT steps through them in the order of their names
 (wrapping): from a track's sample, the next names are the same project and
 track's, then the project's other tracks', then other projects' (older
 `NNNN.wav` ones come first); an empty track starts from the first (or last)
-of its own in the loaded project. A recording not renamed yet sorts as its
-name-to-be. (The `order` field, recording order, isn't used for this any
-more.)
+of its own in the loaded project. (The `order` field, recording order, isn't
+used for this any more.)
 
 ## The rule: no file-system changes while the transport runs
 

@@ -656,9 +656,8 @@ int deleteUnusedSamples() {
   if (transport.running || busy() || job.on) return 0;
   flushProject();
   prepareUnits(nullptr);                           // (no prepared sample files open)
-  static uint8_t used[(9999 + 8) / 8];
-  memset(used, 0, sizeof used);
-  auto mark = [](const TrackUnit &u) { if (u.sample && u.sample <= 9999) used[u.sample / 8] |= 1 << (u.sample % 8); };
+  clearSampleMarks();
+  auto mark = [](const TrackUnit &u) { markSample(u.sample); };
   for (int p = 0; p <= DUMMY; p++) {               // every project's scenes (the clipboard's and the dummy's too)
     FsFile f = openProject(p);
     SceneList l;
@@ -672,7 +671,7 @@ int deleteUnusedSamples() {
   for (int t = 0; t < NUM_TRACKS; t++) mark(unitOf(t));   // the tracks now (muted ones too)
   if (clipFull)
     for (const auto &u : clip.units) mark(u);      // the scene clipboard
-  return deleteSamplesExcept(used);
+  return deleteUnmarkedSamples();
 }
 
 // Opens (or makes, at full size) project files 1-12, the clipboard's and the

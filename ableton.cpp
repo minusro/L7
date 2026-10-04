@@ -227,29 +227,25 @@ int exportProject(int p, void (*progress)(int done, int total)) {
   SD.sdfs.mkdir(path);
 
   // The samples its scenes play, copied.
-  static uint8_t used[(9999 + 8) / 8];
-  memset(used, 0, sizeof used);
-  int total = 0;
+  clearSampleMarks();
   for (int k = 0; k < x.scenes; k++) {
     TrackUnit units[NUM_TRACKS];
-    if (!projectScene(p, x.pos[k], units)) continue;
-    for (const auto &u : units)
-      if (u.sample && u.sample <= 9999 && !(used[u.sample / 8] & 1 << (u.sample % 8))) {
-        used[u.sample / 8] |= 1 << (u.sample % 8);
-        total++;
-      }
+    if (projectScene(p, x.pos[k], units))
+      for (const auto &u : units) markSample(u.sample);
   }
-  int done = 0;
+  int total = 0, done = 0;
+  for (int i = 0; i < (int)sampleCount(); i++) total += sampleMarked(i);
   if (progress) progress(done, total + 1);
-  for (uint32_t n = 1; n <= 9999; n++) {
-    if (!(used[n / 8] & 1 << (n % 8))) continue;
+  for (int i = 0; i < (int)sampleCount(); i++) {
+    if (!sampleMarked(i)) continue;
     SampleDetails d;
-    if (sampleDetails(n, d)) {
+    if (sampleDetails(sampleAt(i), d)) {
       snprintf(path, sizeof path, "%s/Samples/Imported/%s.wav", x.dir, d.name);
-      copySample(n, path);
+      copySample(sampleAt(i), path);
     }
     if (progress) progress(++done, total + 1);
   }
+  clearSampleMarks();
 
   // The set.
   snprintf(path, sizeof path, "%s/%s.als", x.dir, x.name);

@@ -88,7 +88,7 @@ struct Track {
   int32_t nextStartBeat = 0;
 
   // Producer side (loop() only)
-  uint16_t sample = 0;             // the sample file it plays (or records into); 0: none
+  uint32_t sample = 0;             // the sample it plays (or records into), by id (storage.h); 0: none
   FsFile file;                     // that file
   FsFile unitFile;                 // where the track's settings are saved
   uint32_t fileFrame = 0;          // loop frame that stream frame `head` comes from

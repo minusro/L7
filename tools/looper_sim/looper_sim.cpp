@@ -164,29 +164,16 @@ static void runUntilIdle() {
   for (int i = 0; i < 100000 && recording.mode != Recording::Idle; i++) block();
 }
 
-// Sample n's file on the host: "NNNN.wav", or once named "XYNNNN.wav"
-// (project letter, track number).
-static std::string sampleFile(uint32_t n) {
-  char num[16];
-  snprintf(num, sizeof num, "%04u.wav", (unsigned)n);
-  std::string dir = simRoot + "/L7/samples/";
-  if (DIR *d = opendir(dir.c_str())) {
-    while (struct dirent *e = readdir(d)) {
-      size_t len = strlen(e->d_name);
-      if ((len == 8 || len == 10) && !strcmp(e->d_name + len - 8, num)) {
-        std::string found = dir + e->d_name;
-        closedir(d);
-        return found;
-      }
-    }
-    closedir(d);
-  }
-  return dir + num;
+// Sample id's file on the host, where it is now ("XYNNNN.wav" once named).
+static std::string hostFile(uint32_t id) {
+  char path[64];
+  sampleFile(id, path, sizeof path);
+  return simRoot + path;
 }
 
 // Reads frame `frame` of track t's sample (left channel).
 static int16_t wavLeft(int t, uint32_t frame) {
-  std::string path = sampleFile(tracks[t].sample);
+  std::string path = hostFile(tracks[t].sample);
   FILE *f = fopen(path.c_str(), "rb");
   if (!f) return INT16_MIN;
   int16_t s[2] = {INT16_MIN, 0};
@@ -576,8 +563,10 @@ int main(int argc, char **argv) {
     transportStart();
     // The recordings' file names, sorted, with their numbers.
     std::vector<std::pair<std::string, uint32_t>> names;
-    for (uint32_t n = 1; n <= 9999; n++)
-      if (sampleExists(n)) { std::string f = sampleFile(n); names.push_back({f.substr(f.rfind('/') + 1), n}); }
+    for (int i = 0; i < (int)sampleCount(); i++) {
+      std::string f = hostFile(sampleAt(i));
+      names.push_back({f.substr(f.rfind('/') + 1), sampleAt(i)});
+    }
     std::sort(names.begin(), names.end());
     size_t count = names.size();
     auto at = [&](long i) { return names[((i % (long)count) + count) % count].second; };
@@ -901,7 +890,7 @@ int main(int argc, char **argv) {
     clearTrack(5);
     recordPress(5);
     // The file's old contents: junk that must not be left in the recording.
-    if (FILE *f = fopen(sampleFile(tracks[5].sample).c_str(), "r+b")) {
+    if (FILE *f = fopen(hostFile(tracks[5].sample).c_str(), "r+b")) {
       std::vector<int16_t> junk(2 * 44100 * 8, 0x5555);
       fseek(f, WAV_DATA_OFFSET, SEEK_SET);
       fwrite(junk.data(), 2, junk.size(), f);
@@ -1023,7 +1012,7 @@ int main(int argc, char **argv) {
     simSdLatency = realisticSd;
     srand(5);
     std::vector<uint32_t> samples;
-    for (uint32_t n = 1; n <= 9999; n++) if (sampleExists(n)) samples.push_back(n);
+    for (int i = 0; i < (int)sampleCount(); i++) samples.push_back(sampleAt(i));
     if (!transport.running) transportStart();
     runBeats(4);
     auto switchAll = [&](int set) {
@@ -1410,18 +1399,39 @@ int main(int argc, char **argv) {
     clearTrack(3);
     recordTrack(3, 4.5, 1, "  (track 4 recorded)");
     uint32_t n = tracks[3].sample;
+    // Its name: the project's letter, track 4's number on the screen (4), and
+    // the next number for those two (counting per project and track).
+    std::string prefix = std::string(1, (char)('A' + projectCurrent())) + std::to_string(NUM_TRACKS - 3);
+    int highest = 0;                               // the highest number with that prefix before it
+    for (int i = 0; i < (int)sampleCount(); i++) {
+      std::string f = hostFile(sampleAt(i));
+      f = f.substr(f.rfind('/') + 1);
+      if (sampleAt(i) != n && f.size() == 10 && f.compare(0, 2, prefix) == 0) highest = std::max(highest, atoi(f.substr(2, 4).c_str()));
+    }
     char want[16];
-    snprintf(want, sizeof want, "%c%d%04u.wav", 'A' + projectCurrent(), NUM_TRACKS - 3, (unsigned)n);
-    std::string before = sampleFile(n);
+    snprintf(want, sizeof want, "%s%04d.wav", prefix.c_str(), highest + 1);
+    std::string before = hostFile(n);
+    before = before.substr(before.rfind('/') + 1);
     transportStop();
     runUntilIdle();
     for (int i = 0; i < 40; i++) serviceStorage();   // cut down to size and named, stopped
-    std::string after = sampleFile(n);
-    char m[160];
-    snprintf(m, sizeof m, "while playing still %s; once stopped %s (project letter, track number on the screen)",
-             before.substr(before.rfind('/') + 1).c_str(), after.substr(after.rfind('/') + 1).c_str());
-    check(before.size() >= 8 && !strcmp(before.c_str() + before.size() - 8, want + 2) && after.size() >= 10 &&
-          !strcmp(after.c_str() + after.size() - 10, want), m);
+    std::string after = hostFile(n);
+    after = after.substr(after.rfind('/') + 1);
+    char m[200];
+    snprintf(m, sizeof m, "while playing still %s (recording space); once stopped %s (expected %s: project letter, "
+             "track number on the screen, the next number for those)", before.c_str(), after.c_str(), want);
+    check(before.size() == 8 && after == want, m);
+    // The numbers count per project and track: the same number under other tags.
+    int dup = 0;
+    for (int i = 0; i < (int)sampleCount(); i++)
+      for (int j = i + 1; j < (int)sampleCount(); j++) {
+        std::string a = hostFile(sampleAt(i)), b = hostFile(sampleAt(j));
+        a = a.substr(a.rfind('/') + 1);
+        b = b.substr(b.rfind('/') + 1);
+        if (a.size() == 10 && b.size() == 10 && a.substr(2) == b.substr(2) && a.substr(0, 2) != b.substr(0, 2)) dup++;
+      }
+    snprintf(m, sizeof m, "%d pair(s) of recordings with the same number and another project or track (A20003 and A40003 can both exist)", dup);
+    check(dup > 0, m);
     transportStart();
     runBeats(4);
     checkSync(3, "track 4 playing on from the renamed file");
