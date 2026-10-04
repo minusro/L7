@@ -1,8 +1,7 @@
 // ui_menu.cpp — the menu (see ui.h): in place of the track rows and the
 // status row's cells (only the action button shows), the screen's whole
 // width. Opened with B+A (or A on the scene cell); left by loading a project
-// (A on the loaded one: just back). The action button's MENU icon
-// (ui_buttons.cpp) is this layout in miniature: redraw it when it changes. Twelve cards (three rows of
+// (A on the loaded one: just back). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT TO ALS" and "USB
 // DATA MODE" (nothing yet). A runs the action button's action when let go. On a slot, A loads its project (an empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project, or pastes one into an empty slot
