@@ -117,9 +117,8 @@ static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames 
 // The last place's frame level with the action button (from the status row's top).
 static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
 
-// The logo in the bottom left corner, a block in, down to the screen's bottom
-// edge (its 12 rows: the status row's lower ones).
-static constexpr int LOGO_X = PX, LOGO_Y = STATUS_TOP + PX;
+// The logo in the bottom left corner, a block in, the status row's height.
+static constexpr int LOGO_X = PX, LOGO_Y = STATUS_TOP;
 
 static Shape itemShape(int k) {
   if (k < CARDS)

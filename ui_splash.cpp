@@ -112,8 +112,10 @@ static void drawLogo(uint16_t color) {
 
 // The logo small, for the menu's corner: drawn again at 30 x 13 blocks (the
 // status row's height), not shrunk, so it stays in the UI's 2 x 2 blocks; the
-// same two cuts and lines, a block each. Its top row left out: 30 x 12.
+// same two cuts and lines, a block each. Its top row left out but for a
+// block over the 7's top line's first: 30 x 13.
 PROGMEM static const char SMALL_LOGO[][31] = {
+    "..............#...............",
     "...#####......###############.",
     "...#####......##############..",
     "...#####......#############...",
