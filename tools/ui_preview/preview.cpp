@@ -202,15 +202,11 @@ int main(int argc, char **argv) {
   render(out + "/ui_menu_cut.png");
   board.heldKeys = 0;
   render(out + "/ui_menu_load.png");
-  menuKeys(m8::BTN_LEFT);
-  menuKeys(m8::BTN_LEFT);
-  menuKeys(m8::BTN_LEFT);
-  for (int i = 0; i < 4; i++) menuKeys(m8::BTN_DOWN);   // down to the list's second item
+  menuKeys(m8::BTN_UP);                            // from card D up: the list's second column (USB data mode)
   render(out + "/ui_menu_button.png");
-  menuKeys(m8::BTN_UP);                            // the list's first item: export
+  menuKeys(m8::BTN_LEFT);                          // the list's first item: export
   render(out + "/ui_menu_export.png");
-  menuKeys(m8::BTN_DOWN);
-  menuKeys(m8::BTN_DOWN);                          // down again: the status row (its scene cell)
+  for (int i = 0; i < 4; i++) menuKeys(m8::BTN_DOWN);   // down the cards to the status row (its scene cell)
   render(out + "/ui_menu_status.png");
   menuLeaveStatus();
   closeMenu();
