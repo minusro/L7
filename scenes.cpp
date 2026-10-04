@@ -45,6 +45,7 @@ static SceneInfo clip;                           // the scene clipboard
 static bool holding = false;                     // stepping with the change held back (see sceneHold)
 static int target = -1;                          // where the held steps got to (-1: none)
 static bool clipFull = false;
+static int8_t clipsKnown = -1;                   // projectHasClips()'s answer for the stored scenes (-1: to find out)
 
 int sceneCurrent() { return target >= 0 ? target : list.current; }
 bool sceneHeld() { return target >= 0; }
@@ -107,6 +108,7 @@ static SceneInfo sceneAt(int pos) {
 // A new scene at position pos (1..count + 1), the ones from there on moving
 // up; returns its slot, or -1 when the list is full.
 static int insertAt(int pos) {
+  clipsKnown = -1;
   if (list.count >= MAX_SCENES) return -1;
   bool used[MAX_SCENES] = {};
   for (int i = 0; i < list.count; i++) used[list.slot[i]] = true;
@@ -120,6 +122,7 @@ static int insertAt(int pos) {
 }
 
 static void removeAt(int pos) {
+  clipsKnown = -1;
   if (list.slot[pos - 1] == recordSlot) recordSlot = -1;   // no need to write it now
   memmove(list.slot + pos - 1, list.slot + pos, (list.count - pos) * sizeof list.slot[0]);
   list.count--;
@@ -130,6 +133,7 @@ static void removeAt(int pos) {
 // N+1* as scene N+1.
 static void commit() {
   if (!changed) return;
+  clipsKnown = -1;
   changed = false;
   if (list.current == 0 || list.current == list.count + 1) {
     int pos = list.current == 0 ? 1 : list.count + 1;
@@ -368,6 +372,21 @@ void flushScenes() { flushProject(); }
 int projectCurrent() { return project == DUMMY ? -1 : project; }
 bool projectFilled(int p) { return p >= 0 && p < PROJECTS && filled[p]; }
 bool projectClipboardFull() { return projectClip; }
+bool projectHasClips() {
+  if (project == DUMMY) return false;
+  for (int t = 0; t < NUM_TRACKS; t++)
+    if (unitOf(t).sample) return true;              // (on the tracks now)
+  if (clipsKnown < 0) {                            // the stored scenes, read once after each change
+    clipsKnown = 0;
+    for (int pos = 1; pos <= list.count && !clipsKnown; pos++) {
+      SceneInfo s = sceneAt(pos);
+      for (const auto &u : s.units)
+        if (u.sample) clipsKnown = 1;
+    }
+  }
+  return clipsKnown;
+}
+
 bool projectsMayCopy() { return !transport.running && !busy(); }
 
 void projectSelection(int &row, int &cell) {
@@ -388,6 +407,7 @@ void projectSetSelection(int row, int cell) {
 // kept), and so does DUMMY every time. apply: its current scene goes on the
 // looper.
 static bool openAs(int p, bool apply_) {
+  clipsKnown = -1;
   FsFile f = openProject(p);
   if (!f) return false;
   SceneList l;

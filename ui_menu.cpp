@@ -156,8 +156,8 @@ static void drawItem(int k) {
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
     fillRing(s, LIST_SPACE, 0, BG);
-    bool off = k - CARDS == 0 && projectCurrent() < 0;   // export, the dummy project loaded: nothing to export
-    drawText(s.x * PX, s.y * PX, LABELS[k - CARDS], off ? DARK : sel ? INK : LIGHT, BG);
+    bool off = k - CARDS == 0 && !projectHasClips();   // export: nothing to export (no clips, or the dummy project)
+    drawText(s.x * PX, s.y * PX, LABELS[k - CARDS], off ? DIM : sel ? INK : LIGHT, BG);
   }
 }
 
@@ -168,13 +168,13 @@ uint16_t menuActionColor() {
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
   if (menuSel - CARDS == 1) return LIGHT;
-  return projectCurrent() < 0 ? DARK : ACCENT;     // export: none with the dummy project
+  return projectHasClips() ? ACCENT : DIM;         // export: grey with nothing to export
 }
 
 // What an item shows: redrawn when it changes.
 static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
-  return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (projectCurrent() < 0) << 3 |
+  return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(sel ? frameColor() : 0) << 8;
 }
 

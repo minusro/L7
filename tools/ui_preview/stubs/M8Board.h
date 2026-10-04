@@ -67,8 +67,13 @@ class Board {
 public:
   Display &tft() { return display; }
   uint8_t keys() { return heldKeys; }
+  bool keysChanged(uint8_t &k) {                   // (for a test harness driving input.cpp)
+    if (heldKeys == lastKeys) return false;
+    k = lastKeys = heldKeys;
+    return true;
+  }
   Display display;
-  uint8_t heldKeys = 0;
+  uint8_t heldKeys = 0, lastKeys = 0;
 };
 
 }  // namespace m8

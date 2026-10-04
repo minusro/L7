@@ -63,6 +63,9 @@ bool projectLoad(int p);
 // empty dummy project, in no slot, is loaded instead; for now); paste copies the clipboard into an empty
 // slot (it stays on the clipboard).
 bool projectsMayCopy();
+// The loaded project holds a clip somewhere (on the tracks or in a scene);
+// false for the dummy project.
+bool projectHasClips();
 bool projectCut(int p);
 bool projectPaste(int p);
 bool projectClipboardFull();

@@ -1349,9 +1349,10 @@ int main(int argc, char **argv) {
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) empty = false;
     int row, cell;
     projectSelection(row, cell);
-    check(empty && row == -1, "its tracks empty, no selection saved");
+    check(empty && row == -1 && !projectHasClips(), "its tracks empty, no clips, no selection saved");
     check(projectLoad(0) && sceneCount() == scenes && sceneCurrent() == pos && tracks[0].sample == sample0,
           "back to project 1: its scenes and tracks");
+    check(projectHasClips(), "project 1 has clips");
     projectSelection(row, cell);
     check(row == 3 && cell == 1, "with its selection");
     check(projectCut(1) && !projectFilled(1) && projectClipboardFull(), "project 2 cut: its slot empty");
