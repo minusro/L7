@@ -106,6 +106,15 @@ static void drawLogo(uint16_t color) {
       if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, color);
 }
 
+// The logo small, a pixel per block (43 x 26 px), its top left at (x, y):
+// the menu's corner.
+void drawSmallLogo(int x, int y, uint16_t color) {
+  auto &t = board.tft();
+  for (int r = 0; r < LOGO_ROWS; r++)
+    for (int c = 0; c < LOGO_COLS; c++)
+      if (LOGO[r][c] == '#') t.drawPixel(x + c, y + r, color);
+}
+
 static int copyrightX = 0;
 
 // The splash now: the logo fading in, then its hue (the accent's, OKLCH 0.824,

@@ -24,7 +24,8 @@
 // slot's colour; empty, a grey outline with the letter in the slot's colour. The selected item's frame looks and behaves as the looper's
 // cells' (frameColor()), corners cut, a block out from a card (the diagonal
 // too), three from the list's box (the longest label's size, centred;
-// labels left-aligned, light grey, white when selected).
+// labels left-aligned, light grey, white when selected). Bottom left, the
+// logo small, always the action button's backdrop colour.
 #include "ui.h"
 #include "ui_font.h"
 
@@ -115,6 +116,9 @@ static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
 // The last place's frame level with the action button (from the status row's top).
 static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
+
+// The logo in the bottom left corner: the status row's height, a block in.
+static constexpr int LOGO_X = PX;
 
 static Shape itemShape(int k) {
   if (k < CARDS)
@@ -221,6 +225,11 @@ void drawMenu() {
   // first, which flickered.
   // Unselected first: frames that touch a neighbour's space don't get wiped.
   // (Anything redrawn: the selected one again after it, its frame on top.)
+  static uint16_t logo;                          // the corner logo's colour shown
+  if (all || logo != actionBackground()) {       // the logo, bottom left: the action button's colour, always
+    logo = actionBackground();
+    drawSmallLogo(LOGO_X, STATUS_TOP, logo);
+  }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)
     for (int k = 0; k < ITEMS; k++) {
