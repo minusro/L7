@@ -10,11 +10,12 @@
 //   2 - 11  the waveform: a line along rows 6-7, the peaks reaching up to 4
 //           blocks above and below it. Heights go with the square root of
 //           the peak level (as the overview stores it).
-// The waveform is white inside the loop range and dark grey outside; on a
-// muted clip the range is 50% grey (the rest dark grey too). While B alone is
-// held on the selected waveform cell (B + arrows change the range), the range
-// is in the accent colour, muted or not. The start position: a short line
-// across the middle, inverting what's there, on every track. The playhead is an accent-coloured line (white
+// The waveform is light grey inside the loop range (white on the selected
+// cell) and dark grey outside; on a muted clip the range is 50% grey (the rest
+// dark grey too). While B alone is held on the selected waveform cell (B +
+// arrows change the range), the range is in the accent colour, muted or not.
+// The start position: a short line across the middle, inverting what's
+// there, on every track. The playhead is an accent-coloured line (white
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
 // A recording track's cell is in the accent colour, its waveform growing in
@@ -109,10 +110,10 @@ void drawWave(int i, bool recordingHere) {
   uint16_t bg = cellBackground(i, WAVE_CELL);
   uint64_t borders = bordersOf(i, WAVE_CELL);
   // The range: light grey, white on the selected cell, the accent colour while
-  // B alone is held on it (editing); muted: grey, even while edited.
+  // B alone is held on it (editing, muted or not); muted: grey.
   bool muted = tr.state == TrackState::Muted, here = i == selected && selectedCell == WAVE_CELL;
-  bool editing = here && bAlone() && !muted;
-  uint16_t rangeInk = muted ? DIM : editing ? ACCENT : here ? INK : LIGHT;
+  bool editing = here && bAlone();
+  uint16_t rangeInk = editing ? ACCENT : muted ? DIM : here ? INK : LIGHT;
   if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.borders == borders &&
       v.rangeInk == rangeInk)

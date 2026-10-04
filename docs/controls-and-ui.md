@@ -77,21 +77,21 @@ A recording track's waveform cell is in the accent colour.
   square-root scale); light grey inside the loop range (white on the selected cell), dark grey outside (muted:
   50% grey range, dark grey outside). The start position: a short line
   across the middle (inverting what's there), on every track. While B alone
-  is held on the selected waveform cell, the range is in the accent colour
-  (muted: it stays grey). Playheads are accent-coloured lines (white while the
+  is held on the selected waveform cell, the range is in the accent colour,
+  muted or not. Playheads are accent-coloured lines (white while the
   range is in the accent colour); on muted clips black lines cutting through
   the waveform. A
   recording's record head inverts its column.
 * Filter (`ui_filter.cpp`): inside a block of space within the frame, the
   response filled from the curve down, under a
   line one block thick. Fill / line: grey / light grey;
-  selected: light grey / white; muted: dark grey, no line; B held on an
-  unmuted one: the dark accent / the accent colour.
+  selected: light grey / white; muted: dark grey, no line; B held on it
+  (muted or not): the dark accent / the accent colour.
 * Volume (`ui_mix.cpp`): 5 straight vertical lines a side, every other
   column (a column short of the cell's edges), longer further out. A channel's level in lines is
   the volume step minus its balance cut (one line per step of either). Up to
   the level / the outer lines: grey / dark grey; selected: light grey / grey;
-  muted: dark grey / black. The meter: white. B alone held on an unmuted one:
+  muted: dark grey / black. The meter: white. B alone held on it (muted or not):
   the meter in the accent colour, the level in the dark accent.
 * Editing (B held on the selected cell, so B + arrows change it; volume and
   waveform: B alone): white turns to the accent colour and light grey to the

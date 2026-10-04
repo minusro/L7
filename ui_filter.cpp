@@ -6,8 +6,8 @@
 // blocks: the line, one block thick, and filled under it. Fill / line:
 //   unselected: grey / light grey;  selected: light grey / white;
 //   muted: dark grey, no line;
-//   B held on the cell of a clip that isn't muted (B + arrows change the
-//   filter): the dark accent / the accent colour.
+//   B held on the cell, muted or not (B + arrows change the filter): the
+//   dark accent / the accent colour.
 // Nothing on an empty track.
 // The cell is built in a buffer and sent at once (no flash).
 static constexpr int CELL_COLS = CELL[FILTER_CELL].w / PX;      // 30, the border's included
@@ -29,9 +29,9 @@ void drawFilter(int i) {
   k.borders = bordersOf(i, FILTER_CELL);
   k.clip = hasClip(i);                             // empty (or still recording): nothing
   bool muted = tr.state == TrackState::Muted, here = i == selected && selectedCell == FILTER_CELL;
-  bool editing = here && editingCell(i, FILTER_CELL) && !muted;
-  k.fill = muted ? DARK : editing ? ACCENT_DARK : here ? LIGHT : DIM;
-  k.line = muted ? BG : editing ? ACCENT : here ? INK : LIGHT;   // (BG: none)
+  bool editing = here && editingCell(i, FILTER_CELL);
+  k.fill = editing ? ACCENT_DARK : muted ? DARK : here ? LIGHT : DIM;
+  k.line = editing ? ACCENT : muted ? BG : here ? INK : LIGHT;   // (BG: none)
   if (drawn[i] == uiGeneration && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;
   shown[i] = k;

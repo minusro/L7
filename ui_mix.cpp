@@ -11,9 +11,9 @@
 // volume step j + 1's level. Up to the level / above it (the outer lines):
 //   unselected: grey / dark grey;  selected: light grey / grey;
 //   muted (no meter): dark grey / black.
-// While B alone is held on the cell of a clip that isn't muted (B + arrows
-// change volume and balance) the meter is in the accent colour, the level's
-// lines in the dark accent. A line is only redrawn when its colour changes.
+// While B alone is held on the cell, muted or not (B + arrows change volume
+// and balance), the meter is in the accent colour, the level's lines in the
+// dark accent, the outer ones grey. A line is only redrawn when its colour changes.
 static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = CELL_H / PX;   // 24 x 14, the border's included
 // The lines: one in every other column, from the centre out (a column short
 // of the cell's edges), 2 blocks tall at the centre and 2 taller each one
@@ -71,10 +71,10 @@ void drawMix(int i) {
   uint16_t looks[2 * MIX_ARCS];                    // each line's colour
   int levels[2] = {tr.volume - max(0, (int)tr.balance), tr.volume - max(0, -(int)tr.balance)};   // lines lit
   bool muted = tr.state == TrackState::Muted, here = i == selected && selectedCell == MIX_CELL;
-  bool editing = here && bAlone() && !muted;
+  bool editing = here && bAlone();
   uint16_t meterInk = editing ? ACCENT : INK;
-  uint16_t levelInk = muted ? DARK : editing ? ACCENT_DARK : here ? LIGHT : DIM;
-  uint16_t outerInk = muted ? BG : here ? DIM : DARK;
+  uint16_t levelInk = editing ? ACCENT_DARK : muted ? DARK : here ? LIGHT : DIM;
+  uint16_t outerInk = editing ? DIM : muted ? BG : here ? DIM : DARK;
   for (int ch = 0; ch < 2; ch++) {
     int level = levels[ch], meter = arcsForDb(meterDb[i][ch]);
     for (int j = 0; j < MIX_ARCS; j++)
