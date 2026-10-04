@@ -31,6 +31,11 @@ constexpr uint32_t LATENCY_FRAMES = 153;
 // (1/8x to 8x); high ratios need that much more from the card.
 constexpr float MIN_BPM = 30.0f, MAX_BPM = 240.0f;
 
+// Loops up to this many bars: their range's start moves a beat at a time
+// (input.cpp), and the start position is the range's first half bar or bar
+// line (storage.cpp, startPosition()).
+constexpr uint32_t BEAT_STEP_MAX_BARS = 8;
+
 // MIDI clock out (serial MIDI port 2 on variant B, see M8Board.h).
 constexpr bool MIDI_OUT_ENABLED = true;
 

@@ -1682,6 +1682,35 @@ bool recordPress(int t) {
   }
 }
 
+bool cancelRecording(int t) {
+  if (t == queuedTrack) return recordPress(t);   // queued: just not any more
+  if (recording.mode == Recording::Idle || recording.track != t) return false;
+  noInterrupts();
+  recording.mode = Recording::Idle;              // nothing more captured or written
+  interrupts();
+  recording.track = -1;
+  gapCount = 0;
+  writePending = false;
+  // Finishing, its loop may already play: faded out, the track empty again.
+  Track &tr = tracks[t];
+  dropPlan(t);
+  changes[t].on = false;
+  silenceTracks(1 << t);
+  tr.live = false;
+  tr.armed = false;
+  tr.state = TrackState::Empty;
+  memset(tr.overview, 0, sizeof tr.overview);
+  tr.overviewVersion++;
+  returnRecordingSample(t);                      // its file back to the pool: the recording is gone
+  trackChanged(t);
+  if (queuedTrack >= 0) {                        // the next one: from the next bar line
+    int q = queuedTrack;
+    queuedTrack = -1;
+    if (tracks[q].sample || takeRecordingSample(q)) startRecording(q, 0, 0, -1);
+  }
+  return true;
+}
+
 void clearTrack(int t) {
   if (recordingTrack(t)) return;
   Track &tr = tracks[t];
@@ -1708,8 +1737,10 @@ uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBe
   // The grid to snap to: beats, half bars or bars. A range always holds one
   // of its points (it's at least as long as the grid step: 1 beat, 2-3 beats,
   // a bar or more); it may wrap past the loop's end, where the loop (and a
-  // bar) starts again.
-  uint32_t step = rangeBeats <= 1 ? 1 : rangeBeats < (uint32_t)BEATS_PER_BAR ? BEATS_PER_BAR / 2 : BEATS_PER_BAR;
+  // bar) starts again. Loops whose range moves a beat at a time (up to
+  // BEAT_STEP_MAX_BARS): the first half bar or bar line, whichever comes first.
+  bool beatSteps = loopBeats <= BEAT_STEP_MAX_BARS * BEATS_PER_BAR;
+  uint32_t step = rangeBeats <= 1 ? 1 : rangeBeats < (uint32_t)BEATS_PER_BAR || beatSteps ? BEATS_PER_BAR / 2 : BEATS_PER_BAR;
   uint32_t first = (rangeStart + step - 1) / step * step;   // first grid point at or after the range start
   return first % loopBeats;
 }

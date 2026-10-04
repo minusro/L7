@@ -64,6 +64,10 @@ void transportSnapToBar();
 // again: not any more).
 bool recordPress(int t);
 int recordQueued();                   // the track recording next, or -1
+// Track t recording (or waiting to, or queued): stop at once and throw the
+// recording away (its sample file goes back to the pool of empty ones; a
+// queued recording starts from the next bar line instead).
+bool cancelRecording(int t);
 void clearTrack(int t);               // its sample stays on the card
 // Clipboard: a track's sample and settings. cutTrack copies a track there and
 // clears it; pasteTrack puts it on an empty track (it stays on the clipboard).

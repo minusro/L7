@@ -65,10 +65,13 @@ inline uint16_t cellBackground(int i, int cell) {
   return BG;
 }
 // Its frame: grey round the selected cell (dark grey while B is held, with
-// any other keys or none), none elsewhere (BG).
+// any other keys or none; light grey while only arrows are held: moving the
+// selection), none elsewhere (BG).
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != selectedCellIn(i)) return BG;
-  return board.keys() & m8::BTN_OPT ? DARK : DIM;
+  uint8_t k = board.keys();
+  const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
+  return k & m8::BTN_OPT ? DARK : k && !(k & ~arrows) ? LIGHT : DIM;
 }
 // B held as a modifier on its own (no SHIFT, A or START; arrows may be down).
 inline bool bAlone() {

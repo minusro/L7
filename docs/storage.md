@@ -56,6 +56,11 @@ ms to seconds and starves the streams. So:
   where the first ends (same sample, from the input history if needed —
   up to `INPUT_FRAMES - 2 * CHUNK_FRAMES` behind). Its file is taken at queue
   time.
+* **Cancel** (`cancelRecording(t)`, SHIFT+A): stops a recording at once,
+  running or finishing, and throws it away: the track is empty again and its
+  file goes back to the pool (no header was written, so it's an empty pool
+  file again; nothing is deleted while the transport runs). A queued
+  recording then starts from the next bar line.
 * The pre-roll (the 128 input frames before the first one) is copied from
   the input history once recording is under way and written after the
   loop's frames when it finishes.

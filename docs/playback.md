@@ -47,8 +47,9 @@ reaches `startBeat`. Every beat, a live track's `tail` is snapped to
   the first quarter beat the stream hasn't buffered (`applyQueuedRange`).
 * **Start position** (`startPosition()`): where the transport starting at
   1.1.1 plays each track from — a range of 1 beat: its start; shorter than a
-  bar: the first bar start or bar middle in it; a bar or longer: the first
-  bar start in it.
+  bar, or in a loop of up to 8 bars (`BEAT_STEP_MAX_BARS`, where the range
+  moves a beat at a time): the first bar start or bar middle in it, whichever
+  comes first; otherwise the first bar start in it.
 
 ## Gapless clip changes (`Change` → `Plan` → engine switch)
 

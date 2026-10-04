@@ -283,7 +283,8 @@ static int fuzz(int seconds, unsigned seed) {
       Track &tr = tracks[sel];
       switch (rand() % 13) {
         case 0: case 1: lastAction = "record press"; recordPress(sel); break;
-        case 2: lastAction = "clear"; clearTrack(sel); break;
+        case 2: if (rand() % 3) { lastAction = "clear"; clearTrack(sel); }
+                else { lastAction = "cancel recording"; cancelRecording(sel); } break;
         case 3: lastAction = "mute"; if (tr.state != TrackState::Empty) tr.state = tr.state == TrackState::Playing ? TrackState::Muted : TrackState::Playing; break;
         case 4: { lastAction = "tempo"; float b = bpm + (rand() % 21 - 10);
                   uint32_t spb = spbForBpm(b); bool ok = recording.mode == Recording::Idle && b >= MIN_BPM && b <= MAX_BPM;
@@ -483,9 +484,12 @@ int main(int argc, char **argv) {
     setRange(0, loopBeats / 4, loopBeats);         // the whole loop, from a quarter in
     runBeats(6);
     checkSync(0, "whole-loop range offset by a quarter");
-    check(startPosition(16, 0, 16) == 0 && startPosition(16, 4, 8) == 4 && startPosition(32, 3, 16) == 4,
-          "ranges of a bar or more: the first bar start");
-    check(startPosition(16, 15, 16) == 0 && startPosition(16, 13, 4) == 0, "... also across the loop's end");
+    check(startPosition(64, 0, 16) == 0 && startPosition(64, 4, 8) == 4 && startPosition(64, 3, 16) == 4 &&
+          startPosition(64, 1, 8) == 4, "longer loops, ranges of a bar or more: the first bar start");
+    check(startPosition(64, 63, 16) == 0 && startPosition(64, 61, 4) == 0, "... also across the loop's end");
+    check(startPosition(16, 0, 16) == 0 && startPosition(32, 3, 16) == 4 && startPosition(16, 1, 8) == 2 &&
+          startPosition(32, 5, 4) == 6, "loops up to 8 bars: the first half bar or bar line");
+    check(startPosition(16, 15, 16) == 0 && startPosition(16, 13, 4) == 14, "... also across the loop's end");
     check(startPosition(16, 5, 2) == 6 && startPosition(16, 6, 2) == 6 && startPosition(16, 15, 2) == 0,
           "2-beat ranges: the first bar start or middle");
     check(startPosition(16, 5, 1) == 5 && startPosition(16, 15, 1) == 15, "1-beat ranges: their start");
@@ -603,6 +607,25 @@ int main(int argc, char **argv) {
     runUntilIdle();
     check(recording.mode == Recording::Idle && tracks[7].state == TrackState::Empty, "track 8 not recorded");
     clearTrack(6);
+    // SHIFT+A: a recording thrown away at once, while running and while
+    // carrying on to its length; its file back to the pool.
+    recordPress(6);
+    for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+    runBeats(2);
+    uint32_t sample = tracks[6].sample;
+    check(sample && cancelRecording(6) && recording.mode == Recording::Idle && tracks[6].state == TrackState::Empty &&
+          tracks[6].sample == 0, "cancelled while recording: nothing recorded, its file given back");
+    runBeats(1);
+    recordPress(6);
+    for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+    check(tracks[6].sample == sample, "the next recording reuses that file");
+    runBeats(5.5);
+    recordPress(6);                                // carries on to 2 bars
+    check(recording.mode == Recording::Finishing && cancelRecording(6) && recording.mode == Recording::Idle &&
+          tracks[6].state == TrackState::Empty && !tracks[6].live && !tracks[6].armed,
+          "cancelled while finishing: the track empty again, not playing");
+    runBeats(2);
+    check(tracks[6].state == TrackState::Empty && tracks[6].underruns == 0, "and it stays empty");
     transportStop();                               // recording space refilled for what follows
     for (int i = 0; i < 20; i++) serviceStorage();
     transportStart();

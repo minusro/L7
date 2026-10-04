@@ -153,7 +153,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats: any whole number of beats, up to the whole loop.
       //   LEFT/RIGHT: move its start a step, wrapping around the loop (a range
-      //     may run past the loop's end): a beat for loops up to 4 bars, half
+      //     may run past the loop's end): a beat for loops up to 8 bars (BEAT_STEP_MAX_BARS), half
       //     a bar up to 16 bars, a bar beyond. Starts off that grid go to the
       //     next grid point that way.
       //   UP/DOWN: to the next / previous of 1/4, 1/2, 3/4, 1, 1 1/2, 2, 3, 4,
@@ -189,7 +189,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         if (threeTimesPow2(l) && l >= 6) return l / 2;
         uint32_t j = 1; while (j * 2 < l) j *= 2; return l <= 1 ? 1 : j;
       };
-      uint32_t step = tr.loopBars <= 4 ? 1 : tr.loopBars <= 16 ? 2 : 4;   // the start's grid
+      uint32_t step = tr.loopBars <= BEAT_STEP_MAX_BARS ? 1 : tr.loopBars <= 16 ? 2 : 4;   // the start's grid
       for (int k = 0; k < 4; k++) {
         if (!(pressed & keys4[k])) continue;
         bool twice = !repeat && tapTrack == selected && tapAt[k] && millis() - tapAt[k] < DOUBLE_TAP_MS;
@@ -304,9 +304,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     Track &tr = tracks[selected];
     if (shift) {
       // SHIFT+A: cut the clip to the clipboard, or paste it onto an empty
-      // track (nothing while recording).
+      // track; recording (or queued): cancel it, the recording thrown away.
       if (hasClip(selected)) cutTrack(selected);
-      else if (!recordingOn(selected)) pasteTrack(selected);
+      else if (recordingOn(selected) || recordQueued() == selected) cancelRecording(selected);
+      else pasteTrack(selected);
     } else if (tr.state == TrackState::Empty || recordingOn(selected)) {
       recordPress(selected);
     } else {

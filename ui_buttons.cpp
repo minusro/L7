@@ -11,8 +11,9 @@
 // The status row's button (always inverted) shows what A does now on the
 // selected row: record (red) on an empty track; finish recording (play);
 // cancel a recording still waiting for its bar (X); mute (a speaker crossed
-// out) or unmute (a speaker with sound waves); with SHIFT held, cut the clip (scissors) or, on an empty track,
-// paste (a clipboard; dark grey while the clipboard is empty). With B
+// out) or unmute (a speaker with sound waves); with SHIFT held, cut the clip
+// (scissors), cancel a recording (X: thrown away at once) or, on an
+// empty track, paste (a clipboard; dark grey while the clipboard is empty). With B
 // held: open the panel (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the panel is open: a house (A closes it). On the status row itself:
@@ -46,7 +47,7 @@ static int actionIcon() {
     return cell == SCENE_CELL ? ICON_MENU : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_TAP;
   }
   const Track &tr = tracks[selected];
-  if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) ? ICON_NONE : ICON_PASTE;
+  if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) || recordQueued() == selected ? ICON_DELETE : ICON_PASTE;
   if (recordQueued() == selected) return ICON_DELETE;   // takes it out of the queue
   if (recordingOn(selected)) {
     switch (recording.mode) {
@@ -126,7 +127,7 @@ PROGMEM static const Icon ICONS[] = {
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
-PROGMEM static const Icon SMALL_RECORD = {4, 4, {".##.", "####", "####", ".##."}};
+PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
 PROGMEM static const Icon SMALL_PLAY = {3, 5, {"#..", "##.", "###", "##.", "#.."}};
 PROGMEM static const Icon SMALL_PAUSE = {3, 5, {"#.#", "#.#", "#.#", "#.#", "#.#"}};
 static constexpr int TRACK_ICON_CENTRE = 6;       // the column track rows' icons and number centre on

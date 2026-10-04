@@ -8,7 +8,7 @@
 //   0, 13   the border
 //   1, 12   space (the playheads reach into it)
 // A black line the waveform's height just before each bar's start (but the
-// first's), on every track.
+// first's), on every track, while recording too.
 //   2 - 11  the waveform: a line along rows 6-7, the peaks reaching up to 4
 //           blocks above and below it. Heights go with the square root of
 //           the peak level (as the overview stores it).
@@ -20,7 +20,8 @@
 // waveform's colour there every third row, black between), on every track. The playhead is an accent-coloured line (white
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
-// A recording track's cell is in the accent colour, its waveform growing in
+// A recording track's waveform area is in the accent colour (a block of black
+// round it, inside the border), its waveform growing in
 // black (live view), the record head inverting its column.
 // Full redraws only happen when something changes; the playhead moves by
 // redrawing just its columns.
@@ -93,11 +94,14 @@ static void drawColumn(int i, int bc) {
   const Track &tr = tracks[i];
   const WaveView &v = views[i];
   uint16_t col[BAND_ROWS];
+  int c = bc - WAVE_LEFT;                          // waveform column
   for (int r = 0; r < BAND_ROWS; r++) {           // the border (the frame), round the background
     int b = borderAt(i, WAVE_CELL, r, bc, BAND_ROWS, BLOCK_COLS);
-    col[r] = b >= 0 ? (uint16_t)b : v.bg;
+    // The background (a recording's accent colour) only behind the waveform:
+    // a block of black between it and the border.
+    bool behind = c >= 0 && c < WAVE_COLS && r >= MID_ROW - WAVE_REACH && r <= MID_ROW + 1 + WAVE_REACH;
+    col[r] = b >= 0 ? (uint16_t)b : behind ? v.bg : BG;
   }
-  int c = bc - WAVE_LEFT;                          // waveform column
   if (c >= 0 && c < WAVE_COLS && v.visible) {
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
     if (!v.live || c < v.liveFilled) {
@@ -106,16 +110,17 @@ static void drawColumn(int i, int bc) {
       for (int r = MID_ROW - h; r <= MID_ROW + 1 + h; r++)
         col[r] = ink;
     }
-    if (!v.live)                                                  // bars 2 on: a black line just before each start
-      for (int b = 1; b < (int)tr.loopBars; b++)
-        if (edgeCol(b * BEATS_PER_BAR, tr.loopBars * BEATS_PER_BAR) == c + 1) {
-          for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) col[r] = v.bg;
-          break;
-        }
+    int bars = v.live ? (int)v.liveBars : (int)tr.loopBars;      // (recording: as it's shown so far)
+    for (int b = 1; b < bars; b++)                                // bars 2 on: a black line just before each start
+      if (edgeCol(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) == c + 1) {
+        for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) col[r] = BG;
+        break;
+      }
     if (uint16_t ink = startInk(v, c); ink != BG)                 // the start position: a checkered line
       for (int r = START_TOP; r <= START_BOTTOM; r++) col[r] = (r - START_TOP) % 3 ? v.bg : ink;
     if (c == v.playCol) {                                         // on top: the playhead
-      for (int r = MID_ROW - WAVE_REACH - 1; r <= MID_ROW + 2 + WAVE_REACH; r++)   // (a block past the waveform each way)
+      int reach = v.live ? 0 : 1;                                 // (a block past the waveform each way; recording: within its backdrop)
+      for (int r = MID_ROW - WAVE_REACH - reach; r <= MID_ROW + 1 + WAVE_REACH + reach; r++)
         col[r] = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
                : col[r] == v.bg ? (v.bg == BG ? INK : BG) : v.bg;
     }

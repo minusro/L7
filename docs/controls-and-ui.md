@@ -14,7 +14,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
 | B + A | Open the panel (A closes it) |
-| SHIFT + A | Cut the track to the clipboard / paste onto an empty track |
+| SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
 | SHIFT + UP/DOWN | Newer / older scene (see scenes.md); B + UP/DOWN does the same on the status row's scene cell (double taps and holding B included) |
 | SHIFT + UP/DOWN twice, second held | To N+1\* / 0\* |
@@ -27,8 +27,11 @@ tap restarts from 1.1.1 (running: snaps to the nearest bar start).
 
 ### B + arrows on the waveform (loop range)
 
-* LEFT/RIGHT: move the start on a grid — clips ≤ 4 bars: 1 beat; ≤ 16 bars:
+* LEFT/RIGHT: move the start on a grid — clips ≤ 8 bars: 1 beat; ≤ 16 bars:
   half a bar; longer: a bar. Off-grid starts snap to the next grid point.
+  The start position (where 1.1.1 plays from) is then the range's first half
+  bar or bar line on clips ≤ 8 bars, its first bar line on longer ones
+  (playback.md).
 * Twice LEFT/RIGHT: move by the range's own length; a range inside the clip
   stops at the clip edge, one already touching it jumps to the other edge,
   one straddling the edge moves freely (wraps).
@@ -65,18 +68,19 @@ Style (after Elektron's screens): seven colours (`colors.h`) — black (`BG`),
 selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one constant; `ACCENT_DARK` at half brightness, light grey's role while editing: recording
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
 (`PX`), a 160×120 screen of chunky pixels. Selection: a 50% grey frame on the
-selected cell only (dark grey while B is held, with or without other keys). The selected track's button gets a 50% grey panel behind its number (from a block in,
+selected cell only (dark grey while B is held, with or without other keys;
+light grey while only arrows are held). The selected track's button gets a 50% grey panel behind its number (from a block in,
 the button's height: two blocks of border above, left and below the 7×9
 badge; the accent colour while A is held, with the
 action button, showing just the number then, in black).
 None while the status row is selected. The status
 button (the action button) is the accent colour with black icons (dark grey with icons in the accent colour while A is held), as tall as the status cells, a block in from the left like the track panels, its top left corner cut. On a track with a clip its icon is a speaker: crossed out while the track plays (A mutes it; a block right of the other), with sound waves while it's muted (A unmutes it).
-A recording track's waveform cell is in the accent colour.
+A recording track's waveform area is in the accent colour (a block of black between it and the cell's border).
 
 * Waveform (`ui_wave.cpp`): 90 columns, inside a block of space within
   the frame (peaks up to 4 blocks each way from a two-block centre,
   square-root scale); light grey inside the loop range (white on the selected cell), 50% grey outside (muted:
-  50% grey range, dark grey outside). On every track, a black line the
+  50% grey range, dark grey outside). On every track (recording too), a black line the
   waveform's height just before the start of each bar but the first (on the
   same column edges as the range, so the range's colour stops at them). The
   start position, on every track: a dotted line the waveform's height (10
@@ -119,7 +123,7 @@ A recording track's waveform cell is in the accent colour.
   just above the status row) — dark grey on an empty track; in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent
   colour on one playing (number black). The recording (or queued) track shows
-  its recording icons instead (small, in the accent colour). After a recording
+  its recording icons instead (small, in the accent colour; the record dot 5×5). After a recording
   the selection stays on the track (`SELECT_NEXT_AFTER_RECORDING` in config.h,
   off for now, moves it on to the next empty track up).
 * Colours: all in `colors.h`.
