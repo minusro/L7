@@ -232,7 +232,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     // black, its number in the accent colour, on the panel in the accent colour.)
     uint16_t frame = badge == BADGE_PLAYING ? (panel == ACCENT ? BG : ACCENT) : (panel != BG ? BG : DIM);
     uint16_t ink = badge == BADGE_PLAYING ? (panel == ACCENT ? ACCENT : BG)
-                 : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL ? BG : DARK;
+                 : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL || panel != BG ? BG : DARK;   // (empty: black on the panel)
     drawBadge(trackNumber(i), badge == BADGE_PLAYING, badge == BADGE_PLAYING || badge == BADGE_MUTED, frame, ink);
   }
   if (i == STATUS_ROW && bg != BG)                 // the action button: from a block in (as the

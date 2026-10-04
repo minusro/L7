@@ -63,7 +63,7 @@ side with one right next to it): the selection frame is drawn there (`borderAt()
 content uses the cell's full size.
 
 Style (after Elektron's screens): seven colours (`colors.h`) — black (`BG`),
-12.5% grey (`DARK`: background detail — outside the loop range, unlit volume lines, the selection frame while B is held, muted volume lines and filters), 50% grey
+17% grey (`DARK`: background detail — outside the loop range, unlit volume lines, the selection frame while B is held, muted volume lines and filters), 44% grey
 (`DIM`: inactive — muted clips, idle icons and text; filter fills, the selection frame), light grey (`LIGHT`, 81%: unselected waveforms, labels, selected fills and lines), white (`INK`: active,
 selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one constant; `ACCENT_DARK` at half brightness, light grey's role while editing: recording
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
@@ -120,7 +120,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   light grey on each beat's first step (selected: light grey, white on the
   first step), the accent colour on 1.1.1.
 * Track buttons: the track's number (tracks count from the bottom: 1 is
-  just above the status row) — dark grey on an empty track; in a grey-outlined
+  just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent
   colour on one playing (number black). The recording (or queued) track shows
   its recording icons instead (small, in the accent colour; the record dot 5×5). After a recording
