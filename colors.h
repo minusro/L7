@@ -21,7 +21,7 @@ constexpr uint16_t DIM = rgb565(128, 128, 128);     // 50% grey: inactive (muted
 constexpr uint16_t LIGHT = rgb565(208, 208, 208);   // 81% grey: light grey (unselected waveforms, labels, the selected filter)
 constexpr uint16_t INK = rgb565(255, 255, 255);     // white: what's active, selected, playing
 constexpr uint16_t ACCENT = rgb565(48, 230, 170);   // green turquoise: recording, and a scene change on its way
-constexpr uint16_t ACCENT_DARK = blend565(ACCENT, BG, 128);   // the accent at half brightness: light grey's while editing
+constexpr uint16_t ACCENT_DARK = rgb565(24, 120, 72);   // the accent at about half brightness, a little greener: light grey's while editing
 
 // ---- Roles
 constexpr uint16_t PLAYHEAD = ACCENT;        // playing clips
