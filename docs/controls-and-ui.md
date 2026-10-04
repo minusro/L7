@@ -157,13 +157,14 @@ A recording track's waveform area is in the accent colour (a block of black betw
   project loaded, one has to be loaded or made first. Opening the menu
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.
-  Twelve project cards (three rows of four, 26×14 blocks, 6 apart across and 3 down, centred):
+  Twelve project cards (three rows of four, 26×13 blocks, 6 apart across and 3 down, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
   pastels, rose to blush, picked by the author; the loaded project's is the
   app's accent colour, `ACCENT_DARK` at half its brightness; before one is
-  loaded, the splash's turquoise). A slot holding a project is filled with
-  it, its letter (the project's name) black; the loaded one outlined white (two blocks).
+  loaded, the splash's turquoise). The loaded project's card is filled with
+  it, its letter (the project's name) black with a small black pause sign right of it; another
+  project's is a thick outline (two blocks) in its colour, the letter in it too.
   An empty slot is a grey outline, its letter in the slot's colour. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet). Four in
   view at a time (an item

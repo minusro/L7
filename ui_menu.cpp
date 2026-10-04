@@ -17,11 +17,11 @@
 // everything in order. It opens on the loaded project's card (the dummy
 // project loaded: where its selection was).
 //
-// A card: a block shape, its bottom right corner cut diagonally (about a
-// fifth of its height), in its slot's colour (colors.h): filled when it
-// holds a project (the loaded project's outlined white), its letter A-L (the
-// project's name) black; empty, a grey outline with the letter in the slot's
-// colour. The selected item's frame looks and behaves as the looper's
+// A card: a block shape, its bottom right corner cut diagonally (3 blocks),
+// in its slot's colour (colors.h): the loaded project's
+// filled, its letter A-L (the project's name) black with a small pause sign
+// right of it; another project's a thick (two-block) outline, the letter in the
+// slot's colour; empty, a grey outline with the letter in the slot's colour. The selected item's frame looks and behaves as the looper's
 // cells' (frameColor()), corners cut, a block out from a card (the diagonal
 // too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected).
@@ -105,13 +105,13 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 }
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
-// Cards: 26 x 14, the cut 3 (about a fifth), 6 apart across and 3 down (neighbouring
-// rows' frames share a row: only the selected one's shows), centred (15 from the top).
+// Cards: 26 x 13, the cut 3, 6 apart across and 3 down (neighbouring
+// rows' frames share a row: only the selected one's shows), from 16 from the top.
 // The list: centred under them, an item every 12 rows from row 75, on down into the status row's place (its
 // cells are hidden in the menu; the action button is clear to the right), its frame
 // round its label with 3 blocks of space.
-static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6, CARD_VGAP = 3;
-static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 15;
+static constexpr int CARD_W = 26, CARD_H = 13, CARD_CUT = 3, CARD_GAP = 6, CARD_VGAP = 3;
+static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 16;
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
 // The last place's frame level with the action button (from the status row's top).
 static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
@@ -158,18 +158,17 @@ static void drawItem(int k) {
     fillRing(s, 2, 1, frame, true);
     fillRing(s, 1, 0, BG);
     uint16_t color = PROJECT_COLORS[k];
-    bool filled = projectFilled(k);
-    // Its letter (the project's name): black on a project, grey on an empty slot.
-    uint16_t letter = filled ? BG : color;
-    if (filled) {
+    bool filled = projectFilled(k), loaded = k == projectCurrent();
+    // Its letter (the project's name): black on the loaded one, else in the slot's colour.
+    uint16_t letter = loaded ? BG : color;
+    if (loaded) {                                 // the loaded one: filled
       fillRing(s, 0, -s.w, color);
-      if (k == projectCurrent()) {                 // the loaded one: outlined white, two blocks
-        fillRing(s, 0, -2, INK);
-        // (the diagonal a block thicker where it meets the right edge: two blocks inside its corner)
-        auto &tft = board.tft();
-        tft.fillRect((s.x + s.w - 3) * PX, (s.y + s.h - s.cut - 1) * PX, PX, PX, INK);
-        tft.fillRect((s.x + s.w - 4) * PX, (s.y + s.h - s.cut) * PX, PX, PX, INK);
-      }
+    } else if (filled) {                          // a project: a thick outline, two blocks
+      fillRing(s, 0, -2, color);
+      fillRing(s, -2, -s.w, BG);
+      // (the diagonal a block thicker where it meets the right edge: two blocks inside its corner)
+      t.fillRect((s.x + s.w - 3) * PX, (s.y + s.h - s.cut - 1) * PX, PX, PX, color);
+      t.fillRect((s.x + s.w - 4) * PX, (s.y + s.h - s.cut) * PX, PX, PX, color);
     } else {                                      // empty: an outline (the shape's edge)
       fillRing(s, 0, -1, DIM);
       fillRing(s, -1, -s.w, BG);
@@ -180,6 +179,11 @@ static void drawItem(int k) {
       for (int r = 0; r < 5 && g->rows[r]; r++)
         for (int c = 0; c < w; c++)
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
+      if (loaded) {                               // a small pause sign right of it (two bars), black
+        int px = x0 + w + 2;
+        t.fillRect(px * PX, (y0 + 1) * PX, PX, 3 * PX, BG);
+        t.fillRect((px + 2) * PX, (y0 + 1) * PX, PX, 3 * PX, BG);
+      }
     }
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
