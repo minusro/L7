@@ -457,6 +457,23 @@ bool projectCut(int p) {
   return true;
 }
 
+bool projectDelete(int p) {
+  if (!projectFilled(p) || busy()) return false;
+  if (p == project) flushProject();
+  clearProject(p);
+  filled[p] = false;
+  if (p == project) {                              // the loaded one: the dummy project instead (empty)
+    file.close();
+    target = -1;
+    prepareUnits(nullptr);
+    openAs(DUMMY, false);
+    loading = true;
+    apply(emptyScene(), false);
+    loading = false;
+  }
+  return true;
+}
+
 bool projectPaste(int p) {
   if (!projectsMayCopy() || !projectClip || p < 0 || p >= PROJECTS || filled[p]) return false;
   if (!copyProject(CLIP, p)) return false;

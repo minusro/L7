@@ -23,6 +23,8 @@ hold no audio: scenes name their samples. The first version's
   loads an empty dummy project (`none.dat`, in no slot, emptied each time it's
   loaded; the accent then the splash's turquoise; for now), the tracks
   cleared. A new project (or the dummy) starts on track 1's waveform cell.
+* A project with no clips at all is deleted when the menu opens (its slot
+  emptied, not to the clipboard; the dummy project loaded).
 * The selection is saved in the list block (`row`, `cell`, each + 1; 0:
   none) a couple of seconds after it changes, before loading another
   project, and at power off.

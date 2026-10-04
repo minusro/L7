@@ -69,6 +69,9 @@ bool projectHasClips();
 bool projectCut(int p);
 bool projectPaste(int p);
 bool projectClipboardFull();
+// Empties slot p, the project gone (not to the clipboard); the loaded one:
+// the dummy project instead. false: recording.
+bool projectDelete(int p);
 // The loaded project's selected row and cell (-1: none saved).
 void projectSelection(int &row, int &cell);
 void projectSetSelection(int row, int cell);

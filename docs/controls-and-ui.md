@@ -147,7 +147,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   runs the action button's action when let go. B held shows the way out (a
   small arrow right, in the loaded project's colour) and B+A closes the menu,
   as does loading a project; not while the dummy project is loaded (the
-  button grey, disabled): a project has to be loaded first.
+  button grey, disabled): a project has to be loaded first. Opening the menu
+  with a project that has no clips at all (not recording) deletes it: its
+  slot empties and the dummy project is loaded.
   Twelve project cards (three rows of four, 26×14 blocks, 6 apart, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve

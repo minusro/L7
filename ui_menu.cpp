@@ -236,6 +236,11 @@ bool menuKeys(uint8_t pressed) {
 
 void openMenu() {
   if (shown) return;
+  // A project with no clips at all (none recorded since it was made): gone,
+  // the dummy project instead (one has to be chosen before leaving the menu).
+  if (projectCurrent() >= 0 && recording.mode == Recording::Idle && recordQueued() < 0 && !projectHasClips() &&
+      projectDelete(projectCurrent()))
+    takeProjectSelection();
   shown = true;
   if (projectCurrent() >= 0) {                   // on the loaded project's card (the dummy project: where it was)
     onStatus = false;
