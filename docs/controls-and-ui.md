@@ -158,8 +158,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   it, its letter (the project's name) black; the loaded one outlined white.
   An empty slot is a grey outline, its letter in the slot's colour. Under them
   a list, "EXPORT ABLETON PROJECT", "ENTER USB DATA MODE" and two placeholders,
-  "MENU ITEM 3" and "4" (nothing yet; an item every 10 rows, their frames
-  overlapping: only the selected one's shows): a box as wide as
+  "MENU ITEM 3" and "4" (nothing yet; an item every 12 rows, the list running
+  on down into the status row's place, whose cells are hidden here): a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
   selected). Going to the menu, the action button is light grey (and its icon while
   held; the selected track's panel stays grey then). The action button takes the item's colour: on a card, its
