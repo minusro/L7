@@ -78,15 +78,16 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       lastShiftTap = shiftTwice ? 0 : millis();
     }
   }
-  if (menuOpen() && !menuOnStatus()) {               // the menu's items: the arrows move its selection, B+A closes it
-    if (pressed & m8::BTN_EDIT) {
+  // The menu's items: the arrows move its selection; A or B (either, or both
+  // at once) runs the action button's action.
+  if (menuOpen() && !menuOnStatus()) {
+    uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
+    if ((pressed & act) && !((keys & ~pressed) & act)) {   // (the second of the two: nothing more)
       noteActionPress();
       int slot = menuSlot();
-      if (opt) {
-        closeMenu();
-      } else if (slot < 0) {                         // the list's items: nothing yet
+      if (slot < 0) {                                // the list's items: nothing yet
       } else if (shift) {                            // SHIFT+A on a slot: cut its project, or paste one into it
-        projectFilled(slot) ? projectCut(slot) : projectPaste(slot);
+        projectFilled(slot) ? projectCut(slot) : projectPaste(slot);   // (SHIFT+A or SHIFT+B)
         drawMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
       } else {                                       // A: load it (an empty slot: a new project), back to the looper
@@ -99,7 +100,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
           for (int i = 0; i < ROWS; i++) drawTrack(i);
         }
       }
-    } else {
+    } else if (!(pressed & act)) {
       menuKeys(pressed);
     }
     return;

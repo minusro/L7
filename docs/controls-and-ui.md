@@ -14,8 +14,8 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
 | B + A | Open / close the menu (arrows move its selection: cards, list, status row) |
-| A (menu, on a project slot) | Load its project (an empty slot: a new, empty project there) and close the menu; the loaded one: just close it. Not while recording |
-| SHIFT + A (menu, on a slot) | Cut its project to the project clipboard (the loaded one: a new empty project takes its place), or paste the clipboard into an empty slot. Only while stopped |
+| A or B (menu, on a project slot) | Load its project (an empty slot: a new, empty project there) and close the menu; the loaded one: just close it. Not while recording |
+| SHIFT + A or B (menu, on a slot) | Cut its project to the project clipboard (the loaded one: a new empty project takes its place), or paste the clipboard into an empty slot. Only while stopped |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT twice (second tap held) + A | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
@@ -143,7 +143,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   drawing code to PNGs (see build-and-test.md).
 * Menu (`ui_menu.cpp`): opened with B+A (or A on the scene cell), it takes
   the track rows' place across the whole width (the status row stays, its
-  frames hidden; B+A, or A on the scene cell, closes it). Twelve project
+  frames hidden; B+A or A on the scene cell closes it, and so does loading a
+  project). On the menu's items A and B both run the action button's action. Twelve project
   cards (three rows of four, 36×22 blocks, 4 apart): rectangles with the
   bottom right corner cut diagonally, the cut half their height. Each slot
   has its colour (`PROJECT_COLORS`: twelve pastels, rose to blush, picked by
@@ -151,13 +152,15 @@ A recording track's waveform area is in the accent colour (a block of black betw
   at half its brightness; before one is loaded, the splash's turquoise):
   filled when it holds a
   project, an outline when empty; the loaded one shows the looper's rows (the
-  HOME icon) in black. Under them a list, "EXPORT LIVE SET" and "USB MODE"
-  (nothing yet), 75% of the width, centred, labels left-aligned, light grey
-  (white when selected). The selected item's frame is grey, one block of
-  space out from it all round, following the card's diagonal. On a card the
+  HOME icon) in black. Under them a list, "EXPORT TO ABLETON" and "USB DATA
+  MODE" (nothing yet), 75% of the width, centred, labels left-aligned, light
+  grey (white when selected). The selected item's frame is grey: one block of
+  space out from a card all round, following its diagonal; three from a list
+  item's text. On a card the
   action button shows load (a folder) or, empty, new (a plus); with SHIFT,
   cut or paste (dark grey when it can't act: playing, recording, clipboard
-  empty); on the list, > (does nothing yet). LEFT/RIGHT move along a card
+  empty); on the list, a diskette (export) and the USB trident (data mode),
+  doing nothing yet. LEFT/RIGHT move along a card
   row; UP/DOWN go card row to card row, from the last row into the list
   (back up: to the column it came from), from the list's end onto the status
   row (the cell last used there), whose cells then work as in the looper's

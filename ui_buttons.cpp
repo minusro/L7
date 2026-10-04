@@ -17,9 +17,9 @@
 // clipboard is empty). With B
 // held: open the menu (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
-// While the menu is open: on its list's items, > (nothing yet); with B, the
-// looper's rows (B+A closes it, back to them); on a
-// project slot, load (a folder; the loaded one too: back to it) or, on an
+// While the menu is open (on its items A and B both run the action): on its
+// list's items, export to Ableton (a diskette) and USB data mode (the USB
+// trident), nothing yet; on a project slot, load (a folder; the loaded one too: back to it) or, on an
 // empty slot, new (a plus), closing the menu; with SHIFT, cut the project or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
@@ -31,7 +31,7 @@
 // nothing) on one with a clip.
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_OVERDUB, ICON_LOAD, ICON_NEW, ICON_ENTER };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_OVERDUB, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -47,10 +47,9 @@ static bool flashOn() {
 // What A does on the selected row (mirrors onKeys()).
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
-  if (menuOpen() && !menuOnStatus()) {             // a project slot, or A closes the menu
+  if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
     int slot = menuSlot();
-    if (board.keys() & m8::BTN_OPT) return ICON_HOME;
-    if (slot < 0) return ICON_ENTER;               // the list's items
+    if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : ICON_USB;
     if (shift) return projectFilled(slot) ? ICON_CUT : ICON_PASTE;
     return projectFilled(slot) ? ICON_LOAD : ICON_NEW;
   }
@@ -118,7 +117,8 @@ static int buttonIcon(int i) {
     wasOpen = menuOpen();
     heldAction = -1;
   }
-  if (heldAction >= 0 && !(board.keys() & m8::BTN_EDIT)) heldAction = -1;   // A released
+  uint8_t act = menuOpen() && !menuOnStatus() ? m8::BTN_EDIT | m8::BTN_OPT : m8::BTN_EDIT;   // (the menu's items: B too)
+  if (heldAction >= 0 && !(board.keys() & act)) heldAction = -1;   // A released
   return heldAction >= 0 ? heldAction : actionIcon();
 }
 
@@ -152,7 +152,8 @@ PROGMEM static const Icon ICONS[] = {
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // OVERDUB (record +)
   {9, 7, {".###.....", "#...####.", "#.......#", "#.......#", "#.......#", "#.......#", "#########"}},   // LOAD (a folder)
   {7, 7, {"...#...", "...#...", "...#...", "#######", "...#...", "...#...", "...#..."}},   // NEW (a plus)
-  {5, 7, {"##...", ".##..", "..##.", "...##", "..##.", ".##..", "##..."}},   // ENTER (>: the list's items)
+  {9, 9, {"#######..", "##.....#.", "##..##.##", "##.....##", "#########", "#.......#", "#.......#", "#.......#", "#########"}},   // SAVE (a diskette)
+  {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};

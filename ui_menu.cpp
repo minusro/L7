@@ -1,9 +1,9 @@
 // ui_menu.cpp — the menu (see ui.h): in place of the track rows, a second
 // view of the looper (the status row stays), the screen's whole width.
-// Opened with B+A (or A on the scene cell), closed with A (B+A). Twelve
+// Opened with B+A (or A on the scene cell), closed the same way from the status row, or by loading a project. Twelve
 // cards (three rows of four), the project slots, and under them a list,
-// "EXPORT LIVE SET" and "USB MODE" (nothing yet: A shows > and does nothing).
-// On a slot, A loads its project (an empty one: a new project there) and
+// "EXPORT TO ABLETON" and "USB DATA MODE" (nothing yet). A and B both run
+// the action button's action. On a slot, A loads its project (an empty one: a new project there) and
 // closes the menu; with SHIFT, cuts the project, or pastes one into an empty
 // slot (only while stopped).
 //
@@ -20,14 +20,14 @@
 // its height), in its slot's colour (colors.h): filled when it holds a
 // project, an outline when empty; the loaded project's shows the looper's
 // rows (as the HOME icon) in black. The selected item's frame: grey, a block
-// out from it all round, the diagonal too. The list: 75% of the screen's
+// out from a card all round, the diagonal too; three from a list item's text. The list: 75% of the screen's
 // width, centred, its labels left-aligned, light grey (white when selected).
 #include "ui.h"
 
 uint32_t uiGeneration = 1;
 
 static constexpr int CARDS = PROJECTS, LIST = 2, ITEMS = CARDS + LIST, COLS = 4;
-static const char *const LABELS[LIST] = {"EXPORT LIVE SET", "USB MODE"};
+static const char *const LABELS[LIST] = {"EXPORT TO ABLETON", "USB DATA MODE"};
 
 static bool shown = false;
 static int menuSel = 0;                          // the selected item
@@ -40,6 +40,7 @@ bool menuOpen() { return shown; }
 bool menuOnStatus() { return shown && onStatus; }
 int menuSlot() { return shown && !onStatus && menuSel < CARDS ? menuSel : -1; }
 bool menuOnList() { return shown && !onStatus && menuSel >= CARDS; }
+int menuListItem() { return menuOnList() ? menuSel - CARDS : -1; }
 
 void mainSelection(int &row, int &cell) {
   row = shown ? mainRow : selected;
@@ -83,23 +84,25 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color) {
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
 // Cards: 36 x 22, the cut 11, 4 apart (room for a frame between), from 2 in.
-// The list: 120 wide (75%), centred, an item every 10 rows from row 82.
+// The list: 120 wide (75%), centred, an item every 13 rows from row 84, its
+// frame further out (3 blocks of space round the text).
 static constexpr int CARD_W = 36, CARD_H = 22, CARD_GAP = 4, MARGIN = 2;
-static constexpr int LIST_W = 120, LIST_X = (320 / PX - LIST_W) / 2, LIST_Y = 82, LIST_PITCH = 10;
+static constexpr int LIST_W = 120, LIST_X = (320 / PX - LIST_W) / 2, LIST_Y = 84, LIST_PITCH = 13, LIST_SPACE = 3;
 
 static Shape itemShape(int k) {
   if (k < CARDS)
     return {MARGIN + (k % COLS) * (CARD_W + CARD_GAP), MARGIN + (k / COLS) * (CARD_H + CARD_GAP), CARD_W, CARD_H, CARD_H / 2};
-  // A list item: its text's row, a block in from the frame's space.
-  return {LIST_X + 2, LIST_Y + (k - CARDS) * LIST_PITCH, LIST_W - 4, FONT_H / PX, 0};
+  // A list item: its text's row, inside the frame and its space.
+  return {LIST_X + LIST_SPACE + 1, LIST_Y + (k - CARDS) * LIST_PITCH, LIST_W - 2 * (LIST_SPACE + 1), FONT_H / PX, 0};
 }
 
 static void drawItem(int k) {
   auto &t = board.tft();
   Shape s = itemShape(k);
   bool sel = k == menuSel && !onStatus;
-  fillRing(s, 2, 1, sel ? DIM : BG);              // the frame
-  fillRing(s, 1, 0, BG);                          // the space inside it
+  int space = k < CARDS ? 1 : LIST_SPACE;        // between the frame and the item
+  fillRing(s, space + 1, space, sel ? DIM : BG);  // the frame
+  fillRing(s, space, 0, BG);                      // the space inside it
   if (k < CARDS) {                                // a project slot
     uint16_t color = PROJECT_COLORS[k];
     if (projectFilled(k)) {
