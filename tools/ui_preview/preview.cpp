@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
   // Projects: 1 (loaded), 4, 6 and 11 hold one; the rest empty.
   transport.running = false;
   recording.mode = Recording::Idle;
-  std::system(("rm -rf " + simRoot + " && mkdir -p " + simRoot + "/looper").c_str());
+  std::system(("rm -rf " + simRoot + " && mkdir -p " + simRoot + "/L7").c_str());
   scenesBegin([] { return bpm; }, loadTempo, 0, newProjectTempo);
   projectLoad(3);
   projectLoad(5);

@@ -1,6 +1,6 @@
 // scenes.cpp — see scenes.h
 //
-// A project file (/looper/projects/1.dat ... 12.dat; clip.dat the clipboard):
+// A project file (/L7/projects/1.dat ... 12.dat; clip.dat the clipboard):
 // block 0 is the list (which record slot is at each position, how many, the
 // current position, the selected row and cell, and the project's tempo: one
 // for all its scenes); blocks 1.. are the
@@ -368,8 +368,8 @@ void serviceScenes() {
 // ---- Projects
 
 static void projectPath(char *path, size_t n, int p) {   // p: 0-11, CLIP, DUMMY
-  if (p < PROJECTS) snprintf(path, n, "/looper/projects/%d.dat", p + 1);
-  else snprintf(path, n, p == CLIP ? "/looper/projects/clip.dat" : "/looper/projects/none.dat");
+  if (p < PROJECTS) snprintf(path, n, "/L7/projects/%d.dat", p + 1);
+  else snprintf(path, n, p == CLIP ? "/L7/projects/clip.dat" : "/L7/projects/none.dat");
 }
 
 static FsFile openProject(int p) {
@@ -534,6 +534,7 @@ static bool openAs(int p, bool apply_) {
   file = std::move(f);
   list = l;
   project = p;
+  setRecordingLetter(p < PROJECTS ? (char)('A' + p) : 0);   // its recordings are named after it
   if (p < PROJECTS) filled[p] = true;
   recordSlot = -1;
   listDirty = false;
@@ -634,15 +635,15 @@ int deleteUnusedSamples() {
 
 // Opens (or makes, at full size) project files 1-12, the clipboard's and the
 // dummy project's; the
-// scene list of the first version (/looper/scenes.dat) becomes project 1.
+// scene list of the first version (/L7/scenes.dat, from /looper) becomes project 1.
 static void makeProjectFiles() {
-  SD.sdfs.mkdir("/looper/projects");
+  SD.sdfs.mkdir("/L7/projects");
   char path[40];
   projectPath(path, sizeof path, 0);
-  FsFile old = SD.sdfs.open("/looper/scenes.dat", O_RDONLY);
+  FsFile old = SD.sdfs.open("/L7/scenes.dat", O_RDONLY);
   if (old) {
     old.close();
-    if (!SD.sdfs.open(path, O_RDONLY)) SD.sdfs.rename("/looper/scenes.dat", path);
+    if (!SD.sdfs.open(path, O_RDONLY)) SD.sdfs.rename("/L7/scenes.dat", path);
   }
   for (int p = 0; p <= DUMMY; p++) {
     FsFile f = openProject(p);

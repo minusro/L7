@@ -63,7 +63,10 @@
   RAM2.
 * A scene holds 7 track units. No conversion of 8-track projects (none
   exist).
-* The SD paths (`/looper/...`) and the files' tags (`M8SC`, `M8TU`, ...) stay.
+* The app's folder is `/L7` (an older `/looper` is renamed at boot); the
+  files' tags (`M8SC`, `M8TU`, ...) stay. Recordings are named `XYNNNN.wav`
+  (project letter, track number, number; one count for all), and SHIFT +
+  LEFT/RIGHT steps through them in name order.
 
 ## Open ideas (not started)
 

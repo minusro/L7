@@ -1,10 +1,17 @@
 // storage.cpp — see storage.h
 //
-// Files, in /looper:
-//   samples/0001.wav ...  every recording, numbered in order (up to 9999) and
-//                         kept when tracks stop using it. 16-bit stereo WAV
-//                         whose 512-byte header carries, in its JUNK chunk,
-//                         the loop's length and tempo and its waveform overview.
+// Files, in /L7 (an older /looper is renamed to it at boot):
+//   samples/A30001.wav ... every recording: the letter of the project loaded
+//                         when it was recorded, the number of the track it
+//                         was recorded on (1-7, as on the screen), then its
+//                         number, in order (up to 9999, one count for all;
+//                         older ones: just the number, 0001.wav ...). Kept
+//                         when tracks stop using it. 16-bit stereo WAV whose
+//                         512-byte header carries, in its JUNK chunk, the
+//                         loop's length and tempo, its waveform overview and
+//                         that letter and track. Recording space (the pool)
+//                         has neither yet: a recording gets its name when
+//                         it's cut down to size (renamed, stopped).
 //   track1.unit ...       each track: the sample it plays and its settings
 //                         (loop range, mute, filter, volume and balance). 512 bytes.
 //   session.txt           the tempo, the loaded project, the master volume, the menu open.
@@ -37,10 +44,29 @@ static constexpr uint64_t SAMPLE_FILE_BYTES = WAV_DATA_OFFSET + (uint64_t)MAX_RE
 static constexpr int POOL_SIZE = 16;             // empty sample files kept ready for recordings (~360 MB):
                                                  // making one takes ~0.7 s, so never while playing if it can be helped
 static constexpr uint32_t MAX_SAMPLES = 9999;
+// Each sample file's name tag: the project's letter and the track's number
+// (0: none, "0001.wav"; else (letter - 'A' + 1) << 3 | track: "A30001.wav"),
+// TAG_PENDING added while a recording still has its recording-space name
+// (renamed once stopped). Tags sort as the names do.
+static uint8_t sampleTag[MAX_SAMPLES + 1];
+static constexpr uint8_t TAG_PENDING = 0x80;
+static uint8_t tagOf(char letter, int track) { return letter >= 'A' && letter <= 'O' && track >= 1 && track <= 7 ? (uint8_t)((letter - 'A' + 1) << 3 | track) : 0; }
+static uint8_t nameTag(uint32_t n) { return sampleTag[n] & TAG_PENDING ? 0 : sampleTag[n]; }   // as the file is named now
+static uint8_t finalTag(uint32_t n) { return sampleTag[n] & ~TAG_PENDING; }                    // as it will be
+static char tagLetter(uint8_t tag) { return tag ? (char)('A' + (tag >> 3) - 1) : 0; }
+static int tagTrack(uint8_t tag) { return tag & 7; }
+static int screenTrack(int t) { return NUM_TRACKS - t; }   // a track's number on the screen (1: the bottom one)
+static char recordLetter = 0;                    // the loaded project's: recordings made now get it
+static uint8_t recordTag[NUM_TRACKS];           // each track's recording (or queued one): the name tag it gets
+void setRecordingLetter(char letter) { recordLetter = letter; }
 
-static void samplePath(uint32_t n, char *buf, size_t size) { snprintf(buf, size, "/looper/samples/%04u.wav", (unsigned)n); }
-static void unitPath(int t, char *buf, size_t size) { snprintf(buf, size, "/looper/track%d.unit", t + 1); }
-static void legacyPath(int t, char *buf, size_t size) { snprintf(buf, size, "/looper/track%d.wav", t + 1); }
+static void samplePath(uint32_t n, char *buf, size_t size, uint8_t tag) {
+  if (tag) snprintf(buf, size, "/L7/samples/%c%d%04u.wav", tagLetter(tag), tagTrack(tag), (unsigned)n);
+  else snprintf(buf, size, "/L7/samples/%04u.wav", (unsigned)n);
+}
+static void samplePath(uint32_t n, char *buf, size_t size) { samplePath(n, buf, size, n <= MAX_SAMPLES ? nameTag(n) : 0); }
+static void unitPath(int t, char *buf, size_t size) { snprintf(buf, size, "/L7/track%d.unit", t + 1); }
+static void legacyPath(int t, char *buf, size_t size) { snprintf(buf, size, "/L7/track%d.wav", t + 1); }
 
 static int32_t posMod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; }
 
@@ -143,7 +169,10 @@ struct SampleInfo {
 static constexpr uint32_t INFO_OFFSET = 44, SAMPLE_VERSION = 3;
 static uint32_t prerollOf(const SampleInfo &info) { return info.version >= 3 ? info.preroll : 0; }
 static constexpr uint32_t SAMPLE_OVERVIEW_OFFSET = INFO_OFFSET + sizeof(SampleInfo);
-static_assert(SAMPLE_OVERVIEW_OFFSET + OVERVIEW_COLS <= WAV_DATA_OFFSET - 8, "the overview must fit in the header");
+// After the overview: the letter of the project it was recorded in and the
+// number of the track (its name tag; 0, 0: none, as in older samples).
+static constexpr uint32_t SAMPLE_TAG_OFFSET = SAMPLE_OVERVIEW_OFFSET + OVERVIEW_COLS;
+static_assert(SAMPLE_TAG_OFFSET + 2 <= WAV_DATA_OFFSET - 8, "the overview and name tag must fit in the header");
 
 // The samples holding recordings, by number: the order they were recorded in
 // (0: none). Order numbers stay below 65536: there are at most 9999 samples,
@@ -171,17 +200,22 @@ static void noteSample(uint32_t n, uint32_t order) {
 uint32_t sampleCount() { return sampleTotal; }
 bool sampleExists(uint32_t n) { return n >= 1 && n <= MAX_SAMPLES && sampleOrder[n]; }
 
-// The sample recorded just after (dir 1) or before (-1) the one with order
-// `from`, wrapping around; from 0 going forward: the oldest; from 0xFFFF+1
-// going back: the newest. 0 if there's none other.
+// Samples in the order of their names ("0001.wav" ... before "A10001.wav"
+// ... "A20001.wav" ... "B10001.wav" ...; a recording not renamed yet in its
+// name-to-be's place): its key.
+static uint32_t nameKey(uint32_t n) { return finalTag(n) * 10000u + n; }
+
+// The sample whose name comes just after (dir 1) or before (-1) key `from`,
+// wrapping around. 0 if there's none other.
 static uint32_t neighbourSample(uint32_t from, int dir) {
   uint32_t best = 0, wrap = 0;                   // nearest that way; furthest the other way (to wrap to)
   for (uint32_t n = 1; n <= MAX_SAMPLES; n++) {
-    uint32_t o = sampleOrder[n];
-    if (!o || o == from) continue;
-    bool ahead = dir > 0 ? o > from : o < from;
-    if (ahead && (!best || (dir > 0 ? o < sampleOrder[best] : o > sampleOrder[best]))) best = n;
-    if (!wrap || (dir > 0 ? o < sampleOrder[wrap] : o > sampleOrder[wrap])) wrap = n;
+    if (!sampleOrder[n]) continue;
+    uint32_t k = nameKey(n);
+    if (k == from) continue;
+    bool ahead = dir > 0 ? k > from : k < from;
+    if (ahead && (!best || (dir > 0 ? k < nameKey(best) : k > nameKey(best)))) best = n;
+    if (!wrap || (dir > 0 ? k < nameKey(wrap) : k > nameKey(wrap))) wrap = n;
   }
   return best ? best : wrap;
 }
@@ -190,7 +224,7 @@ static void put16(uint8_t *p, uint16_t v) { p[0] = v; p[1] = v >> 8; }
 static void put32(uint8_t *p, uint32_t v) { put16(p, v); put16(p + 2, v >> 16); }
 
 static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t loopBars, const uint8_t *overview,
-                              uint32_t order = 0, uint32_t preroll = 0) {
+                              uint32_t order = 0, uint32_t preroll = 0, uint8_t tag = 0) {
   uint8_t h[WAV_DATA_OFFSET] = {};
   memcpy(h, "RIFF", 4);       put32(h + 4, WAV_DATA_OFFSET - 8 + frames * 4);
   memcpy(h + 8, "WAVE", 4);
@@ -202,6 +236,8 @@ static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t
   SampleInfo info = {{'M', '8', 'S', 'M'}, SAMPLE_VERSION, frames, spb, loopBars, order, preroll};
   memcpy(h + INFO_OFFSET, &info, sizeof info);
   if (overview) memcpy(h + SAMPLE_OVERVIEW_OFFSET, overview, OVERVIEW_COLS);
+  h[SAMPLE_TAG_OFFSET] = tagLetter(tag);
+  h[SAMPLE_TAG_OFFSET + 1] = tag ? tagTrack(tag) : 0;
   memcpy(h + WAV_DATA_OFFSET - 8, "data", 4);
   put32(h + WAV_DATA_OFFSET - 4, frames * 4);
   debugStage = "SD write (sample header)";
@@ -211,12 +247,13 @@ static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t
   return f.sync() && ok;
 }
 
-static bool readSampleHeader(FsFile &f, SampleInfo &info, uint8_t *overview) {
+static bool readSampleHeader(FsFile &f, SampleInfo &info, uint8_t *overview, uint8_t *tag = nullptr) {
   uint8_t h[WAV_DATA_OFFSET];
   if (!f.seekSet(0) || f.read(h, sizeof h) != (int)sizeof h) return false;
   memcpy(&info, h + INFO_OFFSET, sizeof info);
   if (memcmp(h, "RIFF", 4) || memcmp(info.magic, "M8SM", 4) || info.version < 1) return false;
   if (overview) memcpy(overview, h + SAMPLE_OVERVIEW_OFFSET, OVERVIEW_COLS);
+  if (tag) *tag = tagOf((char)h[SAMPLE_TAG_OFFSET], h[SAMPLE_TAG_OFFSET + 1]);
   return true;
 }
 
@@ -233,6 +270,7 @@ static bool poolBlocked = false;
 static bool createPoolFile() {
   if (poolCount >= POOL_SIZE || nextSample > MAX_SAMPLES) return false;
   char path[40];
+  sampleTag[nextSample] = 0;                     // (recording space: no name tag yet)
   samplePath(nextSample, path, sizeof path);
   if (transport.running) Serial.printf("no recording space left: creating %s while playing\n", path);
   debugStage = "SD create (sample file)";
@@ -255,16 +293,30 @@ static bool createPoolFile() {
   return true;
 }
 
-// Cuts a finished sample down to its recording (changes the file system).
+static void reopenSample(uint32_t n);
+
+// Cuts a finished sample down to its recording, and names it after the
+// project and track it was recorded in (changes the file system).
 static void trimSample(uint32_t n) {
   char path[40];
   samplePath(n, path, sizeof path);
   FsFile f = SD.sdfs.open(path, O_RDWR);
   SampleInfo info;
-  if (f && readSampleHeader(f, info, nullptr) && playable(info)) {
+  uint8_t tag = 0;
+  if (f && readSampleHeader(f, info, nullptr, &tag) && playable(info)) {
     debugStage = "SD trim (sample file)";
     f.truncate(WAV_DATA_OFFSET + (uint64_t)(info.frames + prerollOf(info)) * 4);
     poolBlocked = false;                         // (space freed)
+  }
+  f.close();
+  if (tag && tag != nameTag(n)) {                 // "0012.wav" -> "A30012.wav"
+    char to[40];
+    samplePath(n, to, sizeof to, tag);
+    debugStage = "SD rename (sample file)";
+    if (SD.sdfs.rename(path, to)) {
+      sampleTag[n] = tag;
+      reopenSample(n);
+    }
   }
 }
 
@@ -322,6 +374,25 @@ struct Prepared {
 };
 DMAMEM static Prepared prepared[NUM_TRACKS];       // (RAM2: only loop() uses them, never DMA)
 static bool preparing = false;
+
+// Sample n was renamed (stopped): the handles open on it, opened again by its
+// new name, each where it was.
+static void reopenSample(uint32_t n) {
+  char path[40];
+  samplePath(n, path, sizeof path);
+  auto reopen = [&](FsFile &f) {
+    if (!f) return;
+    uint64_t at = f.curPosition();
+    f.close();
+    f = SD.sdfs.open(path, O_RDWR);
+    if (f) f.seekSet(at);
+  };
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    if (tracks[t].sample == n) reopen(tracks[t].file);
+    if (plans[t].on && plans[t].u.sample == n) reopen(plans[t].file);
+    if (prepared[t].sample == n) reopen(prepared[t].file);
+  }
+}
 
 void prepareUnits(const TrackUnit *units) {
   preparing = units != nullptr;
@@ -992,6 +1063,7 @@ int deleteSamplesExcept(const uint8_t *used) {
     debugStage = "SD remove (unused sample)";
     if (!SD.sdfs.remove(path)) continue;
     sampleOrder[n] = 0;
+    sampleTag[n] = 0;
     sampleTotal--;
     for (int k = 0; k < untrimmedCount; k++)
       if (untrimmed[k] == n) untrimmed[k--] = untrimmed[--untrimmedCount];
@@ -1025,9 +1097,12 @@ bool pasteTrack(int t) {
 bool stepSample(int t, int dir) {
   if (sampleTotal < 2 || recordingTrack(t)) return false;
   TrackUnit u = unitOf(t);                       // (a planned change counts)
-  // In recording order from the track's sample, wrapping around; an empty
-  // track starts from the oldest (going forward) or newest (going back).
-  uint32_t from = !u.sample ? (dir > 0 ? 0 : 0x10000) : sampleOrder[u.sample];
+  // In the order of the names from the track's sample, wrapping around: this
+  // track's recordings in this project, then its other tracks', then other
+  // projects'. An empty track starts from the first of its own (going
+  // forward) or the last (going back).
+  uint32_t own = tagOf(recordLetter, screenTrack(t)) * 10000u;
+  uint32_t from = u.sample ? nameKey(u.sample) : dir > 0 ? own : own + 10000;
   uint32_t n = neighbourSample(from, dir);
   if (!n || n == u.sample) return false;
   // Volume, balance, filter and mute stay; the range is the whole loop again
@@ -1042,7 +1117,7 @@ bool stepSample(int t, int dir) {
 
 Session loadSession() {
   Session s;
-  FsFile f = SD.sdfs.open("/looper/session.txt", O_RDONLY);
+  FsFile f = SD.sdfs.open("/L7/session.txt", O_RDONLY);
   char line[32];
   // (Parsed by hand: sscanf would pull ~26 KB of Unicode tables into RAM.)
   while (f && f.fgets(line, sizeof line) > 0) {
@@ -1064,7 +1139,7 @@ Session loadSession() {
 }
 
 void saveSession(const Session &s) {
-  FsFile f = SD.sdfs.open("/looper/session.txt", O_WRONLY | O_CREAT | O_TRUNC);
+  FsFile f = SD.sdfs.open("/L7/session.txt", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
   f.printf("bpm=%.2f\nnewbpm=%.2f\nvolume=%d\nproject=%d\nmenu=%d\n", s.bpm, s.newBpm, s.master, s.project + 1, s.menu);
   f.close();
@@ -1078,27 +1153,34 @@ static void scanSamples() {
   lastOrder = 0;
   poolCount = 0;
   untrimmedCount = 0;
-  FsFile dir = SD.sdfs.open("/looper/samples", O_RDONLY);
+  FsFile dir = SD.sdfs.open("/L7/samples", O_RDONLY);
   FsFile f;
   char name[32];
   while (dir && f.openNext(&dir, O_RDONLY)) {
     f.getName(name, sizeof name);
-    unsigned n = 0;                              // "NNNN.wav"
-    bool digits = strlen(name) == 8 && !strcmp(name + 4, ".wav");
+    unsigned n = 0;                              // "NNNN.wav", or "XYNNNN.wav" (project letter, track)
+    size_t len = strlen(name);
+    uint8_t tag = len == 10 ? tagOf(name[0], name[1] - '0') : 0;
+    const char *num = name + (tag ? 2 : 0);
+    bool digits = (len == 8 || tag) && !strcmp(num + 4, ".wav");
     for (int i = 0; digits && i < 4; i++) {
-      if (name[i] < '0' || name[i] > '9') digits = false;
-      n = n * 10 + (name[i] - '0');
+      if (num[i] < '0' || num[i] > '9') digits = false;
+      n = n * 10 + (num[i] - '0');
     }
     bool numbered = !f.isDir() && digits && n >= 1 && n <= MAX_SAMPLES;
     SampleInfo info;
-    bool ok = numbered && readSampleHeader(f, info, nullptr);
+    uint8_t headerTag = 0;
+    bool ok = numbered && readSampleHeader(f, info, nullptr, &headerTag);
     uint64_t size = f.fileSize();
     f.close();
     if (!numbered) continue;
     if (n >= nextSample) nextSample = n + 1;
+    sampleTag[n] = tag;
     if (ok && playable(info)) {
       noteSample(n, info.version >= 2 && info.order ? info.order : n);
-      if (size > WAV_DATA_OFFSET + (uint64_t)info.frames * 4 && untrimmedCount < 64) untrimmed[untrimmedCount++] = n;
+      bool rename = headerTag && headerTag != tag;   // (recorded, not cut down and named yet)
+      if (rename && !tag) sampleTag[n] = headerTag | TAG_PENDING;
+      if ((size > WAV_DATA_OFFSET + (uint64_t)info.frames * 4 || rename) && untrimmedCount < 64) untrimmed[untrimmedCount++] = n;
     } else if (ok && info.frames == 0 && size == SAMPLE_FILE_BYTES && poolCount < POOL_SIZE) {
       int i = poolCount++;                       // keep the pool sorted
       while (i > 0 && pool[i - 1] > n) { pool[i] = pool[i - 1]; i--; }
@@ -1130,14 +1212,15 @@ bool storageBegin(void (*progress)(const char *)) {
   // between calls and has the CPU poll the FIFO; on the M8 it stalled for
   // seconds at a time (1 s timeouts, retried) with the audio engine running.
   if (!SD.sdfs.begin(SdioConfig(DMA_SDIO))) return false;
-  SD.sdfs.mkdir("/looper");
-  SD.sdfs.mkdir("/looper/samples");
+  if (!SD.sdfs.exists("/L7") && SD.sdfs.exists("/looper")) SD.sdfs.rename("/looper", "/L7");   // (the app's folder, renamed)
+  SD.sdfs.mkdir("/L7");
+  SD.sdfs.mkdir("/L7/samples");
   scanSamples();
   while (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);
   bool ok = true;
   for (int t = 0; t < NUM_TRACKS; t++) {
     char path[40];
-    snprintf(path, sizeof path, "/looper/track%d.txt", t + 1);
+    snprintf(path, sizeof path, "/L7/track%d.txt", t + 1);
     SD.sdfs.remove(path);                        // settings files of an early version
     Track &tr = tracks[t];
     unitPath(t, path, sizeof path);
@@ -1537,9 +1620,10 @@ static void finishRecording() {
   if (prerollKept && tr.file.seekSet(WAV_DATA_OFFSET + (uint64_t)tr.recordedFrames * 4) &&
       tr.file.write(prerollBuf, sizeof prerollBuf) == (int)sizeof prerollBuf)
     preroll = XFADE_FRAMES;
-  writeSampleHeader(tr.file, tr.recordedFrames, tr.spbNative, tr.loopBars, tr.overview, lastOrder + 1, preroll);
+  writeSampleHeader(tr.file, tr.recordedFrames, tr.spbNative, tr.loopBars, tr.overview, lastOrder + 1, preroll, recordTag[t]);
   prerollFrames[t] = preroll;                    // its loop's end now crossfades into it
   noteSample(tr.sample, lastOrder + 1);
+  if (recordTag[t]) sampleTag[tr.sample] = recordTag[t] | TAG_PENDING;   // (renamed once stopped)
   if (untrimmedCount < 64) untrimmed[untrimmedCount++] = tr.sample;
   uint32_t end = recording.startSample + recording.targetFrames;
   int32_t endBeat = recording.startBeat + (int32_t)(recording.loopBars * BEATS_PER_BAR);
@@ -1682,6 +1766,7 @@ static bool takeRecordingSample(int t) {
   poolNextSample = 0;
   tr.sample = pool[0];
   memmove(pool, pool + 1, --poolCount * sizeof pool[0]);
+  recordTag[t] = tagOf(recordLetter, screenTrack(t));   // (named so once trimmed)
   return true;
 }
 

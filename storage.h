@@ -78,6 +78,9 @@ bool recordQueuedResample();          // and it resamples
 // endSilencing().
 int takeResampled();
 void endSilencing();
+// The letter recordings made from now on are named with (the loaded project's,
+// 'A'-'L'; 0: none): "A30012.wav", with the track's number (1-7, as on the screen).
+void setRecordingLetter(char letter);
 void hearAgain(int t);                // track t no longer silenced (it keeps its clip in the scene after it)
 // Track t recording (or waiting to, or queued): stop at once and throw the
 // recording away (its sample file goes back to the pool of empty ones; a

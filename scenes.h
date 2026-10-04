@@ -11,7 +11,7 @@
 // row and cell, and its tempo (the master volume stays global). A new project
 // takes the tempo last set by hand (in any project; 120 BPM before any). The loaded one is
 // saved as it changes. A slot's file holds no audio, only the scenes (which
-// name their samples): /looper/projects/1.dat ... 12.dat, made once at full
+// name their samples): /L7/projects/1.dat ... 12.dat, made once at full
 // size: saving only overwrites 512-byte blocks.
 #pragma once
 #include <stdint.h>

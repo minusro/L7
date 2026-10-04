@@ -5,7 +5,7 @@
 // records new ones. app.* holds the shared state (board, tempo, selection),
 // ui*.* draws the screen and input.* handles the keys; scenes.* keeps the
 // scene list; this file sets things up and runs the main loop. Recordings are
-// WAV samples in /looper on the SD card and survive power-off, along with
+// WAV samples in /L7 on the SD card and survive power-off, along with
 // each track's settings, the scenes and the tempo. More in docs/.
 //
 // Behaviour:
@@ -38,8 +38,10 @@
 //                      volume: LEFT/RIGHT balance, UP/DOWN volume
 //                      tempo: LEFT/RIGHT -/+ 0.1 BPM, UP/DOWN +/- 1 BPM
 //   EDIT             empty track: record / stop recording; full track: mute/unmute
-//   SHIFT+LEFT/RIGHT the track's sample: previous / next on the card (empty track:
-//                      newest / oldest); keeps volume, filter, mute; whole-loop range
+//   SHIFT+LEFT/RIGHT the track's sample: previous / next by name (this project and
+//                      track's first, then its other tracks', then other projects';
+//                      empty track: its own last / first); keeps volume, filter, mute;
+//                      whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
 //   OPT+EDIT         empty track: resample (record the output, from the next bar line);
 //                      then it moves to a new scene after this one (on the same track)
@@ -155,7 +157,7 @@ void setup() {
     splashTick();
   };
   if (!storageBegin(progress))
-    fatal("SD card missing or full: the looper needs ~100 MB free in /looper.");
+    fatal("SD card missing or full: the looper needs ~100 MB free in /L7.");
   progress("");
   splashTick();
   beginSession();                                  // the tempo and the selection

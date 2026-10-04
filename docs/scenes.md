@@ -14,10 +14,10 @@ changes the project's. The master volume is global, in `session.txt`, which
 also names the loaded project and keeps the tempo last set by hand
 (`newbpm=`, 120 before any): a new project starts with it. Loading a project
 doesn't change it. Twelve slots:
-`/looper/projects/1.dat` … `12.dat`, and `clip.dat` for the project clipboard,
+`/L7/projects/1.dat` … `12.dat`, and `clip.dat` for the project clipboard,
 all made once at full size; an empty slot's block 0 is zeros. Project files
 hold no audio: scenes name their samples. The first version's
-`/looper/scenes.dat` becomes project 1.
+`/L7/scenes.dat` (from `/looper`) becomes project 1.
 
 * Loading (A on a slot in the menu): the loaded project's changes are written
   out, the other file opened and its current scene applied. Playing: on the

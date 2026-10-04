@@ -8,6 +8,7 @@
 //   ./looper_sim
 #include <cmath>
 #include <vector>
+#include <algorithm>
 #include "Audio.h"
 #include "SD.h"
 #include "engine.h"
@@ -154,11 +155,30 @@ static void runUntilIdle() {
   for (int i = 0; i < 100000 && recording.mode != Recording::Idle; i++) block();
 }
 
+// Sample n's file on the host: "NNNN.wav", or once named "XYNNNN.wav"
+// (project letter, track number).
+static std::string sampleFile(uint32_t n) {
+  char num[16];
+  snprintf(num, sizeof num, "%04u.wav", (unsigned)n);
+  std::string dir = simRoot + "/L7/samples/";
+  if (DIR *d = opendir(dir.c_str())) {
+    while (struct dirent *e = readdir(d)) {
+      size_t len = strlen(e->d_name);
+      if ((len == 8 || len == 10) && !strcmp(e->d_name + len - 8, num)) {
+        std::string found = dir + e->d_name;
+        closedir(d);
+        return found;
+      }
+    }
+    closedir(d);
+  }
+  return dir + num;
+}
+
 // Reads frame `frame` of track t's sample (left channel).
 static int16_t wavLeft(int t, uint32_t frame) {
-  char path[96];
-  snprintf(path, sizeof path, "%s/looper/samples/%04u.wav", simRoot.c_str(), (unsigned)tracks[t].sample);
-  FILE *f = fopen(path, "rb");
+  std::string path = sampleFile(tracks[t].sample);
+  FILE *f = fopen(path.c_str(), "rb");
   if (!f) return INT16_MIN;
   int16_t s[2] = {INT16_MIN, 0};
   fseek(f, WAV_DATA_OFFSET + frame * 4, SEEK_SET);
@@ -382,10 +402,13 @@ int main(int argc, char **argv) {
           "its filter kept, volume and balance in today's steps (25 -> 3, -4 -> -1)");
     check(wavLeft(4, 0) == -500 && wavLeft(4, 1234) == 1234 % 1000 - 500 && wavLeft(4, legacyFrames - 1) == (int16_t)((legacyFrames - 1) % 1000 - 500),
           "its audio is intact in samples/0002.wav");
-    FILE *old = fopen((simRoot + "/looper/track5.wav").c_str(), "rb");
+    struct stat st;
+    check(::stat((simRoot + "/looper").c_str(), &st) != 0 && ::stat((simRoot + "/L7/samples").c_str(), &st) == 0,
+          "the app's folder moved from /looper to /L7");
+    FILE *old = fopen((simRoot + "/L7/track5.wav").c_str(), "rb");
     check(!old && sampleCount() == 1, "the old track file is gone; one sample on the card");
     if (old) fclose(old);
-    FILE *low = fopen((simRoot + "/looper/samples/0001.wav").c_str(), "rb");
+    FILE *low = fopen((simRoot + "/L7/samples/0001.wav").c_str(), "rb");
     check(!low, "track 4's empty file renumbered after it (0001 gone)");
     if (low) fclose(low);
     clearTrack(4);
@@ -533,19 +556,34 @@ int main(int argc, char **argv) {
     engine.monitor = true;
   }
 
-  printf("choosing samples on track 7 (empty) while playing\n");
+  printf("choosing samples on track 7 (empty) while playing: in the order of their names\n");
   {
     Track &tr = tracks[6];
-    uint32_t oldest = 0, newest = 0, count = 0;   // recordings are numbered in order now
-    for (uint32_t n = 1; n <= 9999; n++) if (sampleExists(n)) { if (!oldest) oldest = n; newest = n; count++; }
+    int changes = simFsChanges;
+    transportStop();
+    runUntilIdle();
+    for (int i = 0; i < 40; i++) serviceStorage();   // the recordings named (stopped)
+    fsChangesAtStart += simFsChanges - changes;    // (stopped: the file system may change)
+    transportStart();
+    // The recordings' file names, sorted, with their numbers.
+    std::vector<std::pair<std::string, uint32_t>> names;
+    for (uint32_t n = 1; n <= 9999; n++)
+      if (sampleExists(n)) { std::string f = sampleFile(n); names.push_back({f.substr(f.rfind('/') + 1), n}); }
+    std::sort(names.begin(), names.end());
+    size_t count = names.size();
+    auto at = [&](long i) { return names[((i % (long)count) + count) % count].second; };
+    // Track 7 is track 1 on the screen: its own recordings start "A1" (project A).
+    std::string own = std::string(1, (char)('A' + projectCurrent())) + "1", after = own.substr(0, 1) + "2";
+    long first = 0, last = -1;                     // its own first (or the next name), its own last (or the one before)
+    while (first < (long)count && names[first].first < own) first++;
+    while (last + 1 < (long)count && names[last + 1].first < after) last++;
     setTrackMix(6, 3, 2);
-    check(stepSample(6, 1) && tr.sample == oldest, "SHIFT+RIGHT on an empty track: the oldest recording");
-    check(stepSample(6, 1) && tr.sample > oldest && sampleExists(tr.sample), "SHIFT+RIGHT: the one recorded next");
-    uint32_t second = tr.sample;
-    check(stepSample(6, -1) && tr.sample == oldest, "SHIFT+LEFT: back to the previous");
-    check(stepSample(6, -1) && tr.sample == newest, "SHIFT+LEFT on the oldest: wraps to the newest");
-    check(stepSample(6, 1) && tr.sample == oldest, "SHIFT+RIGHT on the newest: wraps to the oldest");
-    check(stepSample(6, 1) && tr.sample == second && tr.rangeStartBeat == 0 && tr.rangeBeats == tr.loopBars * 4 &&
+    check(stepSample(6, 1) && tr.sample == at(first), "SHIFT+RIGHT on an empty track: the first of its own, or the next name");
+    check(stepSample(6, 1) && tr.sample == at(first + 1), "SHIFT+RIGHT: the next name (its own first, then the project's other tracks, then other projects)");
+    check(stepSample(6, -1) && tr.sample == at(first), "SHIFT+LEFT: back to the previous");
+    for (size_t i = 0; i < count; i++) stepSample(6, 1);
+    check(tr.sample == at(first), "SHIFT+RIGHT through all of them: round to the same one (wrapping)");
+    check(stepSample(6, 1) && tr.sample == at(first + 1) && tr.rangeStartBeat == 0 && tr.rangeBeats == tr.loopBars * 4 &&
           tr.volume == 3 && tr.balance == 2, "range reset to the whole loop, volume and balance kept");
     setTrackMix(6, VOLUME_UNITY, 0);               // the sync check compares at unity gain
     trackChanged(6);
@@ -554,10 +592,10 @@ int main(int argc, char **argv) {
     tr.gain = 1;
     checkSync(6, "track 7 playing its new sample");
     clearTrack(6);
-    check(stepSample(6, -1) && tr.sample == newest, "SHIFT+LEFT on an empty track: the newest recording");
+    check(stepSample(6, -1) && tr.sample == at(last), "SHIFT+LEFT on an empty track: the last of its own, or the name before");
     clearTrack(6);
     char m[64];
-    snprintf(m, sizeof m, "%u recordings on the card", count);
+    snprintf(m, sizeof m, "%zu recordings on the card", count);
     check(count == 4, m);
     for (auto &x : tracks) x.gain = 1;
     engine.monitor = true;
@@ -854,9 +892,7 @@ int main(int argc, char **argv) {
     clearTrack(5);
     recordPress(5);
     // The file's old contents: junk that must not be left in the recording.
-    char path[96];
-    snprintf(path, sizeof path, "%s/looper/samples/%04u.wav", simRoot.c_str(), (unsigned)tracks[6].sample);
-    if (FILE *f = fopen(path, "r+b")) {
+    if (FILE *f = fopen(sampleFile(tracks[5].sample).c_str(), "r+b")) {
       std::vector<int16_t> junk(2 * 44100 * 8, 0x5555);
       fseek(f, WAV_DATA_OFFSET, SEEK_SET);
       fwrite(junk.data(), 2, junk.size(), f);
@@ -1357,6 +1393,31 @@ int main(int argc, char **argv) {
           tracks[1].sample == mutedSample && tracks[1].state == TrackState::Muted,
           "the scene before: as it was (the muted clip too), without the resampling");
     feedRamp = true;
+  }
+
+  printf("recordings named after the project and the track: XYNNNN.wav\n");
+  {
+    lastAction = "naming";
+    clearTrack(3);
+    recordTrack(3, 4.5, 1, "  (track 4 recorded)");
+    uint32_t n = tracks[3].sample;
+    char want[16];
+    snprintf(want, sizeof want, "%c%d%04u.wav", 'A' + projectCurrent(), NUM_TRACKS - 3, (unsigned)n);
+    std::string before = sampleFile(n);
+    transportStop();
+    runUntilIdle();
+    for (int i = 0; i < 40; i++) serviceStorage();   // cut down to size and named, stopped
+    std::string after = sampleFile(n);
+    char m[160];
+    snprintf(m, sizeof m, "while playing still %s; once stopped %s (project letter, track number on the screen)",
+             before.substr(before.rfind('/') + 1).c_str(), after.substr(after.rfind('/') + 1).c_str());
+    check(before.size() >= 8 && !strcmp(before.c_str() + before.size() - 8, want + 2) && after.size() >= 10 &&
+          !strcmp(after.c_str() + after.size() - 10, want), m);
+    transportStart();
+    runBeats(4);
+    checkSync(3, "track 4 playing on from the renamed file");
+    transportStop();
+    runUntilIdle();
   }
 
   printf("projects: a new one, back, cut and paste\n");

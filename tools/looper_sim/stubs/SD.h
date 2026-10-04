@@ -75,6 +75,7 @@ public:
     return r;
   }
   bool seekSet(uint64_t pos) { return fseek(f_, (long)pos, SEEK_SET) == 0; }
+  uint64_t curPosition() { return f_ ? (uint64_t)ftell(f_) : 0; }
   uint64_t fileSize() { long c = ftell(f_); fseek(f_, 0, SEEK_END); long s = ftell(f_); fseek(f_, c, SEEK_SET); return s; }
   bool preAllocate(uint64_t) { return true; }
   bool truncate(uint64_t len) { simFsChanges++; fflush(f_); return ftruncate(fileno(f_), len) == 0; }
@@ -101,6 +102,7 @@ public:
   SdCard *card() { static SdCard c; return &c; }
   FsFile open(const char *path, int flags) { FsFile f; f.open(path, flags); return f; }
   bool mkdir(const char *path) { return ::mkdir((simRoot + path).c_str(), 0755) == 0; }
+  bool exists(const char *path) { struct stat st; return ::stat((simRoot + path).c_str(), &st) == 0; }
   uint32_t freeClusterCount() { return 1u << 20; }
   uint32_t bytesPerCluster() { return 32768; }
   bool remove(const char *path) {
