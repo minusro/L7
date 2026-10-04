@@ -148,7 +148,7 @@ void hideSplash() {
     splashTick();
     delay(10);
   }
-  splashTick();                                    // (the accent again)
+  splashTick();                                    // (faded out)
   board.tft().fillScreen(BG);
   uiGeneration++;                                // (the menu comes next: nothing of the looper's view drawn first)
 }
