@@ -21,7 +21,8 @@
 // nothing): on its
 // list's items, export to ALS (a diskette) and USB data mode (the USB
 // trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
-// empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project or
+// empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
+// (a checkmark after the first A: a second A confirms) or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
 // the menu (as B+A) on the scene cell, start / stop (play / stop, as
@@ -32,7 +33,7 @@
 // nothing) on one with a clip.
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_OVERDUB, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_OVERDUB, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -51,7 +52,7 @@ static int actionIcon() {
   if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
     int slot = menuSlot();
     if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : ICON_USB;
-    if (shift) return projectFilled(slot) ? ICON_CUT : ICON_PASTE;
+    if (shift) return projectFilled(slot) ? (cutConfirmSlot() == slot ? ICON_CHECK : ICON_CUT) : ICON_PASTE;
     return projectFilled(slot) ? ICON_LOAD : ICON_NEW;
   }
   if (board.keys() & m8::BTN_OPT)                  // B+A: the menu; with SHIFT, the scene
@@ -154,6 +155,7 @@ PROGMEM static const Icon ICONS[] = {
   {5, 5, {"..#..", "#.#.#", ".###.", "#.#.#", "..#.."}},   // NEW (a small asterisk)
   {9, 9, {"#######..", "##.....#.", "##..##.##", "##.....##", "#########", "#.......#", "#.......#", "#.......#", "#########"}},   // SAVE (a diskette)
   {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
+  {7, 6, {"......#", ".....##", "#...##.", "##.##..", ".###...", "..#...."}},   // CHECK (confirm: cut the project with a second A)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
@@ -165,7 +167,7 @@ static constexpr int PANEL_LEFT = 1;              // the selected track's panel'
 static bool unavailable(int i, int icon) {
   if (i != STATUS_ROW) return false;
   if (menuSlot() >= 0 && !menuOnStatus()) {        // a project slot: cut and paste only while stopped
-    if (icon == ICON_CUT) return !projectsMayCopy();
+    if (icon == ICON_CUT || icon == ICON_CHECK) return !projectsMayCopy();
     if (icon == ICON_PASTE) return !projectsMayCopy() || !projectClipboardFull();
     if (icon == ICON_LOAD || icon == ICON_NEW) return recording.mode != Recording::Idle && menuSlot() != projectCurrent();
     return false;

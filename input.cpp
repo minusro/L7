@@ -65,6 +65,8 @@ static bool shiftTwice = false;
 static bool moved = false;
 bool arrowsMoved() { return moved; }
 bool shiftTwiceHeld() { return shiftTwice && (board.keys() & m8::BTN_SHIFT); }
+static int cutConfirm = -1;                       // see cutConfirmSlot()
+int cutConfirmSlot() { return cutConfirm; }
 
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
@@ -90,6 +92,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // button's action once let go (on the item it was pressed on). B does
   // nothing there: the way out is loading a project.
   static bool armed = false, shifted = false;        // A down: its action waits; SHIFT with it
+  // SHIFT+A on a project: the first tap only asks (a checkmark); a second A,
+  // SHIFT still held and the selection still there, cuts it when let go.
+  if (cutConfirm >= 0 && (!menuOpen() || !shift || menuSlot() != cutConfirm)) cutConfirm = -1;
   static int armedSlot = -1;                         // the slot it was pressed on (-1: a list item)
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
@@ -106,8 +111,13 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       if (slot < 0) {                                // the list's items: nothing yet
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
         bool loaded = slot == projectCurrent();
-        if (projectFilled(slot) ? projectCut(slot) : projectPaste(slot))
-          if (loaded) takeProjectSelection();          // the loaded one cut: the dummy project's (track 1's waveform)
+        if (projectFilled(slot) && cutConfirm != slot) {   // the first tap: confirm with a second
+          if (projectsMayCopy()) cutConfirm = slot;  // (only if it can be cut: stopped)
+        } else {
+          cutConfirm = -1;
+          if (projectFilled(slot) ? projectCut(slot) : projectPaste(slot))
+            if (loaded) takeProjectSelection();        // the loaded one cut: the dummy project's (track 1's waveform)
+        }
         drawMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
       } else {                                       // load it (an empty slot: a new project), back to the looper

@@ -55,7 +55,7 @@
 //   SHIFT, OPT, EDIT cut the scene (to the scene clipboard), go to the one before (SHIFT first)
 //   OPT+EDIT         open the menu (on A's release)
 //   EDIT (menu, project slot)        on release: load its project (empty slot: a new one), back to the looper
-//   SHIFT+EDIT (menu, slot)          on release: cut its project / paste one into an empty slot (stopped only)
+//   SHIFT+EDIT (menu, slot)          cut its project (EDIT twice, SHIFT held: confirmed) / paste one into an empty slot (stopped only; on release)
 //   EDIT (menu list)                 export to ALS / USB data mode (nothing yet)
 //   SHIFT+OPT twice  insert a copy of the current scene after it
 //   PLAY             start from 1.1.1 / stop
