@@ -15,8 +15,8 @@
 // (an arrow up from a line), cancel a recording (X: thrown away at once) or,
 // on an empty track, paste (an arrow down to a line; dark grey while the
 // clipboard is empty). With B
-// held alone on a cell it adjusts: four small arrows (B + arrows), in the
-// accent colour on the pressed-looking backdrop; on an empty track: resample
+// held alone on a cell it adjusts: four small arrows (B + arrows), black on
+// the accent colour (A pressed too: the pressed look); on an empty track: resample
 // (the record dot with a plus: B+A); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A runs the action when let go; B does
@@ -59,7 +59,7 @@ static int actionIcon() {
     if (selected != STATUS_ROW && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
         recordQueued() != selected)
       return ICON_RESAMPLE;                          // an empty track: B+A resamples
-    if (board.keys() & (m8::BTN_EDIT | m8::BTN_PLAY)) return ICON_NONE;
+    if (board.keys() & m8::BTN_PLAY) return ICON_NONE;
     return selected == STATUS_ROW || hasClip(selected) ? ICON_ADJUST : ICON_NONE;
   }
   if (selected == STATUS_ROW) {                    // restart / the menu / tap tempo
@@ -154,7 +154,7 @@ PROGMEM static const Icon ICONS[] = {
   {10, 7, {"....#.....", "...##.....", ".####.#.#.", ".####..#..", ".####.#.#.", "...##.....", "....#....."}},   // MUTE (a block right of UNMUTE)
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // RESAMPLE (record +)
-  {9, 9, {"....#....", "...###...", ".........", ".#.....#.", "##.....##", ".#.....#.", ".........", "...###...", "....#...."}},   // ADJUST (B + arrows: four small arrows)
+  {7, 7, {"...#...", "..###..", ".#...#.", "##...##", ".#...#.", "..###..", "...#..."}},   // ADJUST (B + arrows: four small arrows, their corners touching)
   {5, 7, {".#...", ".##..", ".###.", ".####", ".###.", ".##..", ".#..."}},   // LOAD (a small play, a block right of centre: back to the looper, playing it)
   {5, 5, {"..#..", "#.#.#", ".###.", "#.#.#", "..#.."}},   // NEW (a small asterisk)
   {9, 9, {"#######..", "##.....#.", "##..##.##", "##.....##", "#########", "#.......#", "#.......#", "#.......#", "#########"}},   // SAVE (a diskette)
@@ -189,14 +189,13 @@ static bool unavailable(int i, int icon) {
 static uint16_t actionColor(int icon) { return icon == ICON_MENU ? ACCENT : menuActionColor(); }
 
 static uint16_t buttonBackground(int i, int icon) {
-  if (i == STATUS_ROW) return heldAction >= 0 || icon == ICON_ADJUST ? DARK : actionColor(icon);   // (B held: as pressed)
+  if (i == STATUS_ROW) return heldAction >= 0 ? DARK : actionColor(icon);
   return cellBackground(i, -1);
 }
 
 static uint16_t iconColor(int i, int icon) {
   uint16_t bg = buttonBackground(i, icon);
   if (i == STATUS_ROW) {
-    if (icon == ICON_ADJUST) return ACCENT;
     uint16_t c = actionColor(icon);                  // (grey: an item that can't act; its icon black, held too)
     return heldAction >= 0 ? (unavailable(i, icon) || c == DIM ? BG : c) : unavailable(i, icon) ? DARK : BG;
   }
