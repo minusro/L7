@@ -256,14 +256,18 @@ static void trimSample(uint32_t n) {
 }
 
 // ---- Tracks and their unit files
-static constexpr uint32_t UNIT_VERSION = 2;   // 2: volume and balance in today's steps
+static constexpr uint32_t UNIT_VERSION = 3;   // 3: volume and balance in today's steps (2: 6 a side, 6 dB)
 
 void upgradeUnit(TrackUnit &u) {
-  if (u.version >= 2) return;
+  if (u.version >= UNIT_VERSION) return;
+  // The old steps: version 1 volume 0-32 (unity 28, 1.5 dB), balance +-16;
+  // version 2 volume 0-6 (unity 5, 6 dB), balance +-6.
+  bool v1 = u.version < 2;
+  float db = (u.volume - (v1 ? 28 : 5)) * (v1 ? 1.5f : 6.0f);
   if (u.volume > 0)                                // (a quiet one stays audible: at least step 1)
-    u.volume = (int8_t)constrain((int)lroundf(VOLUME_UNITY + (u.volume - 28) * 1.5f / VOLUME_STEP_DB), 1, VOLUME_MAX);
-  u.balance = (int8_t)lroundf(u.balance * (float)BALANCE_MAX / 16);
-  u.version = 2;
+    u.volume = (int8_t)constrain((int)lroundf(VOLUME_UNITY + db / VOLUME_STEP_DB), 1, VOLUME_MAX);
+  u.balance = (int8_t)lroundf(u.balance * (float)BALANCE_MAX / (v1 ? 16 : 6));
+  u.version = UNIT_VERSION;
 }
 
 static TrackUnit clipboard;                       // sample 0: empty

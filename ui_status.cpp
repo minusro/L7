@@ -12,7 +12,7 @@
 //     another scene is selected but not there yet: SHIFT (or B) still held on
 //     it, or the change waiting for its switch point.
 //   second cell: the clock (bar.beat.step)
-//     on the left (a grey 1.1.1 while stopped; running: in the accent colour
+//     on the left (a dark grey 1.1.1 while stopped; running: in the accent colour
 //     on 1.1.1, white on each beat's first step, light grey on the others), the
 //     tempo on the right, followed by an inverted "BPM" tag (both in the
 //     accent colour while B alone is held there: B + arrows change it).
@@ -93,10 +93,10 @@ void drawStatus() {
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
-  // Grey while stopped; running: the accent colour on 1.1.1, white on each
+  // Dark grey while stopped; running: the accent colour on 1.1.1, white on each
   // beat's first step (x.y.1), light grey on the others.
   bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0;
-  uint16_t clockInk = !running ? DIM : first ? ACCENT : step == 0 ? INK : LIGHT;
+  uint16_t clockInk = !running ? DARK : first ? ACCENT : step == 0 ? INK : LIGHT;
   drawText(TEMPO_BOX.x + INSET, textY, text, clockInk, BG, CLOCK_W);   // (its box clears longer text)
 
   // The scene. Its box reaches the cell's inner edge: the position's text

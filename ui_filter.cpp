@@ -10,10 +10,11 @@
 //   filter): the dark accent / the accent colour.
 // Nothing on an empty track.
 // The cell is built in a buffer and sent at once (no flash).
-static constexpr int CELL_COLS = CELL[FILTER_CELL].w / PX;      // 41, the border's included
-static constexpr int GRAPH_COLS = CELL_COLS - 2;
+static constexpr int CELL_COLS = CELL[FILTER_CELL].w / PX;      // 30, the border's included
+static constexpr int GRAPH_LEFT = 2;                             // the first graph column (after the border and a space)
+static constexpr int GRAPH_COLS = CELL_COLS - 2 * GRAPH_LEFT;
 static constexpr int BAND_ROWS = CELL_H / PX;                   // 14
-static constexpr int TOP_ROW = 1, BOTTOM_ROW = 12;              // 0 dB, -CURVE_DB
+static constexpr int TOP_ROW = 2, BOTTOM_ROW = 11;              // 0 dB, -CURVE_DB (a block of space round them)
 static constexpr float CURVE_DB = 30;
 
 void drawFilter(int i) {
@@ -56,9 +57,9 @@ void drawFilter(int i) {
       if (c < GRAPH_COLS - 1) { lo = min(lo, (y[c] + y[c + 1]) / 2); hi = max(hi, (y[c] + y[c + 1]) / 2); }
       int r0 = (int)lroundf(lo), r1 = (int)lroundf(hi);
       if (k.line != BG)
-        for (int r = max(r0, TOP_ROW); r <= min(r1, BOTTOM_ROW); r++) blocks[r][c + 1] = k.line;
+        for (int r = max(r0, TOP_ROW); r <= min(r1, BOTTOM_ROW); r++) blocks[r][c + GRAPH_LEFT] = k.line;
       int under = k.line != BG ? r1 + 1 : (int)lroundf(y[c]);   // (no line: the fill from the curve down)
-      for (int r = max(under, TOP_ROW); r <= BOTTOM_ROW; r++) blocks[r][c + 1] = k.fill;
+      for (int r = max(under, TOP_ROW); r <= BOTTOM_ROW; r++) blocks[r][c + GRAPH_LEFT] = k.fill;
     }
   }
   static uint16_t px[CELL_H * CELL[FILTER_CELL].w];

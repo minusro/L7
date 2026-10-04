@@ -14,6 +14,10 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
     return cellFrame(i, nc);
   }
   if (ni < 0 || ni >= NUM_TRACKS || nc < 0 || nc >= CELLS) return BG;
+  if (nc != cell) {                                // only a cell right next to it (no space between)
+    const Cell &a = CELL[min(cell, nc)], &n = CELL[max(cell, nc)];
+    if (a.x + a.w - PX != n.x) return BG;
+  }
   return cellFrame(ni, nc);
 }
 

@@ -364,8 +364,8 @@ int main(int argc, char **argv) {
              tr.sample, tr.recordedFrames, tr.loopBars, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted);
     check(tr.sample == 2 && tr.recordedFrames == legacyFrames && tr.loopBars == 1 && tr.rangeBeats == 2 &&
           tr.state == TrackState::Muted && tr.overview[10] == 100, m);
-    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 4 && tr.balance == -2,
-          "its filter kept, volume and balance in today's steps (25 -> 4, -4 -> -2)");
+    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 3 && tr.balance == -1,
+          "its filter kept, volume and balance in today's steps (25 -> 3, -4 -> -1)");
     check(wavLeft(4, 0) == -500 && wavLeft(4, 1234) == 1234 % 1000 - 500 && wavLeft(4, legacyFrames - 1) == (int16_t)((legacyFrames - 1) % 1000 - 500),
           "its audio is intact in samples/0002.wav");
     FILE *old = fopen((simRoot + "/looper/track5.wav").c_str(), "rb");

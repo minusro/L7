@@ -3,10 +3,11 @@
 
 // ---- Waveforms
 // Each track's whole loop in WAVE_COLS columns of blocks, inside the cell's
-// border (shared with its neighbours: the selection frame). Rows of blocks
-// (14 in the cell):
+// border (shared with its neighbours: the selection frame) and a block of
+// space. Rows of blocks (14 in the cell):
 //   0, 13   the border
-//   1 - 12  the waveform: a line along rows 6-7, the peaks reaching up to 5
+//   1, 12   space
+//   2 - 11  the waveform: a line along rows 6-7, the peaks reaching up to 4
 //           blocks above and below it. Heights go with the square root of
 //           the peak level (as the overview stores it).
 // The waveform is white inside the loop range and dark grey outside; on a
@@ -21,10 +22,11 @@
 // Full redraws only happen when something changes; the playhead moves by
 // redrawing just its columns.
 
-static constexpr int BLOCK_COLS = WAVE_W / PX;                  // 67, the border's included
-static constexpr int WAVE_COLS = BLOCK_COLS - 2;               // 65 waveform columns
+static constexpr int BLOCK_COLS = WAVE_W / PX;                  // 90, the border's included
+static constexpr int WAVE_LEFT = 2;                            // the first waveform column (after the border and a space)
+static constexpr int WAVE_COLS = BLOCK_COLS - 2 * WAVE_LEFT;   // 86 waveform columns
 static constexpr int BAND_ROWS = CELL_H / PX;                  // 14
-static constexpr int MID_ROW = 6, WAVE_REACH = 5;              // the line: rows 6-7; peaks: rows 1-12
+static constexpr int MID_ROW = 6, WAVE_REACH = 4;              // the line: rows 6-7; peaks: rows 2-11
 
 // Waveform height (blocks each way) for a stored overview level (the square
 // root of the peak, 0-255): in proportion.
@@ -73,7 +75,7 @@ static void drawColumn(int i, int bc) {
     int b = borderAt(i, WAVE_CELL, r, bc, BAND_ROWS, BLOCK_COLS);
     col[r] = b >= 0 ? (uint16_t)b : v.bg;
   }
-  int c = bc - 1;                                  // waveform column
+  int c = bc - WAVE_LEFT;                          // waveform column
   if (c >= 0 && c < WAVE_COLS && v.visible) {
     bool muted = !v.live && tr.state == TrackState::Muted;
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
@@ -86,7 +88,7 @@ static void drawColumn(int i, int bc) {
     if (!v.live && c == v.markCol)                                // the start position: inverting
       for (int r = MID_ROW - 2; r <= MID_ROW + 3; r++) col[r] = col[r] == v.bg ? (muted ? DIM : INK) : v.bg;
     if (c == v.playCol) {                                         // on top: the playhead
-      for (int r = 1; r < BAND_ROWS - 1; r++)
+      for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++)
         col[r] = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
                : col[r] == v.bg ? (v.bg == BG ? INK : BG) : v.bg;
     }
@@ -151,8 +153,8 @@ static void movePlayhead(int i, int col, uint16_t color) {
   int old = v.playCol;
   v.playCol = col;
   v.headColor = color;
-  if (old >= 0 && old != col) drawColumn(i, old + 1);
-  if (col >= 0) drawColumn(i, col + 1);
+  if (old >= 0 && old != col) drawColumn(i, old + WAVE_LEFT);
+  if (col >= 0) drawColumn(i, col + WAVE_LEFT);
 }
 
 // Live view of the recording: new columns as audio is written, a full
@@ -193,7 +195,7 @@ static void updateLive(int i) {
   int oldFilled = v.liveFilled;
   v.liveFilled = filled;
   for (int c = 0; c < WAVE_COLS; c++)
-    if (columnLevel(v.liveData, c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c + 1);
+    if (columnLevel(v.liveData, c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c + WAVE_LEFT);
   movePlayhead(i, head, INVERT_HEAD);              // (on the coloured cell)
 }
 

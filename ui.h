@@ -16,18 +16,17 @@ constexpr int ROW_BAND = 26;                             // a row's height (its 
 constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2;    // 210
 // Each track row: three cells, then the button (a square): the waveform, the
 // filter (its response curve), then volume and balance. A cell is its
-// content in a one-block border, shared with the cells next to it and those
-// above and below (a cell's rect is CELL_H tall: its row's band and the
-// block below, the next row's border): the selection frame is drawn there,
-// grey round the selected cell (ui.cpp, borderAt()). The selected track gets
-// a grey panel in its button, behind its number (ui_buttons.cpp).
-// Left of the buttons (146 blocks, 4 of them borders, then a block's space
-// before the buttons) the waveform takes about 2/3, filter and volume 1/6 each:
-//   waveform: x 0-191   filter: x 190-241   volume: x 240-291   button: x 294-319
+// content in a one-block border, shared with the cells above and below (a
+// cell's rect is CELL_H tall: its row's band and the block below, the next
+// row's border) and with one right next to it (none are now: a block's space
+// between them): the selection frame is drawn there, grey round the selected
+// cell (ui.cpp, borderAt()). The selected track gets a grey panel in its
+// button, behind its number (ui_buttons.cpp).
+//   waveform: x 0-179   filter: x 182-241   volume: x 244-291   button: x 294-319
 struct Cell { int x, w; };
 constexpr int CELL_H = ROW_BAND + PX;
 constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left to right
-constexpr Cell CELL[CELLS] = {{0, 192}, {190, 52}, {240, 52}};
+constexpr Cell CELL[CELLS] = {{0, 180}, {182, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: two cells of equal width, the scene, then

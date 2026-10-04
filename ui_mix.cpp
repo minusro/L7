@@ -14,11 +14,11 @@
 // While B alone is held on the cell of a clip that isn't muted (B + arrows
 // change volume and balance) the meter is in the accent colour, the level's
 // lines in the dark accent. A line is only redrawn when its colour changes.
-static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = CELL_H / PX;   // 26 x 14, the border's included
-// The lines: one in every other column, from the centre out to the cell's
-// edges, 2 blocks tall at the centre and 2 taller each one out (the outer
-// ones the cell's full height): as many per channel as there are volume steps.
-static constexpr int MIX_ARCS = (CELL_COLS - 2) / 4;                     // 6
+static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = CELL_H / PX;   // 24 x 14, the border's included
+// The lines: one in every other column, from the centre out (a column short
+// of the cell's edges), 2 blocks tall at the centre and 2 taller each one
+// out: as many per channel as there are volume steps.
+static constexpr int MIX_ARCS = (CELL_COLS - 4) / 4;                     // 5
 static_assert(MIX_ARCS == VOLUME_MAX && BALANCE_MAX == MIX_ARCS, "a line per volume step (and balance step a side)");
 static constexpr float METER_FALL_DB_PER_S = 24;
 
@@ -26,7 +26,7 @@ static int8_t arcAt[BAND_ROWS][CELL_COLS];          // [row][col]: side * MIX_AR
 
 static void buildArcs() {
   for (auto &row : arcAt) for (auto &a : row) a = -1;
-  const int inner = 2 * MIX_ARCS - 1;              // the left channel's innermost column (11; the right's: 14)
+  const int inner = CELL_COLS / 2 - 2;             // the left channel's innermost column (10; the right's: 13)
   for (int j = 0; j < MIX_ARCS; j++) {
     int h = 2 + 2 * j, top = (BAND_ROWS - h) / 2;  // centred in rows 1-12
     for (int side = 0; side < 2; side++) {
