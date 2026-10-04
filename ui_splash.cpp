@@ -8,7 +8,7 @@
 // accent back to it, eased in and out), fading out at the end; as it fades
 // in, the L and the 7 slide in from the sides, in place at 1 s. With the
 // copyright line under it in light grey (fading in), centred, in the pixel
-// font (ui_font.cpp), smaller than usual but crisp (its blocks 2 and 1 px in turn).
+// font (ui_font.cpp), as in the rest of the app (2 x 2-pixel blocks).
 #include "ui.h"
 #include "ui_font.h"
 
@@ -48,7 +48,7 @@ static constexpr int LOGO_W = 138, LOGO_H = 65;     // (55 x 26 units at 2.5: dr
 // The logo and the copyright line under it centred together (the logo
 // above the middle).
 static constexpr int TEXT_GAP = 22;               // logo to text (the copyright sign's top), px
-static constexpr int TEXT_ROWS = 7, TEXT_H = 10;   // the text's block rows (the copyright sign's), its height (textRowPx())
+static constexpr int TEXT_PX = 2, TEXT_ROWS = 7, TEXT_H = TEXT_ROWS * TEXT_PX;   // the app's font blocks; the text's block rows (the copyright sign's)
 static constexpr int GROUP_H = LOGO_H + TEXT_GAP + TEXT_H;   // logo, gap, text
 static constexpr int GROUP_DOWN = 8;                 // the group sits this far below the middle, px
 static constexpr int LOGO_RIGHT = 16;                // the logo this far right of the middle, px (the text stays centred)
@@ -69,45 +69,34 @@ static uint32_t shownAt = 0;
 
 static const char COPYRIGHT[] = "\xA9 2026 Daniel Stanciu";
 
-// The copyright line, smaller than the font's usual 2 x 2-pixel blocks but
-// crisp: its blocks 2 and 1 px in turn, the same way in every glyph (columns
-// 2, 1, 2 ... from each glyph's left; the rows 2, 1, 2, 1, 2 px from the
-// letters' top, the copyright sign's extra rows 1 px), glyphs 2 px apart.
-static constexpr int TEXT_GAP_PX = 2;
-static int textColPx(int c) { return c % 2 ? 1 : 2; }
-static int textRowPx(int rr) { return rr % 2 ? 2 : 1; }      // (rr: from the copyright sign's top row)
-static int glyphPx(const Glyph &g) {
-  int w = 0;
-  for (int c = 0; c < glyphWidth(g); c++) w += textColPx(c);
-  return w;
-}
-static int textWidthPx(const char *text) {
-  int w = 0;
+// Width of a line of text, in blocks.
+static int textCols(const char *text) {
+  int cols = 0;
   for (const char *p = text; *p; p++)
-    if (const Glyph *g = glyphFor(*p)) w += glyphPx(*g) + (p[1] ? TEXT_GAP_PX : 0);
-  return w;
+    if (const Glyph *g = glyphFor(*p)) cols += glyphWidth(*g) + (p[1] ? 1 : 0);
+  return cols;
 }
+static int textWidthPx(const char *text) { return textCols(text) * TEXT_PX; }
 
-// Built in a buffer and sent at once. (x, y): the top left of its TEXT_ROWS
-// block rows (the copyright sign's, a row above the rest).
+// The copyright line in the app's font (2 x 2-pixel blocks, a block between
+// glyphs), built in a buffer and sent at once. (x, y): the top left of its
+// TEXT_ROWS block rows (the copyright sign's, a row above the rest).
 static constexpr int TEXT_MAX_W = 240;
 static void drawLine(int x, int y, const char *text, uint16_t color) {
   static uint16_t px[TEXT_H * TEXT_MAX_W];
   const int w = min(textWidthPx(text), TEXT_MAX_W);
   for (int i = 0; i < TEXT_H * w; i++) px[i] = BG;
-  int x0 = 0;
+  int col = 0;
   for (const char *p = text; *p; p++) {
     const Glyph *g = glyphFor(*p);
     if (!g) continue;
-    for (int r = 0; r < 7 && g->rows[r]; r++) {
-      int rr = g->top + r + 1, y0 = 0;
-      for (int k = 0; k < rr; k++) y0 += textRowPx(k);
-      for (int c = 0, cx = x0; c < glyphWidth(*g); cx += textColPx(c), c++)
+    for (int r = 0; r < 7 && g->rows[r]; r++)
+      for (int c = 0; c < glyphWidth(*g); c++)
         if (g->rows[r][c] == '#')
-          for (int dy = 0; dy < textRowPx(rr); dy++)
-            for (int dx = 0; dx < textColPx(c) && cx + dx < w; dx++) px[(y0 + dy) * w + cx + dx] = color;
-    }
-    x0 += glyphPx(*g) + TEXT_GAP_PX;
+          for (int dy = 0; dy < TEXT_PX; dy++)
+            for (int dx = 0, x0 = (col + c) * TEXT_PX; dx < TEXT_PX && x0 + dx < w; dx++)
+              px[((g->top + r + 1) * TEXT_PX + dy) * w + x0 + dx] = color;
+    col += glyphWidth(*g) + 1;
   }
   board.tft().writeRect(x, y, w, TEXT_H, px);
 }
