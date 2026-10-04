@@ -17,13 +17,13 @@
 // everything in order. It opens on the loaded project's card (the dummy
 // project loaded: where its selection was).
 //
-// A card: a block shape, its top left and bottom right corners cut diagonally (3 blocks),
+// A card: a block shape, a block missing from each top corner and a 3 x 3 block from the bottom right,
 // in its slot's colour (colors.h): the loaded project's
 // filled, its letter A-L (the project's name) black;
 // another project's a thick (two-block) outline, the letter in the
 // slot's colour; empty, a grey outline with the letter in the slot's colour. The selected item's frame looks and behaves as the looper's
-// cells' (frameColor()), corners cut, a block out from a card (the diagonal
-// too), three from the list's box (the longest label's size, centred;
+// cells' (frameColor()), corners cut, a block out from a card (following its
+// shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
 // logo small, always the action button's colour (not its pressed look).
 #include "ui.h"
@@ -68,10 +68,11 @@ void setMainSelection(int row, int cell) {
   (shown ? mainCell : selectedCell) = cell;
 }
 
-// ---- Shapes, in blocks: an item's content is w x h blocks from (x, y), both
-// its top left and bottom right corners cut `cut` blocks (0: a rectangle). shape(d) is the
-// content grown by d blocks all round (the diagonal moved out a block per
-// step too); a frame is a ring between two of them.
+// ---- Shapes, in blocks: an item's content is w x h blocks from (x, y); a card
+// (cut > 0) has a block missing from each top corner and a cut x cut block
+// from the bottom right (0: a plain rectangle). shape(d) is the content
+// grown by d blocks all round (the notch keeps its size); a frame is a ring
+// between two of them.
 struct Shape { int x, y, w, h, cut; };
 
 // Row r (screen block row) of shape s grown by d: its first and last column
@@ -81,14 +82,17 @@ static bool rowSpan(const Shape &s, int d, int r, int &c0, int &c1, bool round =
   if (y < -d || y > s.h - 1 + d) return false;
   c0 = -d;
   c1 = s.w - 1 + d;
-  if (round && (y == -d || y == s.h - 1 + d)) {   // the top and bottom rows: their corners cut
-    bool top = y == -d;
-    if (!(top && s.cut)) c0++;                    // (the top left and bottom right: the diagonals already)
-    if (!(!top && s.cut)) c1--;
-  }
-  if (s.cut) {                                    // the diagonals: the bottom right one x + y at most this,
-    c1 = min(c1, s.w + s.h - s.cut - 2 + d - y);
-    c0 = max(c0, s.cut - y - d);                  // the top left one x - y at least this
+  bool top = y == -d, bottom = y == s.h - 1 + d;
+  if (s.cut) {                                    // a card: a block missing from each top corner, and a
+    if (top) {                                    // cut x cut block from the bottom right (the notch keeps
+      c0++;                                       // its size as the shape grows or shrinks)
+      c1--;
+    }
+    if (bottom && round) c0++;                    // (a frame: the bottom left corner too)
+    if (y >= s.h - s.cut + d) c1 = min(c1, s.w - s.cut + d - 1);
+  } else if (round && (top || bottom)) {          // the top and bottom rows: their corners cut
+    c0++;
+    c1--;
   }
   if (c1 < c0) return false;
   c0 += s.x;
@@ -177,11 +181,6 @@ static void drawItem(int k) {
     } else if (filled) {                          // a project: a thick outline, two blocks
       fillRing(s, 0, -2, color);
       fillRing(s, -2, -s.w, BG);
-      // (the diagonals a block thicker where they meet the sides: two blocks inside each cut corner)
-      t.fillRect((s.x + s.w - 3) * PX, (s.y + s.h - s.cut - 1) * PX, PX, PX, color);
-      t.fillRect((s.x + s.w - 4) * PX, (s.y + s.h - s.cut) * PX, PX, PX, color);
-      t.fillRect((s.x + 2) * PX, (s.y + s.cut) * PX, PX, PX, color);
-      t.fillRect((s.x + 3) * PX, (s.y + s.cut - 1) * PX, PX, PX, color);
     } else {                                      // empty: an outline (the shape's edge)
       fillRing(s, 0, -1, DIM);
       fillRing(s, -1, -s.w, BG);
