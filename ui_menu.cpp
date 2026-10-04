@@ -8,8 +8,8 @@
 // slot (only while stopped).
 //
 // Items: the cards 0-11 (rows of four, top first) and the list's 12 and 13
-// (export, USB data mode), the list above the cards (two columns, filled
-// from its bottom row up), the cards just above the status row, which the
+// (export, USB data mode), the list above the cards (filled from the bottom
+// up), the cards just above the status row, which the
 // menu's selection reaches too (its cells then work as in the looper's view;
 // the looper's own selection is kept meanwhile and comes back when the menu
 // closes). UP/DOWN go between the list's rows, the card rows and the status
@@ -98,26 +98,26 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
 // The cards at the bottom, just above the status row: 26 x 14, the cut 3,
-// 6 apart, centred. Above them the list: two columns (a box each, the size
-// of its longest label, left-aligned: the first over the cards' first column,
-// the second over their third), filled from the bottom row up (one row for
-// now: export, then USB data mode), its frame 3 blocks out.
-static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6, CARD_ROWS = CARDS / COLS;
+// 6 apart across, 8 down, centred. Above them, 8 rows clear of their frames,
+// the list: a box the size of its longest label, centred (labels
+// left-aligned), an item every 16 rows filled from the bottom up (export,
+// then USB data mode above it), its frame 3 blocks out.
+static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6, CARD_VGAP = 8, CARD_ROWS = CARDS / COLS;
 static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2;
-static constexpr int CARDS_Y = 102 - (CARD_ROWS * CARD_H + (CARD_ROWS - 1) * CARD_GAP) + 1;   // (the last row ends at row 102)
-static constexpr int LIST_SPACE = 3, LIST_PITCH = 13, LIST_COLS = 2;
-static constexpr int LIST_Y = CARDS_Y - 2 - 2 - LIST_SPACE - 1 - FONT_H / PX;   // the bottom row's text (its frame 2 above the cards')
+static constexpr int CARDS_Y = 102 - (CARD_ROWS * CARD_H + (CARD_ROWS - 1) * CARD_VGAP) + 1;   // (the last row ends at row 102)
+static constexpr int LIST_SPACE = 3, LIST_PITCH = 16, LIST_COLS = 1, LIST_GAP = 8;
+static constexpr int LIST_Y = CARDS_Y - 2 - LIST_GAP - LIST_SPACE - 1 - FONT_H / PX;   // the bottom row's text (its frame LIST_GAP above the cards')
 
 static int listRow(int item) { return item / LIST_COLS; }   // 0: the bottom row (filled first)
 static int listCol(int item) { return item % LIST_COLS; }
 
 static Shape itemShape(int k) {
   if (k < CARDS)
-    return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (k / COLS) * (CARD_H + CARD_GAP), CARD_W, CARD_H, CARD_CUT};
+    return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (k / COLS) * (CARD_H + CARD_VGAP), CARD_W, CARD_H, CARD_CUT};
   // A list item: its column's box (the longest label in it).
   int item = k - CARDS, col = listCol(item), w = 0;
   for (int i = col; i < LIST; i += LIST_COLS) w = max(w, textWidth(LABELS[i]) / PX);
-  return {CARDS_X + col * 2 * (CARD_W + CARD_GAP), LIST_Y - listRow(item) * LIST_PITCH, w, FONT_H / PX, 0};
+  return {(320 / PX - w) / 2, LIST_Y - listRow(item) * LIST_PITCH, w, FONT_H / PX, 0};   // (one column, centred)
 }
 
 // The selected item's frame, as the looper's cells': light grey; white while
@@ -205,10 +205,10 @@ static void toStatus() {
   drawMenu();
   drawTrack(STATUS_ROW);
 }
-// The order LEFT/RIGHT go through: the list (in its order), the cards
-// row by row; then the status row.
-static int orderOf(int k) { return k >= CARDS ? k - CARDS : LIST + k; }
-static int itemAt(int pos) { return pos < LIST ? CARDS + pos : pos - LIST; }
+// The order LEFT/RIGHT go through, top to bottom: the list (its top item
+// first), the cards row by row; then the status row.
+static int orderOf(int k) { return k >= CARDS ? LIST - 1 - (k - CARDS) : LIST + k; }
+static int itemAt(int pos) { return pos < LIST ? CARDS + LIST - 1 - pos : pos - LIST; }
 
 void menuLeaveStatus(bool left) {
   if (!onStatus) return;
