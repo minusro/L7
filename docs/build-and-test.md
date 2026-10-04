@@ -23,8 +23,8 @@ Uploading to the M8 over USB (it shows up as a Teensy 4.0; the port is the
 
 Working with Claude Code: after each firmware change, build and upload, so
 the latest sketch is always on the M8 to try. After each successful upload,
-commit the change (only Claude's own changes: personal notes such as
-`M8 Looper.txt` stay out unless asked); no commit when the upload fails.
+commit the change, the user's notes files (such as `M8 Looper.txt`)
+included; no commit when the upload fails.
 
 ## Simulator (`tools/looper_sim`)
 

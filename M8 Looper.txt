@@ -90,9 +90,10 @@ no dropouts or overruns
 4oct26
 
 - figure out how to build resampling V
-- volume control
+- volume control V
 - [ Projects ]
-
+- ableton export
+- overdubbing
 
 - crossfading between two scenes
 - add play icon to status row (?)
