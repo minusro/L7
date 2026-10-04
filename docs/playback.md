@@ -89,3 +89,11 @@ Details:
 Measured in the simulator (realistic card, 120 BPM, all 8 tracks switching):
 new samples heard ~230 ms after the request (max ~280 ms) with no silence;
 before this design a switch left 1–2 beats of silence (~770 ms average).
+
+## Metronome
+
+While the clock runs in a project without clips (none on its tracks or in
+its scenes, the dummy project included), the engine clicks on every beat: a
+small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
+and louder on the bar's first beat). It's added after the master volume and
+left out of what a resampling records. It stops once the project has a clip.

@@ -186,6 +186,7 @@ void loop() {
   pollKeys();
   saveSessionWhenIdle();
   serviceScenes();
+  metronomeOn = transport.running && !projectHasClips();   // an empty project: a click to play along to
 
   // Report dropouts with what the storage code was doing (debugging).
   static uint32_t lastDropCheck = 0, lastDrops[NUM_TRACKS] = {};

@@ -96,6 +96,31 @@ void setTrackMix(int t, int volume, int balance) {
 
 static int masterStep = MASTER_VOLUME_UNITY;
 static volatile float outputGain = 1.0f;          // the master volume's
+volatile bool metronomeOn = false;
+
+// The metronome's wood block: two damped sines (its body and a harder upper
+// partial), started on a beat.
+static constexpr float CLICK_LEVEL = 5000, CLICK_BAR_HZ = 1600, CLICK_BEAT_HZ = 1150;
+static const float CLICK_DECAY = expf(-1.0f / (0.012f * AUDIO_SAMPLE_RATE_EXACT));      // body, ~12 ms
+static const float CLICK_DECAY_HI = expf(-1.0f / (0.004f * AUDIO_SAMPLE_RATE_EXACT));   // partial, ~4 ms
+static float clickAmp = 0, clickAmpHi = 0, clickPhase = 0, clickStep = 0;
+
+static void startClick(bool bar) {
+  float hz = bar ? CLICK_BAR_HZ : CLICK_BEAT_HZ;
+  clickStep = 2 * (float)M_PI * hz / AUDIO_SAMPLE_RATE_EXACT;
+  clickPhase = 0;
+  clickAmp = CLICK_LEVEL * (bar ? 1.0f : 0.75f);
+  clickAmpHi = clickAmp * 0.5f;
+}
+
+static float clickSample() {
+  if (clickAmp < 1) return 0;
+  float s = clickAmp * sinf(clickPhase) + clickAmpHi * sinf(clickPhase * 2.76f);
+  clickPhase += clickStep;                       // (from 0 on each click: it's over long before precision matters)
+  clickAmp *= CLICK_DECAY;
+  clickAmpHi *= CLICK_DECAY_HI;
+  return s;
+}
 static volatile float outPeakL = 0, outPeakR = 0;
 void setMasterVolume(int step) {
   masterStep = constrain(step, 0, MASTER_VOLUME_MAX);
@@ -187,6 +212,7 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
   int32_t beat = transport.beat;
   tickInBeat_ = 0;
   nextTickAt_ = 0;
+  if (metronomeOn) startClick(beat % BEATS_PER_BAR == 0);
 
   if (beat % BEATS_PER_BAR == 0) {
     transport.lastBarSample = transport.now;
@@ -328,11 +354,17 @@ void LooperEngine::update() {
 
     mixL *= outGain;                                 // the master volume
     mixR *= outGain;
+    if (captureOutput) {                             // (without the metronome)
+      int16_t cl = (int16_t)constrain(mixL, -32767.0f, 32767.0f), cr = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
+      inputRing[at % INPUT_FRAMES] = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
+    }
+    float click = clickSample() * outGain;
+    mixL += click;
+    mixR += click;
     outPeak[0] = max(outPeak[0], fabsf(mixL));
     outPeak[1] = max(outPeak[1], fabsf(mixR));
     outL->data[i] = (int16_t)constrain(mixL, -32767.0f, 32767.0f);
     outR->data[i] = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
-    if (captureOutput) inputRing[at % INPUT_FRAMES] = (uint16_t)outL->data[i] | ((uint32_t)(uint16_t)outR->data[i] << 16);
   }
 
   for (int t = 0; t < NUM_TRACKS; t++) {

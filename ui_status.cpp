@@ -11,7 +11,8 @@
 //     UP/DOWN step through the scenes. The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
 //     it, or the change waiting for its switch point.
-//   second cell: the clock (bar.beat.step), centred: stopped, 1.1.1 in dark
+//   second cell: the clock (bar.beat.step), after a small play icon (the
+//     accent colour while it runs), centred together: stopped, 1.1.1 in dark
 //     grey (selected: grey); running, grey with light grey on each beat's
 //     first step (selected: light grey, white on the first step), in the
 //     accent colour on 1.1.1. Selected, A starts / stops the
@@ -158,12 +159,20 @@ void drawStatus() {
   uint16_t clockInk = !running ? (here ? DIM : DARK) : first ? ACCENT
                     : step == 0 ? (here ? INK : LIGHT) : (here ? LIGHT : DIM);
   if (!volume) {
-    // Centred (on the block grid); what longer text left either side cleared.
+    // A small play icon (in the accent colour while the clock runs), then the
+    // text, centred together (on the block grid); what longer text left
+    // either side cleared.
+    static const char *const PLAY[5] = {"#..", "##.", "###", "##.", "#.."};
+    const int iconW = 3 * PX, gap = 2 * PX;
     int w = textWidth(text), inL = CLOCK_BOX.x + INSET, inR = CLOCK_BOX.x + CLOCK_BOX.w - INSET;
-    int x = CLOCK_BOX.x + (CLOCK_BOX.w - w) / 2 / PX * PX;
+    int x = CLOCK_BOX.x + (CLOCK_BOX.w - iconW - gap - w) / 2 / PX * PX, tx = x + iconW + gap;
     t.fillRect(inL, textY, x - inL, FONT_H, BG);
-    t.fillRect(x + w, textY, inR - x - w, FONT_H, BG);
-    drawText(x, textY, text, clockInk, BG);
+    for (int r = 0; r < 5; r++)
+      for (int c = 0; c < 3; c++)
+        t.fillRect(x + c * PX, textY + r * PX, PX, PX, PLAY[r][c] == '#' && running ? ACCENT : BG);
+    t.fillRect(x + iconW, textY, gap, FONT_H, BG);
+    t.fillRect(tx + w, textY, inR - tx - w, FONT_H, BG);
+    drawText(tx, textY, text, clockInk, BG);
   }
 
   // The scene. Its box reaches the cell's inner edge: the position's text

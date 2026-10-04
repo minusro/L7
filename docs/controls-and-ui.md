@@ -14,7 +14,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
 | B + A | On a track: resample / overdub (below). The menu opens with A on the scene cell, or by stopping the clock |
-| A, B or START (menu, on a project slot) | Once let go: load its project, from 1.1.1 (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
+| A, B or START (menu, on a project slot) | Once let go: load its project and start the clock, from 1.1.1 (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
 | SHIFT + A or B (menu, on a slot) | On a project: the first A only asks (the icon turns into a question mark); a second A, SHIFT still held, cuts it once let go (letting go of SHIFT or moving cancels). Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Not while recording |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | B + A (on a track) | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while B is held: a cassette (resample), the record dot with a plus (overdub) |
@@ -125,7 +125,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   and number while SHIFT is held, or B alone on the scene cell; the tempo and
   its tag while B alone is held on its cell. The clock: stopped, dark grey (selected: 50% grey); running, 50% grey with
   light grey on each beat's first step (selected: light grey, white on the
-  first step), the accent colour on 1.1.1. While B alone is held on the clock
+  first step), the accent colour on 1.1.1; before it a small play icon, in
+  the accent colour while it runs. While B alone is held on the clock
   cell it shows the master volume instead: 22 vertical lines across the cell
   (one per step 0–21, 1.5 dB apart: 0 off, 17 100% — the default —, 21 200%): the volume's
   line white, dark accent before it and dark grey after it; their upper halves meter the left output, the
@@ -146,8 +147,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the place of the track rows and the status row's cells, across the whole
   width; of the status row only the action button shows. Opening it stops the
   clock. On its items A and B both act (SHIFT with them: cut and paste); on
-  a project card START does too (load / new). Loading an existing project
-  starts the clock (from 1.1.1); a new one doesn't. In the looper's view,
+  a project card START does too (load / new). Loading a project, or making a
+  new one, starts the clock (from 1.1.1; a new, empty one plays the
+  metronome). In the looper's view,
   stopping the clock (START, or A on the clock cell) goes back to the menu
   once that key is let go; SHIFT+START only restarts from 1.1.1. On its items A
   runs the action button's action when let go; B does nothing. The way out

@@ -78,7 +78,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // The menu's items: the arrows move its selection; A or B runs the action
   // button's action once let go (on the item it was pressed on), and so does
   // START on a project card (loading, or making a new one). The clock stops as
-  // the menu opens; loading an existing project starts it, a new one doesn't.
+  // the menu opens; loading a project (or making one) starts it again.
   static bool armed = false, shifted = false;        // A/B (START) down: its action waits; SHIFT with it
   // SHIFT+A on a project: the first tap only asks (a question mark); a second A,
   // SHIFT still held and the selection still there, cuts it when let go.
@@ -112,11 +112,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         int row, cell;
         mainSelection(row, cell);
         projectSetSelection(row, cell);              // (the project left keeps its selection)
-        bool existing = projectFilled(slot);
         if (projectLoad(slot)) {
           closeMenu();
           takeProjectSelection();
-          if (existing && !transport.running) transportStart();   // an existing project plays (from 1.1.1); a new one waits
+          if (!transport.running) transportStart();  // it plays, from 1.1.1 (a new one: the metronome)
           for (int i = 0; i < ROWS; i++) drawTrack(i);
         }
       }

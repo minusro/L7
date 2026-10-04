@@ -154,6 +154,11 @@ void takeTrackPeaks(int t, float &left, float &right);   // and start the next m
 // Master volume (config.h, steps 0..MASTER_VOLUME_MAX) on the final output,
 // and that output's peaks (full scale 1) since the last call.
 void setMasterVolume(int step);
+// A metronome click on every beat while on (set from loop(): the clock
+// running in a project without clips): a small wood block, higher on the
+// bar's first beat. In the output, after the master volume; not in what a
+// resampling records.
+extern volatile bool metronomeOn;
 int masterVolume();
 void takeOutputPeaks(float &left, float &right);
 
