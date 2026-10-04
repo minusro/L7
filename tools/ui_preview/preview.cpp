@@ -140,6 +140,15 @@ int main(int argc, char **argv) {
   render(out + "/ui_empty.png");
   selected = 2;                                    // a muted track
   render(out + "/ui_muted.png");
+  board.heldKeys = m8::BTN_SHIFT;                  // SHIFT + A: cut a clip, paste onto an empty track
+  selected = 1;
+  render(out + "/ui_cut.png");
+  selected = 5;
+  render(out + "/ui_paste.png");
+  board.heldKeys = m8::BTN_SHIFT | m8::BTN_OPT;    // with B too: the scene versions (paste: B first)
+  render(out + "/ui_scene_paste.png");
+  board.heldKeys = 0;
+  selected = 2;
   previewShiftTwice = true;                        // SHIFT twice, held: overdub on a clip,
   board.heldKeys = m8::BTN_SHIFT;
   render(out + "/ui_overdub.png");

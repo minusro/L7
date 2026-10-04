@@ -12,8 +12,9 @@
 // selected row: record (red) on an empty track; finish recording (play);
 // cancel a recording still waiting for its bar (X); mute (a speaker crossed
 // out) or unmute (a speaker with sound waves); with SHIFT held, cut the clip
-// (scissors), cancel a recording (X: thrown away at once) or, on an
-// empty track, paste (a clipboard; dark grey while the clipboard is empty). With B
+// (an arrow up from a line), cancel a recording (X: thrown away at once) or,
+// on an empty track, paste (an arrow down to a line; dark grey while the
+// clipboard is empty). With B
 // held: open the panel (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the panel is open: a house (A closes it). On the status row itself:
@@ -122,14 +123,14 @@ PROGMEM static const Icon ICONS[] = {
   {7, 7, {".......", ".##.##.", ".##.##.", ".##.##.", ".##.##.", ".##.##.", "......."}},   // PAUSE
   {7, 7, {".......", ".#...#.", "..#.#..", "...#...", "..#.#..", ".#...#.", "......."}},   // DELETE
   {0, 0, {}},                                                                  // TAP (text)
-  {7, 7, {".##...#", "#..#.#.", ".##.#..", "...#...", ".##.#..", "#..#.#.", ".##...#"}},   // CUT
-  {7, 7, {"..###..", ".#####.", ".#...#.", ".#.#.#.", ".#...#.", ".#.#.#.", ".#####."}},   // PASTE
+  {7, 7, {"...#...", "..###..", ".#.#.#.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
+  {7, 7, {"...#...", "...#...", ".#.#.#.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
   {7, 7, {".......", "#######", ".......", "#######", ".......", "#######", "......."}},   // MENU
   {7, 7, {"...#...", "..###..", ".#####.", "#######", ".##.##.", ".##.##.", ".##.##."}},   // HOME
-  {9, 9, {"#########", "#.......#", "#.#...#.#", "#..#.#..#", "#...#...#", "#.##.##.#", "#.##.##.#",
-          "#.......#", "#########"}},                                                   // SCENE_CUT
-  {9, 9, {"#########", "#.......#", "#..###..#", "#.#...#.#", "#.#.#.#.#", "#.#...#.#", "#.#####.#",
-          "#.......#", "#########"}},                                                   // SCENE_PASTE
+  {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#.#.#..", "#...#...#",
+          "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
+  {9, 9, {"#.#.#.#.#", "....#....", "#...#...#", "..#.#.#..", "#..###..#",
+          "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_PASTE
   {10, 7, {"....#.....", "...##.....", ".####.#.#.", ".####..#..", ".####.#.#.", "...##.....", "....#....."}},   // MUTE (a block right of UNMUTE)
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
   {10, 7, {".########.", "#........#", "#.##..##.#", "#.##..##.#", "#........#", "#.######.#", ".########."}},   // RESAMPLE (a cassette)

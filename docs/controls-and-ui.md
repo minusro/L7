@@ -108,7 +108,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   dark accent (`ACCENT_DARK`, the same for the filter fill and the volume
   level): the loop range, the filter line and fill, the volume meter and
   level (`editingCell()` in ui.h).
-* Icons (`ui_buttons.cpp`): bitmaps of blocks; "TAP" in the pixel font.
+* Icons (`ui_buttons.cpp`): bitmaps of blocks; "TAP" in the pixel font. Cut:
+  an arrow pointing up from a line below it; paste: an arrow pointing down to
+  the line; the scene versions the same with a checkered square right round them.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the scene cell
