@@ -258,23 +258,33 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   };
   if (icon == ICON_TAP) {
     // Condensed: T and A touch (T's stem and A's point keep them apart), 10
-    // blocks, centred in the backdrop, in a one-block contour (a block of
-    // space above and below the word, its sides the backdrop's edges; corners cut).
+    // blocks, centred in the backdrop. Inverted: the letters in the
+    // backdrop's colour, each traced by a one-block outline in the icon's
+    // (the blocks next to a letter's, diagonals too), using the full width.
     const char *text = "TAP";
     const int w = textWidth(text) / PX - 1;
     int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, r0 = (rows - FONT_H / PX) / 2;   // (level with the status row's text)
-    for (int r = r0 - 2; r <= r0 + 6; r++)
-      for (int c = c0 - 1; c <= c0 + w; c++) {
-        bool across = r == r0 - 2 || r == r0 + 6, side = c == c0 - 1 || c == c0 + w;
-        if ((across || side) && !(across && side)) block(c, r);
-      }
+    bool on[5][16] = {};                           // the word's blocks
+    int x = 0;
     for (const char *p = text; *p; p++) {
       const Glyph *g = glyphFor(*p);
       for (int r = 0; r < 5; r++)
         for (int c = 0; c < glyphWidth(*g); c++)
-          if (g->rows[r][c] == '#') block(c0 + c, r0 + r);
-      c0 += glyphWidth(*g) + (*p == 'T' ? 0 : 1);
+          if (g->rows[r][c] == '#') on[r][x + c] = true;
+      x += glyphWidth(*g) + (*p == 'T' ? 0 : 1);
     }
+    auto letter = [&](int r, int c) { return r >= 0 && r < 5 && c >= 0 && c < w && on[r][c]; };
+    for (int r = -1; r <= 5; r++)
+      for (int c = -1; c <= w; c++) {
+        if (letter(r, c)) {
+          blockIn(c0 + c, r0 + r, bg);
+          continue;
+        }
+        bool near = false;
+        for (int dr = -1; dr <= 1; dr++)
+          for (int dc = -1; dc <= 1; dc++) near |= letter(r + dr, c + dc);
+        if (near) block(c0 + c, r0 + r);
+      }
   } else if (icon != ICON_NONE) {
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
