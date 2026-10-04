@@ -1361,6 +1361,20 @@ int main(int argc, char **argv) {
           "the loaded one cut: its slot empty, the empty dummy project loaded (no N+1* with no scenes)");
     check(projectPaste(2) && projectLoad(2) && sceneCount() == scenes && sceneCurrent() == pos && tracks[0].sample == sample0,
           "pasted into slot 3 and loaded: project 1 as it was");
+    check(projectPaste(7), "and into slot 8 too (the same clips)");
+    // A track's position at the clock's 1.1.1 is its start position.
+    auto fromStart = [&](const char *what) {
+      bool ok = true;
+      int32_t origin = transportOrigin();
+      for (int t = 0; t < NUM_TRACKS; t++) {
+        const Track &tr = tracks[t];
+        if (tr.state == TrackState::Empty) continue;
+        uint32_t sp = startPosition(tr.loopBars * BEATS_PER_BAR, tr.rangeStartBeat, tr.rangeBeats);
+        int32_t phase = pmod(4 * origin - tr.rangeAnchorQ, 4 * tr.rangeBeats);
+        if (phase != pmod(4 * ((int32_t)sp - (int32_t)tr.rangeStartBeat), 4 * tr.rangeBeats)) ok = false;
+      }
+      check(ok && origin % BEATS_PER_BAR == 0, what);
+    };
     transportStart();
     check(!projectsMayCopy() && !projectCut(2), "no cut or paste while playing");
     check(projectLoad(5), "loading while playing");
@@ -1373,6 +1387,15 @@ int main(int argc, char **argv) {
     waitScene();
     runBeats(2);
     check(tracks[0].sample == sample0 && tracks[0].state != TrackState::Empty, "project 3's scene playing again");
+    check(transportOrigin() > 0, "the clock counts from the switch's bar line");
+    fromStart("its tracks from their 1.1.1 positions there");
+    runBeats(5.5);
+    check(projectLoad(7), "loading a project with the same clips, mid-bar");
+    waitScene();
+    runBeats(2);
+    fromStart("the same clips start over from 1.1.1 too");
+    for (int t = 0; t < NUM_TRACKS; t++)
+      if (tracks[t].state != TrackState::Empty) checkSync(t, "after the switch");
     transportStop();
     runUntilIdle();
     for (int i = 0; i < 20; i++) serviceScenes();

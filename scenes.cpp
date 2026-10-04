@@ -152,9 +152,9 @@ static void commit() {
 // Puts a scene on the looper (its tempo, if it has one, after the tracks).
 // While playing, all of it changes on the next bar line with time to load
 // (quick: the next beat).
-static void apply(const SceneInfo &s, bool quick) {
+static void apply(const SceneInfo &s, bool quick, bool restart = false) {
   loading = true;
-  int32_t at = beginSceneChange(quick, unitsPrepared());
+  int32_t at = beginSceneChange(quick, unitsPrepared(), restart);
   for (int t = 0; t < NUM_TRACKS; t++) setTrackUnit(t, s.units[t]);   // (they take the prepared files)
   prepareUnits(nullptr);
   if (s.tempo > 0) setTempo(s.tempo);
@@ -425,7 +425,7 @@ static bool openAs(int p, bool apply_) {
   changed = false;
   if (apply_) {
     loading = true;                               // (the scene's units go on as they are)
-    apply(sceneAt(min((int)list.current, (int)list.count)), false);   // N+1*: a copy of N
+    apply(sceneAt(min((int)list.current, (int)list.count)), false, true);   // N+1*: a copy of N; from 1.1.1
     loading = false;
   }
   return true;

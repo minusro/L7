@@ -55,7 +55,8 @@ int sceneCount();
 int projectCurrent();          // the loaded one (-1: the dummy project, after the loaded one was cut)
 bool projectFilled(int p);     // the slot holds a project (the loaded one always does)
 // Loads project p: its current scene goes on the looper (playing: on a bar
-// line, as a scene change). An empty slot: a new project there, on its empty
+// line, as a scene change, every track starting over from 1.1.1 there and
+// the clock with them). An empty slot: a new project there, on its empty
 // scene (the tracks cleared, the tempo kept). false: recording.
 bool projectLoad(int p);
 // Cut and paste (only while stopped: projectsMayCopy()): cut copies the

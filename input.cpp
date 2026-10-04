@@ -114,14 +114,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         int row, cell;
         mainSelection(row, cell);
         projectSetSelection(row, cell);              // (the project left keeps its selection)
-        // Another project starts from 1.1.1: playing, the transport stops, the
-        // project loads at once and it starts again (stopped, START starts
-        // from 1.1.1 anyway).
-        bool restart = slot != projectCurrent() && recording.mode == Recording::Idle && transport.running;
-        if (restart) transportStop();
-        bool loaded = projectLoad(slot);
-        if (restart) transportStart();
-        if (loaded) {
+        if (projectLoad(slot)) {                     // (playing: from 1.1.1 at the next bar line)
           closeMenu();
           takeProjectSelection();
           for (int i = 0; i < ROWS; i++) drawTrack(i);

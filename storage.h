@@ -32,8 +32,13 @@ bool setTrackUnit(int t, const TrackUnit &u);
 // instead (a change already waiting moves up to it). Returns that point's
 // transport beat (-1: stopped, at once).
 // prepared: the scene's samples were opened ahead (prepareUnits()): a lead
-// of ~60 ms is enough.
-int32_t beginSceneChange(bool quick = false, bool prepared = false);
+// of ~60 ms is enough. restart (a project switch): at that bar line every
+// track starts over from its 1.1.1 position (as transportStart() places it),
+// and the clock reads 1.1.1 there (transportOrigin()).
+int32_t beginSceneChange(bool quick = false, bool prepared = false, bool restart = false);
+// The transport beat the clock counts from (its 1.1.1): 0, or where a
+// project switch while playing started over.
+int32_t transportOrigin();
 void endSceneChange();
 bool sceneChangeWaiting();             // a scene change hasn't reached its switch point yet
 // Preparing a scene ahead (selected while SHIFT is held): the units' sample

@@ -143,7 +143,7 @@ void drawStatus() {
     shownVolume = false;
   }
   noInterrupts();
-  int32_t beat = transport.beat;
+  int32_t beat = transport.beat - transportOrigin();   // (from a project switch's bar line)
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
   bool running = transport.running;
   interrupts();

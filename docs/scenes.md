@@ -14,9 +14,11 @@ hold no audio: scenes name their samples. The first version's
 `/looper/scenes.dat` becomes project 1.
 
 * Loading (A on a slot in the menu): the loaded project's changes are written
-  out, the other file opened and its current scene applied; it starts from
-  1.1.1 (playing: the transport stops, the scene goes on at once, and it
-  starts again). An empty slot gets a new project (no
+  out, the other file opened and its current scene applied. Playing: on the
+  next bar line, as a scene change, but a restarting one
+  (`beginSceneChange(…, restart)`): every track, even one keeping its clip,
+  is placed as `transportStart()` would at 1.1.1, and the clock counts from
+  there (`transportOrigin()`); the transport itself runs on. An empty slot gets a new project (no
   scenes: the empty scene, the tempo kept). Not while recording.
 * Cut / paste (SHIFT+A): copies the used blocks (the records, then the list
   last) to or from `clip.dat`; cut then zeroes the slot's block 0. Only while
