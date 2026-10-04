@@ -165,16 +165,16 @@ A recording track's waveform area is in the accent colour (a block of black betw
   looper's cells': light grey, white while the arrows move it, grey while A
   or B is held, corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
-  action button shows load (a folder) or, empty, new (a new file: a page, its corner turned); with SHIFT,
+  action button shows load (a small arrow left) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (dark grey when it can't act: playing, recording, clipboard
   empty); on the list, a diskette (export) and the USB trident (data mode),
   doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the
   list; UP/DOWN go card row to card row and on into the list (back up: to
   the column it came from). The looper's own selection is kept
-  meanwhile and comes back when the menu closes; the menu remembers where its
-  selection was for the next time Its selection is kept
-  across power cycles too, and if it was open at power off it opens again at
-  boot (session.txt).
+  meanwhile and comes back when the menu closes. The menu opens on the
+  loaded project's card (with the dummy project: where its selection was,
+  kept across power cycles too); if it was open at power off it opens again
+  at boot (session.txt).
 * Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
   into 43×26 blocks of 2×2 px (two tracks tall), in the accent colour, with
   "© 2026 Daniel Stanciu" under it in light grey, in a 3×5 block font (7×7 ©); at least

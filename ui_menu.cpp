@@ -12,8 +12,8 @@
 // the list's 12 and 13 (the looper's own selection is kept meanwhile and
 // comes back when the menu closes). UP/DOWN go card row to card row and on
 // into the list (back up: to the column it came from); LEFT/RIGHT through
-// everything in order. The menu remembers where its selection was for the
-// next time it opens.
+// everything in order. It opens on the loaded project's card (the dummy
+// project loaded: where its selection was).
 //
 // A card: a block shape, its bottom right corner cut diagonally (about a
 // fifth of its height), in its slot's colour (colors.h): filled when it
@@ -237,6 +237,11 @@ bool menuKeys(uint8_t pressed) {
 void openMenu() {
   if (shown) return;
   shown = true;
+  if (projectCurrent() >= 0) {                   // on the loaded project's card (the dummy project: where it was)
+    onStatus = false;
+    menuSel = projectCurrent();
+    cardCol = menuSel % COLS;
+  }
   mainRow = selected;
   mainCell = selectedCell;
   if (onStatus) {                                // (where it was last time)
