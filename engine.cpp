@@ -94,12 +94,12 @@ void setTrackMix(int t, int volume, int balance) {
   interrupts();
 }
 
-static int masterStep = MASTER_VOLUME_MAX;
+static int masterStep = MASTER_VOLUME_UNITY;
 static volatile float outputGain = 1.0f;          // the master volume's
 static volatile float outPeakL = 0, outPeakR = 0;
 void setMasterVolume(int step) {
   masterStep = constrain(step, 0, MASTER_VOLUME_MAX);
-  outputGain = masterStep ? powf(10.0f, (masterStep - MASTER_VOLUME_MAX) * MASTER_STEP_DB / 20) : 0.0f;
+  outputGain = masterStep ? powf(10.0f, (masterStep - MASTER_VOLUME_UNITY) * MASTER_STEP_DB / 20) : 0.0f;
 }
 int masterVolume() { return masterStep; }
 void takeOutputPeaks(float &left, float &right) {

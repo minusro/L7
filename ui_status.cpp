@@ -61,8 +61,8 @@ static void drawMasterVolume(bool full) {
   for (int ch = 0; ch < 2; ch++) {
     float db = peak[ch] > 0 ? 20 * log10f(peak[ch]) : -200.0f;
     meterDb[ch] = max(db, meterDb[ch] - fall);
-    // (Line j: step j's level, (j - MASTER_VOLUME_MAX) * MASTER_STEP_DB dB.)
-    int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_MAX + 0.5f) + 1, 0, MV_LINES);
+    // (Line j: step j's level, (j - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB.)
+    int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f) + 1, 0, MV_LINES);
     for (int j = 0; j < MV_LINES; j++) {
       uint16_t color = j == level ? INK : j < lit ? ACCENT : j < level ? ACCENT_DARK : DARK;
       if (!full && color == shown[j][ch]) continue;

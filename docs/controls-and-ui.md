@@ -46,7 +46,7 @@ scales from the edge at the edge), volume (UP/DOWN: 0–5, 7.5 dB steps, unity
 at 4) and balance (LEFT/RIGHT: ±5; each step moves one channel's level by a
 line, so every press shows),
 tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–240 BPM),
-the clock cell: the master volume (any arrow a step; B twice: back to unity).
+the clock cell: the master volume (any arrow a step; B twice: off, or from off back to 100%).
 
 Timing constants (input.cpp): key repeat after 200 ms, every 50 ms;
 double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
@@ -124,9 +124,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   light grey on each beat's first step (selected: light grey, white on the
   first step), the accent colour on 1.1.1. While B alone is held on the clock
   cell it shows the master volume instead: 22 vertical lines across the cell
-  (one per step 0–21, 1.5 dB apart, the top one unity, 0 off): the volume's
+  (one per step 0–21, 1.76 dB apart: 0 off, 19 100% — the default —, 21 150%): the volume's
   line white, dark accent before it and dark grey after it; their upper halves meter the left output, the
-  lower halves the right (accent, the top line 0 dBFS, falling back from
+  lower halves the right (accent, line 19 0 dBFS — the two above it clipping —, falling back from
   peaks), from silence each time it shows.
 * Track buttons: the track's number (tracks count from the bottom: 1 is
   just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined

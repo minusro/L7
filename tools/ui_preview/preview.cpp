@@ -131,11 +131,11 @@ int main(int argc, char **argv) {
   render(out + "/ui_status_scene.png");
   selectedCell = CLOCK_CELL;                       // the clock: A starts / stops (as START)
   render(out + "/ui_status_clock.png");
-  setMasterVolume(MASTER_VOLUME_MAX - 4);          // B held on it: the master volume and its meter
+  setMasterVolume(MASTER_VOLUME_UNITY - 4);          // B held on it: the master volume and its meter
   board.heldKeys = m8::BTN_OPT;
   render(out + "/ui_status_master.png");
   board.heldKeys = 0;
-  setMasterVolume(MASTER_VOLUME_MAX);
+  setMasterVolume(MASTER_VOLUME_UNITY);
   selectedCell = TEMPO_CELL;
   bpm = 85.5f;                                     // a tempo below 100
   render(out + "/ui_status_slow.png");

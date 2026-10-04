@@ -10,7 +10,7 @@ int selectedCell = 0;                       // cell in the row (0: the waveform,
 static uint32_t changedMs = 0;                // when the tempo or the selection last changed
 static bool tempoDirty = false;
 static int savedRow = -1, savedCell = -1;      // the selection session.txt holds
-static int savedMaster = MASTER_VOLUME_MAX;     // and the master volume
+static int savedMaster = MASTER_VOLUME_UNITY;   // and the master volume
 
 // ---- Tempo: MIN_BPM-MAX_BPM, whatever the loops were recorded at
 bool setTempo(float b) {
