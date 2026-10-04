@@ -31,7 +31,7 @@ uint64_t bordersOf(int i, int cell) {
 }
 
 void drawTrack(int i) {
-  if (i < 0 || i >= ROWS || panelOpen()) return;
+  if (i < 0 || i >= ROWS || (menuOpen() && i != STATUS_ROW)) return;   // (the menu: in the track rows' place)
   drawCells(i);
   if (i == STATUS_ROW) {
     drawStatus();
@@ -48,8 +48,10 @@ void uiRefresh() {
   static int nextRow = 0;
   if (millis() - lastDraw >= 30) {
     lastDraw = millis();
-    if (panelOpen()) {                               // only the status row's button (its icon)
+    if (menuOpen()) {                                // the menu and the status row
       drawCells(STATUS_ROW);
+      drawStatus();
+      drawMenu();
       return;
     }
     // Every pass, all rows' buttons (only what changed is redrawn): the

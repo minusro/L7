@@ -27,11 +27,6 @@ constexpr uint16_t ACCENT_DARK = rgb565(24, 120, 72);   // the accent at about h
 constexpr uint16_t PLAYHEAD = ACCENT;        // playing clips
 constexpr uint16_t MUTED_HEAD = BG;          // the selected muted clip (a cut through its waveform)
 
-// ---- Panel (B+A)
-constexpr uint16_t PANEL_SHADE = BG;         // every other pixel of the screen behind it
-constexpr uint16_t PANEL_BG = BG;
-constexpr uint16_t PANEL_BORDER = INK;
-
 // ---- Boot / errors
 constexpr uint16_t TEXT_PROGRESS = 0xFFE0;   // yellow: startup messages
 constexpr uint16_t LOGO_COLOR = ACCENT;      // the splash screen's logo

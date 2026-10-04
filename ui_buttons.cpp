@@ -15,10 +15,10 @@
 // (an arrow up from a line), cancel a recording (X: thrown away at once) or,
 // on an empty track, paste (an arrow down to a line; dark grey while the
 // clipboard is empty). With B
-// held: open the panel (a menu icon); with SHIFT too, paste a scene (B pressed
+// held: open the menu (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
-// While the panel is open: the looper's rows (A closes it, back to them). On the status row itself:
-// the panel (menu, as B+A) on the scene cell, start / stop (play / stop, as
+// While the menu is open: the looper's rows (A closes it, back to them). On the status row itself:
+// the menu (as B+A) on the scene cell, start / stop (play / stop, as
 // START) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
 // start from 1.1.1 (play).
 // SHIFT tapped twice and held: resample (a cassette) on an
@@ -42,10 +42,10 @@ static bool flashOn() {
 // What A does on the selected row (mirrors onKeys()).
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
-  if (panelOpen()) return ICON_HOME;               // A closes the panel
-  if (board.keys() & m8::BTN_OPT)                  // B+A: the panel; with SHIFT, the scene
+  if (menuOpen()) return ICON_HOME;               // A closes the menu
+  if (board.keys() & m8::BTN_OPT)                  // B+A: the menu; with SHIFT, the scene
     return !shift ? ICON_MENU : optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
-  if (selected == STATUS_ROW) {                    // restart / the panel (as B+A) / START / tap tempo
+  if (selected == STATUS_ROW) {                    // restart / the menu (as B+A) / START / tap tempo
     if (shift) return ICON_PLAY;
     int cell = selectedCellIn(STATUS_ROW);
     return cell == SCENE_CELL ? ICON_MENU : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_TAP;
@@ -102,7 +102,7 @@ int trackNumber(int i) { return NUM_TRACKS - i; }
 
 static int buttonIcon(int i) {
   if (i != STATUS_ROW) return trackIcon(i);
-  if (panelOpen() && heldAction != ICON_HOME) heldAction = -1;   // just opened: its icon, at once
+  if (menuOpen() && heldAction != ICON_HOME) heldAction = -1;   // just opened: its icon, at once
   if (heldAction >= 0 && !(board.keys() & m8::BTN_EDIT)) heldAction = -1;   // A released
   return heldAction >= 0 ? heldAction : actionIcon();
 }

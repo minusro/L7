@@ -11,7 +11,7 @@
 | `scenes.*` | The scene list (`/looper/scenes.dat`), stepping, cut/paste/duplicate, the SHIFT hold |
 | `app.*` | Shared state: `board`, `bpm`, the selection (`selected` row, `selectedCell`), `setTempo()` |
 | `input.*` | Keys: navigation, cell editing, transport, recording, scenes, double taps and key repeat |
-| `ui*.cpp`, `ui.h` | Drawing: `ui.cpp` (rows, refresh pass), `ui_wave` (waveform, playheads, range), `ui_filter` (curve), `ui_mix` (volume/balance lines + meters), `ui_buttons` (icons), `ui_status` (tempo, clock, scene label), `ui_panel` (B+A panel), `ui_splash` (logo) |
+| `ui*.cpp`, `ui.h` | Drawing: `ui.cpp` (rows, refresh pass), `ui_wave` (waveform, playheads, range), `ui_filter` (curve), `ui_mix` (volume/balance lines + meters), `ui_buttons` (icons), `ui_status` (tempo, clock, scene label), `ui_menu` (the menu, B+A), `ui_splash` (logo) |
 | `colors.h` | All colours, as named constants |
 | `config.h` | Constants: buffer sizes, limits, latency, tempo range |
 | `tools/looper_sim/` | PC simulator and test suite for engine + storage + scenes (see build-and-test.md) |

@@ -25,6 +25,7 @@ HardwareSerial midi;
 bool optBeforeShift() { return true; }             // (input.cpp isn't built here)
 static bool previewShiftTwice = false;
 bool shiftTwiceHeld() { return previewShiftTwice; }   // (SHIFT tapped twice and held)
+bool arrowsMoved() { return true; }
 
 // A made-up waveform: a hit on every beat (louder on bar starts), decaying,
 // over some noise.
@@ -79,7 +80,8 @@ static void render(const std::string &path) {
   board.tft().fillScreen(BG);
   uiGeneration++;
   for (int i = 0; i < ROWS; i++) drawTrack(i);
-  updatePlayheads();
+  if (menuOpen()) drawMenu();                      // (in the track rows' place)
+  else updatePlayheads();
   writePng(path);
 }
 
@@ -179,13 +181,12 @@ int main(int argc, char **argv) {
   noteActionPress();
   render(out + "/ui_action_held.png");
   board.heldKeys = 0;
-  selected = 1;                                    // the panel (B+A) over the screen
-  render(out + "/ui_panel.png");
-  board.tft().fillScreen(BG);
-  uiGeneration++;
-  for (int i = 0; i < ROWS; i++) drawTrack(i);
-  openPanel();
-  writePng(out + "/ui_panel.png");
-  closePanel();
+  selected = 1;                                    // the menu (B+A), its first box selected
+  openMenu();
+  render(out + "/ui_menu.png");
+  menuKeys(m8::BTN_DOWN);                          // down twice: a button
+  menuKeys(m8::BTN_DOWN);
+  render(out + "/ui_menu_button.png");
+  closeMenu();
   return 0;
 }

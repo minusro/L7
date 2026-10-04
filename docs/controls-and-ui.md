@@ -10,10 +10,10 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 |---|---|
 | UP/DOWN | Select row: tracks 8 (top) to 1 (bottom), status row (no wrapping); starts on track 1 |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo) |
-| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the panel (as B+A) on the scene cell, start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
+| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (as B+A) on the scene cell, start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
-| B + A | Open the panel (A closes it) |
+| B + A | Open the menu (A closes it; arrows move its selection) |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT twice (second tap held) + A | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
@@ -55,7 +55,7 @@ double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
 
 320×240, no frame buffer: everything is drawn over its own background and
 only what changed is redrawn (`uiGeneration` forces a full redraw, e.g. after
-the panel or splash). 9 rows of 26 px: 8 tracks from the top of the screen, a 6 px (three-block) gap,
+the menu or splash). 9 rows of 26 px: 8 tracks from the top of the screen, a 6 px (three-block) gap,
 then the status row (y 214–239, to the screen's bottom edge, its cells framed all round); cells waveform | filter | volume | button (square). Columns:
 waveform x 0–187, filter 186–245, volume 244–291, then a block's space
 before the buttons (x 294–319); the status row's three cells share
@@ -71,7 +71,8 @@ selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one cons
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
 (`PX`), a 160×120 screen of chunky pixels. Selection: a 50% grey frame on the
 selected cell only (dark grey while B is held, with or without other keys;
-light grey while only arrows are held). The selected track's button gets a 50% grey panel behind its number (from a block in,
+light grey while only arrows are held and the last press moved the
+selection: not at an edge). The selected track's button gets a 50% grey panel behind its number (from a block in,
 the button's height: two blocks of border above, left and below the 7×9
 badge; the accent colour while A is held, with the
 action button, showing just the number then, in black).
@@ -138,6 +139,12 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Colours: all in `colors.h`.
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
+* Menu (`ui_menu.cpp`): opened with B+A (or A on the scene cell), it takes
+  the track rows' place (the status row stays, its frames hidden; the action
+  button shows the looper's rows: A closes it). Eight boxes (two rows of four,
+  36×36 blocks) and two buttons, "EXPORT LIVE SET" and "USB MODE" (none do
+  anything yet): dark grey, the selected one framed grey (its label white);
+  the arrows move along the rows and between them.
 * Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
   into 43×26 blocks of 2×2 px (two tracks tall), in the accent colour, with
   "© 2026 Daniel Stanciu" under it in light grey, in a 3×5 block font (7×7 ©); at least

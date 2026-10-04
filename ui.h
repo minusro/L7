@@ -65,13 +65,15 @@ inline uint16_t cellBackground(int i, int cell) {
   return BG;
 }
 // Its frame: grey round the selected cell (dark grey while B is held, with
-// any other keys or none; light grey while only arrows are held: moving the
-// selection), none elsewhere (BG).
+// any other keys or none; light grey while only arrows are held and the last
+// press moved the selection: not at an edge), none elsewhere (BG).
+bool menuOpen();
+bool arrowsMoved();                      // input.cpp: the last arrow press moved the selection
 inline uint16_t cellFrame(int i, int cell) {
-  if (i != selected || cell != selectedCellIn(i)) return BG;
+  if (i != selected || cell != selectedCellIn(i) || menuOpen()) return BG;   // (the menu has its own)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
-  return k & m8::BTN_OPT ? DARK : k && !(k & ~arrows) ? LIGHT : DIM;
+  return k & m8::BTN_OPT ? DARK : k && !(k & ~arrows) && arrowsMoved() ? LIGHT : DIM;
 }
 // B held as a modifier on its own (no SHIFT, A or START; arrows may be down).
 inline bool bAlone() {
@@ -111,15 +113,18 @@ constexpr int TAG_H = FONT_H + 4 * PX;
 void drawTag(int x, int y, const char *text, TagStyle style, uint16_t ink, uint16_t bg, int width = 0);
 int tagWidth(const char *text);
 
-// Bumped when the whole screen must be redrawn (after the panel closes):
+// Bumped when the whole screen must be redrawn (the menu opening or closing):
 // every part redraws in full when its last draw was of another generation.
 extern uint32_t uiGeneration;
 
-// ---- Panel (ui_panel.cpp): a centred box over the dimmed screen, opened
-// with B+A and closed with A. While it's open the rows aren't drawn.
-bool panelOpen();
-void openPanel();
-void closePanel();
+// ---- The menu (ui_menu.cpp): a second view in place of the track rows
+// (the status row stays), opened with B+A and closed with A; the arrows move
+// its selection. While it's open the track rows aren't drawn.
+bool menuOpen();
+void openMenu();
+void closeMenu();
+void drawMenu();                         // what changed (all of it after uiGeneration moves on)
+void menuKeys(uint8_t pressed);          // the arrows pressed
 
 // Splash screen (ui_splash.cpp): the logo while the looper starts. hideSplash()
 // waits until it has been up a moment, then draws the looper.

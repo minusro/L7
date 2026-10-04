@@ -61,6 +61,9 @@ bool optBeforeShift() { return optFirst; }
 // another way while it's held: an empty track resamples (records the app's
 // output), one with a clip overdubs (not there yet).
 static bool shiftTwice = false;
+// The last arrow press moved the selection (not: already at the edge that way).
+static bool moved = false;
+bool arrowsMoved() { return moved; }
 bool shiftTwiceHeld() { return shiftTwice && (board.keys() & m8::BTN_SHIFT); }
 
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
@@ -75,10 +78,12 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       lastShiftTap = shiftTwice ? 0 : millis();
     }
   }
-  if (panelOpen()) {                                 // the panel: only A, to close it
+  if (menuOpen()) {                                  // the menu: the arrows move its selection, A closes it
     if (pressed & m8::BTN_EDIT) {
       noteActionPress();
-      closePanel();
+      closeMenu();
+    } else {
+      menuKeys(pressed);
     }
     return;
   }
@@ -295,30 +300,32 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       if (pressed & m8::BTN_RIGHT) stepSample(selected, 1);
     }
   } else {
+    int row = selected, at = selectedCellIn(selected);
     if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
     if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
     if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell = selectedCellIn(selected) - 1;
     if (pressed & m8::BTN_RIGHT && selectedCell < cellCount(selected) - 1) selectedCell++;
+    if (pressed & arrows) moved = selected != row || selectedCellIn(selected) != at;
   }
 
   // START: start from 1.1.1 / stop. With SHIFT: start from 1.1.1 on every
-  // press, running or not. A on the status row: the panel (scene cell), START
+  // press, running or not. A on the status row: the menu (scene cell), START
   // (clock cell), tap tempo (tempo cell); with SHIFT, on any of them: the same
   // as SHIFT+START.
-  // B+A: open the panel. With SHIFT too, the order they were pressed in:
+  // B+A: open the menu. With SHIFT too, the order they were pressed in:
   // B then SHIFT, +A: paste the scene clipboard after the scene; SHIFT then
   // B, +A: cut the scene to it.
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
   bool edit = (pressed & m8::BTN_EDIT) && !opt;
   if ((pressed & m8::BTN_EDIT) && opt) {
-    if (!shift) openPanel();
+    if (!shift) openMenu();
     else sceneChanged = optFirst ? scenePaste() : sceneCut();
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = (transportKey || (edit && onClock)) && !shift;
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onScene) openPanel();                      // as B+A
+    if (onScene) openMenu();                      // as B+A
     else if (onTempo) tapTempo();                  // (the clock cell: as START, below)
   }
   if (edit && !onStatus) {
