@@ -1,7 +1,7 @@
 // ui_splash.cpp — the logo shown while the looper starts (see ui.h): "L8",
-// its colour going once round all hues (from the green turquoise accent back
-// to it, eased in and out, over SPLASH_MIN_MS), in 2x2-pixel blocks, two track rows tall, in the middle of the screen,
-// with the copyright line under it in light grey, in the pixel font (ui_font.cpp).
+// fading in from black, then its colour going once round all hues (from the
+// green turquoise accent back to it, eased in and out), in 2x2-pixel blocks, two track rows tall, in the middle of the screen,
+// with the copyright line under it in light grey (fading in), in the pixel font (ui_font.cpp).
 #include "ui.h"
 #include "ui_font.h"
 
@@ -41,7 +41,11 @@ static constexpr int GROUP_H = LOGO_ROWS * LOGO_PIXEL + TEXT_GAP + 6 * LOGO_PIXE
 static constexpr int GROUP_DOWN = 8;                 // the group sits this far below the middle, px
 static constexpr int LOGO_X = (320 - LOGO_COLS * LOGO_PIXEL) / 2,
                      LOGO_Y = (240 - GROUP_H) / 2 / LOGO_PIXEL * LOGO_PIXEL + GROUP_DOWN;
-static constexpr uint32_t SPLASH_MIN_MS = 2000;   // shown at least this long
+// The splash's animation, in ms from showSplash(): the logo fades in from
+// black (0-500), then its colour goes once round the hues (500-2500); the
+// copyright line fades in (1500-2000). Shown at least this long.
+static constexpr uint32_t LOGO_FADE_MS = 500, HUE_MS = 2000, TEXT_FROM_MS = 1500, TEXT_FADE_MS = 500;
+static constexpr uint32_t SPLASH_MIN_MS = LOGO_FADE_MS + HUE_MS;
 static uint32_t shownAt = 0;
 
 static const char COPYRIGHT[] = "\xA9 2026 Daniel Stanciu";
@@ -100,24 +104,39 @@ static void drawLogo(uint16_t color) {
       if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, color);
 }
 
-// The logo's colour now: the accent's hue (OKLCH 0.824, 0.164, 164.8 deg)
-// turned once round, eased in and out (smoothstep) over SPLASH_MIN_MS.
+static int copyrightX = 0;
+
+// The splash now: the logo fading in, then its hue (the accent's, OKLCH 0.824,
+// 0.164, 164.8 deg) turned once round, eased in and out (smoothstep); the
+// copyright line fading in.
 void splashTick() {
-  static uint16_t shown = 0;
-  float t = min(1.0f, (millis() - shownAt) / (float)SPLASH_MIN_MS);
-  float e = t * t * (3 - 2 * t);
-  uint16_t color = t >= 1 ? LOGO_COLOR : oklch565(0.8238f, 0.1641f, 164.76f + 360 * e);
-  if (color == shown) return;
-  shown = color;
-  drawLogo(color);
+  static uint16_t shownLogo = 0, shownText = 0;
+  uint32_t ms = millis() - shownAt;
+  uint16_t logo;
+  if (ms < LOGO_FADE_MS) {
+    logo = blend565(LOGO_COLOR, BG, (uint8_t)(255 * ms / LOGO_FADE_MS));
+  } else {
+    float t = min(1.0f, (ms - LOGO_FADE_MS) / (float)HUE_MS), e = t * t * (3 - 2 * t);
+    logo = t >= 1 ? LOGO_COLOR : oklch565(0.8238f, 0.1641f, 164.76f + 360 * e);
+  }
+  if (logo != shownLogo) {
+    shownLogo = logo;
+    drawLogo(logo);
+  }
+  uint32_t into = ms < TEXT_FROM_MS ? 0 : min(ms - TEXT_FROM_MS, TEXT_FADE_MS);
+  uint16_t text = blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / TEXT_FADE_MS));
+  if (text != shownText) {
+    shownText = text;
+    drawLine(copyrightX, TEXT_Y_SPLASH, COPYRIGHT, text);
+  }
 }
 
 void showSplash() {
   auto &t = board.tft();
-  t.fillScreen(BG);
-  drawLogo(LOGO_COLOR);
-  drawLine((320 - textCols(COPYRIGHT) * LOGO_PIXEL) / 2, TEXT_Y_SPLASH, COPYRIGHT, SPLASH_TEXT);
+  t.fillScreen(BG);                                // (logo and line fade in: splashTick())
+  copyrightX = (320 - textCols(COPYRIGHT) * LOGO_PIXEL) / 2;
   shownAt = millis();
+  splashTick();
 }
 
 void hideSplash() {
