@@ -101,10 +101,10 @@ static void drawLine(int x, int y, const char *text, uint16_t color) {
   board.tft().writeRect(x, y, w, TEXT_H, px);
 }
 
-// The text at the bottom, as far from the screen's edge (26 px) as it used to
-// be from the logo (the logo stays where the centring above puts it).
-static constexpr int TEXT_MARGIN = TEXT_GAP + 4;
-static constexpr int TEXT_Y_SPLASH = 240 - TEXT_MARGIN - TEXT_H;
+// The text at the bottom, its letters level with the status row's text (the
+// clock's), the copyright sign a block above (the logo stays where the
+// centring above puts it).
+static constexpr int TEXT_Y_SPLASH = STATUS_TOP + (STATUS_H - FONT_H) / 2 / PX * PX - TEXT_PX;
 
 int splashBottom() { return LOGO_Y + LOGO_H; }      // (startup messages go under the logo, above the text)
 
