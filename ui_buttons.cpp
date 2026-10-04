@@ -22,7 +22,7 @@
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A runs the action when let go; B does
 // nothing): on its
-// list's items, export Ableton project (an arrow into a tray) and enter USB data mode (the USB
+// list's items, export Ableton project (an arrow into a tray) and USB drive mode (the USB
 // trident), nothing yet; on a project slot, load (a small play; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
 // (a question mark after the first A: a second A confirms) or
@@ -198,7 +198,7 @@ static bool unavailable(int i, int icon) {
 // The action button (the status row's): the accent colour with black icons; dark grey
 // with icons in the accent colour while A is held. In the menu its colour
 // follows the item (menuActionColor()): a card's, or light grey on the
-// system-level ones (USB data mode). The tracks' buttons: black.
+// system-level ones (USB drive mode). The tracks' buttons: black.
 // The action's colour: the menu item's, or the accent (going to the menu too).
 static uint16_t actionColor(int icon) { return icon == ICON_MENU ? ACCENT : menuActionColor(); }
 // An action that can't act now: grey (a menu item's own grey too: export with nothing to export).

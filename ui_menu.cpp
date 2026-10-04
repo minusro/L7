@@ -3,7 +3,7 @@
 // width. Opened with A on the scene cell, or by stopping the clock; left by loading a project
 // (A on the loaded one: just back). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
-// "ENTER USB DATA MODE" (nothing yet); it scrolls once it has more than four. A runs
+// "USB DRIVE MODE" (nothing yet); it scrolls once it has more than four. A runs
 // the action button's action when let go. On a slot, A loads its project (an
 // empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project (a second A confirms), or pastes
@@ -34,7 +34,7 @@ uint32_t uiGeneration = 1;
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
 static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER USB DATA MODE"};
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "USB DRIVE MODE"};
 static int listTop = 0;                          // the list's first item in view
 
 static bool shown = false;
@@ -193,12 +193,12 @@ static void drawItem(int k) {
 }
 
 // The action button's colour: a card's, its slot's; the system-level list
-// items' (USB data mode), light grey; the project's own (export, the status
+// items' (USB drive mode), light grey; the project's own (export, the status
 // row), the accent colour.
 uint16_t menuActionColor() {
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
-  if (menuSel - CARDS >= 1) return LIGHT;          // (USB data mode: system-level)
+  if (menuSel - CARDS >= 1) return LIGHT;          // (USB drive mode: system-level)
   return projectHasClips() ? ACCENT : DIM;         // export: grey with nothing to export
 }
 

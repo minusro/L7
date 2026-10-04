@@ -168,7 +168,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   An empty slot is a grey outline, its letter in the slot's colour. In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
   in the action button's colour (not its pressed look: it stays put while A is held). Under them
-  a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet). Four in
+  a list, "EXPORT ABLETON PROJECT" and "USB DRIVE MODE" (nothing yet). Four in
   view at a time (an item
   every 12 rows, the last place in the status row's, level with the action
   button); moving, the list scrolls so the item past the selection that way
@@ -179,14 +179,14 @@ A recording track's waveform area is in the accent colour (a block of black betw
   icon while held; the selected track's panel stays grey then). The action button takes the item's colour: on a card, its
   slot's; on project-level items (export) the accent (grey, the label too, with
   nothing to export: no clips in the project's tracks or scenes, or the dummy
-  project); on system-level ones (USB data mode) light grey (its icon light
+  project); on system-level ones (USB drive mode) light grey (its icon light
   grey while pressed too). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
   is held (not B), corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
   action button shows load (a small play) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (the button grey when it can't act: recording, another copy
-  under way, clipboard empty); on the list, an arrow down into a tray (export) and the USB trident (data mode),
+  under way, clipboard empty); on the list, an arrow down into a tray (export) and the USB trident (drive mode),
   doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the
   list; UP/DOWN go card row to card row and on into the list (back up: to
   the column it came from). The looper's own selection is kept

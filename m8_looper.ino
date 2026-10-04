@@ -54,7 +54,7 @@
 //   SHIFT, OPT, EDIT cut the scene (to the scene clipboard), go to the one before (SHIFT first)
 //   EDIT/OPT/START (menu, project)   on release: load its project (empty slot: a new one), back to the looper
 //   SHIFT+EDIT/OPT (menu, slot)      cut its project (EDIT twice, SHIFT held: confirmed) / paste one into an empty slot (on release; playing: copied in the background)
-//   EDIT/OPT (menu list)             export Ableton project / enter USB data mode (nothing yet)
+//   EDIT/OPT (menu list)             export Ableton project / USB drive mode (nothing yet)
 //   SHIFT+OPT twice  insert a copy of the current scene after it
 //   PLAY             start from 1.1.1 / stop (then the menu, once PLAY is let go)
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
