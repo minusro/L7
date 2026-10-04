@@ -278,11 +278,12 @@ static int fuzz(int seconds, unsigned seed) {
   float bpm = 120;
   for (uint64_t i = 0; i < blocks; i++) {
     if (i % 2000 == 0) alarm(10);
+    if (int r = takeResampled(); r >= 0 && !sceneFromResample(r)) endSilencing();   // (as followRecording())
     if (rand() % 300 == 0) {
       sel = rand() % NUM_TRACKS;
       Track &tr = tracks[sel];
       switch (rand() % 13) {
-        case 0: case 1: lastAction = "record press"; recordPress(sel); break;
+        case 0: case 1: lastAction = "record press"; recordPress(sel, rand() % 4 == 0); break;   // (a quarter of them resample)
         case 2: if (rand() % 3) { lastAction = "clear"; clearTrack(sel); }
                 else { lastAction = "cancel recording"; cancelRecording(sel); } break;
         case 3: lastAction = "mute"; if (tr.state != TrackState::Empty) tr.state = tr.state == TrackState::Playing ? TrackState::Muted : TrackState::Playing; break;
@@ -1277,6 +1278,59 @@ int main(int argc, char **argv) {
     transportStart();
     for (auto &x : tracks) x.gain = 1;
     engine.monitor = true;
+    feedRamp = true;
+  }
+
+  printf("resampling: the output recorded, then a scene of its own\n");
+  {
+    if (!transport.running) transportStart();
+    feedRamp = false;                              // no input: the output is the tracks
+    for (int t = 1; t < NUM_TRACKS; t++) if (recording.mode == Recording::Idle) clearTrack(t);
+    if (tracks[0].state != TrackState::Playing) recordTrack(0, 7.5, 2, "  (track 1 recorded to play under it)");
+    feedRamp = false;
+    runBeats(4);
+    // The output, by transport sample, while it records.
+    std::vector<int16_t> outLog(44100 * 30);
+    uint32_t logFrom = transport.now;
+    afterAudio = [&] {
+      uint32_t s0 = transport.now - AUDIO_BLOCK_SAMPLES;
+      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
+        if (s0 + i - logFrom < outLog.size()) outLog[s0 + i - logFrom] = outL.data[i];
+    };
+    check(recordPress(6, true) && recording.mode == Recording::WaitBar && recording.resample,
+          "resample on track 7: waits for the next bar line");
+    for (int i = 0; i < 4000 && recording.mode == Recording::WaitBar; i++) block();
+    check(recording.mode == Recording::Running && recording.startSample == transport.lastBarSample,
+          "starts on the bar line (no latency: it's the output)");
+    uint32_t start = recording.startSample;
+    runBeats(5.5);
+    recordPress(6);                                // carries on to 2 bars
+    check(recording.mode == Recording::Finishing && (silencedTracks & 1) && !(silencedTracks & (1 << 6)),
+          "stopped: track 1 goes quiet where the loop ends");
+    runUntilIdle();
+    afterAudio = nullptr;
+    bool same = true;
+    for (uint32_t f : {0u, 1000u, 30000u, 100000u, tracks[6].recordedFrames - 1})
+      if (wavLeft(6, f) != outLog[start + f - logFrom]) same = false;
+    check(tracks[6].state == TrackState::Playing && tracks[6].loopBars == 2 && same && outLog[start + 1000 - logFrom] != 0,
+          "track 7 holds 2 bars of what was played");
+    check(takeResampled() == 6 && takeResampled() == -1, "reported once as resampled");
+    uint32_t sample = tracks[6].sample;
+    int count = sceneCount(), pos = sceneCurrent();
+    check(sceneFromResample(6) && sceneCount() == count + 1 && sceneCurrent() == pos + 1,
+          "a new scene inserted after the current one, and selected");
+    waitScene();
+    runBeats(2);
+    bool othersEmpty = true;
+    for (int t = 0; t < NUM_TRACKS; t++) if (t != 6 && tracks[t].state != TrackState::Empty) othersEmpty = false;
+    check(tracks[6].sample == sample && tracks[6].state == TrackState::Playing && tracks[6].live && othersEmpty &&
+          silencedTracks == 0, "in it: just the resampling, on the same track");
+    checkSync(6, "the resampling, playing on");
+    check(sceneStep(-1), "back to the scene before");
+    waitScene();
+    runBeats(2);
+    check(tracks[0].state == TrackState::Playing && tracks[6].state == TrackState::Empty,
+          "the scene before: as it was, without the resampling");
     feedRamp = true;
   }
 

@@ -20,9 +20,12 @@
 // the panel (menu, as B+A) on the scene cell, start / stop (play / stop, as
 // START) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
 // start from 1.1.1 (play).
+// SHIFT tapped twice and held: resample (a cassette) on an
+// empty track, overdub (the record dot with a plus; not there yet: A does
+// nothing) on one with a clip.
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_OVERDUB };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -47,6 +50,8 @@ static int actionIcon() {
     return cell == SCENE_CELL ? ICON_MENU : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_TAP;
   }
   const Track &tr = tracks[selected];
+  if (shiftTwiceHeld() && !recordingOn(selected) && recordQueued() != selected)   // SHIFT twice, held
+    return tr.state == TrackState::Empty ? ICON_RESAMPLE : ICON_OVERDUB;
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) || recordQueued() == selected ? ICON_DELETE : ICON_PASTE;
   if (recordQueued() == selected) return ICON_DELETE;   // takes it out of the queue
   if (recordingOn(selected)) {
@@ -106,7 +111,7 @@ static int buttonIcon(int i) {
 // smaller, left of centre (on the selected track's panel, its left
 // corners cut). An action with nothing to act
 // on (paste, clipboard empty) is dark grey.
-struct Icon { int w, h; const char *rows[9]; };
+struct Icon { int w, h; const char *rows[11]; };
 PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // ICON_NONE
   {7, 7, {".......", "..###..", ".#####.", ".#####.", ".#####.", "..###..", "......."}},   // RECORD
@@ -125,6 +130,8 @@ PROGMEM static const Icon ICONS[] = {
           "#.......#", "#########"}},                                                   // SCENE_PASTE
   {11, 7, {".....#.....", "....##.....", "..####.#.#.", "..####..#..", "..####.#.#.", "....##.....", ".....#....."}},   // MUTE (a block right of UNMUTE)
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
+  {9, 7, {".#######.", "#.......#", "#.##.##.#", "#.##.##.#", "#.......#", "#.#####.#", ".#######."}},   // RESAMPLE (a cassette)
+  {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // OVERDUB (record +)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
@@ -222,7 +229,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
-    int c0 = track ? TRACK_ICON_CENTRE - ic.w / 2 : (cols - ic.w) / 2, r0 = (rows - ic.h) / 2;
+    int c0 = track ? TRACK_ICON_CENTRE - ic.w / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1), r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);

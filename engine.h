@@ -124,12 +124,22 @@ struct Recording {
   uint32_t targetFrames = 0;             // set when stopped
   uint32_t loopBars = 0;
   volatile uint32_t overruns = 0;
+  // Resampling: the app's output is recorded instead of the input (the
+  // interrupt puts it in inputRing while this recording is on; no latency).
+  volatile bool resample = false;
 };
 
 extern Track tracks[NUM_TRACKS];
 extern Transport transport;
 extern Recording recording;
 extern uint32_t inputRing[INPUT_FRAMES];  // stereo input, index = sample % INPUT_FRAMES
+// Tracks (bit per track) silenced from transport sample silenceFrom on: the
+// others while a resampling's loop takes over from them. A track's bit
+// clears when its stream switches clips (see takeSwitch); all clear on stop.
+extern volatile uint8_t silencedTracks;
+extern volatile uint32_t silenceFrom;
+// The input latency a recording is shifted by (none for a resampling).
+inline uint32_t recordingLatency() { return recording.resample ? 0 : LATENCY_FRAMES; }
 
 uint32_t spbForBpm(float bpm);
 float bpmForSpb(uint32_t spb);

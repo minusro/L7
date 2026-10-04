@@ -12,6 +12,8 @@ uint32_t inputRing[INPUT_FRAMES];
 Track tracks[NUM_TRACKS];
 Transport transport;
 Recording recording;
+volatile uint8_t silencedTracks = 0;
+volatile uint32_t silenceFrom = 0;
 
 static struct RingInit {
   RingInit() {
@@ -150,6 +152,7 @@ static void queueTick(uint32_t due) {
 // ---- Engine
 // A track's stream has reached its sample switch: its clock mapping follows.
 static void takeSwitch(Track &tr) {
+  silencedTracks &= ~(1 << (&tr - tracks));      // a new clip here: heard again
   tr.s0 = tr.nextS0;
   tr.startBeat = tr.nextStartBeat;
   tr.playSpb = tr.nextSpb;
@@ -173,7 +176,7 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
     transport.lastBarSample = transport.now;
     transport.lastBarBeat = beat;
     if (recording.mode == Recording::WaitBar) {
-      recording.startSample = transport.now + LATENCY_FRAMES;
+      recording.startSample = transport.now + recordingLatency();
       recording.startBeat = beat;
       recording.mode = Recording::Running;
     }
@@ -229,19 +232,24 @@ void LooperEngine::update() {
   double speed[NUM_TRACKS];
   float mix[NUM_TRACKS][4];                          // the tracks' own volume/balance mixes (metered)
   float peakL[NUM_TRACKS] = {}, peakR[NUM_TRACKS] = {};
+  bool silencing = silencedTracks && (int32_t)(transport.now - silenceFrom) >= 0;   // (from this block on)
   for (int t = 0; t < NUM_TRACKS; t++) {
     const Track &tr = tracks[t];
     speed[t] = tr.playSpb ? (double)tr.playSpb / spb : 0;
-    float g = tr.state == TrackState::Playing && !tr.stopping ? tr.gain : 0;
+    bool silenced = silencing && (silencedTracks & (1 << t));
+    float g = tr.state == TrackState::Playing && !tr.stopping && !silenced ? tr.gain : 0;
     mix[t][0] = g * tr.mixLL;
     mix[t][1] = g * tr.mixLR;
     mix[t][2] = g * tr.mixRL;
     mix[t][3] = g * tr.mixRR;
   }
 
+  // Resampling: the output goes in the input history (what's recorded) instead.
+  const bool captureOutput = recording.resample && recording.mode != Recording::Idle;
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
     int16_t l = inL ? inL->data[i] : 0, r = inR ? inR->data[i] : 0;
-    inputRing[transport.now % INPUT_FRAMES] = (uint16_t)l | ((uint32_t)(uint16_t)r << 16);
+    const uint32_t at = transport.now;
+    inputRing[at % INPUT_FRAMES] = (uint16_t)l | ((uint32_t)(uint16_t)r << 16);
 
     float mixL = monitor ? l : 0, mixR = monitor ? r : 0;
     if (running) {
@@ -302,6 +310,7 @@ void LooperEngine::update() {
 
     outL->data[i] = (int16_t)constrain(mixL, -32767.0f, 32767.0f);
     outR->data[i] = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
+    if (captureOutput) inputRing[at % INPUT_FRAMES] = (uint16_t)outL->data[i] | ((uint32_t)(uint16_t)outR->data[i] << 16);
   }
 
   for (int t = 0; t < NUM_TRACKS; t++) {

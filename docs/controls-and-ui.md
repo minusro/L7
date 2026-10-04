@@ -15,6 +15,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | SHIFT + B twice | Duplicate the scene |
 | B + A | Open the panel (A closes it) |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
+| SHIFT twice (second tap held) + A | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
 | SHIFT + UP/DOWN | Newer / older scene (see scenes.md); B + UP/DOWN does the same on the status row's scene cell (double taps and holding B included) |
 | SHIFT + UP/DOWN twice, second held | To N+1\* / 0\* |

@@ -23,6 +23,8 @@ void (*IntervalTimer::fn)() = nullptr;
 HardwareSerial midi;
 
 bool optBeforeShift() { return true; }             // (input.cpp isn't built here)
+static bool previewShiftTwice = false;
+bool shiftTwiceHeld() { return previewShiftTwice; }   // (SHIFT tapped twice and held)
 
 // A made-up waveform: a hit on every beat (louder on bar starts), decaying,
 // over some noise.
@@ -138,6 +140,14 @@ int main(int argc, char **argv) {
   render(out + "/ui_empty.png");
   selected = 2;                                    // a muted track
   render(out + "/ui_muted.png");
+  previewShiftTwice = true;                        // SHIFT twice, held: overdub on a clip,
+  board.heldKeys = m8::BTN_SHIFT;
+  render(out + "/ui_overdub.png");
+  selected = 5;                                    // resample on an empty track
+  render(out + "/ui_resample.png");
+  selected = 2;
+  previewShiftTwice = false;
+  board.heldKeys = 0;
   // Track 6 recording, 2 bars and a bit in (its live view: no audio saved yet).
   recording.track = 5;
   recording.mode = Recording::Running;

@@ -53,10 +53,24 @@ static void tapTempo() {
 static bool optFirst = false;
 bool optBeforeShift() { return optFirst; }
 
+// SHIFT tapped twice (within DOUBLE_TAP_MS), the second tap held: A records
+// another way while it's held: an empty track resamples (records the app's
+// output), one with a clip overdubs (not there yet).
+static bool shiftTwice = false;
+bool shiftTwiceHeld() { return shiftTwice && (board.keys() & m8::BTN_SHIFT); }
+
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
+  {
+    static uint32_t lastShiftTap = 0;
+    if (!shift) shiftTwice = false;
+    if (pressed & m8::BTN_SHIFT) {
+      shiftTwice = millis() - lastShiftTap < DOUBLE_TAP_MS;
+      lastShiftTap = shiftTwice ? 0 : millis();
+    }
+  }
   if (panelOpen()) {                                 // the panel: only A, to close it
     if (pressed & m8::BTN_EDIT) {
       noteActionPress();
@@ -302,7 +316,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   if (edit && !onStatus) {
     Track &tr = tracks[selected];
-    if (shift) {
+    if (shiftTwice && !recordingOn(selected) && recordQueued() != selected) {
+      // SHIFT tapped twice and held, A: an empty track resamples (queued
+      // behind a recording, as A records); one with a clip overdubs (to come).
+      if (tracks[selected].state == TrackState::Empty) recordPress(selected, true);
+    } else if (shift) {
       // SHIFT+A: cut the clip to the clipboard, or paste it onto an empty
       // track; recording (or queued): cancel it, the recording thrown away.
       if (hasClip(selected)) cutTrack(selected);
@@ -371,6 +389,17 @@ void pollKeys() {
 }
 
 void followRecording() {
+  // A resampling saved: a new scene holding just it (scenes.h), its track
+  // selected.
+  int resampled = takeResampled();
+  if (resampled >= 0) {
+    if (sceneFromResample(resampled)) {
+      selected = resampled;
+      for (int i = 0; i < ROWS; i++) drawTrack(i);
+    } else {
+      endSilencing();                              // (scene list full: it stays where it is)
+    }
+  }
   // A recording that ended with a clip (not cancelled): select the next track
   // (if SELECT_NEXT_AFTER_RECORDING).
   static int recTrack = -1;

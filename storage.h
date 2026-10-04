@@ -62,8 +62,16 @@ void transportSnapToBar();
 // Returns false if the track already holds a loop. Pressed on another track
 // while one is recording: that one stops and this one records next (pressed
 // again: not any more).
-bool recordPress(int t);
+// resample: record the app's output (everything heard) instead of the input;
+// it starts on a bar line (the next one, or bar 1 when stopped). When it's
+// stopped, the other tracks playing go quiet where its loop ends.
+bool recordPress(int t, bool resample = false);
 int recordQueued();                   // the track recording next, or -1
+// A resampling saved since the last call: its track (once), or -1. The other
+// tracks stay quiet until their clips change (the scene after it), or
+// endSilencing().
+int takeResampled();
+void endSilencing();
 // Track t recording (or waiting to, or queued): stop at once and throw the
 // recording away (its sample file goes back to the pool of empty ones; a
 // queued recording starts from the next bar line instead).

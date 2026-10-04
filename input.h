@@ -4,4 +4,5 @@
 
 void pollKeys();                         // call from loop(): reads the keys, repeats held arrows
 void followRecording();
-bool optBeforeShift();                   // SHIFT and B held: B was pressed first                  // call from loop(): selects the next track after a recording
+bool optBeforeShift();                   // SHIFT and B held: B was pressed first
+bool shiftTwiceHeld();                   // SHIFT tapped twice, still held: A resamples / overdubs                  // call from loop(): selects the next track after a recording

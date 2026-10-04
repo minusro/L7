@@ -27,6 +27,12 @@ bool sceneCut();               // to the scene clipboard; removed from the list,
 bool scenePaste();             // inserted after the current scene (or over N+1*), and selected
 bool sceneDuplicate();         // a copy inserted after the current scene, and selected
 bool sceneClipboardFull();
+// A resampling on track t has been saved: a new scene with the same tempo is
+// inserted after the current one, holding just it, on the same track; it
+// leaves the current scene. The new scene is selected and goes on on the next beat
+// (works while another recording runs: that track is left alone). false: the
+// list is full.
+bool sceneFromResample(int t);
 // While on (SHIFT held, playing), stepping only moves the selection shown;
 // turning it off goes there (on the next bar line, see beginSceneChange()).
 // Quick, at once and on the next beat: steps to and from N+1*, the jumps to

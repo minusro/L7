@@ -253,6 +253,30 @@ bool sceneDuplicate() {
   return true;
 }
 
+bool sceneFromResample(int t) {
+  takeHeld();
+  commit();                                        // (the current scene, the resampling on it)
+  SceneInfo from = snapshot(), to = emptyScene();
+  to.tempo = from.tempo;
+  to.units[t] = from.units[t];                     // (on the same track)
+  from.units[t] = emptyScene().units[t];
+  int pos = list.current == list.count + 1 ? list.count + 1 : list.current + 1;
+  if (list.count >= MAX_SCENES) return false;
+  if (list.current >= 1 && list.current <= list.count) {   // the current scene, without it
+    int slot = list.slot[list.current - 1];
+    if (recordSlot >= 0 && recordSlot != slot) writeRecordNow();
+    record = from;
+    recordSlot = slot;
+  }
+  int slot = insertAt(pos);
+  if (recordSlot >= 0) writeRecordNow();
+  record = to;
+  recordSlot = slot;
+  list.current = pos;
+  apply(to, true);                                 // on the next beat
+  return true;
+}
+
 void serviceScenes() {
   launchHeld();                                    // let go before it was prepared: now it is
   commit();

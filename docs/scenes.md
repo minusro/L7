@@ -46,6 +46,13 @@ A scene is a snapshot of the looper: the 8 track units and the tempo
   another scene, or a change waiting for its switch point.
 * Stopped: scene changes apply at once.
 * No scene changes while recording.
+* **After a resampling** (`sceneFromResample(t)`, from `followRecording()`):
+  a new scene with the same tempo is inserted after the current one, holding
+  just the resampled clip, on the same track; the clip leaves the current
+  scene. The new scene is selected and goes on on the next beat (the other
+  tracks were already silenced where the loop ended), with that track
+  selected. A recording
+  queued behind the resampling carries on and is left out of the switch.
 
 A half-bar grid for normal changes was tried and reverted (commits 506c0d7 /
 786f884): normal changes stay on bar lines.
