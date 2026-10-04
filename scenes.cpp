@@ -206,6 +206,7 @@ static void takeSceneSelection(const SceneInfo &s) {
 
 static bool go(int pos, bool quick = false) {
   pos = constrain(pos, 0, list.count ? list.count + 1 : 0);   // (no scenes: no N+1*, a copy of nothing)
+  if (pos == 0) quick = true;                      // to the empty scene: at once (the next beat), SHIFT held or not
   if (holding && !quick) {                       // only the label moves for now, the scene is prepared
     if (busy() || pos == sceneCurrent()) return false;
     target = pos == list.current ? -1 : pos;
