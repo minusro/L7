@@ -4,7 +4,7 @@
 
 namespace looper {
 
-constexpr int NUM_TRACKS = 8;
+constexpr int NUM_TRACKS = 7;
 constexpr int BEATS_PER_BAR = 4;                   // fixed 4/4
 constexpr uint32_t MAX_BARS = 32;                  // longest recording
 // Stopping a recording up to this many beats past a bar line trims it to end

@@ -1,6 +1,6 @@
 # Scenes
 
-A scene is a snapshot of the looper: the 8 track units and the tempo
+A scene is a snapshot of the looper: the 7 track units and the tempo
 (`SceneInfo` {magic `M8SC`, version, float tempo (0: keep), units[8]}).
 
 ## Projects

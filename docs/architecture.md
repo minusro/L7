@@ -40,8 +40,8 @@
 Free: ≈70 KB in RAM1 (stack lives there), ≈13 KB in RAM2 (the heap; little
 uses it: printf internals). The big items:
 
-* 8 track rings × 64 KB (`RING_FRAMES` = 16384 stereo frames, ~370 ms at 1x):
-  seven in RAM2 (DMAMEM), the eighth in RAM1.
+* 7 track rings × 64 KB (`RING_FRAMES` = 16384 stereo frames, ~370 ms at 1x),
+  all in RAM2 (DMAMEM). (With 8 tracks the eighth had to go in RAM1.)
 * `inputRing` 128 KB (`INPUT_FRAMES` = 32768, ~740 ms): pre-roll for late
   record presses and slack for slow SD writes.
 * `chunk` 16 KB (RAM1): the SD transfer buffer. It must stay in RAM1: SdFat's
@@ -56,7 +56,7 @@ Keeping RAM1 free:
 * Don't use `sscanf`/`scanf`: newlib's version pulls in ~26 KB of Unicode
   tables (parse by hand; `strtof`/`strtol` are fine).
 
-Consequences: the rings can't grow much (8 tracks × any increase); caching
+Consequences: the rings can't grow much (7 tracks × any increase); caching
 the next scene's audio is not possible. A track played faster than recorded empties its ring faster
 (at 1.33x a full ring lasts ~280 ms), which is where the remaining dropouts
 on slow card writes come from.

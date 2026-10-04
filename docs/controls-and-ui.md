@@ -56,7 +56,7 @@ double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
 
 320×240, no frame buffer: everything is drawn over its own background and
 only what changed is redrawn (`uiGeneration` forces a full redraw, e.g. after
-the menu or splash). 9 rows of 26 px: 8 tracks from the top of the screen, a 6 px (three-block) gap,
+the menu or splash). 8 rows: 7 tracks of 30 px from the top of the screen, a 4 px (two-block) gap,
 then the status row (y 214–239, to the screen's bottom edge, its cells framed all round); cells waveform | filter | volume | button (square). Columns:
 waveform x 0–187, filter 186–245, volume 244–291, then a block's space
 before the buttons (x 294–319); the status row's three cells share

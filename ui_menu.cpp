@@ -61,6 +61,7 @@ void mainSelection(int &row, int &cell) {
 }
 
 void setMainSelection(int row, int cell) {
+  if (row < 0 || row >= ROWS || cell < 0 || cell >= CELLS) return;   // (not a place: a project of the 8-track looper)
   (shown ? mainRow : selected) = row;
   (shown ? mainCell : selectedCell) = cell;
 }

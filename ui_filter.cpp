@@ -13,8 +13,8 @@
 static constexpr int CELL_COLS = CELL[FILTER_CELL].w / PX;      // 30, the border's included
 static constexpr int GRAPH_LEFT = 2;                             // the first graph column (after the border and a space)
 static constexpr int GRAPH_COLS = CELL_COLS - 2 * GRAPH_LEFT;
-static constexpr int BAND_ROWS = CELL_H / PX;                   // 14
-static constexpr int TOP_ROW = 2, BOTTOM_ROW = 11;              // 0 dB, -CURVE_DB (a block of space round them)
+static constexpr int BAND_ROWS = CELL_H / PX;                   // 16
+static constexpr int TOP_ROW = 2, BOTTOM_ROW = BAND_ROWS - 3;   // 0 dB, -CURVE_DB (a block of space round them; rows 2-13, as the waveform)
 static constexpr float CURVE_DB = 30;
 
 void drawFilter(int i) {

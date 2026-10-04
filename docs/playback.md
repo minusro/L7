@@ -86,7 +86,7 @@ Details:
 * B+arrow range edits are refused while a change is on its way.
 * Transport stop / snap-to-bar settle all changes at once (`settleNow`).
 
-Measured in the simulator (realistic card, 120 BPM, all 8 tracks switching):
+Measured in the simulator (realistic card, 120 BPM, all 8 tracks switching, before L7 went to 7):
 new samples heard ~230 ms after the request (max ~280 ms) with no silence;
 before this design a switch left 1–2 beats of silence (~770 ms average).
 

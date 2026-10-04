@@ -4,12 +4,12 @@
 // ---- Waveforms
 // Each track's whole loop in WAVE_COLS columns of blocks, inside the cell's
 // border (shared with its neighbours: the selection frame) and a block of
-// space. Rows of blocks (14 in the cell):
-//   0, 13   the border
-//   1, 12   space (the playheads reach into it)
+// space. Rows of blocks (16 in the cell):
+//   0, 15   the border
+//   1, 14   space (the playheads reach into it)
 // A black line the waveform's height just before each bar's start (but the
 // first's), on every track, while recording too.
-//   2 - 11  the waveform: a line along rows 6-7, the peaks reaching up to 4
+//   2 - 13  the waveform: a line along rows 7-8, the peaks reaching up to 5
 //           blocks above and below it. Heights go with the square root of
 //           the peak level (as the overview stores it).
 // The waveform is light grey inside the loop range (white on the selected
@@ -29,8 +29,8 @@
 static constexpr int BLOCK_COLS = WAVE_W / PX;                  // 94, the border's included
 static constexpr int WAVE_LEFT = 2;                            // the first waveform column (after the border and a space)
 static constexpr int WAVE_COLS = BLOCK_COLS - 2 * WAVE_LEFT;   // 90 waveform columns
-static constexpr int BAND_ROWS = CELL_H / PX;                  // 14
-static constexpr int MID_ROW = 6, WAVE_REACH = 4;              // the line: rows 6-7; peaks: rows 2-11
+static constexpr int BAND_ROWS = CELL_H / PX;                  // 16
+static constexpr int MID_ROW = 7, WAVE_REACH = 5;              // the line: rows 7-8; peaks: rows 2-13
 
 // Waveform height (blocks each way) for a stored overview level (the square
 // root of the peak, 0-255): in proportion.
@@ -79,9 +79,9 @@ static int edgeCol(uint32_t beat, uint32_t loopBeats) {
 }
 
 // The start position's line in waveform column c of view v: the waveform's
-// height (rows 2-11), a block of the waveform's colour there every third
-// row from the top (2, 5, 8, 11), black between; BG: no line there.
-static constexpr int START_TOP = MID_ROW - WAVE_REACH, START_BOTTOM = MID_ROW + 1 + WAVE_REACH;   // rows 2-11
+// height (rows 2-13), a block of the waveform's colour there every third
+// row in from either end (2, 5, 10, 13), black between; BG: no line there.
+static constexpr int START_TOP = MID_ROW - WAVE_REACH, START_BOTTOM = MID_ROW + 1 + WAVE_REACH;   // rows 2-13
 static uint16_t startInk(const WaveView &v, int c) {
   if (!v.visible || v.live || c != v.markCol) return BG;
   bool in = (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
@@ -117,7 +117,7 @@ static void drawColumn(int i, int bc) {
         break;
       }
     if (uint16_t ink = startInk(v, c); ink != BG)                 // the start position: a checkered line
-      for (int r = START_TOP; r <= START_BOTTOM; r++) col[r] = (r - START_TOP) % 3 ? v.bg : ink;
+      for (int r = START_TOP; r <= START_BOTTOM; r++) col[r] = min(r - START_TOP, START_BOTTOM - r) % 3 ? v.bg : ink;
     if (c == v.playCol) {                                         // on top: the playhead
       int reach = v.live ? 0 : 1;                                 // (a block past the waveform each way; recording: within its backdrop)
       for (int r = MID_ROW - WAVE_REACH - reach; r <= MID_ROW + 1 + WAVE_REACH + reach; r++)

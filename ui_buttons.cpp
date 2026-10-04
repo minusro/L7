@@ -232,7 +232,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     for (int dy = 0; dy < PX; dy++)
       for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * BUTTON_W + c * PX + dx] = ink;
   };
-  const int cols = BUTTON_W / PX, rows = ROW_BAND / PX;
+  const int cols = BUTTON_W / PX, rows = height / PX;
   // The selected track's panel, under its number or icons: from a block in to
   // the right edge, the button's height, its left corners cut (a two-block
   // border round the badge on the left, top and bottom). Grey; the accent
@@ -258,7 +258,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
       }
   };
   // A track's badge: its number, in a square (filled, or outlined) or alone.
-  // The square: 7 x 9 blocks from row 2 (a block of edge, a block of space
+  // The square: 7 x 9 blocks, centred (a block of edge, a block of space
   // round the digit).
   auto drawBadge = [&](int number, bool filled, bool square, uint16_t frame, uint16_t ink) {
     const int r0 = (rows - 9) / 2;

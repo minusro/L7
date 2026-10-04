@@ -10,10 +10,10 @@
 // PX x PX pixel blocks (a 160 x 120 screen of chunky pixels), a blocky
 // pixel font, and the selection shown by frames and inverted boxes.
 constexpr int PX = 2;
-// Vertical layout: rows every 26 px (13 blocks): the 8 tracks from the top
-// of the screen, then the status row 6 px (three blocks) lower.
-constexpr int ROW_BAND = 26;                             // a row's height (its button's)
-constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 3 * PX;   // 214
+// Vertical layout: rows every 30 px (15 blocks): the 7 tracks from the top
+// of the screen, then the status row 4 px (two blocks) lower.
+constexpr int ROW_BAND = 30;                             // a row's height (its button's)
+constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2 * PX;   // 214
 // Each track row: three cells, then the button (a square): the waveform, the
 // filter (its response curve), then volume and balance. A cell is its
 // content in a one-block border, shared with the cells above and below (a
@@ -147,7 +147,7 @@ void showSplash();
 void hideSplash();
 void splashTick();                       // the logo's colour cycle: call while starting up (hideSplash() finishes it)
 int splashBottom();                    // y just below the logo (for startup messages)
-void drawSmallLogo(int x, int y, uint16_t color);   // the logo, a pixel per block (43 x 26 px; the menu's corner)
+void drawSmallLogo(int x, int y, uint16_t color);   // the logo, a pixel per block (51 x 26 px; the menu's corner)
 uint16_t actionBackground();             // the action button's backdrop colour now (ui_buttons.cpp)
 
 // ---- Drawing (ui*.cpp)
