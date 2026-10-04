@@ -94,6 +94,9 @@ no dropouts or overruns
 - [ Projects ] V
 - add play icon to status row V
 - animated splash screen V
+- playback state linked to menu state V
+- make it 7 tracks V
+- global tempo V
 - ableton export
 - usb data mode
 

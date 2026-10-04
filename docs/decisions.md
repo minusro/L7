@@ -51,6 +51,10 @@
   holds no audio, only references to the sample files its scenes use.
 * The loaded project is autosaved.
 * Loading, cut and paste all work while playing (copies in the background).
+* The tempo is the project's (agreed 2026-10-04): changing it in one scene
+  changes it in all of them. New projects start with the tempo last set by
+  hand (120 BPM before any); loading a project without changing its tempo
+  leaves that as it was.
 
 ## L7: 7 tracks (agreed 2026-10-04)
 

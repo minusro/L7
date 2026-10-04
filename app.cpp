@@ -15,8 +15,11 @@ static int savedProject = 0;                    // and the loaded project
 static int savedMenu = -1, bootMenu = -1;       // and the menu (its selection, + 1000 open)
 static int bootProject = 0;
 
-// ---- Tempo: MIN_BPM-MAX_BPM, whatever the loops were recorded at
-bool setTempo(float b) {
+// ---- Tempo: MIN_BPM-MAX_BPM, whatever the loops were recorded at. It's the
+// project's (all its scenes); new projects take the last one set by hand.
+static float newBpm = 120.0f;
+
+static bool changeTempo(float b) {
   b = constrain(roundf(b * 10) / 10, MIN_BPM, MAX_BPM);   // tenths of a BPM
   if (recording.mode != Recording::Idle) return false;   // a recording keeps its tempo
   uint32_t spb = spbForBpm(b);
@@ -25,9 +28,21 @@ bool setTempo(float b) {
   transport.pendingSpb = spb;
   changedMs = millis();
   tempoDirty = true;
-  sceneStateChanged();                             // the current scene follows
   return true;
 }
+
+bool setTempo(float b) {
+  float was = bpm;
+  if (!changeTempo(b)) return false;
+  if (bpm != was) {
+    newBpm = bpm;                                  // new projects start with it
+    projectTempoChanged();                         // the loaded project keeps it
+  }
+  return true;
+}
+
+bool loadTempo(float b) { return changeTempo(b); }
+float newProjectTempo() { return newBpm; }
 
 // ---- Master volume (steps, config.h): kept in the session
 void stepMasterVolume(int by) {
@@ -39,6 +54,7 @@ void stepMasterVolume(int by) {
 void beginSession() {
   Session s = loadSession();
   bpm = roundf(s.bpm * 10) / 10;
+  newBpm = roundf(s.newBpm * 10) / 10;
   if (s.row >= 0 && s.row < ROWS && s.cell >= 0 && s.cell < CELLS) {   // (saved before projects kept it)
     selected = s.row;
     selectedCell = s.cell;
@@ -75,6 +91,7 @@ static bool sessionDirty() {
 static void writeSession() {
   Session s;
   s.bpm = bpm;
+  s.newBpm = newBpm;
   s.master = masterVolume();
   s.project = projectCurrent();
   s.menu = menuState();

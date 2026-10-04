@@ -161,7 +161,7 @@ void setup() {
   beginSession();                                  // the tempo and the selection
   splashTick();
   transport.spb = spbForBpm(bpm);
-  scenesBegin([] { return bpm; }, setTempo, sessionProject());
+  scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo);
   scenesSelection(mainSelection, setMainSelection);
   takeProjectSelection(false);
   deleteUnusedSamples();                           // recordings no project uses

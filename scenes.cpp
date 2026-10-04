@@ -2,7 +2,8 @@
 //
 // A project file (/looper/projects/1.dat ... 12.dat; clip.dat the clipboard):
 // block 0 is the list (which record slot is at each position, how many, the
-// current position, and the selected row and cell); blocks 1.. are the
+// current position, the selected row and cell, and the project's tempo: one
+// for all its scenes); blocks 1.. are the
 // scenes' records, in slots reused as scenes come and go. Inserting or
 // removing a scene only rewrites the list block. All of them are made once at
 // full size; an empty slot's block 0 is zeros.
@@ -15,7 +16,8 @@ namespace looper {
 struct SceneInfo {
   char magic[4];                                 // "M8SC"
   uint32_t version;
-  float tempo;                                   // 0: keeps the tempo (the empty scene)
+  float tempo;                                   // the tempo when saved (projects keep one tempo now:
+                                                 // an older project's comes from its current scene's)
   TrackUnit units[NUM_TRACKS];
   uint8_t row, cell;                             // the selection on it, each + 1 (0: none saved; older records)
 };
@@ -24,6 +26,7 @@ struct SceneList {
   uint16_t version, count, current;
   uint8_t row, cell;                             // the selection, each + 1 (0: none saved)
   uint16_t slot[MAX_SCENES];                     // record slot of each scene, in list order
+  uint16_t tempo10;                              // the project's tempo, tenths of a BPM (0: not kept yet, older files)
 };
 static constexpr uint32_t BLOCK = 512;
 static constexpr uint64_t FILE_BYTES = BLOCK * (1 + (uint64_t)MAX_SCENES);
@@ -36,7 +39,9 @@ static int project = 0;                          // the loaded one (0-11, or DUM
 static bool filled[PROJECTS];                    // the slots holding a project
 static bool projectClip = false;                 // the project clipboard holds one
 static float (*getTempo)() = nullptr;
-static bool (*setTempo)(float) = nullptr;
+static bool (*setTempo)(float) = nullptr;        // a project's tempo, as it loads (not a change by hand)
+static float (*newTempo)() = nullptr;            // new projects' tempo (the last one set by hand)
+static uint16_t tenths(float b) { return (uint16_t)lroundf(b * 10); }
 static bool changed = false;                     // the looper changed: the current scene must follow
 static bool loading = false;                     // a scene is being put on the looper
 static bool listDirty = false;
@@ -164,17 +169,20 @@ static void commit() {
   recordSlot = slot;
 }
 
-// Puts a scene on the looper (its tempo, if it has one, after the tracks).
-// While playing, all of it changes on the next bar line with time to load
-// (quick: the next beat).
-static void apply(const SceneInfo &s, bool quick, bool restart = false) {
+// Puts a scene on the looper; tempo > 0 (a project loading): that tempo too,
+// after the tracks (a scene keeps the tempo: it's the project's). While
+// playing, all of it changes on the next bar line with time to load (quick:
+// the next beat).
+static void apply(const SceneInfo &s, bool quick, bool restart = false, float tempo = 0) {
   loading = true;
   int32_t at = beginSceneChange(quick, unitsPrepared(), restart);
   for (int t = 0; t < NUM_TRACKS; t++) setTrackUnit(t, s.units[t]);   // (they take the prepared files)
   prepareUnits(nullptr);
-  if (s.tempo > 0) setTempo(s.tempo);
-  // A tempo change on its way (this scene's, or one still waiting) goes with it.
-  transport.spbAtBeat = transport.pendingSpb ? at : -1;
+  if (tempo > 0) {
+    setTempo(tempo);
+    // A tempo change on its way (this one, or one still waiting) goes with it.
+    transport.spbAtBeat = transport.pendingSpb ? at : -1;
+  }
   endSceneChange();
   loading = false;
 }
@@ -375,6 +383,7 @@ static SceneList newList() {
   memset(&l, 0, sizeof l);
   memcpy(l.magic, "M8SL", 4);
   l.version = 1;
+  l.tempo10 = tenths(newTempo ? newTempo() : 120.0f);   // a new project: the last tempo set by hand
   return l;
 }
 
@@ -508,9 +517,10 @@ void projectSetSelection(int row, int cell) {
 }
 
 // The looper on project p (its file open as `file`, its list in `list`): an
-// empty slot gets a new project (no scenes: the empty scene, the tempo
-// kept), and so does DUMMY every time. apply: its current scene goes on the
-// looper.
+// empty slot gets a new project (no scenes: the empty scene, the tempo last
+// set by hand), and so does DUMMY every time. Its tempo goes on the looper
+// (one saved before projects kept a tempo: its current scene's, kept now);
+// apply: its current scene too.
 static bool openAs(int p, bool apply_) {
   clipsKnown = -1;
   FsFile f = openProject(p);
@@ -528,12 +538,23 @@ static bool openAs(int p, bool apply_) {
   recordSlot = -1;
   listDirty = false;
   changed = false;
-  if (apply_) {
-    loading = true;                               // (the scene's units go on as they are)
-    apply(sceneAt(min((int)list.current, (int)list.count)), false, true);   // N+1*: a copy of N; from 1.1.1
-    loading = false;
+  SceneInfo s = sceneAt(min((int)list.current, (int)list.count));   // N+1*: a copy of N
+  float tempo = list.tempo10 ? list.tempo10 / 10.0f : s.tempo > 0 ? s.tempo : getTempo();
+  if (!list.tempo10) {
+    list.tempo10 = tenths(tempo);
+    listDirty = true;
   }
+  loading = true;                                 // (the scene's units go on as they are)
+  if (apply_) apply(s, false, true, tempo);       // from 1.1.1
+  else setTempo(tempo);
+  loading = false;
   return true;
+}
+
+void projectTempoChanged() {
+  if (loading || tenths(getTempo()) == list.tempo10) return;
+  list.tempo10 = tenths(getTempo());
+  listDirty = true;
 }
 
 bool projectLoad(int p) {
@@ -643,9 +664,10 @@ static void makeProjectFiles() {
   }
 }
 
-void scenesBegin(float (*getTempoFn)(), bool (*setTempoFn)(float), int loaded) {
+void scenesBegin(float (*getTempoFn)(), bool (*setTempoFn)(float), int loaded, float (*newTempoFn)()) {
   getTempo = getTempoFn;
   setTempo = setTempoFn;
+  newTempo = newTempoFn;
   makeProjectFiles();
   loaded = loaded < 0 ? DUMMY : min(loaded, PROJECTS - 1);
   if (!openAs(loaded, false)) {

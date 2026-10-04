@@ -1047,6 +1047,7 @@ Session loadSession() {
   // (Parsed by hand: sscanf would pull ~26 KB of Unicode tables into RAM.)
   while (f && f.fgets(line, sizeof line) > 0) {
     if (!strncmp(line, "bpm=", 4)) s.bpm = strtof(line + 4, nullptr);
+    else if (!strncmp(line, "newbpm=", 7)) s.newBpm = strtof(line + 7, nullptr);   // (new projects' tempo)
     else if (!strncmp(line, "row=", 4)) s.row = (int)strtol(line + 4, nullptr, 10);
     else if (!strncmp(line, "cell=", 5)) s.cell = (int)strtol(line + 5, nullptr, 10);
     // ("volume=": the master volume on today's scale; an older "master=" is left: 100% again)
@@ -1056,6 +1057,7 @@ Session loadSession() {
   }
   f.close();
   s.bpm = constrain(s.bpm, MIN_BPM, MAX_BPM);
+  s.newBpm = constrain(s.newBpm, MIN_BPM, MAX_BPM);
   s.master = constrain(s.master, 0, MASTER_VOLUME_MAX);
   s.project = constrain(s.project, -1, PROJECTS - 1);   // (-1, "project=0": the dummy project)
   return s;
@@ -1064,7 +1066,7 @@ Session loadSession() {
 void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/looper/session.txt", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nvolume=%d\nproject=%d\nmenu=%d\n", s.bpm, s.master, s.project + 1, s.menu);
+  f.printf("bpm=%.2f\nnewbpm=%.2f\nvolume=%d\nproject=%d\nmenu=%d\n", s.bpm, s.newBpm, s.master, s.project + 1, s.menu);
   f.close();
 }
 

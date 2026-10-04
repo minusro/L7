@@ -1,13 +1,19 @@
 # Scenes
 
-A scene is a snapshot of the looper: the 7 track units and the tempo
-(`SceneInfo` {magic `M8SC`, version, float tempo (0: keep), units[8]}).
+A scene is a snapshot of the looper: the 7 track units (`SceneInfo` {magic
+`M8SC`, version, float tempo, units[7]}; its tempo is only what it was when
+saved: the tempo belongs to the project, the same in all its scenes).
 
 ## Projects
 
-A project is a scene list with its current scene and the looper's selected
-row and cell (the master volume and the tempo outside scenes are global, in
-`session.txt`, which also names the loaded project). Twelve slots:
+A project is a scene list with its current scene, the looper's selected
+row and cell, and its tempo (block 0: `tempo10`, tenths of a BPM, in the
+place of a 250th scene: 249 scenes at most; 0 in a project saved before, which
+then takes its current scene's tempo). Changing the tempo, in any scene,
+changes the project's. The master volume is global, in `session.txt`, which
+also names the loaded project and keeps the tempo last set by hand
+(`newbpm=`, 120 before any): a new project starts with it. Loading a project
+doesn't change it. Twelve slots:
 `/looper/projects/1.dat` … `12.dat`, and `clip.dat` for the project clipboard,
 all made once at full size; an empty slot's block 0 is zeros. Project files
 hold no audio: scenes name their samples. The first version's
@@ -18,8 +24,9 @@ hold no audio: scenes name their samples. The first version's
   next bar line, as a scene change, but a restarting one
   (`beginSceneChange(…, restart)`): every track, even one keeping its clip,
   is placed as `transportStart()` would at 1.1.1, and the clock counts from
-  there (`transportOrigin()`); the transport itself runs on. An empty slot gets a new project (no
-  scenes: the empty scene, the tempo kept). Not while recording.
+  there (`transportOrigin()`); the transport itself runs on. Its tempo comes in with it, on
+  that bar line. An empty slot gets a new project (no scenes: the empty
+  scene, the tempo last set by hand). Not while recording.
 * Cut / paste (SHIFT+A): copies the used blocks (the records, then the list
   last) to or from `clip.dat`; cut then zeroes the slot's block 0. Stopped: at
   once. Playing: in the background, a block per `serviceScenes()` pass when
@@ -66,9 +73,10 @@ hold no audio: scenes name their samples. The first version's
   lead before its switch point instead of 150 ms.
 * A normal change then takes effect on the **first bar line at least 150 ms
   ahead** (`beginSceneChange()`), all of it together: samples (gapless, see
-  playback.md), mutes, filters, volumes, tracks starting or stopping, and the
-  tempo (engine applies `pendingSpb` exactly at `spbAtBeat`). The tempo label
-  shows the playing tempo until then.
+  playback.md), mutes, filters, volumes, tracks starting or stopping; a
+  project loading, its tempo too (engine applies `pendingSpb` exactly at
+  `spbAtBeat`; the tempo label shows the playing tempo until then). Scenes
+  keep the tempo.
 * Stepping on before the bar reuses the same bar line (unless < 50 ms away;
   then the next one, with no gap).
 * **Quick operations** — switch on the **next beat** (≥ 150 ms ahead), ignore
@@ -85,7 +93,7 @@ hold no audio: scenes name their samples. The first version's
 * Stopped: scene changes apply at once.
 * No scene changes while recording.
 * **After a resampling** (`sceneFromResample(t)`, from `followRecording()`):
-  a new scene with the same tempo is inserted after the current one, holding
+  a new scene is inserted after the current one, holding
   the resampled clip, on the same track, and the current scene's muted clips,
   still muted (copied: they stay in the current scene too); the resampled
   clip leaves the current scene. The new scene is selected and goes on on the next beat (the other

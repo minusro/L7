@@ -81,9 +81,21 @@ static void block() {
   serviceScenes();
 }
 
-// The app's tempo, for scenes.
+// The app's tempo, for scenes: simSetTempo as a project loads, tempoByHand as
+// the app's setTempo (the project keeps it, new projects start with it).
 static float simTempo() { return bpmForSpb(transport.pendingSpb ? transport.pendingSpb : transport.spb); }
-static bool simSetTempo(float b) { transport.pendingSpb = spbForBpm(b); return true; }
+static bool simSetTempo(float b) {
+  uint32_t spb = spbForBpm(b);
+  if (spb != (transport.pendingSpb ? transport.pendingSpb : transport.spb)) transport.pendingSpb = spb;   // (the same: nothing, as the app)
+  return true;
+}
+static float simNewBpm = 120.0f;
+static float simNewTempo() { return simNewBpm; }
+static void tempoByHand(float b) {
+  simSetTempo(b);
+  simNewBpm = b;
+  projectTempoChanged();
+}
 
 #include <map>
 static std::map<std::string, uint32_t> dropStages;   // what loop() was doing when tracks ran dry
@@ -357,7 +369,7 @@ int main(int argc, char **argv) {
   }
   printf("first boot (with track 5 in the older one-file-per-track format)\n");
   storageBegin([](const char *m) { if (*m) printf("  (%s)\n", m); });
-  scenesBegin(simTempo, simSetTempo);
+  scenesBegin(simTempo, simSetTempo, 0, simNewTempo);
   check(sceneCount() == 1 && sceneCurrent() == 1, "scenes start with what's on the tracks as scene 1");
   {
     const Track &tr = tracks[4];
@@ -770,7 +782,7 @@ int main(int argc, char **argv) {
     int scenes = sceneCount(), scene = sceneCurrent();
     for (int i = 0; i < 20; i++) serviceScenes();  // anything left saved
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo);
+    scenesBegin(simTempo, simSetTempo, 0, simNewTempo);
     check(sceneCount() == scenes && sceneCurrent() == scene, "scenes and the current one restored");
     bool same = true;
     for (int t = 0; t < NUM_TRACKS; t++) {
@@ -1048,12 +1060,12 @@ int main(int argc, char **argv) {
     for (int t = 0; t < NUM_TRACKS; t++) a[t] = unitOf(t);
     uint32_t spbA = transport.spb;
     // Scene B: a copy with track 3 on another sample, track 5 muted, track 6
-    // empty and another tempo.
+    // empty, and the tempo changed there (the project's: A's too).
     check(sceneDuplicate(), "scene B: a copy of A");
     stepSample(2, 1);
     setTrackMuted(4, true);
     clearTrack(5);
-    simSetTempo(125);
+    tempoByHand(125);
     sceneStateChanged();
     runBeats(3);
     TrackUnit b2 = unitOf(2);
@@ -1079,10 +1091,11 @@ int main(int argc, char **argv) {
     afterAudio = nullptr;
     auto onBar = [](const At &x, uint32_t within) { return x.beat >= 0 && x.beat % 4 == 0 && x.sib <= within; };
     char m[160];
-    snprintf(m, sizeof m, "on a bar line together: sample (beat %d +%u), tempo (%d +%u), unmute (%d +%u), empty track starts (%d +%u)",
-             sw.beat, sw.sib, tempo.beat, tempo.sib, unmute.beat, unmute.sib, start.beat, start.sib);
-    check(onBar(sw, AUDIO_BLOCK_SAMPLES) && onBar(tempo, AUDIO_BLOCK_SAMPLES) && onBar(unmute, 4 * AUDIO_BLOCK_SAMPLES) &&
-          onBar(start, AUDIO_BLOCK_SAMPLES) && sw.beat == tempo.beat && sw.beat == unmute.beat && sw.beat == start.beat, m);
+    snprintf(m, sizeof m, "on a bar line together: sample (beat %d +%u), unmute (%d +%u), empty track starts (%d +%u)",
+             sw.beat, sw.sib, unmute.beat, unmute.sib, start.beat, start.sib);
+    check(onBar(sw, AUDIO_BLOCK_SAMPLES) && onBar(unmute, 4 * AUDIO_BLOCK_SAMPLES) &&
+          onBar(start, AUDIO_BLOCK_SAMPLES) && sw.beat == unmute.beat && sw.beat == start.beat, m);
+    check(tempo.beat < 0 && transport.spb == spbB, "the tempo stays: the project's (changed in B, A has it too)");
     bool same = true;
     for (int t = 0; t < NUM_TRACKS; t++) if (unitOf(t).sample != a[t].sample) same = false;
     check(same && !sceneChangeWaiting(), "scene A's tracks, label bright again");
@@ -1421,7 +1434,7 @@ int main(int argc, char **argv) {
     runUntilIdle();
     for (int i = 0; i < 20; i++) serviceScenes();
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo, 2);
+    scenesBegin(simTempo, simSetTempo, 2, simNewTempo);
     check(projectCurrent() == 2 && sceneCount() == scenes && projectFilled(5) && projectFilled(2) && !projectFilled(1) && projectClipboardFull(),
           "after a power cycle: the slots as they were");
     {
@@ -1438,6 +1451,31 @@ int main(int argc, char **argv) {
       transportStop();
       runUntilIdle();
     }
+  }
+
+  printf("projects: one tempo each; new ones take the last one set by hand\n");
+  {
+    lastAction = "project tempo";
+    auto at = [](float b) { return fabsf(simTempo() - b) < 0.05f; };
+    check(projectLoad(2) && sceneCount() >= 2, "project 3");
+    tempoByHand(133);
+    for (int i = 0; i < 5; i++) block();
+    int pos = sceneCurrent();
+    check((sceneStep(-1) || sceneStep(1)) && sceneCurrent() != pos && at(133), "another scene: the same tempo");
+    check(sceneGoEmpty() && at(133), "the empty scene too");
+    check(projectLoad(3) && sceneCount() == 0 && at(133), "a new project (slot 4): the tempo last set by hand");
+    tempoByHand(97);
+    check(projectLoad(2) && at(133), "project 3 again: its own tempo");
+    check(projectLoad(4) && at(97), "another new project (slot 5): 97, the last set by hand (loading project 3 didn't count)");
+    check(projectLoad(2) && at(133), "and project 3");
+    for (int i = 0; i < 20; i++) serviceScenes();
+    simSetTempo(120);                              // (power off: the tempo forgotten)
+    for (int i = 0; i < 5; i++) block();
+    storageBegin([](const char *) {});
+    scenesBegin(simTempo, simSetTempo, 2, simNewTempo);
+    for (int i = 0; i < 5; i++) block();
+    check(projectCurrent() == 2 && at(133), "after a power cycle: project 3's tempo");
+    check(projectDelete(3) && projectDelete(4), "(the new ones deleted)");
   }
 
   printf("random sessions\n");

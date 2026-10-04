@@ -15,8 +15,11 @@ extern int selected;                               // row: a track, or STATUS_RO
 extern int selectedCell;                           // cell in the row (ui.h: FILTER_CELL ...)
 
 // In tenths of a BPM, limited to MIN_BPM-MAX_BPM. false (and no change)
-// while recording.
+// while recording. setTempo: by hand (the loaded project keeps it, and new
+// projects start with it); loadTempo: a project's, as it loads (neither).
 bool setTempo(float b);
+bool loadTempo(float b);
+float newProjectTempo();                 // the last tempo set by hand (saved with the session; first 120)
 // The master volume a step up (by 1) or down (-1); saved with the session.
 void stepMasterVolume(int by);
 // The session: the tempo, the master volume and the loaded project, kept in

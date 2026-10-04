@@ -1,13 +1,15 @@
 // scenes.h — scenes: snapshots of the whole looper (every track's clip and
-// settings, and the tempo), kept in a list you step through.
+// settings), kept in a list you step through. The tempo is the project's: the
+// same in all its scenes.
 //
 // Position 0 is the empty scene (0*), never stored: changing anything there
 // inserts a new scene 1 holding the change (the others move up one). Past the
 // last scene N is N+1*, a copy of N that becomes a scene once changed. On a
 // stored scene every change updates it.
 //
-// Projects: 12 slots, each a scene list with its current scene and the
-// selected row and cell (the master volume stays global). The loaded one is
+// Projects: 12 slots, each a scene list with its current scene, the selected
+// row and cell, and its tempo (the master volume stays global). A new project
+// takes the tempo last set by hand (in any project; 120 BPM before any). The loaded one is
 // saved as it changes. A slot's file holds no audio, only the scenes (which
 // name their samples): /looper/projects/1.dat ... 12.dat, made once at full
 // size: saving only overwrites 512-byte blocks.
@@ -16,11 +18,14 @@
 
 namespace looper {
 
-constexpr int MAX_SCENES = 250, PROJECTS = 12;
+constexpr int MAX_SCENES = 249, PROJECTS = 12;   // (249: the list block keeps the tempo in the 250th's place)
 
 // After storageBegin(): loads project `project` (0-11; -1: the dummy one). The tempo goes
-// through the app (rounding, limits): getTempo returns it, setTempo applies it.
-void scenesBegin(float (*getTempo)(), bool (*setTempo)(float), int project = 0);
+// through the app (rounding, limits): getTempo returns it, setTempo applies a
+// project's as it loads (not a change by hand), newTempo gives new projects'
+// (the last set by hand; none: 120 BPM).
+void scenesBegin(float (*getTempo)(), bool (*setTempo)(float), int project = 0, float (*newTempo)() = nullptr);
+void projectTempoChanged();    // the tempo was set by hand: the loaded project keeps it (all its scenes)
 void sceneStateChanged();      // something in the looper changed: the current scene follows
 void serviceScenes();          // call from loop(): saves, one write at a time, when the buffers allow
 void flushScenes();            // everything waiting saved now (power off)
@@ -33,8 +38,7 @@ bool sceneCut();               // to the scene clipboard; removed from the list,
 bool scenePaste();             // inserted after the current scene (or over N+1*), and selected
 bool sceneDuplicate();         // a copy inserted after the current scene, and selected
 bool sceneClipboardFull();
-// A resampling on track t has been saved: a new scene with the same tempo is
-// inserted after the current one, holding just it, on the same track; it
+// A resampling on track t has been saved: a new scene is inserted after the current one, holding just it, on the same track; it
 // leaves the current scene. The new scene is selected and goes on on the next beat
 // (works while another recording runs: that track is left alone). false: the
 // list is full.
@@ -58,7 +62,8 @@ bool projectFilled(int p);     // the slot holds a project (the loaded one alway
 // Loads project p: its current scene goes on the looper (playing: on a bar
 // line, as a scene change, every track starting over from 1.1.1 there and
 // the clock with them). An empty slot: a new project there, on its empty
-// scene (the tracks cleared, the tempo kept). false: recording.
+// scene (the tracks cleared, the tempo last set by hand). Loading keeps the
+// tempo for new projects as it was. false: recording.
 bool projectLoad(int p);
 // Cut and paste (projectsMayCopy(): not while recording or while another
 // copy is under way; playing, the copying goes on in the background): cut copies the
