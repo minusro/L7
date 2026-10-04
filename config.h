@@ -34,6 +34,10 @@ constexpr float MIN_BPM = 30.0f, MAX_BPM = 240.0f;
 // MIDI clock out (serial MIDI port 2 on variant B, see M8Board.h).
 constexpr bool MIDI_OUT_ENABLED = true;
 
+// After a recording ends with a clip, select the next free track (the next
+// empty one up, else the next muted one; input.cpp, followRecording()).
+constexpr bool SELECT_NEXT_AFTER_RECORDING = false;
+
 // Waveform overview per track: OVERVIEW_COLS peak values over the whole loop,
 // stored in the WAV header. Peaks are gathered per PEAK_BIN_FRAMES while recording.
 constexpr int OVERVIEW_COLS = 286;                 // one per pixel: x = 30..315

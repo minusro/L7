@@ -370,12 +370,13 @@ void pollKeys() {
 }
 
 void followRecording() {
-  // A recording that ended with a clip (not cancelled): select the next track.
+  // A recording that ended with a clip (not cancelled): select the next track
+  // (if SELECT_NEXT_AFTER_RECORDING).
   static int recTrack = -1;
   if (recording.mode != Recording::Idle) {
     recTrack = recording.track;
   } else if (recTrack >= 0) {
-    if (tracks[recTrack].state != TrackState::Empty) selectAfterRecording(recTrack);
+    if (SELECT_NEXT_AFTER_RECORDING && tracks[recTrack].state != TrackState::Empty) selectAfterRecording(recTrack);
     recTrack = -1;
   }
 }

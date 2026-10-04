@@ -120,7 +120,8 @@ A recording track's waveform cell is in the accent colour.
   square on a muted one (number grey); in a square filled with the accent
   colour on one playing (number black). The recording (or queued) track shows
   its recording icons instead (small, in the accent colour). After a recording
-  the selection moves on to the next empty track up.
+  the selection stays on the track (`SELECT_NEXT_AFTER_RECORDING` in config.h,
+  off for now, moves it on to the next empty track up).
 * Colours: all in `colors.h`.
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
