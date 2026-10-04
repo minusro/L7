@@ -226,8 +226,8 @@ void drawMenu() {
   // Unselected first: frames that touch a neighbour's space don't get wiped.
   // (Anything redrawn: the selected one again after it, its frame on top.)
   static uint16_t logo;                          // the corner logo's colour shown
-  if (all || logo != menuActionColor()) {        // the logo, bottom left: the action button's colour (not its pressed look)
-    logo = menuActionColor();
+  if (all || logo != actionRestColor()) {        // the logo, bottom left: the action button's colour (not its pressed look)
+    logo = actionRestColor();
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
   bool redrawn = false;

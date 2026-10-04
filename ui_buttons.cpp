@@ -58,8 +58,8 @@ static int actionIcon() {
   if (board.keys() & m8::BTN_OPT) {                // B: adjusting the cell (B + arrows); with SHIFT, the scene
     if (shift) return optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
     if (selected != STATUS_ROW && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
-        recordQueued() != selected && anyClipHeard())
-      return ICON_RESAMPLE;                          // an empty track: B+A resamples (something to: a clip not muted)
+        recordQueued() != selected)
+      return ICON_RESAMPLE;                          // an empty track: B+A resamples (unavailable with no clip playing unmuted)
     if (board.keys() & m8::BTN_PLAY) return ICON_NONE;
     return selected == STATUS_ROW || hasClip(selected) ? ICON_ADJUST : ICON_NONE;
   }
@@ -85,9 +85,12 @@ static int actionIcon() {
 // The command A ran, shown dimmed while A is still held (-1: none).
 static int heldAction = -1;
 
+static bool unavailable(int i, int icon);
+
 void noteActionPress() {
   heldAction = actionIcon();
   if (heldAction == ICON_ADJUST) heldAction = -1;  // (B held on a cell: A does nothing, the button stays)
+  if (heldAction >= 0 && unavailable(STATUS_ROW, heldAction)) heldAction = -1;   // (nothing happens: no pressed look)
 }
 
 // B + arrows adjusting a cell: the button looks pressed while an arrow is down.
@@ -142,7 +145,8 @@ static int buttonIcon(int i) {
 // recording, white for a track playing, grey otherwise. Track rows' are
 // smaller, left of centre (on the selected track's panel, its left
 // corners cut). An action with nothing to act
-// on (paste, clipboard empty) is dark grey.
+// on (paste, clipboard empty; resample, no clip playing unmuted; export,
+// no clips) greys the action button, its icon black, pressed or not.
 struct Icon { int w, h; const char *rows[11]; };
 PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // ICON_NONE
@@ -187,7 +191,8 @@ static bool unavailable(int i, int icon) {
       return (recording.mode != Recording::Idle && menuSlot() != projectCurrent()) || projectCopying(menuSlot());
     return false;
   }
-  return (icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull());
+  return (icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()) ||
+         (icon == ICON_RESAMPLE && !anyClipHeard());
 }
 
 // The action button (the status row's): the accent colour with black icons; dark grey
@@ -196,18 +201,29 @@ static bool unavailable(int i, int icon) {
 // system-level ones (USB data mode). The tracks' buttons: black.
 // The action's colour: the menu item's, or the accent (going to the menu too).
 static uint16_t actionColor(int icon) { return icon == ICON_MENU ? ACCENT : menuActionColor(); }
+// An action that can't act now: grey (a menu item's own grey too: export with nothing to export).
+static bool cannotAct(int icon) { return unavailable(STATUS_ROW, icon) || actionColor(icon) == DIM; }
 
 static uint16_t buttonBackground(int i, int icon) {
-  if (i == STATUS_ROW) return heldAction >= 0 || (icon == ICON_ADJUST && adjusting()) ? DARK : actionColor(icon);
+  if (i == STATUS_ROW) {
+    if (cannotAct(icon)) return DIM;               // (no pressed look either)
+    return heldAction >= 0 || (icon == ICON_ADJUST && adjusting()) ? DARK : actionColor(icon);
+  }
   return cellBackground(i, -1);
+}
+
+// The action button's colour when not pressed (the menu's logo follows it).
+uint16_t actionRestColor() {
+  int icon = buttonIcon(STATUS_ROW);
+  return cannotAct(icon) ? DIM : actionColor(icon);
 }
 
 static uint16_t iconColor(int i, int icon) {
   uint16_t bg = buttonBackground(i, icon);
   if (i == STATUS_ROW) {
     if (icon == ICON_ADJUST) return adjusting() ? ACCENT : BG;
-    uint16_t c = actionColor(icon);                  // (grey: an item that can't act; its icon black, held too)
-    return heldAction >= 0 ? (unavailable(i, icon) || c == DIM ? BG : c) : unavailable(i, icon) ? DARK : BG;
+    if (cannotAct(icon)) return BG;                // (grey, its icon black, held too)
+    return heldAction >= 0 ? actionColor(icon) : BG;
   }
   if (unavailable(i, icon)) return DARK;
   if (bg != BG) return BG;

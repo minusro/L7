@@ -13,7 +13,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (on release; the clock stops) on the scene cell, start from 1.1.1 on the clock cell (as SHIFT+START; icon |>), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
-| B (held) | On a cell it adjusts (B + arrows): the action button shows four small arrows round a small +, black on the accent colour; while an arrow is down (adjusting) the pressed look, dark grey with the icon in the accent colour. A does nothing then. On an empty track (any cell), when some track's clip is playing unmuted (something to resample), the button shows resample (the record dot with a plus) and B + A **resamples**: records the app's output (everything heard) from the next bar line, queued like a recording; when it's saved it moves to a new scene, on the same track (scenes.md). Otherwise B + A does nothing (SHIFT+B+A: the scene clipboard, below) |
+| B (held) | On a cell it adjusts (B + arrows): the action button shows four small arrows round a small +, black on the accent colour; while an arrow is down (adjusting) the pressed look, dark grey with the icon in the accent colour. A does nothing then. On an empty track (any cell) the button shows resample (the record dot with a plus) and B + A **resamples** (unavailable, the button grey, while no clip plays unmuted: nothing to resample): records the app's output (everything heard) from the next bar line, queued like a recording; when it's saved it moves to a new scene, on the same track (scenes.md). Otherwise B + A does nothing (SHIFT+B+A: the scene clipboard, below) |
 | A, B or START (menu, on a project slot) | Once let go: load its project and start the clock, from 1.1.1 (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
 | SHIFT + A or B (menu, on a slot) | On a project: the first A only asks (the icon turns into a question mark); a second A, SHIFT still held, cuts it once let go (letting go of SHIFT or moving cancels). Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Not while recording |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
@@ -78,7 +78,7 @@ the button's height: two blocks of border above, left and below the 7×9
 badge; the accent colour while A is held, with the
 action button, showing just the number then, in black).
 None while the status row is selected. The status
-button (the action button) is the accent colour with black icons (dark grey with icons in the accent colour while A is held), as tall as the status cells, a block in from the left like the track panels, its top left corner cut. On a track with a clip its icon is a speaker: crossed out while the track plays (A mutes it; a block right of the other), with sound waves while it's muted (A unmutes it).
+button (the action button) is the accent colour with black icons (dark grey with icons in the accent colour while A is held; grey with a black icon, held or not, when its action can't act now: paste with the clipboard empty, resample with nothing playing, ...), as tall as the status cells, a block in from the left like the track panels, its top left corner cut. On a track with a clip its icon is a speaker: crossed out while the track plays (A mutes it; a block right of the other), with sound waves while it's muted (A unmutes it).
 A recording track's waveform area is in the accent colour (a block of black between it and the cell's border), the waveform growing on it in white, its bar lines in the dark accent.
 
 * Waveform (`ui_wave.cpp`): 90 columns, inside a block of space within
@@ -185,8 +185,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   is held (not B), corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
   action button shows load (a small play) or, empty, new (a small asterisk); with SHIFT,
-  cut or paste (dark grey when it can't act: recording, another copy under
-  way, clipboard empty); on the list, an arrow down into a tray (export) and the USB trident (data mode),
+  cut or paste (the button grey when it can't act: recording, another copy
+  under way, clipboard empty); on the list, an arrow down into a tray (export) and the USB trident (data mode),
   doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the
   list; UP/DOWN go card row to card row and on into the list (back up: to
   the column it came from). The looper's own selection is kept
