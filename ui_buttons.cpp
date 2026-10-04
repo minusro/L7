@@ -21,7 +21,7 @@
 // both held together: the looper's rows, closing the menu): on its
 // list's items, export to ALS (a diskette) and USB data mode (the USB
 // trident), nothing yet; on a project slot, load (a folder; the loaded one too: back to it) or, on an
-// empty slot, new (a plus), closing the menu; with SHIFT, cut the project or
+// empty slot, new (a new file), closing the menu; with SHIFT, cut the project or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
 // the menu (as B+A) on the scene cell, start / stop (play / stop, as
@@ -153,7 +153,7 @@ PROGMEM static const Icon ICONS[] = {
   {10, 7, {".########.", "#........#", "#.##..##.#", "#.##..##.#", "#........#", "#.######.#", ".########."}},   // RESAMPLE (a cassette)
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // OVERDUB (record +)
   {9, 7, {".###.....", "#...####.", "#.......#", "#.......#", "#.......#", "#.......#", "#########"}},   // LOAD (a folder)
-  {7, 7, {"...#...", "...#...", "...#...", "#######", "...#...", "...#...", "...#..."}},   // NEW (a plus)
+  {7, 9, {"####...", "#..##..", "#..#.#.", "#..####", "#.....#", "#.....#", "#.....#", "#.....#", "#######"}},   // NEW (a new file: a page, its corner turned)
   {9, 9, {"#######..", "##.....#.", "##..##.##", "##.....##", "#########", "#.......#", "#.......#", "#.......#", "#########"}},   // SAVE (a diskette)
   {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
 };

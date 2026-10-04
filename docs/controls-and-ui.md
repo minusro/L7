@@ -164,7 +164,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   looper's cells': light grey, white while the arrows move it, grey while A
   or B is held, corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
-  action button shows load (a folder) or, empty, new (a plus); with SHIFT,
+  action button shows load (a folder) or, empty, new (a new file: a page, its corner turned); with SHIFT,
   cut or paste (dark grey when it can't act: playing, recording, clipboard
   empty); on the list, a diskette (export) and the USB trident (data mode),
   doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the
