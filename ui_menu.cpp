@@ -2,13 +2,15 @@
 // status row's cells (only the action button shows), the screen's whole
 // width. Opened with B+A (or A on the scene cell); left by loading a project
 // (A on the loaded one: just back). Twelve cards (three rows of
-// four), the project slots, and under them a list, "EXPORT ABLETON PROJECT"
-// and "ENTER USB DATA MODE" (nothing yet). A runs the action button's action when let go. On a slot, A loads its project (an empty one: a new project there) and closes
+// four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
+// "ENTER USB DATA MODE" and two placeholders (none do anything yet). A runs
+// the action button's action when let go. On a slot, A loads its project (an
+// empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project (a second A confirms), or pastes
 // one into an empty slot. START works here too.
 //
 // Items, in selection order: the cards 0-11 (rows of four, top first), then
-// the list's 12 and 13 (the looper's own selection is kept meanwhile and
+// the list's 12-15 (the looper's own selection is kept meanwhile and
 // comes back when the menu closes). UP/DOWN go card row to card row and on
 // into the list (back up: to the column it came from); LEFT/RIGHT through
 // everything in order. It opens on the loaded project's card (the dummy
@@ -27,8 +29,8 @@
 
 uint32_t uiGeneration = 1;
 
-static constexpr int CARDS = PROJECTS, LIST = 2, ITEMS = CARDS + LIST, COLS = 4;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER USB DATA MODE"};
+static constexpr int CARDS = PROJECTS, LIST = 4, ITEMS = CARDS + LIST, COLS = 4;
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER USB DATA MODE", "MENU ITEM 3", "MENU ITEM 4"};   // (3, 4: placeholders)
 
 static bool shown = false;
 static int menuSel = 0;                          // the selected item
@@ -99,12 +101,12 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 }
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
-// Cards: 26 x 14, the cut 3 (about a fifth), 6 apart, centred (18 from the top: a card's height lower than at first).
-// The list: centred under them, an item every 12 rows from row 81, its frame
+// Cards: 26 x 14, the cut 3 (about a fifth), 6 apart, centred (4 from the top).
+// The list: centred under them, an item every 10 rows from row 65, its frame
 // round its label with 3 blocks of space.
 static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6;
-static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 4 + CARD_H;
-static constexpr int LIST_Y = 67 + CARD_H, LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
+static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 4;
+static constexpr int LIST_Y = 65, LIST_PITCH = 10, LIST_SPACE = 3;   // (neighbouring frames overlap: only one shows)
 
 static Shape itemShape(int k) {
   if (k < CARDS)
@@ -166,7 +168,7 @@ static void drawItem(int k) {
 uint16_t menuActionColor() {
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
-  if (menuSel - CARDS == 1) return LIGHT;
+  if (menuSel - CARDS >= 1) return LIGHT;          // (USB data mode, and the placeholders: system-level)
   return projectHasClips() ? ACCENT : DIM;         // export: grey with nothing to export
 }
 

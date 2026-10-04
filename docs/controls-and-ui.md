@@ -157,12 +157,14 @@ A recording track's waveform area is in the accent colour (a block of black betw
   loaded, the splash's turquoise). A slot holding a project is filled with
   it, its letter (the project's name) black; the loaded one outlined white.
   An empty slot is a grey outline, its letter in the slot's colour. Under them
-  a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet): a box as wide as
+  a list, "EXPORT ABLETON PROJECT", "ENTER USB DATA MODE" and two placeholders,
+  "MENU ITEM 3" and "4" (nothing yet; an item every 10 rows, their frames
+  overlapping: only the selected one's shows): a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
   selected). The action button takes the item's colour: on a card, its
   slot's; on project-level items (export) the accent (grey, the label too, with
   nothing to export: no clips in the project's tracks or scenes, or the dummy
-  project); on system-level ones (USB data mode) light grey (its icon light
+  project); on system-level ones (USB data mode, the placeholders: no icon) light grey (its icon light
   grey while pressed too). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
   is held (not B), corners cut; round a card one block out (following its
