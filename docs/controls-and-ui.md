@@ -145,18 +145,17 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the track rows' place across the whole width (the status row stays, its
   frames hidden; B+A or A on the scene cell closes it, and so does loading a
   project). On the menu's items A and B both run the action button's action.
-  Twelve project cards (three rows of four, 26×14 blocks, 6 apart across and
-  8 down, centred, just above the status row):
+  Twelve project cards (three rows of four, 26×14 blocks, 6 apart, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
   pastels, rose to blush, picked by the author; the loaded project's is the
   app's accent colour, `ACCENT_DARK` at half its brightness; before one is
   loaded, the splash's turquoise). A slot holding a project is filled with
   it, its letter (the project's name) black; the loaded one outlined white.
-  An empty slot is a grey outline, its letter in the slot's colour. Above them a
-  list, filled from the bottom up ("EXPORT TO ALS", then "USB DATA MODE" above
-  it; nothing yet): a box the size of its longest label, centred, labels
-  left-aligned, light grey (white when selected). The action button takes the item's colour: on a card, its
+  An empty slot is a grey outline, its letter in the slot's colour. Under them
+  a list, "EXPORT TO ALS" and "USB DATA MODE" (nothing yet): a box as wide as
+  the longest label, centred, labels left-aligned, light grey (white when
+  selected). The action button takes the item's colour: on a card, its
   slot's; on project-level items (export, the status row's cells) the
   accent; on system-level ones (USB data mode) light grey (its icon light
   grey while pressed too). The selected item's frame looks and behaves as the
@@ -166,14 +165,13 @@ A recording track's waveform area is in the accent colour (a block of black betw
   action button shows load (a folder) or, empty, new (a plus); with SHIFT,
   cut or paste (dark grey when it can't act: playing, recording, clipboard
   empty); on the list, a diskette (export) and the USB trident (data mode),
-  doing nothing yet. LEFT/RIGHT go through everything top to bottom: the list, the cards row
-  by row, then the status row's cells (and back: LEFT from the scene cell to
-  the last card). UP/DOWN go between the list's items, the card rows (from
-  the list down to the column last used; from the top row up to the list's
-  bottom item) and the status row (from the last card row, the cell last
-  used there; back up, the column last used). The looper's own selection is kept
+  doing nothing yet. LEFT/RIGHT go through everything in order: the cards
+  row by row, the list, then the status row's cells (and back); UP/DOWN go card row to card row, from the last row into the list
+  (back up: to the column it came from), from the list's end onto the status
+  row (the cell last used there), whose cells then work as in the looper's
+  view, and back up to the list. The looper's own selection is kept
   meanwhile and comes back when the menu closes; the menu remembers where its
-  selection was for the next time. If it was open at power off it opens again at
+  selection was for the next time If it was open at power off it opens again at
   boot (session.txt).
 * Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
   into 43×26 blocks of 2×2 px (two tracks tall), in the accent colour, with

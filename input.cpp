@@ -122,7 +122,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // (or LEFT from the scene cell) goes back to the menu's items.
   if (menuOpen() && !shift && !opt &&
       ((pressed & m8::BTN_UP) || ((pressed & m8::BTN_LEFT) && selectedCellIn(STATUS_ROW) == SCENE_CELL))) {
-    menuLeaveStatus(!(pressed & m8::BTN_UP));        // (LEFT from its first cell: the last card)
+    menuLeaveStatus();                               // (LEFT from its first cell too: the list's last item)
     moved = true;
     return;
   }

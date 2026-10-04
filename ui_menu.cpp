@@ -7,15 +7,15 @@
 // closes the menu; with SHIFT, cuts the project, or pastes one into an empty
 // slot (only while stopped).
 //
-// Items: the cards 0-11 (rows of four, top first) and the list's 12 and 13
-// (export, USB data mode), the list above the cards (filled from the bottom
-// up), the cards just above the status row, which the
-// menu's selection reaches too (its cells then work as in the looper's view;
-// the looper's own selection is kept meanwhile and comes back when the menu
-// closes). UP/DOWN go between the list's rows, the card rows and the status
-// row; LEFT/RIGHT through everything in order: the list, the cards row by
-// row, the status row's cells (and back). The menu remembers where its
-// selection was for the next time it opens.
+// Items, in selection order: the cards 0-11 (rows of four, top first), then
+// the list's 12 and 13; below them the status row, which the menu's
+// selection reaches too (its cells then work as in the looper's view; the
+// looper's own selection is kept meanwhile and comes back when the menu
+// closes). UP/DOWN go card row to card row, from the last row into the list
+// (back up: to the column it came from), from the list's end onto the status
+// row (the cell last there) and back. LEFT/RIGHT go through everything in
+// order: the cards row by row, the list, the status row's cells (and back). The menu remembers where its selection
+// was for the next time it opens.
 //
 // A card: a block shape, its bottom right corner cut diagonally (about a
 // fifth of its height), in its slot's colour (colors.h): filled when it
@@ -97,27 +97,21 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 }
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
-// The cards at the bottom, just above the status row: 26 x 14, the cut 3,
-// 6 apart across, 8 down, centred. Above them, 8 rows clear of their frames,
-// the list: a box the size of its longest label, centred (labels
-// left-aligned), an item every 16 rows filled from the bottom up (export,
-// then USB data mode above it), its frame 3 blocks out.
-static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6, CARD_VGAP = 8, CARD_ROWS = CARDS / COLS;
-static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2;
-static constexpr int CARDS_Y = 102 - (CARD_ROWS * CARD_H + (CARD_ROWS - 1) * CARD_VGAP) + 1;   // (the last row ends at row 102)
-static constexpr int LIST_SPACE = 3, LIST_PITCH = 16, LIST_COLS = 1, LIST_GAP = 8;
-static constexpr int LIST_Y = CARDS_Y - 2 - LIST_GAP - LIST_SPACE - 1 - FONT_H / PX;   // the bottom row's text (its frame LIST_GAP above the cards')
-
-static int listRow(int item) { return item / LIST_COLS; }   // 0: the bottom row (filled first)
-static int listCol(int item) { return item % LIST_COLS; }
+// Cards: 26 x 14, the cut 3 (about a fifth), 6 apart, centred (4 from the top).
+// The list: centred under them, an item every 13 rows from row 66, its frame
+// round its label with 3 blocks of space.
+static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6;
+static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 4;
+static constexpr int LIST_Y = 66, LIST_PITCH = 13, LIST_SPACE = 3;
 
 static Shape itemShape(int k) {
   if (k < CARDS)
-    return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (k / COLS) * (CARD_H + CARD_VGAP), CARD_W, CARD_H, CARD_CUT};
-  // A list item: its column's box (the longest label in it).
-  int item = k - CARDS, col = listCol(item), w = 0;
-  for (int i = col; i < LIST; i += LIST_COLS) w = max(w, textWidth(LABELS[i]) / PX);
-  return {(320 / PX - w) / 2, LIST_Y - listRow(item) * LIST_PITCH, w, FONT_H / PX, 0};   // (one column, centred)
+    return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (k / COLS) * (CARD_H + CARD_GAP), CARD_W, CARD_H, CARD_CUT};
+  // A list item: the box fitting the longest label, centred (its label
+  // left-aligned in it).
+  int w = 0;
+  for (const char *label : LABELS) w = max(w, textWidth(label) / PX);
+  return {(320 / PX - w) / 2, LIST_Y + (k - CARDS) * LIST_PITCH, w, FONT_H / PX, 0};
 }
 
 // The selected item's frame, as the looper's cells': light grey; white while
@@ -205,16 +199,11 @@ static void toStatus() {
   drawMenu();
   drawTrack(STATUS_ROW);
 }
-// The order LEFT/RIGHT go through, top to bottom: the list (its top item
-// first), the cards row by row; then the status row.
-static int orderOf(int k) { return k >= CARDS ? LIST - 1 - (k - CARDS) : LIST + k; }
-static int itemAt(int pos) { return pos < LIST ? CARDS + LIST - 1 - pos : pos - LIST; }
-
-void menuLeaveStatus(bool left) {
+void menuLeaveStatus() {
   if (!onStatus) return;
   onStatus = false;
   statusCell = selectedCellIn(STATUS_ROW);
-  menuSel = left ? CARDS - 1 : CARDS - COLS + cardCol;   // LEFT: the last card; UP: the cards' last row
+  menuSel = ITEMS - 1;                           // the list's last item
   movedHere = true;
   selected = mainRow;
   selectedCell = mainCell;
@@ -222,46 +211,39 @@ void menuLeaveStatus(bool left) {
   drawTrack(STATUS_ROW);
 }
 
-// The arrows: LEFT/RIGHT through everything in order (orderOf()), on past
-// the last card onto the status row's first cell; UP/DOWN between the list's
-// rows, the card rows (a list column over each half of them: back down to
-// the column last used there) and the status row.
+// The arrows: LEFT/RIGHT along a card row (no wrapping); UP/DOWN between the
+// card rows, the list's items and the status row.
 bool menuKeys(uint8_t pressed) {
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   int k = menuSel;
-  if (pressed & m8::BTN_LEFT && orderOf(k) > 0) k = itemAt(orderOf(k) - 1);
+  // LEFT/RIGHT: through every item in order (the cards row by row, the list),
+  // on past the list's end onto the status row's first cell.
+  if (pressed & m8::BTN_LEFT && k > 0) k--;
   if (pressed & m8::BTN_RIGHT) {
-    if (orderOf(k) == ITEMS - 1) {
+    if (k == ITEMS - 1) {
       movedHere = true;
       statusCell = SCENE_CELL;
       toStatus();
       return true;
     }
-    k = itemAt(orderOf(k) + 1);
+    k++;
   }
-  if (!(pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
-    if (k < CARDS) {
-      int row = k / COLS, col = k % COLS;
-      if (pressed & m8::BTN_UP)                      // the top row: up to the list column over it
-        k = row > 0 ? k - COLS : CARDS + min(col / (COLS / LIST_COLS), LIST - 1);
-      if (pressed & m8::BTN_DOWN) {
-        if (row == CARD_ROWS - 1) {                  // the last row: the status row
-          movedHere = true;
-          toStatus();
-          return true;
-        }
-        k += COLS;
+  if (k < CARDS) {
+    int row = k / COLS;
+    if (pressed & m8::BTN_UP && row > 0) k -= COLS;
+    if (pressed & m8::BTN_DOWN) k = row < CARDS / COLS - 1 ? k + COLS : CARDS;
+    if (k < CARDS) cardCol = k % COLS;
+  } else if (!(pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
+    if (pressed & m8::BTN_UP) k = k > CARDS ? k - 1 : CARDS - COLS + cardCol;
+    if (pressed & m8::BTN_DOWN) {
+      if (k == ITEMS - 1) {                        // below the list: the status row
+        movedHere = true;
+        toStatus();
+        return true;
       }
-    } else {
-      int item = k - CARDS, col = listCol(item), half = COLS / LIST_COLS;
-      if (pressed & m8::BTN_UP && item + LIST_COLS < LIST) k += LIST_COLS;   // a row up
-      if (pressed & m8::BTN_DOWN) {
-        if (listRow(item) > 0) k -= LIST_COLS;
-        else k = cardCol / half == col ? cardCol : col * half;   // onto the cards' top row, under it
-      }
+      k++;
     }
   }
-  if (k < CARDS) cardCol = k % COLS;
   if (pressed & arrows) movedHere = k != menuSel;
   menuSel = k;
   drawMenu();
