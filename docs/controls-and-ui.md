@@ -14,8 +14,8 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
 | B + A | Open the menu, once A is let go (arrows move its selection: cards, list; loading a project leaves it) |
-| A (menu, on a project slot) | Once let go: load its project, from 1.1.1 (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
-| SHIFT + A (menu, on a slot) | On a project: the first A only asks (the icon turns into a question mark); a second A, SHIFT still held, cuts it once let go (letting go of SHIFT or moving cancels). Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Not while recording |
+| A, B or START (menu, on a project slot) | Once let go: load its project, from 1.1.1 (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
+| SHIFT + A or B (menu, on a slot) | On a project: the first A only asks (the icon turns into a question mark); a second A, SHIFT still held, cuts it once let go (letting go of SHIFT or moving cancels). Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Not while recording |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT twice (second tap held) + A | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
@@ -144,7 +144,11 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Menu (`ui_menu.cpp`): opened with B+A (or A on the scene cell), it takes
   the place of the track rows and the status row's cells, across the whole
   width; of the status row only the action button shows. Opening it stops the
-  clock; in it START and B do nothing (SHIFT only for cut and paste). On its items A
+  clock. On its items A and B both act (SHIFT with them: cut and paste); on
+  a project card START does too (load / new). Loading an existing project
+  starts the clock (from 1.1.1); a new one doesn't. In the looper's view,
+  stopping the clock (START, or A on the clock cell) goes back to the menu
+  once that key is let go; SHIFT+START only restarts from 1.1.1. On its items A
   runs the action button's action when let go; B does nothing. The way out
   is loading a project (A on the loaded one: just back); with the dummy
   project loaded, one has to be loaded or made first. Opening the menu
@@ -174,7 +178,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   looper's cells': light grey, white while the arrows move it, grey while A
   is held (not B), corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
-  action button shows load (a small arrow right) or, empty, new (a small asterisk); with SHIFT,
+  action button shows load (a small play) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (dark grey when it can't act: recording, another copy under
   way, clipboard empty); on the list, a diskette (export) and the USB trident (data mode),
   doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the

@@ -20,7 +20,7 @@
 // While the menu is open (on its items A runs the action when let go; B does
 // nothing): on its
 // list's items, export Ableton project (a diskette) and enter USB data mode (the USB
-// trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
+// trident), nothing yet; on a project slot, load (a small play; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
 // (a question mark after the first A: a second A confirms) or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
@@ -119,7 +119,8 @@ static int buttonIcon(int i) {
     wasOpen = menuOpen();
     heldAction = -1;
   }
-  if (heldAction >= 0 && !(board.keys() & m8::BTN_EDIT)) heldAction = -1;   // A released
+  uint8_t act = menuOpen() ? m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY : m8::BTN_EDIT;   // (the menu: B and START act too)
+  if (heldAction >= 0 && !(board.keys() & act)) heldAction = -1;   // released
   return heldAction >= 0 ? heldAction : actionIcon();
 }
 
@@ -151,7 +152,7 @@ PROGMEM static const Icon ICONS[] = {
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
   {10, 7, {".########.", "#........#", "#.##..##.#", "#.##..##.#", "#........#", "#.######.#", ".########."}},   // RESAMPLE (a cassette)
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // OVERDUB (record +)
-  {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // LOAD (back to the looper with it: a small arrow right)
+  {4, 7, {"#...", "##..", "###.", "####", "###.", "##..", "#..."}},   // LOAD (a small play: back to the looper, playing it)
   {5, 5, {"..#..", "#.#.#", ".###.", "#.#.#", "..#.."}},   // NEW (a small asterisk)
   {9, 9, {"#######..", "##.....#.", "##..##.##", "##.....##", "#########", "#.......#", "#.......#", "#.......#", "#########"}},   // SAVE (a diskette)
   {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)

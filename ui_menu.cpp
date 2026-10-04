@@ -7,8 +7,8 @@
 // the action button's action when let go. On a slot, A loads its project (an
 // empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project (a second A confirms), or pastes
-// one into an empty slot. Opening it stops the clock; START and B do nothing
-// in it (SHIFT only for cut and paste).
+// one into an empty slot. B acts as A; START too on a card. Opening it stops
+// the clock; loading an existing project starts it, a new one doesn't.
 //
 // Items, in selection order: the cards 0-11 (rows of four, top first), then
 // the list's 12 and 13 (the looper's own selection is kept meanwhile and

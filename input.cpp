@@ -81,32 +81,32 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
   }
   // B+A (or A on the scene cell) in the looper's view: the menu opens once A
-  // is let go.
-  static bool menuOnRelease = false;
-  if (menuOnRelease && !(keys & m8::BTN_EDIT)) {
-    menuOnRelease = false;
+  // is let go; stopping the clock (START, A on the clock cell): once that key is.
+  static uint8_t menuOnRelease = 0;                  // the key to wait for
+  if (menuOnRelease && !(keys & menuOnRelease)) {
+    menuOnRelease = 0;
     openMenu();
     return;
   }
-  // The menu's items: the arrows move its selection; A runs the action
-  // button's action once let go (on the item it was pressed on). B does
-  // nothing there, nor START (the clock stops as the menu opens); the way
-  // out is loading a project.
-  static bool armed = false, shifted = false;        // A down: its action waits; SHIFT with it
+  // The menu's items: the arrows move its selection; A or B runs the action
+  // button's action once let go (on the item it was pressed on), and so does
+  // START on a project card (loading, or making a new one). The clock stops as
+  // the menu opens; loading an existing project starts it, a new one doesn't.
+  static bool armed = false, shifted = false;        // A/B (START) down: its action waits; SHIFT with it
   // SHIFT+A on a project: the first tap only asks (a question mark); a second A,
   // SHIFT still held and the selection still there, cuts it when let go.
   if (cutConfirm >= 0 && (!menuOpen() || !shift || menuSlot() != cutConfirm)) cutConfirm = -1;
   static int armedSlot = -1;                         // the slot it was pressed on (-1: a list item)
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
-    const uint8_t act = m8::BTN_EDIT;
-    if (pressed & act) {
+    const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT | (menuSlot() >= 0 && !shift ? m8::BTN_PLAY : 0);
+    if (pressed & act) noteActionPress();            // (the icon: what letting go will do)
+    if ((pressed & act) && !armed) {
       armed = true;
       armedSlot = menuSlot();
       shifted = shift;
-      noteActionPress();                             // (the icon: what letting go will do)
     }
-    if (armed && !(keys & act)) {                    // let go: act
+    if (armed && !(keys & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY))) {   // all let go: act
       armed = false;
       int slot = armedSlot;
       if (slot < 0) {                                // the list's items: nothing yet
@@ -125,9 +125,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         int row, cell;
         mainSelection(row, cell);
         projectSetSelection(row, cell);              // (the project left keeps its selection)
-        if (projectLoad(slot)) {                     // (playing: from 1.1.1 at the next bar line)
+        bool existing = projectFilled(slot);
+        if (projectLoad(slot)) {
           closeMenu();
           takeProjectSelection();
+          if (existing && !transport.running) transportStart();   // an existing project plays (from 1.1.1); a new one waits
           for (int i = 0; i < ROWS; i++) drawTrack(i);
         }
       }
@@ -378,14 +380,14 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
   bool edit = (pressed & m8::BTN_EDIT) && !opt;
   if ((pressed & m8::BTN_EDIT) && opt) {
-    if (!shift) menuOnRelease = true;                // (the menu opens once A is let go)
+    if (!shift) menuOnRelease = m8::BTN_EDIT;        // (the menu opens once A is let go)
     else sceneChanged = optFirst ? scenePaste() : sceneCut();
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = (transportKey || (edit && onClock)) && !shift;
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onScene) menuOnRelease = true;              // as B+A
+    if (onScene) menuOnRelease = m8::BTN_EDIT;      // as B+A
     else if (onTempo) tapTempo();                  // (the clock cell: as START, below)
   }
   if (edit && !onStatus) {
@@ -407,8 +409,12 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
   }
   if (toggleTransport) {
-    if (transport.running) transportStop();
-    else transportStart();
+    if (transport.running) {                         // stopped: back to the menu once that key is let go
+      transportStop();
+      menuOnRelease = transportKey ? m8::BTN_PLAY : m8::BTN_EDIT;
+    } else {
+      transportStart();
+    }
   }
   if (!sceneMod) sceneChanged |= sceneHold(false);  // SHIFT (or B) let go: to the scene stepped to
   // Show the result right away rather than on the rows' next redraw: the new

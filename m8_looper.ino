@@ -54,11 +54,11 @@
 //   OPT, SHIFT, EDIT paste the scene clipboard after the current scene (OPT pressed first)
 //   SHIFT, OPT, EDIT cut the scene (to the scene clipboard), go to the one before (SHIFT first)
 //   OPT+EDIT         open the menu (on A's release)
-//   EDIT (menu, project slot)        on release: load its project (empty slot: a new one), back to the looper
-//   SHIFT+EDIT (menu, slot)          cut its project (EDIT twice, SHIFT held: confirmed) / paste one into an empty slot (on release; playing: copied in the background)
-//   EDIT (menu list)                 export Ableton project / enter USB data mode (nothing yet)
+//   EDIT/OPT/START (menu, project)   on release: load its project (empty slot: a new one), back to the looper
+//   SHIFT+EDIT/OPT (menu, slot)      cut its project (EDIT twice, SHIFT held: confirmed) / paste one into an empty slot (on release; playing: copied in the background)
+//   EDIT/OPT (menu list)             export Ableton project / enter USB data mode (nothing yet)
 //   SHIFT+OPT twice  insert a copy of the current scene after it
-//   PLAY             start from 1.1.1 / stop
+//   PLAY             start from 1.1.1 / stop (then the menu, once PLAY is let go)
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
 //   EDIT (scene cell) open the menu (as OPT+EDIT)
 //   EDIT (tempo cell) tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
