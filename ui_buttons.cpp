@@ -15,12 +15,12 @@
 // (an arrow up from a line), cancel a recording (X: thrown away at once) or,
 // on an empty track, paste (an arrow down to a line; dark grey while the
 // clipboard is empty). With B
-// held: open the menu (a small arrow right); with SHIFT too, paste a scene (B pressed
+// held: open the menu (a small arrow left); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A or B runs the action when let go;
 // both held together: the looper's rows, closing the menu): on its
 // list's items, export to ALS (a diskette) and USB data mode (the USB
-// trident), nothing yet; on a project slot, load (a small arrow left; the loaded one too: back to it) or, on an
+// trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
@@ -142,7 +142,7 @@ PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // TAP (text)
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
-  {7, 5, {"....#..", "....##.", "#######", "....##.", "....#.."}},   // MENU (into the menu: a small arrow right)
+  {5, 5, {"..#..", ".##..", "#####", ".##..", "..#.."}},   // MENU (into the menu: a small arrow left)
   {7, 7, {".......", "###.#.#", ".......", "###.#.#", ".......", "###.#.#", "......."}},   // HOME (the looper's rows: waveform, filter, volume)
   {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
           "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
@@ -152,7 +152,7 @@ PROGMEM static const Icon ICONS[] = {
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
   {10, 7, {".########.", "#........#", "#.##..##.#", "#.##..##.#", "#........#", "#.######.#", ".########."}},   // RESAMPLE (a cassette)
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // OVERDUB (record +)
-  {7, 5, {"..#....", ".##....", "#######", ".##....", "..#...."}},   // LOAD (back to the looper with it: a small arrow left)
+  {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // LOAD (back to the looper with it: a small arrow right)
   {5, 5, {"..#..", "#.#.#", ".###.", "#.#.#", "..#.."}},   // NEW (a small asterisk)
   {9, 9, {"#######..", "##.....#.", "##..##.##", "##.....##", "#########", "#.......#", "#.......#", "#.......#", "#########"}},   // SAVE (a diskette)
   {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
