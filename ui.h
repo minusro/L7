@@ -131,9 +131,7 @@ void menuLeaveStatus();                  // from the status row back up to the m
 int menuSlot();                          // the project slot selected in the menu (0-11), or -1
 bool menuOnList();                       // the selection on the menu's list (EXPORT ABLETON PROJECT ...)
 uint16_t menuActionColor();              // the action button's colour (the accent, a card's, light grey)
-int menuListItem();
-bool menuOnVolume();                     // the selection on the menu's master volume (B + arrows change it)
-void drawMenuVolume(bool full, uint16_t frame);   // ui_status.cpp: that control, in the clock cell's place                      // which of its items (0: export, 1: USB data mode), or -1
+int menuListItem();                      // which of its items (0: export, 1: USB data mode), or -1
 // The menu's state for the session: its selection (an item, or 100 + the
 // status row's cell), + 1000 while it's open. restoreMenu() puts it back
 // (opening it if it was open; at boot).

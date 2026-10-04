@@ -3,16 +3,15 @@
 // width. Opened with B+A (or A on the scene cell); left by loading a project
 // (A on the loaded one: just back). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
-// "ENTER USB DATA MODE" (nothing yet); it scrolls once it has more than
-// three. Under it, in the clock cell's place, the master volume (as on the
-// clock cell with B held, always showing; B + arrows change it). A runs
+// "ENTER USB DATA MODE" (nothing yet); it scrolls once it has more than four. A runs
 // the action button's action when let go. On a slot, A loads its project (an
 // empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project (a second A confirms), or pastes
-// one into an empty slot. START works here too.
+// one into an empty slot. Opening it stops the clock; START and B do nothing
+// in it (SHIFT only for cut and paste).
 //
 // Items, in selection order: the cards 0-11 (rows of four, top first), then
-// the list's 12 and 13, the master volume 14 (the looper's own selection is kept meanwhile and
+// the list's 12 and 13 (the looper's own selection is kept meanwhile and
 // comes back when the menu closes). UP/DOWN go card row to card row and on
 // into the list (back up: to the column it came from); LEFT/RIGHT through
 // everything in order. It opens on the loaded project's card (the dummy
@@ -32,9 +31,8 @@
 uint32_t uiGeneration = 1;
 
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
-// no more than that, from the top of its room). Under it, in the status row's
-// place, the master volume (item VOLUME).
-static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 3, VOLUME = CARDS + LIST, ITEMS = VOLUME + 1, COLS = 4;
+// no more than that, from the top of its room).
+static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
 static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER USB DATA MODE"};
 static int listTop = 0;                          // the list's first item in view
 
@@ -48,8 +46,7 @@ static int mainRow = 0, mainCell = 0;            // the looper's selection, back
 bool menuOpen() { return shown; }
 bool menuOnStatus() { return shown && onStatus; }
 int menuSlot() { return shown && !onStatus && menuSel < CARDS ? menuSel : -1; }
-bool menuOnList() { return shown && !onStatus && menuSel >= CARDS && menuSel < VOLUME; }
-bool menuOnVolume() { return shown && !onStatus && menuSel == VOLUME; }
+bool menuOnList() { return shown && !onStatus && menuSel >= CARDS; }
 int menuListItem() { return menuOnList() ? menuSel - CARDS : -1; }
 
 int menuState() {
@@ -115,8 +112,8 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6;
 static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 14;
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
-// The list's room ends a place above the status row's (the master volume's).
-static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - LIST_ROOM * LIST_PITCH;   // 75
+// The last place's frame level with the action button (from the status row's top).
+static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
 
 static Shape itemShape(int k) {
   if (k < CARDS)
@@ -135,11 +132,10 @@ static bool movedHere = false;                   // the last arrow press moved t
 static uint16_t frameColor() {
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
-  bool adjusting = menuSel == VOLUME && (k & m8::BTN_OPT);   // (the master volume: B as on the looper's cells)
-  return k & m8::BTN_EDIT || adjusting ? DIM : k && !(k & ~arrows) && movedHere ? INK : LIGHT;
+  return k & m8::BTN_EDIT ? DIM : k && !(k & ~arrows) && movedHere ? INK : LIGHT;
 }
 
-static bool listInView(int k) { return k < CARDS || k == VOLUME || (k - CARDS >= listTop && k - CARDS < listTop + LIST_ROOM); }
+static bool listInView(int k) { return k < CARDS || (k - CARDS >= listTop && k - CARDS < listTop + LIST_ROOM); }
 
 // Scrolls the list after its selection moved to item i (dir: 1 down, -1 up,
 // 0: just into view): the item past it that way stays in view where there is
@@ -153,7 +149,6 @@ static void scrollList(int i, int dir) {
 
 static void drawItem(int k) {
   if (!listInView(k)) return;
-  if (k == VOLUME) return;                         // (the master volume: every pass, drawMenu())
   auto &t = board.tft();
   Shape s = itemShape(k);
   bool sel = k == menuSel && !onStatus;
@@ -191,7 +186,7 @@ static void drawItem(int k) {
 // items' (USB data mode), light grey; the project's own (export, the status
 // row), the accent colour.
 uint16_t menuActionColor() {
-  if (!shown || onStatus || menuSel == VOLUME) return ACCENT;   // (the master volume: START, as on the clock cell)
+  if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
   if (menuSel - CARDS >= 1) return LIGHT;          // (USB data mode: system-level)
   return projectHasClips() ? ACCENT : DIM;         // export: grey with nothing to export
@@ -226,7 +221,6 @@ void drawMenu() {
       shownKey[k] = key;
       drawItem(k);
     }
-  drawMenuVolume(all, menuSel == VOLUME && !onStatus ? frameColor() : BG);   // (its meters move)
 }
 
 // Back from the status row (it can't be reached any more: kept for input.cpp).
@@ -234,7 +228,8 @@ void menuLeaveStatus() {
   if (!onStatus) return;
   onStatus = false;
   statusCell = selectedCellIn(STATUS_ROW);
-  menuSel = VOLUME;
+  menuSel = ITEMS - 1;                           // the list's last item
+  scrollList(LIST - 1, 0);
   movedHere = true;
   selected = mainRow;
   selectedCell = mainCell;
@@ -260,7 +255,7 @@ bool menuKeys(uint8_t pressed) {
     if (pressed & m8::BTN_DOWN && k < ITEMS - 1) k++;
   }
   if (pressed & arrows) movedHere = k != menuSel;
-  if (k >= CARDS && k < VOLUME && k != menuSel) scrollList(k - CARDS, k > menuSel ? 1 : -1);
+  if (k >= CARDS && k != menuSel) scrollList(k - CARDS, k > menuSel ? 1 : -1);
   menuSel = k;
   drawMenu();
   return movedHere;
@@ -273,6 +268,7 @@ void openMenu() {
   if (projectCurrent() >= 0 && recording.mode == Recording::Idle && recordQueued() < 0 && !projectHasClips() &&
       projectDelete(projectCurrent()))
     takeProjectSelection();
+  if (transport.running) transportStop();         // the menu: the clock stopped
   shown = true;
   if (projectCurrent() >= 0) {                   // on the loaded project's card (the dummy project: where it was)
     onStatus = false;
@@ -306,6 +302,6 @@ void restoreMenu(int state) {
   int sel = state % 1000;
   menuSel = constrain(sel, 0, ITEMS - 1);         // (saved on the status row, before it was hidden: the list's end)
   if (menuSel < CARDS) cardCol = menuSel % COLS;
-  if (menuSel >= CARDS && menuSel < VOLUME) scrollList(menuSel - CARDS, 0);
+  if (menuSel >= CARDS) scrollList(menuSel - CARDS, 0);
   if (state >= 1000) openMenu();
 }
