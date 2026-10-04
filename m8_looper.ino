@@ -152,11 +152,14 @@ void setup() {
     t.setCursor(4, splashBottom() + 16);
     t.printf("%-50s", msg);
     Serial.println(msg);
+    splashTick();
   };
   if (!storageBegin(progress))
     fatal("SD card missing or full: the looper needs ~100 MB free in /looper.");
   progress("");
+  splashTick();
   beginSession();                                  // the tempo and the selection
+  splashTick();
   transport.spb = spbForBpm(bpm);
   scenesBegin([] { return bpm; }, setTempo, sessionProject());
   scenesSelection(mainSelection, setMainSelection);

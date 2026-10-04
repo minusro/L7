@@ -92,15 +92,23 @@ no dropouts or overruns
 - figure out how to build resampling V
 - volume control V
 - [ Projects ] V
+- add play icon to status row V
+- animated splash screen (?)
 - ableton export
 - usb data mode
-- overdubbing
 
 - crossfading between two scenes
-- add play icon to status row (?)
-- animated splash screen (?)
+- overdubbing - not for now or ever maybe X
 
 
 L8
 Loop8
 8L
+711
+L7
+7Loop
+
+
+MINUSELEVEN
+minuseleven
+

@@ -1,5 +1,6 @@
 // ui_splash.cpp — the logo shown while the looper starts (see ui.h): "L8",
-// in green turquoise (the accent before a project is loaded), in 2x2-pixel blocks, two track rows tall, in the middle of the screen,
+// its colour going once round all hues (from the green turquoise accent back
+// to it, eased in and out, over SPLASH_MIN_MS), in 2x2-pixel blocks, two track rows tall, in the middle of the screen,
 // with the copyright line under it in light grey, in the pixel font (ui_font.cpp).
 #include "ui.h"
 #include "ui_font.h"
@@ -71,18 +72,60 @@ static constexpr int TEXT_Y_SPLASH = LOGO_Y + LOGO_ROWS * LOGO_PIXEL + TEXT_GAP;
 
 int splashBottom() { return TEXT_Y_SPLASH + 6 * LOGO_PIXEL; }   // (the copyright sign's last row)
 
+// OKLCH (lightness, chroma, hue in degrees) to RGB565; a chroma out of sRGB's
+// reach at that lightness comes down until it fits.
+static uint16_t oklch565(float L, float C, float hDeg) {
+  float h = hDeg * (float)M_PI / 180, r = 0, g = 0, b = 0;
+  for (int i = 0; i < 12; i++, C *= 0.9f) {
+    float a = C * cosf(h), bb = C * sinf(h);
+    float l = L + 0.3963377774f * a + 0.2158037573f * bb, m = L - 0.1055613458f * a - 0.0638541728f * bb,
+          s = L - 0.0894841775f * a - 1.2914855480f * bb;
+    l = l * l * l; m = m * m * m; s = s * s * s;
+    r = 4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s;
+    g = -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s;
+    b = -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s;
+    if (r >= -0.001f && r <= 1.001f && g >= -0.001f && g <= 1.001f && b >= -0.001f && b <= 1.001f) break;
+  }
+  auto gamma = [](float c) {
+    c = constrain(c, 0.0f, 1.0f);
+    return (uint8_t)lroundf(255 * (c <= 0.0031308f ? 12.92f * c : 1.055f * powf(c, 1 / 2.4f) - 0.055f));
+  };
+  return rgb565(gamma(r), gamma(g), gamma(b));
+}
+
+static void drawLogo(uint16_t color) {
+  auto &t = board.tft();
+  for (int r = 0; r < LOGO_ROWS; r++)
+    for (int c = 0; c < LOGO_COLS; c++)
+      if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, color);
+}
+
+// The logo's colour now: the accent's hue (OKLCH 0.824, 0.164, 164.8 deg)
+// turned once round, eased in and out (smoothstep) over SPLASH_MIN_MS.
+void splashTick() {
+  static uint16_t shown = 0;
+  float t = min(1.0f, (millis() - shownAt) / (float)SPLASH_MIN_MS);
+  float e = t * t * (3 - 2 * t);
+  uint16_t color = t >= 1 ? LOGO_COLOR : oklch565(0.8238f, 0.1641f, 164.76f + 360 * e);
+  if (color == shown) return;
+  shown = color;
+  drawLogo(color);
+}
+
 void showSplash() {
   auto &t = board.tft();
   t.fillScreen(BG);
-  for (int r = 0; r < LOGO_ROWS; r++)
-    for (int c = 0; c < LOGO_COLS; c++)
-      if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, LOGO_COLOR);
+  drawLogo(LOGO_COLOR);
   drawLine((320 - textCols(COPYRIGHT) * LOGO_PIXEL) / 2, TEXT_Y_SPLASH, COPYRIGHT, SPLASH_TEXT);
   shownAt = millis();
 }
 
 void hideSplash() {
-  while (millis() - shownAt < SPLASH_MIN_MS) delay(10);
+  while (millis() - shownAt < SPLASH_MIN_MS) {
+    splashTick();
+    delay(10);
+  }
+  splashTick();                                    // (the accent again)
   board.tft().fillScreen(BG);
   uiGeneration++;                                // (the menu comes next: nothing of the looper's view drawn first)
 }

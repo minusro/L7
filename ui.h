@@ -145,6 +145,7 @@ void setMainSelection(int row, int cell);   // and set (the menu open: for when 
 // waits until it has been up a moment, then clears the screen (the menu follows).
 void showSplash();
 void hideSplash();
+void splashTick();                       // the logo's colour cycle: call while starting up (hideSplash() finishes it)
 int splashBottom();                    // y just below the logo (for startup messages)
 
 // ---- Drawing (ui*.cpp)
