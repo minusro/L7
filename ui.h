@@ -147,7 +147,7 @@ void showSplash();
 void hideSplash();
 void splashTick();                       // the logo's colour cycle: call while starting up (hideSplash() finishes it)
 int splashBottom();                    // y just below the logo (for startup messages)
-void drawSmallLogo(int x, int y, uint16_t color);   // the logo, a pixel per block (51 x 26 px; the menu's corner)
+void drawSmallLogo(int x, int y, uint16_t color);   // the logo, a pixel per block (55 x 26 px; the menu's corner)
 uint16_t actionBackground();             // the action button's backdrop colour now (ui_buttons.cpp)
 
 // ---- Drawing (ui*.cpp)

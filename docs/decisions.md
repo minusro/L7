@@ -57,10 +57,8 @@
 * The app is called L7. Seven tracks instead of eight: the track rows are
   taller (30 px), the status row stays as it was, and all seven rings fit in
   RAM2.
-* No conversion of older projects: a scene holds 7 track units, so a project
-  saved with 8 tracks loads the first seven units of each scene (its top
-  track, track 8, becomes track 7, and so on; track 1's is dropped) and its
-  saved selection is ignored. New projects only have the 7 places.
+* A scene holds 7 track units. No conversion of 8-track projects (none
+  exist).
 * The SD paths (`/looper/...`) and the files' tags (`M8SC`, `M8TU`, ...) stay.
 
 ## Open ideas (not started)
