@@ -68,9 +68,10 @@ inline uint16_t cellBackground(int i, int cell) {
 // any other keys or none; light grey while only arrows are held and the last
 // press moved the selection: not at an edge), none elsewhere (BG).
 bool menuOpen();
+bool menuOnStatus();
 bool arrowsMoved();                      // input.cpp: the last arrow press moved the selection
 inline uint16_t cellFrame(int i, int cell) {
-  if (i != selected || cell != selectedCellIn(i) || menuOpen()) return BG;   // (the menu has its own)
+  if (i != selected || cell != selectedCellIn(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   return k & m8::BTN_OPT ? DARK : k && !(k & ~arrows) && arrowsMoved() ? LIGHT : DIM;
@@ -124,7 +125,9 @@ bool menuOpen();
 void openMenu();
 void closeMenu();
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)
-void menuKeys(uint8_t pressed);          // the arrows pressed
+void menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items
+bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)
+void menuLeaveStatus();                  // from the status row back up to the menu's items
 
 // Splash screen (ui_splash.cpp): the logo while the looper starts. hideSplash()
 // waits until it has been up a moment, then draws the looper.

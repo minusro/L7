@@ -110,7 +110,7 @@ void drawStatus() {
   interrupts();
   float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
   snprintf(text, sizeof text, "%.1f", shown);
-  int cell = selected == STATUS_ROW ? selectedCellIn(STATUS_ROW) : -1;
+  int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) ? selectedCellIn(STATUS_ROW) : -1;
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {

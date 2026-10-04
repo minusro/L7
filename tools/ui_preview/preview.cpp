@@ -187,6 +187,9 @@ int main(int argc, char **argv) {
   menuKeys(m8::BTN_DOWN);                          // down twice: a button
   menuKeys(m8::BTN_DOWN);
   render(out + "/ui_menu_button.png");
+  menuKeys(m8::BTN_DOWN);                          // down again: the status row (its scene cell)
+  render(out + "/ui_menu_status.png");
+  menuLeaveStatus();
   closeMenu();
   return 0;
 }

@@ -42,13 +42,13 @@ static bool flashOn() {
 // What A does on the selected row (mirrors onKeys()).
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
-  if (menuOpen()) return ICON_HOME;               // A closes the menu
+  if (menuOpen() && !menuOnStatus()) return ICON_HOME;   // A closes the menu
   if (board.keys() & m8::BTN_OPT)                  // B+A: the menu; with SHIFT, the scene
-    return !shift ? ICON_MENU : optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
+    return !shift ? (menuOpen() ? ICON_HOME : ICON_MENU) : optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
   if (selected == STATUS_ROW) {                    // restart / the menu (as B+A) / START / tap tempo
     if (shift) return ICON_PLAY;
     int cell = selectedCellIn(STATUS_ROW);
-    return cell == SCENE_CELL ? ICON_MENU : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_TAP;
+    return cell == SCENE_CELL ? (menuOpen() ? ICON_HOME : ICON_MENU) : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_TAP;
   }
   const Track &tr = tracks[selected];
   if (shiftTwiceHeld() && !recordingOn(selected) && recordQueued() != selected)   // SHIFT twice, held
@@ -102,7 +102,11 @@ int trackNumber(int i) { return NUM_TRACKS - i; }
 
 static int buttonIcon(int i) {
   if (i != STATUS_ROW) return trackIcon(i);
-  if (menuOpen() && heldAction != ICON_HOME) heldAction = -1;   // just opened: its icon, at once
+  static bool wasOpen = false;
+  if (menuOpen() != wasOpen) {                     // opened or closed: the icon it shows now, at once
+    wasOpen = menuOpen();
+    heldAction = -1;
+  }
   if (heldAction >= 0 && !(board.keys() & m8::BTN_EDIT)) heldAction = -1;   // A released
   return heldAction >= 0 ? heldAction : actionIcon();
 }

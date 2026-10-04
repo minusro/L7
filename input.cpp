@@ -78,13 +78,19 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       lastShiftTap = shiftTwice ? 0 : millis();
     }
   }
-  if (menuOpen()) {                                  // the menu: the arrows move its selection, A closes it
+  if (menuOpen() && !menuOnStatus()) {               // the menu's items: the arrows move its selection, A closes it
     if (pressed & m8::BTN_EDIT) {
       noteActionPress();
       closeMenu();
     } else {
       menuKeys(pressed);
     }
+    return;
+  }
+  // The menu's selection on the status row: as in the looper's view, but UP
+  // goes back to the menu's items.
+  if (menuOpen() && (pressed & m8::BTN_UP) && !shift && !opt) {
+    menuLeaveStatus();
     return;
   }
   bool onStatus = selected == STATUS_ROW;
@@ -318,14 +324,14 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
   bool edit = (pressed & m8::BTN_EDIT) && !opt;
   if ((pressed & m8::BTN_EDIT) && opt) {
-    if (!shift) openMenu();
+    if (!shift) menuOpen() ? closeMenu() : openMenu();
     else sceneChanged = optFirst ? scenePaste() : sceneCut();
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = (transportKey || (edit && onClock)) && !shift;
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onScene) openMenu();                      // as B+A
+    if (onScene) menuOpen() ? closeMenu() : openMenu();   // as B+A
     else if (onTempo) tapTempo();                  // (the clock cell: as START, below)
   }
   if (edit && !onStatus) {

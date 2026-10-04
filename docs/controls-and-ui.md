@@ -13,7 +13,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (as B+A) on the scene cell, start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
-| B + A | Open the menu (A closes it; arrows move its selection) |
+| B + A | Open / close the menu (A also closes it; arrows move its selection, down onto the status row too) |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT twice (second tap held) + A | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
@@ -144,7 +144,11 @@ A recording track's waveform area is in the accent colour (a block of black betw
   button shows the looper's rows: A closes it). Eight boxes (two rows of four,
   36×36 blocks) and two buttons, "EXPORT LIVE SET" and "USB MODE" (none do
   anything yet): dark grey, the selected one framed grey (its label white);
-  the arrows move along the rows and between them.
+  the arrows move along the rows and between them, and down from the buttons
+  onto the status row, whose cells then work as in the looper's view (UP goes
+  back to the buttons; A on the scene cell, or B+A, closes the menu). The
+  looper's own selection is kept meanwhile and comes back when the menu
+  closes; the menu remembers where its selection was for the next time.
 * Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
   into 43×26 blocks of 2×2 px (two tracks tall), in the accent colour, with
   "© 2026 Daniel Stanciu" under it in light grey, in a 3×5 block font (7×7 ©); at least
