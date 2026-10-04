@@ -67,13 +67,13 @@ side with one right next to it): the selection frame is drawn there (`borderAt()
 content uses the cell's full size.
 
 Style (after Elektron's screens): seven colours (`colors.h`) — black (`BG`),
-17% grey (`DARK`: background detail — outside the loop range, unlit volume lines, the selection frame while B is held, muted volume lines and filters), 44% grey
-(`DIM`: inactive — muted clips, idle icons and text; filter fills, the selection frame), light grey (`LIGHT`, 81%: unselected waveforms, labels, selected fills and lines), white (`INK`: active,
+17% grey (`DARK`: background detail — outside the loop range, unlit volume lines, muted volume lines and filters), 44% grey
+(`DIM`: inactive — muted clips, idle icons and text; filter fills, the selection frame while B is held), light grey (`LIGHT`, 81%: unselected waveforms, labels, selected fills and lines, the selection frame), white (`INK`: active,
 selected) and the accent (`ACCENT`: the loaded project's colour, green turquoise 48/230/170 before one is loaded; `ACCENT_DARK` at half brightness, light grey's role while editing: recording
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
-(`PX`), a 160×120 screen of chunky pixels. Selection: a 50% grey frame on the
-selected cell only (dark grey while B is held, with or without other keys;
-light grey while only arrows are held and the last press moved the
+(`PX`), a 160×120 screen of chunky pixels. Selection: a light grey frame on the
+selected cell only (grey while B is held, with or without other keys:
+adjusting; white while only arrows are held and the last press moved the
 selection: not at an edge). The selected track's button gets a 50% grey panel behind its number (from a block in,
 the button's height: two blocks of border above, left and below the 7×9
 badge; the accent colour while A is held, with the

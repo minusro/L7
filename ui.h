@@ -64,9 +64,9 @@ inline uint16_t cellBackground(int i, int cell) {
   if (cell == -1 && i == STATUS_ROW) return ACCENT;
   return BG;
 }
-// Its frame: grey round the selected cell (dark grey while B is held, with
-// any other keys or none; light grey while only arrows are held and the last
-// press moved the selection: not at an edge), none elsewhere (BG).
+// Its frame: light grey round the selected cell (grey while B is held, with
+// any other keys or none: adjusting; white while only arrows are held and the
+// last press moved the selection: not at an edge), none elsewhere (BG).
 bool menuOpen();
 bool menuOnStatus();
 bool arrowsMoved();                      // input.cpp: the last arrow press moved the selection
@@ -74,7 +74,7 @@ inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != selectedCellIn(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
-  return k & m8::BTN_OPT ? DARK : k && !(k & ~arrows) && arrowsMoved() ? LIGHT : DIM;
+  return k & m8::BTN_OPT ? DIM : k && !(k & ~arrows) && arrowsMoved() ? INK : LIGHT;
 }
 // B held as a modifier on its own (no SHIFT, A or START; arrows may be down).
 inline bool bAlone() {
