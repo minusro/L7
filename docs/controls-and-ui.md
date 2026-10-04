@@ -146,7 +146,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   width; of the status row only the action button shows. On its items A or
   B runs the action button's action when let go; A and B held together close
   the menu instead (the button shows the looper's rows), as does loading a
-  project.
+  project. Not while the dummy project is loaded (the icon dark grey): a
+  project has to be loaded first.
   Twelve project cards (three rows of four, 26×14 blocks, 6 apart, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve

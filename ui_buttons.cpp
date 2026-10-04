@@ -166,6 +166,7 @@ static constexpr int PANEL_LEFT = 1;              // the selected track's panel'
 
 static bool unavailable(int i, int icon) {
   if (i != STATUS_ROW) return false;
+  if (icon == ICON_HOME && menuOpen() && projectCurrent() < 0) return true;   // no leaving the menu with the dummy project
   if (menuSlot() >= 0 && !menuOnStatus()) {        // a project slot: cut and paste only while stopped
     if (icon == ICON_CUT) return !projectsMayCopy();
     if (icon == ICON_PASTE) return !projectsMayCopy() || !projectClipboardFull();

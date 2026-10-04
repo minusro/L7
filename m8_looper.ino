@@ -167,6 +167,7 @@ void setup() {
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();
   restoreMenu(sessionMenu());                      // its selection (open at power off: open again)
+  if (projectCurrent() < 0) openMenu();            // the dummy project: a project has to be chosen first
 }
 
 void loop() {

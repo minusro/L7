@@ -80,7 +80,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   // The menu's items: the arrows move its selection; A or B runs the action
   // button's action once let go (on the item it was pressed on); A and B held
-  // together close the menu instead.
+  // together close the menu instead (not while the dummy project is loaded).
   static bool armed = false, closing = false, shifted = false;   // A/B down: its action waits; both: close; SHIFT with it
   static int armedSlot = -1;                         // the slot it was pressed on (-1: a list item)
   if (!menuOpen()) armed = false;
@@ -98,8 +98,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
     if (armed && !(keys & act)) {                    // let go: act
       armed = false;
-      if (closing) {
-        closeMenu();
+      if (closing) {                                 // (not with the dummy project loaded: a project must be chosen)
+        if (projectCurrent() >= 0) closeMenu();
         return;
       }
       int slot = armedSlot;
