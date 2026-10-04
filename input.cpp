@@ -87,28 +87,21 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     return;
   }
   // The menu's items: the arrows move its selection; A runs the action
-  // button's action once let go (on the item it was pressed on); with B held
-  // (before or meanwhile), B+A closes the menu instead (not while the dummy
-  // project is loaded).
-  static bool armed = false, closing = false, shifted = false;   // A down: its action waits; B with it: close; SHIFT with it
+  // button's action once let go (on the item it was pressed on). B does
+  // nothing there: the way out is loading a project.
+  static bool armed = false, shifted = false;        // A down: its action waits; SHIFT with it
   static int armedSlot = -1;                         // the slot it was pressed on (-1: a list item)
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
     const uint8_t act = m8::BTN_EDIT;
     if (pressed & act) {
       armed = true;
-      closing = false;
       armedSlot = menuSlot();
       shifted = shift;
       noteActionPress();                             // (the icon: what letting go will do)
     }
-    if (armed && opt) closing = true;
     if (armed && !(keys & act)) {                    // let go: act
       armed = false;
-      if (closing) {                                 // (not with the dummy project loaded: a project must be chosen)
-        if (projectCurrent() >= 0) closeMenu();
-        return;
-      }
       int slot = armedSlot;
       if (slot < 0) {                                // the list's items: nothing yet
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it

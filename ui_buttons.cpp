@@ -15,11 +15,10 @@
 // (an arrow up from a line), cancel a recording (X: thrown away at once) or,
 // on an empty track, paste (an arrow down to a line; dark grey while the
 // clipboard is empty). With B
-// held: open the menu (a small arrow left); with SHIFT too, paste a scene (B pressed
+// held: open the menu (the menu in miniature: its cards and list); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
-// While the menu is open (on its items A runs the action when let go; B
-// held: a small arrow right, B+A closing the menu, in the loaded project's
-// colour; grey, disabled, with the dummy project): on its
+// While the menu is open (on its items A runs the action when let go; B does
+// nothing): on its
 // list's items, export to ALS (a diskette) and USB data mode (the USB
 // trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project or
@@ -50,7 +49,6 @@ static bool flashOn() {
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
   if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
-    if (board.keys() & m8::BTN_OPT) return ICON_HOME;   // B held: B+A closes it
     int slot = menuSlot();
     if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : ICON_USB;
     if (shift) return projectFilled(slot) ? ICON_CUT : ICON_PASTE;
@@ -142,7 +140,9 @@ PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // TAP (text)
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
-  {5, 5, {"..#..", ".##..", "#####", ".##..", "..#.."}},   // MENU (into the menu: a small arrow left)
+  // MENU: the menu in miniature (ui_menu.cpp; redraw it when the menu's layout
+  // changes): three rows of four cards, the list's two items under them.
+  {11, 9, {"##.##.##.##", "...........", "##.##.##.##", "...........", "##.##.##.##", "...........", "...#####...", "...........", "...#####..."}},
   {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // HOME (out of the menu: the small arrow right, as LOAD)
   {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
           "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
