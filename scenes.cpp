@@ -289,9 +289,20 @@ bool sceneFromResample(int t) {
   return true;
 }
 
+static bool copyOn();
+static void stepCopy();
+
 void serviceScenes() {
   launchHeld();                                    // let go before it was prepared: now it is
   commit();
+  if (copyOn()) {                                  // a project copy: a block now and then
+    if (!transport.running) {
+      while (copyOn()) stepCopy();
+    } else if (storageMayWrite()) {
+      stepCopy();
+      return;                                      // (one write per call)
+    }
+  }
   if (!file || (recordSlot < 0 && !listDirty) || !storageMayWrite()) return;
   if (recordSlot >= 0) {                          // one write per call
     writeRecordNow();
@@ -345,22 +356,62 @@ static void flushProject() {
   listDirty = false;
 }
 
-// Copies project `from` to `to` (0-11, CLIP): the scenes'
-// records, then the list (written last: a copy cut short leaves `to` empty).
-static bool copyProject(int from, int to) {
-  if (from == project) flushProject();
-  FsFile src = openProject(from), dst = openProject(to);
+// Copying a project (cut and paste): its scenes' records, then the list
+// (written last: a copy cut short leaves `to` empty), then for a cut the
+// source emptied. Playing, it goes on in the background, a block per pass of
+// serviceScenes() when the buffers allow; stopped, at once.
+static struct {
+  bool on = false, clearFrom = false;
+  int from = 0, to = 0, i = 0;                   // i: the next record to copy
   SceneList l;
-  if (!readList(src, l) || !dst) return false;
-  uint8_t b[BLOCK];
-  for (int i = 0; i < l.count; i++) {
-    uint64_t at = (uint64_t)(1 + l.slot[i]) * BLOCK;
-    if (!src.seekSet(at) || src.read(b, BLOCK) != (int)BLOCK) return false;
-    debugStage = "SD write (projects)";
-    if (!dst.seekSet(at) || dst.write(b, BLOCK) != (int)BLOCK) return false;
-  }
-  return writeBlockTo(dst, 0, &l, sizeof l);
+  FsFile src, dst;
+} job;
+
+static void endCopy(bool ok) {
+  if (!ok && job.clearFrom && job.from < PROJECTS) filled[job.from] = true;   // (a cut that failed: still there)
+  if (ok && job.to == CLIP) projectClip = true;
+  job.on = false;
+  job.src.close();
+  job.dst.close();
 }
+
+static void stepCopy() {
+  if (job.i < job.l.count) {
+    uint8_t b[BLOCK];
+    uint64_t at = (uint64_t)(1 + job.l.slot[job.i++]) * BLOCK;
+    bool ok = job.src.seekSet(at) && job.src.read(b, BLOCK) == (int)BLOCK;
+    debugStage = "SD write (projects)";
+    ok = ok && job.dst.seekSet(at) && job.dst.write(b, BLOCK) == (int)BLOCK && job.dst.sync();
+    if (!ok) endCopy(false);
+    return;
+  }
+  bool ok = writeBlockTo(job.dst, 0, &job.l, sizeof job.l);
+  if (ok && job.clearFrom) writeBlockTo(job.src, 0, "", 0);
+  endCopy(ok);
+}
+
+static bool startCopy(int from, int to, bool clearFrom) {
+  if (job.on) return false;
+  if (from == project) flushProject();
+  job.src = openProject(from);
+  job.dst = openProject(to);
+  if (!readList(job.src, job.l) || !job.dst) {
+    job.src.close();
+    job.dst.close();
+    return false;
+  }
+  job.on = true;
+  job.from = from;
+  job.to = to;
+  job.i = 0;
+  job.clearFrom = clearFrom;
+  if (to == CLIP) projectClip = false;           // (being replaced)
+  while (job.on && !transport.running) stepCopy();   // stopped: all of it now
+  return true;
+}
+
+bool projectCopying(int p) { return job.on && (job.from == p || job.to == p); }
+static bool copyOn() { return job.on; }
 
 static void clearProject(int p) {
   FsFile f = openProject(p);
@@ -387,7 +438,7 @@ bool projectHasClips() {
   return clipsKnown;
 }
 
-bool projectsMayCopy() { return !transport.running && !busy(); }
+bool projectsMayCopy() { return !busy() && !job.on; }
 
 void projectSelection(int &row, int &cell) {
   row = list.row ? list.row - 1 : -1;
@@ -432,7 +483,7 @@ static bool openAs(int p, bool apply_) {
 }
 
 bool projectLoad(int p) {
-  if (p < 0 || p >= PROJECTS || busy()) return false;
+  if (p < 0 || p >= PROJECTS || busy() || projectCopying(p)) return false;
   if (p == project) return true;
   target = -1;
   prepareUnits(nullptr);
@@ -441,24 +492,26 @@ bool projectLoad(int p) {
 }
 
 bool projectCut(int p) {
-  if (!projectsMayCopy() || !projectFilled(p) || !copyProject(p, CLIP)) return false;
-  projectClip = true;
-  clearProject(p);
-  filled[p] = false;
+  if (!projectsMayCopy() || !projectFilled(p)) return false;
+  filled[p] = false;                               // (shown empty at once; emptied once copied)
+  if (!startCopy(p, CLIP, true)) {
+    filled[p] = true;
+    return false;
+  }
   if (p == project) {                              // the loaded one: the dummy project instead (empty)
     file.close();
     target = -1;
     prepareUnits(nullptr);
     openAs(DUMMY, false);
     loading = true;
-    apply(emptyScene(), false);
+    apply(emptyScene(), true);                     // silent from the next beat (the clock runs on)
     loading = false;
   }
   return true;
 }
 
 bool projectDelete(int p) {
-  if (!projectFilled(p) || busy()) return false;
+  if (!projectFilled(p) || busy() || projectCopying(p)) return false;
   if (p == project) flushProject();
   clearProject(p);
   filled[p] = false;
@@ -476,8 +529,8 @@ bool projectDelete(int p) {
 
 bool projectPaste(int p) {
   if (!projectsMayCopy() || !projectClip || p < 0 || p >= PROJECTS || filled[p]) return false;
-  if (!copyProject(CLIP, p)) return false;
-  filled[p] = true;
+  if (!startCopy(CLIP, p, false)) return false;
+  filled[p] = true;                                // (loadable once the copy is done)
   return true;
 }
 

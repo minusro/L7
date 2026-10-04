@@ -1376,7 +1376,7 @@ int main(int argc, char **argv) {
       check(ok && origin % BEATS_PER_BAR == 0, what);
     };
     transportStart();
-    check(!projectsMayCopy() && !projectCut(2), "no cut or paste while playing");
+    check(projectsMayCopy(), "cut and paste work while playing");
     check(projectLoad(5), "loading while playing");
     waitScene();
     runBeats(2);
@@ -1396,12 +1396,21 @@ int main(int argc, char **argv) {
     fromStart("the same clips start over from 1.1.1 too");
     for (int t = 0; t < NUM_TRACKS; t++)
       if (tracks[t].state != TrackState::Empty) checkSync(t, "after the switch");
+    check(projectCurrent() == 7 && projectCut(2) && !projectFilled(2) && projectCopying(2) && !projectsMayCopy() && !projectLoad(2),
+          "cutting another project while playing: its slot empty at once, being copied");
+    for (int i = 0; i < 2000 && projectCopying(2); i++) block();
+    check(!projectCopying(2) && projectClipboardFull(), "copied in the background, a block at a time");
+    check(projectPaste(2) && projectFilled(2), "pasted back while playing");
+    for (int i = 0; i < 2000 && projectCopying(2); i++) block();
+    check(!projectCopying(2), "copied");
+    for (int t = 0; t < NUM_TRACKS; t++)
+      if (tracks[t].state != TrackState::Empty) checkSync(t, "while copying");
     transportStop();
     runUntilIdle();
     for (int i = 0; i < 20; i++) serviceScenes();
     storageBegin([](const char *) {});
     scenesBegin(simTempo, simSetTempo, 2);
-    check(projectCurrent() == 2 && sceneCount() == scenes && projectFilled(5) && !projectFilled(1) && projectClipboardFull(),
+    check(projectCurrent() == 2 && sceneCount() == scenes && projectFilled(5) && projectFilled(2) && !projectFilled(1) && projectClipboardFull(),
           "after a power cycle: the slots as they were");
   }
 

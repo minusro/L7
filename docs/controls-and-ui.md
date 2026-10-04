@@ -15,7 +15,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | SHIFT + B twice | Duplicate the scene |
 | B + A | Open the menu, once A is let go (arrows move its selection: cards, list; loading a project leaves it) |
 | A (menu, on a project slot) | Once let go: load its project, from 1.1.1 (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
-| SHIFT + A (menu, on a slot) | On a project: the first A only asks (the icon turns into a checkmark); a second A, SHIFT still held, cuts it once let go (letting go of SHIFT or moving cancels). Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Only while stopped |
+| SHIFT + A (menu, on a slot) | On a project: the first A only asks (the icon turns into a checkmark); a second A, SHIFT still held, cuts it once let go (letting go of SHIFT or moving cancels). Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Playing too: the copying goes on in the background (the slot can't be loaded meanwhile); not while recording |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT twice (second tap held) + A | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
@@ -157,7 +157,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   loaded, the splash's turquoise). A slot holding a project is filled with
   it, its letter (the project's name) black; the loaded one outlined white.
   An empty slot is a grey outline, its letter in the slot's colour. Under them
-  a list, "EXPORT TO ALS" and "USB DATA MODE" (nothing yet): a box as wide as
+  a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet): a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
   selected). The action button takes the item's colour: on a card, its
   slot's; on project-level items (export) the accent (grey, the label too, with
@@ -168,8 +168,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   is held (not B), corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
   action button shows load (a small arrow right) or, empty, new (a small asterisk); with SHIFT,
-  cut or paste (dark grey when it can't act: playing, recording, clipboard
-  empty); on the list, a diskette (export) and the USB trident (data mode),
+  cut or paste (dark grey when it can't act: recording, another copy under
+  way, clipboard empty); on the list, a diskette (export) and the USB trident (data mode),
   doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the
   list; UP/DOWN go card row to card row and on into the list (back up: to
   the column it came from). The looper's own selection is kept

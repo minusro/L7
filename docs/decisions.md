@@ -50,7 +50,7 @@
 * Projects can be saved separately (several on the card). A project file
   holds no audio, only references to the sample files its scenes use.
 * The loaded project is autosaved.
-* Loading works while playing; cut and paste only while stopped.
+* Loading, cut and paste all work while playing (copies in the background).
 
 ## Open ideas (not started)
 

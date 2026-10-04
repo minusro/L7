@@ -2,10 +2,10 @@
 // status row's cells (only the action button shows), the screen's whole
 // width. Opened with B+A (or A on the scene cell); left by loading a project
 // (A on the loaded one: just back). Twelve cards (three rows of
-// four), the project slots, and under them a list, "EXPORT TO ALS" and "USB
-// DATA MODE" (nothing yet). A runs the action button's action when let go. On a slot, A loads its project (an empty one: a new project there) and closes
-// the menu; with SHIFT, cuts the project, or pastes one into an empty slot
-// (only while stopped).
+// four), the project slots, and under them a list, "EXPORT ABLETON PROJECT"
+// and "ENTER USB DATA MODE" (nothing yet). A runs the action button's action when let go. On a slot, A loads its project (an empty one: a new project there) and closes
+// the menu; with SHIFT, cuts the project (a second A confirms), or pastes
+// one into an empty slot. START works here too.
 //
 // Items, in selection order: the cards 0-11 (rows of four, top first), then
 // the list's 12 and 13 (the looper's own selection is kept meanwhile and
@@ -28,7 +28,7 @@
 uint32_t uiGeneration = 1;
 
 static constexpr int CARDS = PROJECTS, LIST = 2, ITEMS = CARDS + LIST, COLS = 4;
-static const char *const LABELS[LIST] = {"EXPORT TO ALS", "USB DATA MODE"};
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER USB DATA MODE"};
 
 static bool shown = false;
 static int menuSel = 0;                          // the selected item

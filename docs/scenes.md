@@ -21,8 +21,10 @@ hold no audio: scenes name their samples. The first version's
   there (`transportOrigin()`); the transport itself runs on. An empty slot gets a new project (no
   scenes: the empty scene, the tempo kept). Not while recording.
 * Cut / paste (SHIFT+A): copies the used blocks (the records, then the list
-  last) to or from `clip.dat`; cut then zeroes the slot's block 0. Only while
-  stopped (many writes). Cutting the loaded project empties its slot too and
+  last) to or from `clip.dat`; cut then zeroes the slot's block 0. Stopped: at
+  once. Playing: in the background, a block per `serviceScenes()` pass when
+  the buffers allow (as scene saves); meanwhile the slots involved can't be
+  loaded and no other copy starts. Not while recording. Cutting the loaded project empties its slot too and
   loads an empty dummy project (`none.dat`, in no slot, emptied each time it's
   loaded; the accent then the splash's turquoise; for now), the tracks
   cleared. A new project (or the dummy) starts on track 1's waveform cell.

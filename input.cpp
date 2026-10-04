@@ -98,6 +98,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   static int armedSlot = -1;                         // the slot it was pressed on (-1: a list item)
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
+    if (pressed & m8::BTN_PLAY) {                    // START works in the menu too (SHIFT: from 1.1.1)
+      if (shift) transportRestart();
+      else if (transport.running) transportStop();
+      else transportStart();
+    }
     const uint8_t act = m8::BTN_EDIT;
     if (pressed & act) {
       armed = true;
@@ -112,7 +117,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
         bool loaded = slot == projectCurrent();
         if (projectFilled(slot) && cutConfirm != slot) {   // the first tap: confirm with a second
-          if (projectsMayCopy()) cutConfirm = slot;  // (only if it can be cut: stopped)
+          if (projectsMayCopy()) cutConfirm = slot;  // (only if it can be cut now)
         } else {
           cutConfirm = -1;
           if (projectFilled(slot) ? projectCut(slot) : projectPaste(slot))
@@ -132,7 +137,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       }
       return;
     }
-    if (!(pressed & (act | m8::BTN_OPT))) {
+    if (!(pressed & (act | m8::BTN_OPT | m8::BTN_PLAY))) {
       bool went = menuKeys(pressed);
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) moved = went;
     }

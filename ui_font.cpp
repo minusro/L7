@@ -94,7 +94,7 @@ static void putText(int w, int bx, int by, const char *text, uint16_t ink) {
 
 void drawText(int x, int y, const char *text, uint16_t ink, uint16_t bg, int width) {
   int w = max(textWidth(text), width);
-  if (w <= 0 || w > 160) return;
+  if (w <= 0 || w * FONT_H > (int)(sizeof box / sizeof box[0])) return;   // (plain text: up to 288 px wide)
   for (int i = 0; i < w * FONT_H; i++) box[i] = bg;
   putText(w, 0, 0, text, ink);
   board.tft().writeRect(x, y, w, FONT_H, box);

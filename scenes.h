@@ -59,7 +59,8 @@ bool projectFilled(int p);     // the slot holds a project (the loaded one alway
 // the clock with them). An empty slot: a new project there, on its empty
 // scene (the tracks cleared, the tempo kept). false: recording.
 bool projectLoad(int p);
-// Cut and paste (only while stopped: projectsMayCopy()): cut copies the
+// Cut and paste (projectsMayCopy(): not while recording or while another
+// copy is under way; playing, the copying goes on in the background): cut copies the
 // project to the project clipboard and empties its slot (the loaded one: an
 // empty dummy project, in no slot, is loaded instead; for now); paste copies the clipboard into an empty
 // slot (it stays on the clipboard).
@@ -70,6 +71,7 @@ bool projectHasClips();
 bool projectCut(int p);
 bool projectPaste(int p);
 bool projectClipboardFull();
+bool projectCopying(int p);    // slot p is being copied from or to (not loadable meanwhile)
 // Empties slot p, the project gone (not to the clipboard); the loaded one:
 // the dummy project instead. false: recording.
 bool projectDelete(int p);

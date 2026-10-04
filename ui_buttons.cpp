@@ -19,7 +19,7 @@
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A runs the action when let go; B does
 // nothing): on its
-// list's items, export to ALS (a diskette) and USB data mode (the USB
+// list's items, export Ableton project (a diskette) and enter USB data mode (the USB
 // trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
 // (a checkmark after the first A: a second A confirms) or
@@ -166,10 +166,11 @@ static constexpr int PANEL_LEFT = 1;              // the selected track's panel'
 
 static bool unavailable(int i, int icon) {
   if (i != STATUS_ROW) return false;
-  if (menuSlot() >= 0 && !menuOnStatus()) {        // a project slot: cut and paste only while stopped
+  if (menuSlot() >= 0 && !menuOnStatus()) {        // a project slot: cut and paste not while recording or copying
     if (icon == ICON_CUT || icon == ICON_CHECK) return !projectsMayCopy();
     if (icon == ICON_PASTE) return !projectsMayCopy() || !projectClipboardFull();
-    if (icon == ICON_LOAD || icon == ICON_NEW) return recording.mode != Recording::Idle && menuSlot() != projectCurrent();
+    if (icon == ICON_LOAD || icon == ICON_NEW)        // (not while recording, nor while it's being copied)
+      return (recording.mode != Recording::Idle && menuSlot() != projectCurrent()) || projectCopying(menuSlot());
     return false;
   }
   return (icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull());

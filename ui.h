@@ -129,7 +129,7 @@ bool menuKeys(uint8_t pressed);          // the arrows pressed, its selection on
 bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)
 void menuLeaveStatus();                  // from the status row back up to the menu's items
 int menuSlot();                          // the project slot selected in the menu (0-11), or -1
-bool menuOnList();                       // the selection on the menu's list (EXPORT TO ALS ...)
+bool menuOnList();                       // the selection on the menu's list (EXPORT ABLETON PROJECT ...)
 uint16_t menuActionColor();              // the action button's colour (the accent, a card's, light grey)
 int menuListItem();                      // which of its items (0: export, 1: USB data mode), or -1
 // The menu's state for the session: its selection (an item, or 100 + the
