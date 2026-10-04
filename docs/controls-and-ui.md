@@ -145,15 +145,14 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the track rows' place across the whole width (the status row stays, its
   frames hidden; B+A or A on the scene cell closes it, and so does loading a
   project). On the menu's items A and B both run the action button's action.
-  Twelve project cards (three rows of four, 32×18 blocks, 6 apart, centred):
-  rectangles with the bottom right corner cut diagonally (a third of their
-  height), lettered A-L from the top row. Each slot has its colour
-  (`PROJECT_COLORS`: twelve pastels, rose to blush, picked by the author; the
-  loaded project's is the app's accent colour, `ACCENT_DARK` at half its
-  brightness; before one is loaded, the splash's turquoise): an outline when
-  empty, filled when it holds a project, its edge outlined black over the
-  fill (white on the loaded project's). The letter (the
-  project's name): grey when empty, black on a project. Under them
+  Twelve project cards (three rows of four, 26×14 blocks, 6 apart, centred):
+  rectangles with the bottom right corner cut diagonally (3 blocks), lettered
+  A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
+  pastels, rose to blush, picked by the author; the loaded project's is the
+  app's accent colour, `ACCENT_DARK` at half its brightness; before one is
+  loaded, the splash's turquoise). A slot holding a project is filled with
+  it, its letter (the project's name) black; the loaded one outlined white.
+  An empty slot is a grey outline, its letter in the slot's colour. Under them
   a list, "EXPORT TO ALS" and "USB DATA MODE" (nothing yet): a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
   selected). The action button takes the item's colour: on a card, its

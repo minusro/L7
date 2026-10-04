@@ -17,11 +17,11 @@
 // order: the cards row by row, the list, the status row's cells (and back). The menu remembers where its selection
 // was for the next time it opens.
 //
-// A card: a block shape, its bottom right corner cut diagonally (a third of
-// its height), in its slot's colour (colors.h): an outline when empty,
-// filled when it holds a project, outlined (its edge) black, or white on the
-// loaded project's. Its letter, A-L (the project's name): grey when empty, black
-// on a project. The selected item's frame looks and behaves as the looper's
+// A card: a block shape, its bottom right corner cut diagonally (about a
+// fifth of its height), in its slot's colour (colors.h): filled when it
+// holds a project (the loaded project's outlined white), its letter A-L (the
+// project's name) black; empty, a grey outline with the letter in the slot's
+// colour. The selected item's frame looks and behaves as the looper's
 // cells' (frameColor()), corners cut, a block out from a card (the diagonal
 // too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected).
@@ -97,12 +97,12 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 }
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
-// Cards: 32 x 18, the cut 6 (a third), 6 apart, from 7 in (4 from the top).
-// The list: centred under them, an item every 13 rows from row 78, its frame
+// Cards: 26 x 14, the cut 3 (about a fifth), 6 apart, centred (4 from the top).
+// The list: centred under them, an item every 13 rows from row 66, its frame
 // round its label with 3 blocks of space.
-static constexpr int CARD_W = 32, CARD_H = 18, CARD_CUT = CARD_H / 3, CARD_GAP = 6;
+static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6;
 static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 4;
-static constexpr int LIST_Y = 78, LIST_PITCH = 13, LIST_SPACE = 3;
+static constexpr int LIST_Y = 66, LIST_PITCH = 13, LIST_SPACE = 3;
 
 static Shape itemShape(int k) {
   if (k < CARDS)
@@ -135,12 +135,12 @@ static void drawItem(int k) {
     uint16_t color = PROJECT_COLORS[k];
     bool filled = projectFilled(k);
     // Its letter (the project's name): black on a project, grey on an empty slot.
-    uint16_t letter = filled ? BG : DIM;
+    uint16_t letter = filled ? BG : color;
     if (filled) {
       fillRing(s, 0, -s.w, color);
-      fillRing(s, 0, -1, k == projectCurrent() ? INK : BG);   // outlined: white on the loaded one, else black
+      if (k == projectCurrent()) fillRing(s, 0, -1, INK);   // the loaded one: outlined white
     } else {                                      // empty: an outline (the shape's edge)
-      fillRing(s, 0, -1, color);
+      fillRing(s, 0, -1, DIM);
       fillRing(s, -1, -s.w, BG);
     }
     const Glyph *g = glyphFor((char)('A' + k));
