@@ -118,12 +118,12 @@ static Shape itemShape(int k) {
 
 // The selected item's frame, as the looper's cells': light grey; white while
 // only arrows are held and the last press moved the selection; grey while A
-// or B is held.
+// is held (B: no change, it only leads to leaving).
 static bool movedHere = false;                   // the last arrow press moved the menu's selection
 static uint16_t frameColor() {
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
-  return k & (m8::BTN_EDIT | m8::BTN_OPT) ? DIM : k && !(k & ~arrows) && movedHere ? INK : LIGHT;
+  return k & m8::BTN_EDIT ? DIM : k && !(k & ~arrows) && movedHere ? INK : LIGHT;
 }
 
 static void drawItem(int k) {
