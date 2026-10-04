@@ -144,19 +144,21 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Menu (`ui_menu.cpp`): opened with B+A (or A on the scene cell), it takes
   the track rows' place across the whole width (the status row stays, its
   frames hidden; B+A or A on the scene cell closes it, and so does loading a
-  project). On the menu's items A and B both run the action button's action. Twelve project
-  cards (three rows of four, 36×22 blocks, 4 apart): rectangles with the
-  bottom right corner cut diagonally, the cut half their height. Each slot
-  has its colour (`PROJECT_COLORS`: twelve pastels, rose to blush, picked by
-  the author; the loaded project's is the app's accent colour, `ACCENT_DARK`
-  at half its brightness; before one is loaded, the splash's turquoise):
-  filled when it holds a
-  project, an outline when empty; the loaded one shows the looper's rows (the
-  HOME icon) in black. Under them a list, "EXPORT TO ABLETON" and "USB DATA
-  MODE" (nothing yet), 75% of the width, centred, labels left-aligned, light
-  grey (white when selected). The selected item's frame is grey: one block of
-  space out from a card all round, following its diagonal; three from a list
-  item's text. On a card the
+  project). On the menu's items A and B both run the action button's action.
+  Twelve project cards (three rows of four, 32×18 blocks, 6 apart, centred):
+  rectangles with the bottom right corner cut diagonally (a third of their
+  height), lettered A-L from the top row. Each slot has its colour
+  (`PROJECT_COLORS`: twelve pastels, rose to blush, picked by the author; the
+  loaded project's is the app's accent colour, `ACCENT_DARK` at half its
+  brightness; before one is loaded, the splash's turquoise). Unselected, at
+  half brightness; selected, full: an empty slot is an outline in it (its
+  letter too), one holding a project filled with it (letter black); the
+  loaded project light grey (white when selected). Under them a list, "EXPORT
+  TO ABLETON" and "USB DATA MODE" (nothing yet), centred, light grey (white
+  when selected). The selected item's frame looks and behaves as the
+  looper's cells': light grey, white while the arrows move it, grey while A
+  or B is held, corners cut; on a card two blocks thick, touching it
+  (following its diagonal); round a list item's label, three blocks out. On a card the
   action button shows load (a folder) or, empty, new (a plus); with SHIFT,
   cut or paste (dark grey when it can't act: playing, recording, clipboard
   empty); on the list, a diskette (export) and the USB trident (data mode),

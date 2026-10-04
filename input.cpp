@@ -101,7 +101,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         }
       }
     } else if (!(pressed & act)) {
-      menuKeys(pressed);
+      bool went = menuKeys(pressed);
+      if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) moved = went;
     }
     return;
   }

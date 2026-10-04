@@ -125,7 +125,7 @@ bool menuOpen();
 void openMenu();
 void closeMenu();
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)
-void menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items
+bool menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items (true: it moved)
 bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)
 void menuLeaveStatus();                  // from the status row back up to the menu's items
 int menuSlot();                          // the project slot selected in the menu (0-11), or -1
