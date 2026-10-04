@@ -17,7 +17,7 @@
 // everything in order. It opens on the loaded project's card (the dummy
 // project loaded: where its selection was).
 //
-// A card: a block shape, both its top corners cut diagonally (3 blocks),
+// A card: a block shape, its top left and bottom right corners cut diagonally (3 blocks),
 // in its slot's colour (colors.h): the loaded project's
 // filled, its letter A-L (the project's name) black;
 // another project's a thick (two-block) outline, the letter in the
@@ -69,7 +69,7 @@ void setMainSelection(int row, int cell) {
 }
 
 // ---- Shapes, in blocks: an item's content is w x h blocks from (x, y), both
-// its top corners cut `cut` blocks (0: a rectangle). shape(d) is the
+// its top left and bottom right corners cut `cut` blocks (0: a rectangle). shape(d) is the
 // content grown by d blocks all round (the diagonal moved out a block per
 // step too); a frame is a ring between two of them.
 struct Shape { int x, y, w, h, cut; };
@@ -82,14 +82,13 @@ static bool rowSpan(const Shape &s, int d, int r, int &c0, int &c1, bool round =
   c0 = -d;
   c1 = s.w - 1 + d;
   if (round && (y == -d || y == s.h - 1 + d)) {   // the top and bottom rows: their corners cut
-    if (y == s.h - 1 + d || !s.cut) {             // (the top ones: the diagonals already)
-      c0++;
-      c1--;
-    }
+    bool top = y == -d;
+    if (!(top && s.cut)) c0++;                    // (the top left and bottom right: the diagonals already)
+    if (!(!top && s.cut)) c1--;
   }
-  if (s.cut) {                                    // the diagonals: the right one x - y at most this,
-    c1 = min(c1, s.w - s.cut - 1 + d + y);        // the left one its mirror
-    c0 = max(c0, s.cut - y - d);
+  if (s.cut) {                                    // the diagonals: the bottom right one x + y at most this,
+    c1 = min(c1, s.w + s.h - s.cut - 2 + d - y);
+    c0 = max(c0, s.cut - y - d);                  // the top left one x - y at least this
   }
   if (c1 < c0) return false;
   c0 += s.x;
@@ -178,9 +177,9 @@ static void drawItem(int k) {
     } else if (filled) {                          // a project: a thick outline, two blocks
       fillRing(s, 0, -2, color);
       fillRing(s, -2, -s.w, BG);
-      // (the diagonals a block thicker where they meet the sides: two blocks inside each corner)
-      t.fillRect((s.x + s.w - 3) * PX, (s.y + s.cut) * PX, PX, PX, color);
-      t.fillRect((s.x + s.w - 4) * PX, (s.y + s.cut - 1) * PX, PX, PX, color);
+      // (the diagonals a block thicker where they meet the sides: two blocks inside each cut corner)
+      t.fillRect((s.x + s.w - 3) * PX, (s.y + s.h - s.cut - 1) * PX, PX, PX, color);
+      t.fillRect((s.x + s.w - 4) * PX, (s.y + s.h - s.cut) * PX, PX, PX, color);
       t.fillRect((s.x + 2) * PX, (s.y + s.cut) * PX, PX, PX, color);
       t.fillRect((s.x + 3) * PX, (s.y + s.cut - 1) * PX, PX, PX, color);
     } else {                                      // empty: an outline (the shape's edge)
