@@ -25,7 +25,7 @@
 // (a question mark after the first A: a second A confirms) or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
-// the menu (a small hamburger) on the scene and clock cells, tap tempo
+// the menu (a small stop) on the scene and clock cells, tap tempo
 // ("TAP") on the tempo cell; with SHIFT,
 // start from 1.1.1 (play).
 // B held on a track: resample (a cassette) on an empty track, overdub (the
@@ -142,7 +142,7 @@ PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // TAP (text)
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
-  {5, 5, {"#####", ".....", "#####", ".....", "#####"}},   // MENU (a small hamburger)
+  {5, 5, {"#####", "#####", "#####", "#####", "#####"}},   // MENU (a small stop: to the menu, the clock stopped)
   {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // HOME (out of the menu: the small arrow right, as LOAD)
   {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
           "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
