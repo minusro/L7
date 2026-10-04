@@ -166,7 +166,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   it, its letter (the project's name) black; another
   project's is a thick outline (two blocks) in its colour, the letter in it too.
   An empty slot is a grey outline, its letter in the slot's colour. In the bottom
-  left corner, the logo small (redrawn at 30 × 13 blocks, the status row's height; its top row only a block over the 7's top line's first), always
+  left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
   in the action button's colour (not its pressed look: it stays put while A is held). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet). Four in
   view at a time (an item
@@ -194,8 +194,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   loaded project's card (with the dummy project: where its selection was,
   kept across power cycles too); if it was open at power off it opens again
   at boot (session.txt).
-* Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
-  into 43×26 blocks of 2×2 px (two tracks tall), in the accent colour, with
-  "© 2026 Daniel Stanciu" under it in light grey, in a 3×5 block font (7×7 ©); at least
-  2 s; startup messages print below it.
+* Splash (`ui_splash.cpp`): the "L7" logo (italic, the 7's right edge one
+  45° line to a sharp corner, two equal cuts near the bottom; design options in
+  `docs/design/`), drawn in full resolution from its shape (`drawL7()`, 110×52 px;
+  the menu's corner: 55×26), fading in, its hue going once round, with
+  "© 2026 Daniel Stanciu" under it in light grey, in a 3×5 block font (7×7 ©); 3.5 s;
+  startup messages print below it.
 * Headphones plugged in → speaker off (sense pin 22 < 300).

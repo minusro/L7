@@ -1,49 +1,42 @@
 // ui_splash.cpp — the logo shown while the looper starts (see ui.h): "L7",
-// italic (a column every three rows), the 7's right edge one 45-degree line
-// up to a sharp corner, the diagonal 10 blocks thick; near the bottom two
-// cuts, each as thick as the line under it (80s; the L's foot starts above
-// them),
-// fading in from black, then its colour going once round all hues (from the
-// green turquoise accent back to it, eased in and out), fading out at the end, in 2x2-pixel blocks, 26 tall, in the middle of the screen,
-// with the copyright line under it in light grey (fading in), in the pixel font (ui_font.cpp).
+// italic, the 7's right edge one 45-degree line up to a sharp corner, its
+// diagonal thick; near the bottom two cuts, each as thick as the line under
+// it (80s; the L's foot starts above them). Drawn in full resolution (pixels,
+// not blocks) from its shape (drawL7()): 110 x 52 px here, in the middle of the
+// screen, 55 x 26 in the menu's corner (drawSmallLogo()). It fades in from
+// black, then its colour goes once round all hues (from the green turquoise
+// accent back to it, eased in and out), fading out at the end, with the
+// copyright line under it in light grey (fading in), in the pixel font
+// (ui_font.cpp, 2x2-pixel blocks).
 #include "ui.h"
 #include "ui_font.h"
 
-PROGMEM static const char LOGO[][56] = {          // (in flash: const data would sit in RAM1)
-    "........#######..............##########################",
-    "........#######..............#########################.",
-    ".......#######..............#########################..",
-    ".......#######..............########################...",
-    ".......#######..............#######################....",
-    "......#######..............#######################.....",
-    "......#######..............######################......",
-    "......#######.........................##########.......",
-    ".....#######.........................##########........",
-    ".....#######........................##########.........",
-    ".....#######.......................##########..........",
-    "....#######.......................##########...........",
-    "....#######......................##########............",
-    "....#######.....................##########.............",
-    "...#######.....................##########..............",
-    "...#######....................##########...............",
-    "...#################.........##########................",
-    "..#################.........##########.................",
-    ".......................................................",
-    ".......................................................",
-    ".#################.......##########....................",
-    ".#################......##########.....................",
-    ".......................................................",
-    ".......................................................",
-    "#################....##########........................",
-    "#################...##########.........................",
-};
-static constexpr int LOGO_ROWS = sizeof LOGO / sizeof LOGO[0], LOGO_COLS = sizeof LOGO[0] - 1, LOGO_PIXEL = 2;
+// The logo's shape: 55 x 26 units, drawn at k pixels a unit (top left at x,
+// y), a row of pixels at a time: the italic slant a pixel every three rows,
+// the 7's right edge a pixel a row (45 degrees), whatever the size. In units:
+// the L's stem 7 wide, its foot 17 wide from row 16 down; the 7's top line 7
+// tall from column 21, its diagonal 10 wide; the cuts rows 18-19 and 22-23.
+static constexpr int L7_W = 55, L7_H = 26;
+static void drawL7(int x, int y, int k, uint16_t color) {
+  auto &t = board.tft();
+  const int h = L7_H * k;
+  for (int p = 0; p < h; p++) {
+    if ((p >= 18 * k && p < 20 * k) || (p >= 22 * k && p < 24 * k)) continue;   // the cuts
+    int off = (h - 1 - p) / 3;                                  // italic
+    t.fillRect(x + off, y + p, (p >= h - 10 * k ? 17 : 7) * k, 1, color);   // the L: its stem, then its foot
+    int right = L7_W * k - p;                                   // the 7: its right edge
+    int left = p < 7 * k ? 21 * k + off : right - 10 * k;        // its top line, then its diagonal
+    t.fillRect(x + left, y + p, right - left, 1, color);
+  }
+}
+
+static constexpr int LOGO_SCALE = 2, LOGO_PIXEL = 2;  // the logo's pixels a unit; the copyright line's font blocks
 // The logo and the copyright line under it centred together (the logo
 // above the middle).
 static constexpr int TEXT_GAP = 24;               // logo to text, px
-static constexpr int GROUP_H = LOGO_ROWS * LOGO_PIXEL + TEXT_GAP + 6 * LOGO_PIXEL;   // logo, gap, text (to the copyright sign's bottom)
+static constexpr int GROUP_H = L7_H * LOGO_SCALE + TEXT_GAP + 6 * LOGO_PIXEL;   // logo, gap, text (to the copyright sign's bottom)
 static constexpr int GROUP_DOWN = 8;                 // the group sits this far below the middle, px
-static constexpr int LOGO_X = (320 - LOGO_COLS * LOGO_PIXEL) / 2,
+static constexpr int LOGO_X = (320 - L7_W * LOGO_SCALE) / 2,
                      LOGO_Y = (240 - GROUP_H) / 2 / LOGO_PIXEL * LOGO_PIXEL + GROUP_DOWN;
 // The splash's animation, in ms from showSplash(): the logo fades in from
 // black (0-500), then its colour goes once round the hues (500-2500); the
@@ -78,7 +71,7 @@ static void drawLine(int x, int y, const char *text, uint16_t color) {   // (the
   }
 }
 
-static constexpr int TEXT_Y_SPLASH = LOGO_Y + LOGO_ROWS * LOGO_PIXEL + TEXT_GAP;
+static constexpr int TEXT_Y_SPLASH = LOGO_Y + L7_H * LOGO_SCALE + TEXT_GAP;
 
 int splashBottom() { return TEXT_Y_SPLASH + 6 * LOGO_PIXEL; }   // (the copyright sign's last row)
 
@@ -103,40 +96,10 @@ static uint16_t oklch565(float L, float C, float hDeg) {
   return rgb565(gamma(r), gamma(g), gamma(b));
 }
 
-static void drawLogo(uint16_t color) {
-  auto &t = board.tft();
-  for (int r = 0; r < LOGO_ROWS; r++)
-    for (int c = 0; c < LOGO_COLS; c++)
-      if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, color);
-}
+static void drawLogo(uint16_t color) { drawL7(LOGO_X, LOGO_Y, LOGO_SCALE, color); }
 
-// The logo small, for the menu's corner: drawn again at 30 x 13 blocks (the
-// status row's height), not shrunk, so it stays in the UI's 2 x 2 blocks; the
-// same two cuts and lines, a block each. Its top row left out but for a
-// block over the 7's top line's first: 30 x 13.
-PROGMEM static const char SMALL_LOGO[][31] = {
-    "..............#...............",
-    "...#####......###############.",
-    "...#####......##############..",
-    "...#####......#############...",
-    "..#####......#############....",
-    "..#####............######.....",
-    "..#####...........######......",
-    ".#####...........######.......",
-    ".##########.....######........",
-    "..............................",
-    "##########....######..........",
-    "..............................",
-    "##########..######............",
-};
-static constexpr int SMALL_ROWS = sizeof SMALL_LOGO / sizeof SMALL_LOGO[0], SMALL_COLS = sizeof SMALL_LOGO[0] - 1;
-
-void drawSmallLogo(int x, int y, uint16_t color) {
-  auto &t = board.tft();
-  for (int r = 0; r < SMALL_ROWS; r++)
-    for (int c = 0; c < SMALL_COLS; c++)
-      if (SMALL_LOGO[r][c] == '#') t.fillRect(x + c * PX, y + r * PX, PX, PX, color);
-}
+// The logo small, for the menu's corner: 55 x 26 px (the status row's height).
+void drawSmallLogo(int x, int y, uint16_t color) { drawL7(x, y, 1, color); }
 
 static int copyrightX = 0;
 
