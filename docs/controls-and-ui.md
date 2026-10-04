@@ -158,7 +158,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   a list, "EXPORT TO ALS" and "USB DATA MODE" (nothing yet): a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
   selected). The action button takes the item's colour: on a card, its
-  slot's; on project-level items (export) the accent; on system-level ones (USB data mode) light grey (its icon light
+  slot's; on project-level items (export) the accent (dark grey, the label too,
+  while the dummy project is loaded: nothing to export); on system-level ones (USB data mode) light grey (its icon light
   grey while pressed too). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
   or B is held, corners cut; round a card one block out (following its

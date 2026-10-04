@@ -187,7 +187,10 @@ static uint16_t buttonBackground(int i, int icon) {
 
 static uint16_t iconColor(int i, int icon) {
   uint16_t bg = buttonBackground(i, icon);
-  if (i == STATUS_ROW) return heldAction >= 0 ? (unavailable(i, icon) ? BG : menuActionColor()) : unavailable(i, icon) ? DARK : BG;
+  if (i == STATUS_ROW) {
+    uint16_t c = menuActionColor();                  // (dark grey: an item that can't act; its icon black, held too)
+    return heldAction >= 0 ? (unavailable(i, icon) || c == DARK ? BG : c) : unavailable(i, icon) ? DARK : BG;
+  }
   if (unavailable(i, icon)) return DARK;
   if (bg != BG) return BG;
   if (recordingOn(i) || recordQueued() == i) return ACCENT;
