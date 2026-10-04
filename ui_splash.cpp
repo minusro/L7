@@ -58,10 +58,11 @@ static constexpr int LOGO_X = (320 - LOGO_W) / 2 + LOGO_RIGHT, LOGO_Y = (240 - G
 // copyright line fades in (1500-2000); both fade out (3000-3500). Shown at
 // least this long.
 static constexpr uint32_t LOGO_FADE_MS = 500, HUE_MS = 2000, TEXT_FROM_MS = 1500, TEXT_FADE_MS = 500;
-// Meanwhile the L slides in from the left and the 7 from the right, from off
-// the screen, slowing down (cubic ease-out) until they're in place at 1 s.
+// Meanwhile the L slides in from the left and the 7 from the right, from far
+// off the screen (still about at its edges once they're well lit, ~0.35 s),
+// slowing down (cubic ease-out) until they're in place at 1 s.
 static constexpr uint32_t SLIDE_MS = 1000;
-static constexpr int SLIDE_PX = 200;
+static constexpr int SLIDE_PX = 600;
 static constexpr uint32_t OUT_FROM_MS = 3000, OUT_MS = 500;
 static constexpr uint32_t SPLASH_MIN_MS = OUT_FROM_MS + OUT_MS;
 static uint32_t shownAt = 0;

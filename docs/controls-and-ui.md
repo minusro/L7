@@ -199,7 +199,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   `docs/design/`), drawn in full resolution from its shape (`drawL7()`, at any
   scale: 138×65 px here, 16 px right of the middle; the menu's corner: 55×26),
   fading in (0–0.5 s) while the L slides in from the left and the 7 from the
-  right (from off the screen, cubic ease-out, in place at 1 s), its hue going
+  right (from 600 px off: still about at the screen's edges once well lit;
+  cubic ease-out, in place at 1 s), its hue going
   once round, with "© 2026 Daniel Stanciu" centred under it in light grey, in
   the 3×5 block font (7×7 ©) smaller than usual but crisp: its blocks 2 and
   1 px in turn, the same in every glyph (columns 2, 1, 2 px; rows 2, 1, 2, 1, 2
