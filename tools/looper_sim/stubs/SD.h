@@ -101,6 +101,8 @@ public:
   SdCard *card() { static SdCard c; return &c; }
   FsFile open(const char *path, int flags) { FsFile f; f.open(path, flags); return f; }
   bool mkdir(const char *path) { return ::mkdir((simRoot + path).c_str(), 0755) == 0; }
+  uint32_t freeClusterCount() { return 1u << 20; }
+  uint32_t bytesPerCluster() { return 32768; }
   bool remove(const char *path) {
     struct stat st;
     if (::stat((simRoot + path).c_str(), &st) != 0) return false;   // nothing there: no change

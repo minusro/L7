@@ -244,7 +244,9 @@ static bool createPoolFile() {
   if (!ok) {                                     // probably no space: don't keep half a file
     SD.sdfs.remove(path);
     poolBlocked = true;
-    Serial.printf("no space for more recording files (%d ready)\n", poolCount);
+    Serial.printf("no space for more recording files (%d ready; %lu MB free, one needs %lu MB)\n", poolCount,
+                  (unsigned long)((uint64_t)SD.sdfs.freeClusterCount() * SD.sdfs.bytesPerCluster() >> 20),
+                  (unsigned long)(SAMPLE_FILE_BYTES >> 20));
     return false;
   }
   pool[poolCount++] = nextSample++;
@@ -1085,10 +1087,8 @@ bool storageBegin(void (*progress)(const char *)) {
     migrateLegacy(t, progress);                  // older version: its track file becomes a sample
   }
   renumberPool();
-  while (poolCount < POOL_SIZE) {
-    char msg[64];
-    snprintf(msg, sizeof msg, "preparing recording space (%d of %d, once)...", poolCount + 1, POOL_SIZE);
-    progress(msg);
+  while (poolCount < POOL_SIZE) {                // (serial only: on screen it showed on every start with the card full)
+    Serial.printf("preparing recording space (%d of %d)...\n", poolCount + 1, POOL_SIZE);
     if (!createPoolFile()) break;
   }
   openPoolNext();
