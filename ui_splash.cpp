@@ -55,7 +55,7 @@ static constexpr int LOGO_RIGHT = 8;                 // the logo this far right 
 static constexpr int LOGO_X = (320 - LOGO_W) / 2 + LOGO_RIGHT, LOGO_Y = (240 - GROUP_H) / 2 + GROUP_DOWN;
 // The splash's animation, in ms from showSplash(): the logo fades in from
 // black (0-500), then its colour goes once round the hues (500-2500); the
-// copyright line fades in (1500-2000); both fade out (3000-3500). Shown at
+// copyright line fades in (1500-2000); both fade out (3500-4000). Shown at
 // least this long.
 static constexpr uint32_t LOGO_FADE_MS = 500, HUE_MS = 2000, TEXT_FROM_MS = 1500, TEXT_FADE_MS = 500;
 // Meanwhile the L slides in from the left and the 7 from the right, from far
@@ -63,7 +63,7 @@ static constexpr uint32_t LOGO_FADE_MS = 500, HUE_MS = 2000, TEXT_FROM_MS = 1500
 // slowing down (cubic ease-out) until they're in place at 1 s.
 static constexpr uint32_t SLIDE_MS = 1000;
 static constexpr int SLIDE_PX = 600;
-static constexpr uint32_t OUT_FROM_MS = 3000, OUT_MS = 500;
+static constexpr uint32_t OUT_FROM_MS = 3500, OUT_MS = 500;
 static constexpr uint32_t SPLASH_MIN_MS = OUT_FROM_MS + OUT_MS;
 static uint32_t shownAt = 0;
 
