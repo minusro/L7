@@ -46,6 +46,11 @@ int menuSlot() { return shown && !onStatus && menuSel < CARDS ? menuSel : -1; }
 bool menuOnList() { return shown && !onStatus && menuSel >= CARDS; }
 int menuListItem() { return menuOnList() ? menuSel - CARDS : -1; }
 
+int menuState() {
+  if (!shown) return -1;
+  return onStatus ? 100 + selectedCellIn(STATUS_ROW) : menuSel;
+}
+
 void mainSelection(int &row, int &cell) {
   row = shown ? mainRow : selected;
   cell = shown ? mainCell : selectedCell;
@@ -277,4 +282,16 @@ void closeMenu() {
   board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);
   uiGeneration++;                                // everything redraws in full
   for (int i = 0; i < ROWS; i++) drawTrack(i);
+}
+
+void restoreMenu(int state) {
+  if (state < 0) return;
+  if (state >= 100) {
+    onStatus = true;
+    statusCell = constrain(state - 100, 0, TEMPO_CELL);
+  } else {
+    menuSel = constrain(state, 0, ITEMS - 1);
+    if (menuSel < CARDS) cardCol = menuSel % COLS;
+  }
+  openMenu();
 }

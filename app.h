@@ -27,6 +27,7 @@ void stepMasterVolume(int by);
 // project's: kept in it a while after they change (and at power off).
 void beginSession();
 int sessionProject();                              // the project to load at boot
+int sessionMenu();                                 // the menu as it was (ui_menu.cpp menuState(); -1: closed)
 // The loaded project's selection taken (after loading it; none saved: track
 // 1's waveform cell).
 void takeProjectSelection();

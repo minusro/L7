@@ -108,7 +108,8 @@ uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBe
 // The session: the tempo, the loaded project (0-11) and the master volume, in
 // session.txt. (row/cell: the selection, saved there before projects kept it;
 // -1: none.)
-struct Session { float bpm = 120.0f; int row = -1, cell = -1, master = MASTER_VOLUME_UNITY, project = 0; };
+// menu: the menu open at power off (its selection, ui_menu.cpp menuState()), or -1.
+struct Session { float bpm = 120.0f; int row = -1, cell = -1, master = MASTER_VOLUME_UNITY, project = 0, menu = -1; };
 Session loadSession();
 void saveSession(const Session &s);  // creates/rewrites a file: only while stopped
 void trackChanged(int t);            // settings changed: header saved when buffers allow

@@ -165,6 +165,7 @@ void setup() {
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();
+  restoreMenu(sessionMenu());                      // (open at power off: open again)
 }
 
 void loop() {

@@ -172,7 +172,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   row (the cell last used there), whose cells then work as in the looper's
   view, and back up to the list. The looper's own selection is kept
   meanwhile and comes back when the menu closes; the menu remembers where its
-  selection was for the next time.
+  selection was for the next time If it was open at power off it opens again at
+  boot (session.txt).
 * Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
   into 43×26 blocks of 2×2 px (two tracks tall), in the accent colour, with
   "© 2026 Daniel Stanciu" under it in light grey, in a 3×5 block font (7×7 ©); at least

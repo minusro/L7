@@ -12,6 +12,7 @@ static bool tempoDirty = false;
 static int savedRow = -1, savedCell = -1;      // the selection the project holds
 static int savedMaster = MASTER_VOLUME_UNITY;   // the master volume session.txt holds
 static int savedProject = 0;                    // and the loaded project
+static int savedMenu = -1, bootMenu = -1;       // and the menu (open: its selection; -1: closed)
 static int bootProject = 0;
 
 // ---- Tempo: MIN_BPM-MAX_BPM, whatever the loops were recorded at
@@ -45,9 +46,11 @@ void beginSession() {
   setMasterVolume(s.master);
   savedMaster = s.master;
   savedProject = bootProject = s.project;
+  savedMenu = bootMenu = s.menu;
 }
 
 int sessionProject() { return bootProject; }
+int sessionMenu() { return bootMenu; }
 
 void takeProjectSelection() {
   int row, cell;
@@ -62,7 +65,7 @@ void takeProjectSelection() {
 }
 
 static bool sessionDirty() {
-  return tempoDirty || masterVolume() != savedMaster || projectCurrent() != savedProject;
+  return tempoDirty || masterVolume() != savedMaster || projectCurrent() != savedProject || menuState() != savedMenu;
 }
 
 static void writeSession() {
@@ -70,7 +73,9 @@ static void writeSession() {
   s.bpm = bpm;
   s.master = masterVolume();
   s.project = projectCurrent();
+  s.menu = menuState();
   saveSession(s);
+  savedMenu = s.menu;
   savedMaster = s.master;
   savedProject = s.project;
   tempoDirty = false;
@@ -87,12 +92,13 @@ static void keepSelection() {
 }
 
 void saveSessionWhenIdle() {
-  static int row = -1, cell = -1;                 // the selection last seen here
+  static int row = -1, cell = -1, menu = -1;      // the selection and the menu last seen here
   int r, c;
   mainSelection(r, c);
-  if (r != row || c != cell) {
+  if (r != row || c != cell || menuState() != menu) {
     row = r;
     cell = c;
+    menu = menuState();
     changedMs = millis();
   }
   if (millis() - changedMs > 2000) keepSelection();   // (written to the project when the buffers allow)
