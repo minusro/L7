@@ -83,6 +83,15 @@ no dropouts or overruns
 - instead of the muted / unmuted / recording track status icons, show the track number. if the track is not empty, the track number is inside a square. the square is only a gray outline if the track is muted, or an accent colour filled square if the track is unmuted. the track number label colour should be: dark gray if track is empty, gray if track is muted or black if track is unmuted. while awaiting recording, recording or awaiting recording to finish, the number label on the recording track is hidden so it doesn't overlap with the remaining status icons V
 - scene naming: first empty scene is now 0/N, the last scene is no longer n+1*/n, but */n V
 
+123456789012
+-  --  --  -
+-- --  -- --
+
+1234567890
+-  -  -  -
+
+
+4oct26
 
 - [ Projects ]
 - figure out how to build resampling

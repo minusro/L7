@@ -1,6 +1,6 @@
 // ui_splash.cpp — the logo shown while the looper starts (see ui.h): "L8",
-// white, in 2x2-pixel blocks, two track rows tall, in the middle of the screen,
-// with the copyright line under it in the pixel font (ui_font.cpp).
+// in the accent colour, in 2x2-pixel blocks, two track rows tall, in the middle of the screen,
+// with the copyright line under it in light grey, in the pixel font (ui_font.cpp).
 #include "ui.h"
 #include "ui_font.h"
 
@@ -77,7 +77,7 @@ void showSplash() {
   for (int r = 0; r < LOGO_ROWS; r++)
     for (int c = 0; c < LOGO_COLS; c++)
       if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, LOGO_COLOR);
-  drawLine((320 - textCols(COPYRIGHT) * LOGO_PIXEL) / 2, TEXT_Y_SPLASH, COPYRIGHT, LOGO_COLOR);
+  drawLine((320 - textCols(COPYRIGHT) * LOGO_PIXEL) / 2, TEXT_Y_SPLASH, COPYRIGHT, SPLASH_TEXT);
   shownAt = millis();
 }
 

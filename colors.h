@@ -34,5 +34,6 @@ constexpr uint16_t PANEL_BORDER = INK;
 
 // ---- Boot / errors
 constexpr uint16_t TEXT_PROGRESS = 0xFFE0;   // yellow: startup messages
-constexpr uint16_t LOGO_COLOR = INK;         // the splash screen's logo
+constexpr uint16_t LOGO_COLOR = ACCENT;      // the splash screen's logo
+constexpr uint16_t SPLASH_TEXT = LIGHT;      // and its copyright line
 constexpr uint16_t TEXT_ERROR = 0xF800;      // red: fatal errors

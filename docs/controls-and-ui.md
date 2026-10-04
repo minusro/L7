@@ -75,11 +75,15 @@ A recording track's waveform cell is in the accent colour.
 
 * Waveform (`ui_wave.cpp`): 90 columns, inside a block of space within
   the frame (peaks up to 4 blocks each way from a two-block centre,
-  square-root scale); light grey inside the loop range (white on the selected cell), dark grey outside (muted:
-  50% grey range, dark grey outside). The start position: a short line
-  across the middle (inverting what's there), on every track. While B alone
+  square-root scale); light grey inside the loop range (white on the selected cell), 50% grey outside (muted:
+  50% grey range, dark grey outside). On every track, a black line the
+  waveform's height just before the start of each bar but the first (on the
+  same column edges as the range, so the range's colour stops at them). The
+  start position, on every track: a dotted line the waveform's height (10
+  blocks: a block of the waveform's colour there every third, black between). While B alone
   is held on the selected waveform cell, the range is in the accent colour,
-  muted or not. Playheads are accent-coloured lines (white while the
+  muted or not. Playheads are accent-coloured lines, a block taller than the waveform
+  each way (white while the
   range is in the accent colour); on muted clips black lines cutting through
   the waveform. A
   recording's record head inverts its column.
@@ -121,7 +125,7 @@ A recording track's waveform cell is in the accent colour.
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
 * Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
-  into 43×26 blocks of 2×2 px (two tracks tall), white, with
-  "© 2026 Daniel Stanciu" under it in a 3×5 block font (7×7 ©); at least
+  into 43×26 blocks of 2×2 px (two tracks tall), in the accent colour, with
+  "© 2026 Daniel Stanciu" under it in light grey, in a 3×5 block font (7×7 ©); at least
   2 s; startup messages print below it.
 * Headphones plugged in → speaker off (sense pin 22 < 300).
