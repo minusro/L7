@@ -33,6 +33,9 @@
   recording (simulator: no dropouts at native tempo with 7 tracks + a
   recording).
 * More than 16 recordings without stopping exhausts the pool → ~0.7 s stall.
+* Card nearly full: the pool stays short (each empty file is ~22 MB); after a
+  failed try it isn't retried until trimming a recording frees space (each
+  try blocks the loop ~1 s — retrying every pass made the app crawl).
 * Below ~110 BPM a queued recording after a trimmed one may start on the next
   bar (input history too short to catch up).
 * B+arrow range edits are ignored on a track while a clip change waits.

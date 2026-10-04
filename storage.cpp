@@ -224,6 +224,10 @@ static bool playable(const SampleInfo &info) {
 }
 
 // A new empty sample file at full size, for the pool (changes the file system).
+// A pool file couldn't be made (the card full): not tried again while
+// stopped until trimming a recording frees some space (a try takes ~1 s).
+static bool poolBlocked = false;
+
 static bool createPoolFile() {
   if (poolCount >= POOL_SIZE || nextSample > MAX_SAMPLES) return false;
   char path[40];
@@ -239,6 +243,8 @@ static bool createPoolFile() {
   f.close();
   if (!ok) {                                     // probably no space: don't keep half a file
     SD.sdfs.remove(path);
+    poolBlocked = true;
+    Serial.printf("no space for more recording files (%d ready)\n", poolCount);
     return false;
   }
   pool[poolCount++] = nextSample++;
@@ -254,6 +260,7 @@ static void trimSample(uint32_t n) {
   if (f && readSampleHeader(f, info, nullptr) && playable(info)) {
     debugStage = "SD trim (sample file)";
     f.truncate(WAV_DATA_OFFSET + (uint64_t)(info.frames + prerollOf(info)) * 4);
+    poolBlocked = false;                         // (space freed)
   }
 }
 
@@ -1897,7 +1904,7 @@ void flushHeaders() {
 static void serviceFiles() {
   if (transport.running || recording.mode != Recording::Idle || sdFailed) return;
   if (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);
-  else if (poolCount < POOL_SIZE) createPoolFile();
+  else if (poolCount < POOL_SIZE && !poolBlocked) createPoolFile();
   else openPoolNext();
 }
 
