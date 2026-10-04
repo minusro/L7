@@ -142,7 +142,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Colours: all in `colors.h`.
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
-* Menu (`ui_menu.cpp`): opened with A on the scene cell, or by stopping the
+* Menu (`ui_menu.cpp`): the app starts in it (the clock stopped, on the
+  last project's card, that project already loaded). Opened with A on the scene cell, or by stopping the
   clock (START, once let go), or with A on the clock cell, it takes
   the place of the track rows and the status row's cells, across the whole
   width; of the status row only the action button shows. Opening it stops the
@@ -163,7 +164,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   pastels, rose to blush, picked by the author; the loaded project's is the
   app's accent colour, `ACCENT_DARK` at half its brightness; before one is
   loaded, the splash's turquoise). A slot holding a project is filled with
-  it, its letter (the project's name) black; the loaded one outlined white.
+  it, its letter (the project's name) black; the loaded one outlined white (two blocks).
   An empty slot is a grey outline, its letter in the slot's colour. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet). Four in
   view at a time (an item

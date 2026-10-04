@@ -79,7 +79,12 @@ bool projectDelete(int p);
 // not; the clipboards and the dummy project included), nor the tracks now.
 // Stopped only; at boot and when the menu opens. Returns how many.
 int deleteUnusedSamples();
-// The loaded project's selected row and cell (-1: none saved).
+// Each scene keeps the looper's selection (row and cell): when leaving it
+// it's saved with the scene, and arriving there it comes back. get/set: the
+// app's selection.
+void scenesSelection(void (*get)(int &row, int &cell), void (*set)(int row, int cell));
+// The loaded project's selected row and cell (its current scene's, else the
+// project's; -1: none saved).
 void projectSelection(int &row, int &cell);
 void projectSetSelection(int row, int cell);
 

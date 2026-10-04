@@ -17,6 +17,7 @@ struct SceneInfo {
   uint32_t version;
   float tempo;                                   // 0: keeps the tempo (the empty scene)
   TrackUnit units[NUM_TRACKS];
+  uint8_t row, cell;                             // the selection on it, each + 1 (0: none saved; older records)
 };
 struct SceneList {
   char magic[4];                                 // "M8SL"
@@ -67,10 +68,24 @@ static SceneInfo emptyScene() {
   return s;
 }
 
+// The looper's selection (row, cell), from the app (scenesSelection()).
+static void (*getSel)(int &, int &) = nullptr;
+static void (*setSel)(int, int) = nullptr;
+void scenesSelection(void (*get)(int &, int &), void (*set)(int, int)) {
+  getSel = get;
+  setSel = set;
+}
+
 static SceneInfo snapshot() {
   SceneInfo s = emptyScene();
   s.tempo = getTempo();
   for (int t = 0; t < NUM_TRACKS; t++) s.units[t] = unitOf(t);
+  if (getSel) {
+    int r, c;
+    getSel(r, c);
+    s.row = r + 1;
+    s.cell = c + 1;
+  }
   return s;
 }
 
@@ -168,6 +183,27 @@ static bool busy() { return recording.mode != Recording::Idle; }
 
 // To scene pos. While SHIFT is held only the label moves (see sceneHold), unless
 // quick: then at once, switching on the next beat.
+// The current scene (a stored one) keeps the selection there now (leaving
+// it, or the selection moved: written with the record).
+static void keepSceneSelection() {
+  if (!getSel || list.current < 1 || list.current > list.count) return;
+  int r, c;
+  getSel(r, c);
+  SceneInfo s = sceneAt(list.current);
+  if (s.row == r + 1 && s.cell == c + 1) return;
+  s.row = r + 1;
+  s.cell = c + 1;
+  int slot = list.slot[list.current - 1];
+  if (recordSlot >= 0 && recordSlot != slot) writeRecordNow();
+  record = s;
+  recordSlot = slot;
+}
+
+// Arriving on scene s: its selection, if it has one.
+static void takeSceneSelection(const SceneInfo &s) {
+  if (setSel && s.row && s.cell) setSel(s.row - 1, s.cell - 1);
+}
+
 static bool go(int pos, bool quick = false) {
   pos = constrain(pos, 0, list.count ? list.count + 1 : 0);   // (no scenes: no N+1*, a copy of nothing)
   if (holding && !quick) {                       // only the label moves for now, the scene is prepared
@@ -184,9 +220,12 @@ static bool go(int pos, bool quick = false) {
   if (quick) prepareUnits(nullptr);                // (files prepared for another scene: not these)
   commit();
   if (busy() || pos == list.current) return false;
+  keepSceneSelection();
   list.current = pos;
   listDirty = true;
-  apply(sceneAt(min(pos, (int)list.count)), quick);   // N+1*: a copy of N
+  SceneInfo s = sceneAt(min(pos, (int)list.count));   // N+1*: a copy of N
+  apply(s, quick);
+  takeSceneSelection(s);
   return true;
 }
 
@@ -441,12 +480,21 @@ bool projectHasClips() {
 bool projectsMayCopy() { return !busy() && !job.on; }
 
 void projectSelection(int &row, int &cell) {
+  if (list.current >= 1 && list.current <= list.count) {   // its scene's own, if it has one
+    SceneInfo s = sceneAt(list.current);
+    if (s.row && s.cell) {
+      row = s.row - 1;
+      cell = s.cell - 1;
+      return;
+    }
+  }
   row = list.row ? list.row - 1 : -1;
   cell = list.cell ? list.cell - 1 : -1;
 }
 
 void projectSetSelection(int row, int cell) {
   uint8_t r = row < 0 ? 0 : row + 1, c = cell < 0 ? 0 : cell + 1;
+  keepSceneSelection();                            // (the scene's own too)
   if (r == list.row && c == list.cell) return;
   list.row = r;
   list.cell = c;

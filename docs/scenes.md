@@ -30,6 +30,10 @@ hold no audio: scenes name their samples. The first version's
   cleared. A new project (or the dummy) starts on track 1's waveform cell.
 * A project with no clips at all is deleted when the menu opens (its slot
   emptied, not to the clipboard; the dummy project loaded).
+* Each scene keeps the looper's selection (`SceneInfo.row`, `cell`, + 1):
+  saved when leaving it (and with every save of the scene), restored when
+  arriving; loading a project takes its current scene's. The list block's
+  selection is the fallback (scenes saved before this).
 * The selection is saved in the list block (`row`, `cell`, each + 1; 0:
   none) a couple of seconds after it changes, before loading another
   project, and at power off.

@@ -159,14 +159,16 @@ void setup() {
   beginSession();                                  // the tempo and the selection
   transport.spb = spbForBpm(bpm);
   scenesBegin([] { return bpm; }, setTempo, sessionProject());
+  scenesSelection(mainSelection, setMainSelection);
   takeProjectSelection(false);
   deleteUnusedSamples();                           // recordings no project uses
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();
-  restoreMenu(sessionMenu());                      // its selection (open at power off: open again)
-  if (projectCurrent() < 0) openMenu();            // the dummy project: a project has to be chosen first
+  restoreMenu(sessionMenu());                      // its selection
+  openMenu();                                      // always starting in the menu (the clock stopped), on the last project
+                                                   // (already loaded: its tracks ready to play)
 }
 
 void loop() {

@@ -162,7 +162,7 @@ static void drawItem(int k) {
     uint16_t letter = filled ? BG : color;
     if (filled) {
       fillRing(s, 0, -s.w, color);
-      if (k == projectCurrent()) fillRing(s, 0, -1, INK);   // the loaded one: outlined white
+      if (k == projectCurrent()) fillRing(s, 0, -2, INK);   // the loaded one: outlined white, two blocks
     } else {                                      // empty: an outline (the shape's edge)
       fillRing(s, 0, -1, DIM);
       fillRing(s, -1, -s.w, BG);
