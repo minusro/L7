@@ -174,16 +174,18 @@ static bool unavailable(int i, int icon) {
 }
 
 // The action button (the status row's): the accent colour with black icons; dark grey
-// with icons in the accent colour while A is held. The tracks' buttons: black.
+// with icons in the accent colour while A is held. In the menu its colour
+// follows the item (menuActionColor()): a card's, or light grey on the
+// system-level ones (USB data mode). The tracks' buttons: black.
 static uint16_t buttonBackground(int i, int icon) {
   (void)icon;
-  if (i == STATUS_ROW) return heldAction >= 0 ? DARK : ACCENT;
+  if (i == STATUS_ROW) return heldAction >= 0 ? DARK : menuActionColor();
   return cellBackground(i, -1);
 }
 
 static uint16_t iconColor(int i, int icon) {
   uint16_t bg = buttonBackground(i, icon);
-  if (i == STATUS_ROW) return heldAction >= 0 ? (unavailable(i, icon) ? BG : ACCENT) : unavailable(i, icon) ? DARK : BG;
+  if (i == STATUS_ROW) return heldAction >= 0 ? (unavailable(i, icon) ? BG : menuActionColor()) : unavailable(i, icon) ? DARK : BG;
   if (unavailable(i, icon)) return DARK;
   if (bg != BG) return BG;
   if (recordingOn(i) || recordQueued() == i) return ACCENT;

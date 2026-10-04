@@ -18,13 +18,14 @@
 // was for the next time it opens.
 //
 // A card: a block shape, its bottom right corner cut diagonally (a third of
-// its height), lettered A-L, in its slot's colour (colors.h): at half
-// brightness unless selected; an outline (and letter) when empty, filled
-// (letter black) when it holds a project; the loaded project's light grey
-// (white when selected). The selected item's frame looks and behaves as the
-// looper's cells' (frameColor()), corners cut: on a card a block of space
-// out (the diagonal too); round a list item's label (centred, light
-// grey, white when selected) three blocks out.
+// its height), in its slot's colour (colors.h): an outline when empty,
+// filled when it holds a project; the loaded project's light grey (white
+// when selected). Its letter, A-L (the project's name): dark grey when
+// empty, black on a project, the slot's colour on the loaded one. The
+// selected item's frame looks and behaves as the looper's cells'
+// (frameColor()), corners cut, a block out from a card (the diagonal too),
+// three from the list's box (the longest label's size, centred; labels
+// left-aligned, light grey, white when selected).
 #include "ui.h"
 #include "ui_font.h"
 
@@ -102,8 +103,10 @@ static constexpr int LIST_Y = 78, LIST_PITCH = 13, LIST_SPACE = 3;
 static Shape itemShape(int k) {
   if (k < CARDS)
     return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (k / COLS) * (CARD_H + CARD_GAP), CARD_W, CARD_H, CARD_CUT};
-  // A list item: its label.
-  int w = textWidth(LABELS[k - CARDS]) / PX;
+  // A list item: the box fitting the longest label, centred (its label
+  // left-aligned in it).
+  int w = 0;
+  for (const char *label : LABELS) w = max(w, textWidth(label) / PX);
   return {(320 / PX - w) / 2, LIST_Y + (k - CARDS) * LIST_PITCH, w, FONT_H / PX, 0};
 }
 
@@ -117,8 +120,6 @@ static uint16_t frameColor() {
   return k & (m8::BTN_EDIT | m8::BTN_OPT) ? DIM : k && !(k & ~arrows) && movedHere ? INK : LIGHT;
 }
 
-static uint16_t darker(uint16_t c) { return blend565(c, BG, 128); }   // a slot's colour at half brightness
-
 static void drawItem(int k) {
   auto &t = board.tft();
   Shape s = itemShape(k);
@@ -127,28 +128,39 @@ static void drawItem(int k) {
   if (k < CARDS) {                                // a project slot: its frame a block out
     fillRing(s, 2, 1, frame, true);
     fillRing(s, 1, 0, BG);
-    uint16_t color = sel ? PROJECT_COLORS[k] : darker(PROJECT_COLORS[k]);
+    uint16_t color = PROJECT_COLORS[k];
     bool filled = projectFilled(k), loaded = k == projectCurrent();
     if (loaded) color = sel ? INK : LIGHT;
+    // Its letter (the project's name): black on a project, the slot's colour
+    // on the loaded one, dark grey on an empty slot.
+    uint16_t letter = !filled ? DARK : loaded ? PROJECT_COLORS[k] : BG;
     if (filled) {
       fillRing(s, 0, -s.w, color);
     } else {                                      // empty: an outline (the shape's edge)
       fillRing(s, 0, -1, color);
       fillRing(s, -1, -s.w, BG);
     }
-    // Its letter, A-L: black on a filled card; on an empty one, its colour.
     const Glyph *g = glyphFor((char)('A' + k));
     if (g) {
       int w = glyphWidth(*g), x0 = s.x + (s.w - w) / 2, y0 = s.y + (s.h - 5) / 2;
       for (int r = 0; r < 5 && g->rows[r]; r++)
         for (int c = 0; c < w; c++)
-          if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, filled ? BG : color);
+          if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
     }
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
     fillRing(s, LIST_SPACE, 0, BG);
     drawText(s.x * PX, s.y * PX, LABELS[k - CARDS], sel ? INK : LIGHT, BG);
   }
+}
+
+// The action button's colour: a card's, its slot's; the system-level list
+// items' (USB data mode), light grey; the project's own (export, the status
+// row), the accent colour.
+uint16_t menuActionColor() {
+  if (!shown || onStatus) return ACCENT;
+  if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
+  return menuSel - CARDS == 1 ? LIGHT : ACCENT;
 }
 
 // What an item shows: redrawn when it changes.

@@ -130,6 +130,7 @@ bool menuOnStatus();                     // open, its selection on the status ro
 void menuLeaveStatus();                  // from the status row back up to the menu's items
 int menuSlot();                          // the project slot selected in the menu (0-11), or -1
 bool menuOnList();                       // the selection on the menu's list (EXPORT TO ALS ...)
+uint16_t menuActionColor();              // the action button's colour (the accent, a card's, light grey)
 int menuListItem();                      // which of its items (0: export, 1: USB data mode), or -1
 void mainSelection(int &row, int &cell); // the looper's selection (kept while the menu is open)
 

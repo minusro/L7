@@ -150,15 +150,19 @@ A recording track's waveform area is in the accent colour (a block of black betw
   height), lettered A-L from the top row. Each slot has its colour
   (`PROJECT_COLORS`: twelve pastels, rose to blush, picked by the author; the
   loaded project's is the app's accent colour, `ACCENT_DARK` at half its
-  brightness; before one is loaded, the splash's turquoise). Unselected, at
-  half brightness; selected, full: an empty slot is an outline in it (its
-  letter too), one holding a project filled with it (letter black); the
-  loaded project light grey (white when selected). Under them a list, "EXPORT
-  TO ALS" and "USB DATA MODE" (nothing yet), centred, light grey (white
-  when selected). The selected item's frame looks and behaves as the
+  brightness; before one is loaded, the splash's turquoise): an outline when
+  empty, filled when it holds a project, the loaded project's filled light
+  grey (white when selected). The letter (the project's name): dark grey when
+  empty, black on a project, the slot's colour on the loaded one. Under them
+  a list, "EXPORT TO ALS" and "USB DATA MODE" (nothing yet): a box as wide as
+  the longest label, centred, labels left-aligned, light grey (white when
+  selected). The action button takes the item's colour: on a card, its
+  slot's; on project-level items (export, the status row's cells) the
+  accent; on system-level ones (USB data mode) light grey (its icon light
+  grey while pressed too). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
   or B is held, corners cut; round a card one block out (following its
-  diagonal); round a list item's label, three blocks out. On a card the
+  diagonal); round the list's box, three blocks out. On a card the
   action button shows load (a folder) or, empty, new (a plus); with SHIFT,
   cut or paste (dark grey when it can't act: playing, recording, clipboard
   empty); on the list, a diskette (export) and the USB trident (data mode),
