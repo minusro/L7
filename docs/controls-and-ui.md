@@ -154,7 +154,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   half brightness; selected, full: an empty slot is an outline in it (its
   letter too), one holding a project filled with it (letter black); the
   loaded project light grey (white when selected). Under them a list, "EXPORT
-  TO ABLETON" and "USB DATA MODE" (nothing yet), centred, light grey (white
+  TO ALS" and "USB DATA MODE" (nothing yet), centred, light grey (white
   when selected). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
   or B is held, corners cut; on a card two blocks thick, touching it

@@ -18,7 +18,7 @@
 // held: open the menu (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A and B both run the action): on its
-// list's items, export to Ableton (a diskette) and USB data mode (the USB
+// list's items, export to ALS (a diskette) and USB data mode (the USB
 // trident), nothing yet; on a project slot, load (a folder; the loaded one too: back to it) or, on an
 // empty slot, new (a plus), closing the menu; with SHIFT, cut the project or
 // paste one into an empty slot (dark grey while it can't: playing, recording,

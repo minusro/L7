@@ -2,7 +2,7 @@
 // view of the looper (the status row stays), the screen's whole width.
 // Opened with B+A (or A on the scene cell), closed the same way from the status row, or by loading a project. Twelve
 // cards (three rows of four), the project slots, and under them a list,
-// "EXPORT TO ABLETON" and "USB DATA MODE" (nothing yet). A and B both run
+// "EXPORT TO ALS" and "USB DATA MODE" (nothing yet). A and B both run
 // the action button's action. On a slot, A loads its project (an empty one: a new project there) and
 // closes the menu; with SHIFT, cuts the project, or pastes one into an empty
 // slot (only while stopped).
@@ -31,7 +31,7 @@
 uint32_t uiGeneration = 1;
 
 static constexpr int CARDS = PROJECTS, LIST = 2, ITEMS = CARDS + LIST, COLS = 4;
-static const char *const LABELS[LIST] = {"EXPORT TO ABLETON", "USB DATA MODE"};
+static const char *const LABELS[LIST] = {"EXPORT TO ALS", "USB DATA MODE"};
 
 static bool shown = false;
 static int menuSel = 0;                          // the selected item
