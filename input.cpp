@@ -94,7 +94,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // volume: B + arrows change it, B twice turns it off or back to 100%, as on
   // the clock cell; A there starts / stops (SHIFT+A: from 1.1.1).
   static bool armed = false, shifted = false, armedVolume = false;   // A down: its action waits; SHIFT with it
-  // SHIFT+A on a project: the first tap only asks (a checkmark); a second A,
+  // SHIFT+A on a project: the first tap only asks (a question mark); a second A,
   // SHIFT still held and the selection still there, cuts it when let go.
   if (cutConfirm >= 0 && (!menuOpen() || !shift || menuSlot() != cutConfirm)) cutConfirm = -1;
   static int armedSlot = -1;                         // the slot it was pressed on (-1: a list item)

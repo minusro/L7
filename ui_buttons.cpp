@@ -22,7 +22,7 @@
 // list's items, export Ableton project (a diskette) and enter USB data mode (the USB
 // trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
-// (a checkmark after the first A: a second A confirms) or
+// (a question mark after the first A: a second A confirms) or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
 // the menu (as B+A) on the scene cell, start / stop (play / stop, as
@@ -156,7 +156,7 @@ PROGMEM static const Icon ICONS[] = {
   {5, 5, {"..#..", "#.#.#", ".###.", "#.#.#", "..#.."}},   // NEW (a small asterisk)
   {9, 9, {"#######..", "##.....#.", "##..##.##", "##.....##", "#########", "#.......#", "#.......#", "#.......#", "#########"}},   // SAVE (a diskette)
   {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
-  {7, 6, {"......#", ".....##", "#...##.", "##.##..", ".###...", "..#...."}},   // CHECK (confirm: cut the project with a second A)
+  {5, 7, {".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."}},   // CHECK (a question mark: cut the project with a second A?)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
