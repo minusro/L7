@@ -13,7 +13,8 @@
 // looper's own selection is kept meanwhile and comes back when the menu
 // closes). UP/DOWN go card row to card row, from the last row into the list
 // (back up: to the column it came from), from the list's end onto the status
-// row (the cell last there) and back. The menu remembers where its selection
+// row (the cell last there) and back. LEFT/RIGHT go through everything in
+// order: the cards row by row, the list, the status row's cells (and back). The menu remembers where its selection
 // was for the next time it opens.
 //
 // A card: a block shape, its bottom right corner cut diagonally (a third of
@@ -187,6 +188,7 @@ void menuLeaveStatus() {
   onStatus = false;
   statusCell = selectedCellIn(STATUS_ROW);
   menuSel = ITEMS - 1;                           // the list's last item
+  movedHere = true;
   selected = mainRow;
   selectedCell = mainCell;
   drawMenu();
@@ -198,14 +200,24 @@ void menuLeaveStatus() {
 bool menuKeys(uint8_t pressed) {
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   int k = menuSel;
+  // LEFT/RIGHT: through every item in order (the cards row by row, the list),
+  // on past the list's end onto the status row's first cell.
+  if (pressed & m8::BTN_LEFT && k > 0) k--;
+  if (pressed & m8::BTN_RIGHT) {
+    if (k == ITEMS - 1) {
+      movedHere = true;
+      statusCell = SCENE_CELL;
+      toStatus();
+      return true;
+    }
+    k++;
+  }
   if (k < CARDS) {
-    int row = k / COLS, col = k % COLS;
-    if (pressed & m8::BTN_LEFT && col > 0) k--;
-    if (pressed & m8::BTN_RIGHT && col < COLS - 1) k++;
+    int row = k / COLS;
     if (pressed & m8::BTN_UP && row > 0) k -= COLS;
     if (pressed & m8::BTN_DOWN) k = row < CARDS / COLS - 1 ? k + COLS : CARDS;
     if (k < CARDS) cardCol = k % COLS;
-  } else {
+  } else if (!(pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
     if (pressed & m8::BTN_UP) k = k > CARDS ? k - 1 : CARDS - COLS + cardCol;
     if (pressed & m8::BTN_DOWN) {
       if (k == ITEMS - 1) {                        // below the list: the status row

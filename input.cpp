@@ -107,9 +107,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     return;
   }
   // The menu's selection on the status row: as in the looper's view, but UP
-  // goes back to the menu's items.
-  if (menuOpen() && (pressed & m8::BTN_UP) && !shift && !opt) {
-    menuLeaveStatus();
+  // (or LEFT from the scene cell) goes back to the menu's items.
+  if (menuOpen() && !shift && !opt &&
+      ((pressed & m8::BTN_UP) || ((pressed & m8::BTN_LEFT) && selectedCellIn(STATUS_ROW) == SCENE_CELL))) {
+    menuLeaveStatus();                               // (LEFT from its first cell too: the list's last item)
+    moved = true;
     return;
   }
   bool onStatus = selected == STATUS_ROW;

@@ -162,8 +162,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   action button shows load (a folder) or, empty, new (a plus); with SHIFT,
   cut or paste (dark grey when it can't act: playing, recording, clipboard
   empty); on the list, a diskette (export) and the USB trident (data mode),
-  doing nothing yet. LEFT/RIGHT move along a card
-  row; UP/DOWN go card row to card row, from the last row into the list
+  doing nothing yet. LEFT/RIGHT go through everything in order: the cards
+  row by row, the list, then the status row's cells (and back); UP/DOWN go card row to card row, from the last row into the list
   (back up: to the column it came from), from the list's end onto the status
   row (the cell last used there), whose cells then work as in the looper's
   view, and back up to the list. The looper's own selection is kept
