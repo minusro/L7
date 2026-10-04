@@ -19,8 +19,8 @@
 //
 // A card: a block shape, its bottom right corner cut diagonally (a third of
 // its height), in its slot's colour (colors.h): an outline when empty,
-// filled when it holds a project; the loaded project's outlined light grey
-// (white when selected). Its letter, A-L (the project's name): grey when empty, black
+// filled when it holds a project, outlined (its edge) black, or white on the
+// loaded project's. Its letter, A-L (the project's name): grey when empty, black
 // on a project. The selected item's frame looks and behaves as the looper's
 // cells' (frameColor()), corners cut, a block out from a card (the diagonal
 // too), three from the list's box (the longest label's size, centred;
@@ -138,7 +138,7 @@ static void drawItem(int k) {
     uint16_t letter = filled ? BG : DIM;
     if (filled) {
       fillRing(s, 0, -s.w, color);
-      if (k == projectCurrent()) fillRing(s, 0, -1, sel ? INK : LIGHT);   // loaded: outlined light grey (white)
+      fillRing(s, 0, -1, k == projectCurrent() ? INK : BG);   // outlined: white on the loaded one, else black
     } else {                                      // empty: an outline (the shape's edge)
       fillRing(s, 0, -1, color);
       fillRing(s, -1, -s.w, BG);
