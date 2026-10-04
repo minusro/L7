@@ -23,13 +23,14 @@ constexpr uint16_t INK = rgb565(255, 255, 255);     // white: what's active, sel
 constexpr uint16_t ACCENT = rgb565(48, 230, 170);   // green turquoise: recording, and a scene change on its way
 constexpr uint16_t ACCENT_DARK = rgb565(24, 120, 72);   // the accent at about half brightness, a little greener: light grey's while editing
 
-// The project slots' colours (the menu): eight hues a perceptual step apart
-// (OKLCH, 45 degrees), red to pink, at the accent's lightness and chroma (the
-// accent the 4th); hues that can't reach its chroma at that lightness as
+// The project slots' colours (the menu): twelve hues a perceptual step apart
+// (OKLCH, 30 degrees), red to pink, at the accent's lightness and chroma (the
+// accent the 6th); hues that can't reach its chroma at that lightness as
 // colourful as they can be.
-constexpr uint16_t PROJECT_COLORS[8] = {
-    rgb565(255, 173, 160), rgb565(255, 181, 62), rgb565(185, 212, 74), ACCENT,
-    rgb565(0, 222, 248), rgb565(158, 201, 255), rgb565(207, 182, 255), rgb565(255, 164, 216)};
+constexpr uint16_t PROJECT_COLORS[12] = {
+    rgb565(255, 171, 177), rgb565(255, 176, 140), rgb565(255, 181, 62), rgb565(214, 202, 43),
+    rgb565(150, 220, 106), ACCENT, rgb565(0, 225, 225), rgb565(98, 214, 255),
+    rgb565(158, 201, 255), rgb565(190, 190, 255), rgb565(229, 171, 255), rgb565(255, 164, 216)};
 
 // ---- Roles
 constexpr uint16_t PLAYHEAD = ACCENT;        // playing clips

@@ -78,12 +78,13 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       lastShiftTap = shiftTwice ? 0 : millis();
     }
   }
-  if (menuOpen() && !menuOnStatus()) {               // the menu's items: the arrows move its selection, A closes it
+  if (menuOpen() && !menuOnStatus()) {               // the menu's items: the arrows move its selection, B+A closes it
     if (pressed & m8::BTN_EDIT) {
       noteActionPress();
       int slot = menuSlot();
-      if (slot < 0 || opt) {
+      if (opt) {
         closeMenu();
+      } else if (slot < 0) {                         // the list's items: nothing yet
       } else if (shift) {                            // SHIFT+A on a slot: cut its project, or paste one into it
         projectFilled(slot) ? projectCut(slot) : projectPaste(slot);
         drawMenu();

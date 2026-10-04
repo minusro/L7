@@ -6,19 +6,19 @@
 // last scene N is N+1*, a copy of N that becomes a scene once changed. On a
 // stored scene every change updates it.
 //
-// Projects: 8 slots, each a scene list with its current scene and the
+// Projects: 12 slots, each a scene list with its current scene and the
 // selected row and cell (the master volume stays global). The loaded one is
 // saved as it changes. A slot's file holds no audio, only the scenes (which
-// name their samples): /looper/projects/1.dat ... 8.dat, made once at full
+// name their samples): /looper/projects/1.dat ... 12.dat, made once at full
 // size: saving only overwrites 512-byte blocks.
 #pragma once
 #include <stdint.h>
 
 namespace looper {
 
-constexpr int MAX_SCENES = 250, PROJECTS = 8;
+constexpr int MAX_SCENES = 250, PROJECTS = 12;
 
-// After storageBegin(): loads project `project` (0-7). The tempo goes
+// After storageBegin(): loads project `project` (0-11). The tempo goes
 // through the app (rounding, limits): getTempo returns it, setTempo applies it.
 void scenesBegin(float (*getTempo)(), bool (*setTempo)(float), int project = 0);
 void sceneStateChanged();      // something in the looper changed: the current scene follows
@@ -51,7 +51,7 @@ bool sceneHeld();              // a held selection not gone to yet
 int sceneCurrent();
 int sceneCount();
 
-// ---- Projects (slots 0-7)
+// ---- Projects (slots 0-11)
 int projectCurrent();          // the loaded one
 bool projectFilled(int p);     // the slot holds a project (the loaded one always does)
 // Loads project p: its current scene goes on the looper (playing: on a bar

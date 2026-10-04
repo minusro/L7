@@ -13,7 +13,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (as B+A) on the scene cell, start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
-| B + A | Open / close the menu (A also closes it; arrows move its selection, down onto the status row too) |
+| B + A | Open / close the menu (arrows move its selection: cards, list, status row) |
 | A (menu, on a project slot) | Load its project (an empty slot: a new, empty project there) and close the menu; the loaded one: just close it. Not while recording |
 | SHIFT + A (menu, on a slot) | Cut its project to the project clipboard (the loaded one: a new empty project takes its place), or paste the clipboard into an empty slot. Only while stopped |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
@@ -142,23 +142,27 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
 * Menu (`ui_menu.cpp`): opened with B+A (or A on the scene cell), it takes
-  the track rows' place (the status row stays, its frames hidden; the action
-  button shows the looper's rows: A closes it). Eight boxes (two rows of four,
-  36×18 blocks), the project slots, and two buttons, "EXPORT LIVE SET" and
-  "USB MODE" (nothing yet), the selected item framed grey. Each slot has its
-  colour (`PROJECT_COLORS`: eight OKLCH hues 45° apart at the accent's
-  lightness and chroma, red to pink, the accent the 4th; blues and reds as
-  colourful as sRGB allows at that lightness): filled when it holds a
+  the track rows' place across the whole width (the status row stays, its
+  frames hidden; B+A, or A on the scene cell, closes it). Twelve project
+  cards (three rows of four, 36×22 blocks, 4 apart): rectangles with the
+  bottom right corner cut diagonally, the cut half their height. Each slot
+  has its colour (`PROJECT_COLORS`: twelve OKLCH hues 30° apart at the
+  accent's lightness and chroma, red to pink, the accent the 6th; blues and
+  reds as colourful as sRGB allows at that lightness): filled when it holds a
   project, an outline when empty; the loaded one shows the looper's rows (the
-  HOME icon) in black. On a slot the action button shows load (a folder) or,
-  empty, new (a plus); with SHIFT, cut or paste (dark grey when it can't act:
-  playing, recording, clipboard empty). The buttons: dark grey, their labels
-  light grey (white when selected);
-  the arrows move along the rows and between them, and down from the buttons
-  onto the status row, whose cells then work as in the looper's view (UP goes
-  back to the buttons; A on the scene cell, or B+A, closes the menu). The
-  looper's own selection is kept meanwhile and comes back when the menu
-  closes; the menu remembers where its selection was for the next time.
+  HOME icon) in black. Under them a list, "EXPORT LIVE SET" and "USB MODE"
+  (nothing yet), 75% of the width, centred, labels left-aligned, light grey
+  (white when selected). The selected item's frame is grey, one block of
+  space out from it all round, following the card's diagonal. On a card the
+  action button shows load (a folder) or, empty, new (a plus); with SHIFT,
+  cut or paste (dark grey when it can't act: playing, recording, clipboard
+  empty); on the list, > (does nothing yet). LEFT/RIGHT move along a card
+  row; UP/DOWN go card row to card row, from the last row into the list
+  (back up: to the column it came from), from the list's end onto the status
+  row (the cell last used there), whose cells then work as in the looper's
+  view, and back up to the list. The looper's own selection is kept
+  meanwhile and comes back when the menu closes; the menu remembers where its
+  selection was for the next time.
 * Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
   into 43×26 blocks of 2×2 px (two tracks tall), in the accent colour, with
   "© 2026 Daniel Stanciu" under it in light grey, in a 3×5 block font (7×7 ©); at least

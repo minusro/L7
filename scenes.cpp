@@ -1,6 +1,6 @@
 // scenes.cpp — see scenes.h
 //
-// A project file (/looper/projects/1.dat ... 8.dat; clip.dat the clipboard):
+// A project file (/looper/projects/1.dat ... 12.dat; clip.dat the clipboard):
 // block 0 is the list (which record slot is at each position, how many, the
 // current position, and the selected row and cell); blocks 1.. are the
 // scenes' records, in slots reused as scenes come and go. Inserting or
@@ -30,7 +30,7 @@ static_assert(sizeof(SceneList) <= BLOCK && sizeof(SceneInfo) <= BLOCK, "a block
 
 static FsFile file;                              // the loaded project's
 static SceneList list;
-static int project = 0;                          // the loaded one (0-7)
+static int project = 0;                          // the loaded one (0-11)
 static bool filled[PROJECTS];                    // the slots holding a project
 static bool projectClip = false;                 // the project clipboard holds one
 static float (*getTempo)() = nullptr;
@@ -298,7 +298,7 @@ void serviceScenes() {
 
 // ---- Projects
 
-static void projectPath(char *path, size_t n, int p) {   // p: 0-7, PROJECTS: the clipboard
+static void projectPath(char *path, size_t n, int p) {   // p: 0-11, PROJECTS: the clipboard
   if (p < PROJECTS) snprintf(path, n, "/looper/projects/%d.dat", p + 1);
   else snprintf(path, n, "/looper/projects/clip.dat");
 }
@@ -340,7 +340,7 @@ static void flushProject() {
   listDirty = false;
 }
 
-// Copies project `from` to `to` (0-7, PROJECTS: the clipboard): the scenes'
+// Copies project `from` to `to` (0-11, PROJECTS: the clipboard): the scenes'
 // records, then the list (written last: a copy cut short leaves `to` empty).
 static bool copyProject(int from, int to) {
   if (from == project) flushProject();
@@ -442,7 +442,7 @@ bool projectPaste(int p) {
   return true;
 }
 
-// Opens (or makes, at full size) project files 1-8 and the clipboard; the
+// Opens (or makes, at full size) project files 1-12 and the clipboard; the
 // scene list of the first version (/looper/scenes.dat) becomes project 1.
 static void makeProjectFiles() {
   SD.sdfs.mkdir("/looper/projects");

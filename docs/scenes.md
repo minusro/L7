@@ -7,8 +7,8 @@ A scene is a snapshot of the looper: the 8 track units and the tempo
 
 A project is a scene list with its current scene and the looper's selected
 row and cell (the master volume and the tempo outside scenes are global, in
-`session.txt`, which also names the loaded project). Eight slots:
-`/looper/projects/1.dat` … `8.dat`, and `clip.dat` for the project clipboard,
+`session.txt`, which also names the loaded project). Twelve slots:
+`/looper/projects/1.dat` … `12.dat`, and `clip.dat` for the project clipboard,
 all made once at full size; an empty slot's block 0 is zeros. Project files
 hold no audio: scenes name their samples. The first version's
 `/looper/scenes.dat` becomes project 1.

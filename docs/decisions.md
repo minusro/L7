@@ -38,7 +38,7 @@
 * B+arrow range edits are ignored on a track while a clip change waits.
 * A switch replanned < 50 ms before its point goes to the next one.
 
-## Projects (agreed 2026-10-04; 8 slots in the menu, scenes.md)
+## Projects (agreed 2026-10-04; 12 slots in the menu, scenes.md)
 
 * A project is a list of scenes plus the state that belongs to none of
   them: which scene is selected, and the main screen's last selected cell

@@ -53,7 +53,7 @@
 //                    (N+1*); SHIFT+DOWN: to the empty scene (0*)
 //   OPT, SHIFT, EDIT paste the scene clipboard after the current scene (OPT pressed first)
 //   SHIFT, OPT, EDIT cut the scene (to the scene clipboard), go to the one before (SHIFT first)
-//   OPT+EDIT         open the menu (EDIT closes it)
+//   OPT+EDIT         open / close the menu
 //   EDIT (menu, project slot)   load its project (empty slot: a new one), back to the looper
 //   SHIFT+EDIT (menu, slot)     cut its project / paste one into an empty slot (stopped only)
 //   SHIFT+OPT twice  insert a copy of the current scene after it

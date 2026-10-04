@@ -105,7 +105,7 @@ void trackRange(int t, uint32_t &startBeat, uint32_t &beats);
 // plays each track from here.
 uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats);
 
-// The session: the tempo, the loaded project (0-7) and the master volume, in
+// The session: the tempo, the loaded project (0-11) and the master volume, in
 // session.txt. (row/cell: the selection, saved there before projects kept it;
 // -1: none.)
 struct Session { float bpm = 120.0f; int row = -1, cell = -1, master = MASTER_VOLUME_UNITY, project = 0; };

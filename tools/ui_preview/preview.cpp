@@ -181,13 +181,14 @@ int main(int argc, char **argv) {
   noteActionPress();
   render(out + "/ui_action_held.png");
   board.heldKeys = 0;
-  // Projects: 1 (loaded), 4 and 6 hold one; the rest empty.
+  // Projects: 1 (loaded), 4, 6 and 11 hold one; the rest empty.
   transport.running = false;
   recording.mode = Recording::Idle;
   std::system(("rm -rf " + simRoot + " && mkdir -p " + simRoot + "/looper").c_str());
   scenesBegin([] { return bpm; }, setTempo, 0);
   projectLoad(3);
   projectLoad(5);
+  projectLoad(10);
   projectLoad(0);
   selected = 1;                                    // the menu (B+A), its first box selected
   openMenu();
@@ -204,8 +205,7 @@ int main(int argc, char **argv) {
   menuKeys(m8::BTN_LEFT);
   menuKeys(m8::BTN_LEFT);
   menuKeys(m8::BTN_LEFT);
-  menuKeys(m8::BTN_DOWN);                          // down twice: a button
-  menuKeys(m8::BTN_DOWN);
+  for (int i = 0; i < 4; i++) menuKeys(m8::BTN_DOWN);   // down to the list's second item
   render(out + "/ui_menu_button.png");
   menuKeys(m8::BTN_DOWN);                          // down again: the status row (its scene cell)
   render(out + "/ui_menu_status.png");
