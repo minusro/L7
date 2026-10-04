@@ -93,7 +93,7 @@ no dropouts or overruns
 - volume control V
 - [ Projects ] V
 - add play icon to status row V
-- animated splash screen (?)
+- animated splash screen V
 - ableton export
 - usb data mode
 

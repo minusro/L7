@@ -1,6 +1,6 @@
 // ui_splash.cpp — the logo shown while the looper starts (see ui.h): "L8",
 // fading in from black, then its colour going once round all hues (from the
-// green turquoise accent back to it, eased in and out), in 2x2-pixel blocks, two track rows tall, in the middle of the screen,
+// green turquoise accent back to it, eased in and out), fading out at the end, in 2x2-pixel blocks, two track rows tall, in the middle of the screen,
 // with the copyright line under it in light grey (fading in), in the pixel font (ui_font.cpp).
 #include "ui.h"
 #include "ui_font.h"
@@ -43,9 +43,11 @@ static constexpr int LOGO_X = (320 - LOGO_COLS * LOGO_PIXEL) / 2,
                      LOGO_Y = (240 - GROUP_H) / 2 / LOGO_PIXEL * LOGO_PIXEL + GROUP_DOWN;
 // The splash's animation, in ms from showSplash(): the logo fades in from
 // black (0-500), then its colour goes once round the hues (500-2500); the
-// copyright line fades in (1500-2000). Shown at least this long.
+// copyright line fades in (1500-2000); both fade out (3000-3500). Shown at
+// least this long.
 static constexpr uint32_t LOGO_FADE_MS = 500, HUE_MS = 2000, TEXT_FROM_MS = 1500, TEXT_FADE_MS = 500;
-static constexpr uint32_t SPLASH_MIN_MS = LOGO_FADE_MS + HUE_MS;
+static constexpr uint32_t OUT_FROM_MS = 3000, OUT_MS = 500;
+static constexpr uint32_t SPLASH_MIN_MS = OUT_FROM_MS + OUT_MS;
 static uint32_t shownAt = 0;
 
 static const char COPYRIGHT[] = "\xA9 2026 Daniel Stanciu";
@@ -119,12 +121,14 @@ void splashTick() {
     float t = min(1.0f, (ms - LOGO_FADE_MS) / (float)HUE_MS), e = t * t * (3 - 2 * t);
     logo = t >= 1 ? LOGO_COLOR : oklch565(0.8238f, 0.1641f, 164.76f + 360 * e);
   }
+  uint8_t out = ms < OUT_FROM_MS ? 255 : 255 - (uint8_t)(255 * min(ms - OUT_FROM_MS, OUT_MS) / OUT_MS);   // (the fade out)
+  logo = blend565(logo, BG, out);
   if (logo != shownLogo) {
     shownLogo = logo;
     drawLogo(logo);
   }
   uint32_t into = ms < TEXT_FROM_MS ? 0 : min(ms - TEXT_FROM_MS, TEXT_FADE_MS);
-  uint16_t text = blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / TEXT_FADE_MS));
+  uint16_t text = blend565(blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / TEXT_FADE_MS)), BG, out);
   if (text != shownText) {
     shownText = text;
     drawLine(copyrightX, TEXT_Y_SPLASH, COPYRIGHT, text);
