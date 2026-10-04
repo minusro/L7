@@ -65,7 +65,8 @@ static struct Gzip {
 
 // ---- The set, from the templates: their fields filled in as they're written.
 static struct {
-  int p, scenes, current, number;                // current: the project's scene (1..scenes; 0: none)
+  int p, scenes, current, number;                // scenes: those with clips; current: its place among them (-1: none)
+  uint8_t pos[MAX_SCENES];                       // each one's position in the project (1..)
   float tempo;
   char dir[48], name[16];                        // "/Ableton/L7 A005", "L7 A005"
   int place;                                     // the track being written: 0-6 (Live's order)
@@ -91,7 +92,7 @@ static int trackAt(int place) { return NUM_TRACKS - 1 - place; }
 static void clipSlots(bool freeze) {
   for (x.slot = 0; x.slot < x.scenes; x.slot++) {
     TrackUnit units[NUM_TRACKS];
-    bool clip = !freeze && projectScene(x.p, x.slot + 1, units) && units[trackAt(x.place)].sample &&
+    bool clip = !freeze && projectScene(x.p, x.pos[x.slot], units) && units[trackAt(x.place)].sample &&
                 sampleDetails(units[trackAt(x.place)].sample, x.sample);
     if (!clip) {
       emit(ALS_SLOT);
@@ -139,8 +140,8 @@ static void field(char code) {
     case 'M': clipSlots(false); break;
     case 'S': {                                  // the current scene's clip, saved as playing
       TrackUnit units[NUM_TRACKS];
-      bool clip = x.current && projectScene(x.p, x.current, units) && units[trackAt(x.place)].sample;
-      putNumber(clip ? x.current - 1 : -2);
+      bool clip = x.current >= 0 && projectScene(x.p, x.pos[x.current], units) && units[trackAt(x.place)].sample;
+      putNumber(clip ? x.current : -2);
       break;
     }
     case 'F': clipSlots(true); break;
@@ -148,7 +149,7 @@ static void field(char code) {
     case 'k': putNumber(x.slot); break;
     case 'm':
       if (x.place < NUM_TRACKS) gz.puts(x.sample.name);   // a clip: its sample's
-      else putNumber(x.slot + 1);                         // a scene: its number
+      else putNumber(x.pos[x.slot]);                      // a scene: its number in the project
       break;
     case 'b': case 's': putNumber(x.loopStart); break;
     case 'e': case 'l': case 'o': putNumber(x.loopEnd); break;
@@ -196,7 +197,20 @@ static int nextNumber(char letter) {
 int exportProject(int p, void (*progress)(int done, int total)) {
   if (p < 0 || p >= PROJECTS || transport.running || recording.mode != Recording::Idle) return 0;
   x.p = p;
-  if (!projectInfo(p, x.scenes, x.tempo, x.current)) return 0;
+  int scenes, current;
+  if (!projectInfo(p, scenes, x.tempo, current)) return 0;
+  // Its scenes with clips (an empty one, as the empty scene 0* is, left out).
+  x.scenes = 0;
+  x.current = -1;
+  for (int pos = 1; pos <= scenes && x.scenes < MAX_SCENES; pos++) {
+    TrackUnit units[NUM_TRACKS];
+    bool clips = false;
+    if (projectScene(p, pos, units))
+      for (const auto &u : units) clips |= u.sample != 0;
+    if (!clips) continue;
+    if (pos == current) x.current = x.scenes;
+    x.pos[x.scenes++] = pos;
+  }
   char letter = (char)('A' + p);
   SD.sdfs.mkdir("/Ableton");
   x.number = nextNumber(letter);
@@ -205,6 +219,8 @@ int exportProject(int p, void (*progress)(int done, int total)) {
   snprintf(x.dir, sizeof x.dir, "/Ableton/%s", x.name);
   char path[96];
   SD.sdfs.mkdir(x.dir);
+  snprintf(path, sizeof path, "%s/Ableton Project Info", x.dir);   // (what makes it a Live project:
+  SD.sdfs.mkdir(path);                                               //  its samples' paths relative to it)
   snprintf(path, sizeof path, "%s/Samples", x.dir);
   SD.sdfs.mkdir(path);
   snprintf(path, sizeof path, "%s/Samples/Imported", x.dir);
@@ -214,9 +230,9 @@ int exportProject(int p, void (*progress)(int done, int total)) {
   static uint8_t used[(9999 + 8) / 8];
   memset(used, 0, sizeof used);
   int total = 0;
-  for (int pos = 1; pos <= x.scenes; pos++) {
+  for (int k = 0; k < x.scenes; k++) {
     TrackUnit units[NUM_TRACKS];
-    if (!projectScene(p, pos, units)) continue;
+    if (!projectScene(p, x.pos[k], units)) continue;
     for (const auto &u : units)
       if (u.sample && u.sample <= 9999 && !(used[u.sample / 8] & 1 << (u.sample % 8))) {
         used[u.sample / 8] |= 1 << (u.sample % 8);

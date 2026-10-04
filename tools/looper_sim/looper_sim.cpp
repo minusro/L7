@@ -1559,7 +1559,15 @@ int main(int argc, char **argv) {
     check(projectLoad(2), "project 3");
     for (int i = 0; i < 10 && sceneCurrent() != 2; i++) sceneStep(sceneCurrent() < 2 ? 1 : -1);   // (stopped: at once)
     check(sceneCurrent() == 2, "on its scene 2");
-    int scenes = sceneCount();
+    // Its scenes with clips (empty ones left out), and scene 2's place among them.
+    int scenes = 0, index = -1;
+    for (int pos = 1; pos <= sceneCount(); pos++) {
+      TrackUnit units[NUM_TRACKS];
+      bool clips = false;
+      if (projectScene(2, pos, units)) for (const auto &u : units) clips |= u.sample != 0;
+      if (clips && pos == 2) index = scenes;
+      if (clips) scenes++;
+    }
     int playing = 0;                               // its tracks with a clip there: saved as playing
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) playing++;
     int first = exportProject(2), second = exportProject(2);
@@ -1573,16 +1581,17 @@ int main(int argc, char **argv) {
                      "t=r.find('LiveSet/Tracks'); s=len(r.find('LiveSet/Scenes')); "
                      "ok=len(t)==7 and all(len(x.findall('.//Devices/AutoFilter'))==2 for x in t) and all(len(x.find('DeviceChain/MainSequencer/ClipSlotList'))==s for x in t); "
                      "c=[f.get('Value') for f in r.iter('RelativePath') if f.get('Value').startswith('Samples/')]; "
-                     "ok=ok and all(os.path.exists(d+'/'+p) for p in c); pl=[x.find('SavedPlayingSlot').get('Value') for x in t]; "
-                     "print(s, len(c), sum(v=='1' for v in pl), sum(v not in ('1','-2') for v in pl)); sys.exit(0 if ok else 1)\" '" + dir + "'";
+                     "ok=ok and all(os.path.exists(d+'/'+p) for p in c) and os.path.isdir(d+'/Ableton Project Info'); i=sys.argv[2]; pl=[x.find('SavedPlayingSlot').get('Value') for x in t]; "
+                     "print(s, len(c), sum(v==i for v in pl), sum(v not in (i,'-2') for v in pl)); sys.exit(0 if ok else 1)\" '" + dir + "' " + std::to_string(index);
     FILE *out = popen(py.c_str(), "r");
     int s = -1, clips = -1, saved = -1, other = -1;
     if (out) { if (fscanf(out, "%d %d %d %d", &s, &clips, &saved, &other) != 4) s = -1; }
     int rc = out ? pclose(out) : -1;
-    snprintf(m, sizeof m, "the set opens as gzip and XML: 7 tracks, two Auto Filters each, %d scene(s) (%d in the project), %d clip(s), their samples copied",
-             s, scenes, clips);
+    snprintf(m, sizeof m, "the set opens as gzip and XML: 7 tracks, two Auto Filters each, %d scene(s) (%d of the project's have clips), %d clip(s), "
+             "their samples copied, a Live project (Ableton Project Info)", s, scenes, clips);
     check(rc == 0 && s == scenes && clips > 0, m);
-    snprintf(m, sizeof m, "scene 2's clips saved as playing: %d track(s) (%d have a clip there), %d other", saved, playing, other);
+    snprintf(m, sizeof m, "scene 2's clips (set scene %d) saved as playing: %d track(s) (%d have a clip there), %d other", index + 1, saved,
+             playing, other);
     check(saved == playing && other == 0 && playing > 0, m);
   }
 
