@@ -72,6 +72,24 @@ static void drawMasterVolume(bool full) {
   }
 }
 
+// The menu's master volume: the clock cell's control, in its place on the
+// status row (whose cells the menu hides), always showing; its frame (corners
+// cut) in `frame` (BG: unselected). full: all of it again.
+void drawMenuVolume(bool full, uint16_t frame) {
+  static uint16_t shownFrame = 1;                  // (no colour: drawn the first time)
+  auto &t = board.tft();
+  const Cell &c = CLOCK_BOX;
+  int top = rowTop(STATUS_ROW);
+  if (full || frame != shownFrame) {
+    shownFrame = frame;
+    t.fillRect(c.x + PX, top, c.w - 2 * PX, PX, frame);
+    t.fillRect(c.x + PX, top + STATUS_H - PX, c.w - 2 * PX, PX, frame);
+    t.fillRect(c.x, top + PX, PX, STATUS_H - 2 * PX, frame);
+    t.fillRect(c.x + c.w - PX, top + PX, PX, STATUS_H - 2 * PX, frame);
+  }
+  drawMasterVolume(full);
+}
+
 // A cell's border (the frame), each side in its colour (borderAt(): the
 // two cells share the side between them).
 static void drawFrame(int cell) {

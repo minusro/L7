@@ -90,8 +90,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   // The menu's items: the arrows move its selection; A runs the action
   // button's action once let go (on the item it was pressed on). B does
-  // nothing there: the way out is loading a project.
-  static bool armed = false, shifted = false;        // A down: its action waits; SHIFT with it
+  // nothing there (the way out is loading a project), but on the master
+  // volume: B + arrows change it, B twice turns it off or back to 100%, as on
+  // the clock cell; A there starts / stops (SHIFT+A: from 1.1.1).
+  static bool armed = false, shifted = false, armedVolume = false;   // A down: its action waits; SHIFT with it
   // SHIFT+A on a project: the first tap only asks (a checkmark); a second A,
   // SHIFT still held and the selection still there, cuts it when let go.
   if (cutConfirm >= 0 && (!menuOpen() || !shift || menuSlot() != cutConfirm)) cutConfirm = -1;
@@ -104,8 +106,20 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       else transportStart();
     }
     const uint8_t act = m8::BTN_EDIT;
+    if (menuOnVolume() && opt) {
+      if (pressed & (m8::BTN_LEFT | m8::BTN_DOWN)) stepMasterVolume(-1);
+      if (pressed & (m8::BTN_RIGHT | m8::BTN_UP)) stepMasterVolume(1);
+    }
+    static uint32_t lastVolumeTap = 0;
+    if (pressed & m8::BTN_OPT) {
+      bool twice = menuOnVolume() && millis() - lastVolumeTap < DOUBLE_TAP_MS;
+      if (twice) stepMasterVolume((masterVolume() == 0 ? MASTER_VOLUME_UNITY : 0) - masterVolume());
+      lastVolumeTap = twice ? 0 : millis();
+    }
+    if (pressed & ~(m8::BTN_OPT)) lastVolumeTap = 0;   // (B used as a modifier: not a tap)
     if (pressed & act) {
       armed = true;
+      armedVolume = menuOnVolume();
       armedSlot = menuSlot();
       shifted = shift;
       noteActionPress();                             // (the icon: what letting go will do)
@@ -113,7 +127,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if (armed && !(keys & act)) {                    // let go: act
       armed = false;
       int slot = armedSlot;
-      if (slot < 0) {                                // the list's items: nothing yet
+      if (armedVolume) {                             // the master volume: as the clock cell, START
+        if (shifted) transportRestart();
+        else if (transport.running) transportStop();
+        else transportStart();
+      } else if (slot < 0) {                         // the list's items: nothing yet
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
         bool loaded = slot == projectCurrent();
         if (projectFilled(slot) && cutConfirm != slot) {   // the first tap: confirm with a second
@@ -137,7 +155,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       }
       return;
     }
-    if (!(pressed & (act | m8::BTN_OPT | m8::BTN_PLAY))) {
+    if (!(pressed & (act | m8::BTN_OPT | m8::BTN_PLAY)) && !(menuOnVolume() && opt)) {
       bool went = menuKeys(pressed);
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) moved = went;
     }

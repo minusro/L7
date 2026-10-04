@@ -50,6 +50,7 @@ static bool flashOn() {
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
   if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
+    if (menuOnVolume()) return shift ? ICON_PLAY : transport.running ? ICON_STOP : ICON_PLAY;   // (as the clock cell)
     int slot = menuSlot();
     if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : ICON_USB;
     if (shift) return projectFilled(slot) ? (cutConfirmSlot() == slot ? ICON_CHECK : ICON_CUT) : ICON_PASTE;
