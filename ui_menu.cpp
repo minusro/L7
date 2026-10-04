@@ -47,13 +47,18 @@ bool menuOnList() { return shown && !onStatus && menuSel >= CARDS; }
 int menuListItem() { return menuOnList() ? menuSel - CARDS : -1; }
 
 int menuState() {
-  if (!shown) return -1;
-  return onStatus ? 100 + selectedCellIn(STATUS_ROW) : menuSel;
+  int sel = onStatus ? 100 + (shown ? selectedCellIn(STATUS_ROW) : statusCell) : menuSel;
+  return sel + (shown ? 1000 : 0);
 }
 
 void mainSelection(int &row, int &cell) {
   row = shown ? mainRow : selected;
   cell = shown ? mainCell : selectedCell;
+}
+
+void setMainSelection(int row, int cell) {
+  (shown ? mainRow : selected) = row;
+  (shown ? mainCell : selectedCell) = cell;
 }
 
 // ---- Shapes, in blocks: an item's content is w x h blocks from (x, y), its
@@ -277,12 +282,13 @@ void closeMenu() {
 
 void restoreMenu(int state) {
   if (state < 0) return;
-  if (state >= 100) {
+  int sel = state % 1000;
+  if (sel >= 100) {
     onStatus = true;
-    statusCell = constrain(state - 100, 0, TEMPO_CELL);
+    statusCell = constrain(sel - 100, 0, TEMPO_CELL);
   } else {
-    menuSel = constrain(state, 0, ITEMS - 1);
+    menuSel = constrain(sel, 0, ITEMS - 1);
     if (menuSel < CARDS) cardCol = menuSel % COLS;
   }
-  openMenu();
+  if (state >= 1000) openMenu();
 }

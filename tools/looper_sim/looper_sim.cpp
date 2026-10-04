@@ -1356,7 +1356,8 @@ int main(int argc, char **argv) {
     check(row == 3 && cell == 1, "with its selection");
     check(projectCut(1) && !projectFilled(1) && projectClipboardFull(), "project 2 cut: its slot empty");
     check(projectPaste(5) && projectFilled(5) && !projectPaste(5), "pasted into slot 6 (once: it's full then)");
-    check(projectCut(0) && projectCurrent() == 0 && projectFilled(0) && sceneCount() == 0, "the loaded one cut: a new empty project in its place");
+    check(projectCut(0) && projectCurrent() == -1 && !projectFilled(0) && sceneCount() == 0 && !sceneStep(1),
+          "the loaded one cut: its slot empty, the empty dummy project loaded (no N+1* with no scenes)");
     check(projectPaste(2) && projectLoad(2) && sceneCount() == scenes && sceneCurrent() == pos && tracks[0].sample == sample0,
           "pasted into slot 3 and loaded: project 1 as it was");
     transportStart();

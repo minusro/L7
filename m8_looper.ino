@@ -160,12 +160,12 @@ void setup() {
   beginSession();                                  // the tempo and the selection
   transport.spb = spbForBpm(bpm);
   scenesBegin([] { return bpm; }, setTempo, sessionProject());
-  takeProjectSelection();
+  takeProjectSelection(false);
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();
-  restoreMenu(sessionMenu());                      // (open at power off: open again)
+  restoreMenu(sessionMenu());                      // its selection (open at power off: open again)
 }
 
 void loop() {

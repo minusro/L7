@@ -14,8 +14,8 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
 | B + A | Open / close the menu (arrows move its selection: cards, list, status row) |
-| A or B (menu, on a project slot) | Once let go: load its project (an empty slot: a new, empty project there) and close the menu; the loaded one: just close it. Not while recording |
-| SHIFT + A or B (menu, on a slot) | Cut its project to the project clipboard (the loaded one: a new empty project takes its place), or paste the clipboard into an empty slot. Only while stopped |
+| A or B (menu, on a project slot) | Once let go: load its project (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
+| SHIFT + A or B (menu, on a slot) | Cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Only while stopped |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT twice (second tap held) + A | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
@@ -171,7 +171,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   row (the cell last used there), whose cells then work as in the looper's
   view, and back up to the list. The looper's own selection is kept
   meanwhile and comes back when the menu closes; the menu remembers where its
-  selection was for the next time If it was open at power off it opens again at
+  selection was for the next time Its selection is kept
+  across power cycles too, and if it was open at power off it opens again at
   boot (session.txt).
 * Splash (`ui_splash.cpp`): "L8" logo rasterised from the author's artwork
   into 43×26 blocks of 2×2 px (two tracks tall), in the accent colour, with

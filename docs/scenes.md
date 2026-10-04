@@ -19,8 +19,10 @@ hold no audio: scenes name their samples. The first version's
   scenes: the empty scene, the tempo kept). Not while recording.
 * Cut / paste (SHIFT+A): copies the used blocks (the records, then the list
   last) to or from `clip.dat`; cut then zeroes the slot's block 0. Only while
-  stopped (many writes). Cutting the loaded project puts a new empty one in
-  its place (the tracks cleared).
+  stopped (many writes). Cutting the loaded project empties its slot too and
+  loads an empty dummy project (`none.dat`, in no slot, emptied each time it's
+  loaded; the accent then the splash's turquoise; for now), the tracks
+  cleared. A new project (or the dummy) starts on track 1's waveform cell.
 * The selection is saved in the list block (`row`, `cell`, each + 1; 0:
   none) a couple of seconds after it changes, before loading another
   project, and at power off.
@@ -34,7 +36,7 @@ hold no audio: scenes name their samples. The first version's
 * Position **0\*** is the empty scene, never stored; changing anything there
   inserts a new scene 1 (the others move up).
 * Position **N+1\*** (after the last scene N) is a copy of N, stored only once
-  changed.
+  changed. With no scenes there is none: the list stays on 0\*.
 * On a stored scene every change updates it (`sceneStateChanged()` → `commit()`;
   written one block at a time when the buffers allow).
 * The label shows `SCN n/N`; the empty scene shows as `0/N` and the copy after

@@ -18,7 +18,7 @@ namespace looper {
 
 constexpr int MAX_SCENES = 250, PROJECTS = 12;
 
-// After storageBegin(): loads project `project` (0-11). The tempo goes
+// After storageBegin(): loads project `project` (0-11; -1: the dummy one). The tempo goes
 // through the app (rounding, limits): getTempo returns it, setTempo applies it.
 void scenesBegin(float (*getTempo)(), bool (*setTempo)(float), int project = 0);
 void sceneStateChanged();      // something in the looper changed: the current scene follows
@@ -26,7 +26,7 @@ void serviceScenes();          // call from loop(): saves, one write at a time, 
 void flushScenes();            // everything waiting saved now (power off)
 
 // Moving around (false: nothing to do, or a recording is in progress).
-bool sceneStep(int dir);       // -1: older; 1: newer, up to N+1*
+bool sceneStep(int dir);       // -1: older; 1: newer, up to N+1* (none while there are no scenes)
 bool sceneGoEmpty();           // to 0*
 bool sceneGoEnd();             // to N+1*
 bool sceneCut();               // to the scene clipboard; removed from the list, goes to the one before
@@ -52,15 +52,15 @@ int sceneCurrent();
 int sceneCount();
 
 // ---- Projects (slots 0-11)
-int projectCurrent();          // the loaded one
+int projectCurrent();          // the loaded one (-1: the dummy project, after the loaded one was cut)
 bool projectFilled(int p);     // the slot holds a project (the loaded one always does)
 // Loads project p: its current scene goes on the looper (playing: on a bar
 // line, as a scene change). An empty slot: a new project there, on its empty
 // scene (the tracks cleared, the tempo kept). false: recording.
 bool projectLoad(int p);
 // Cut and paste (only while stopped: projectsMayCopy()): cut copies the
-// project to the project clipboard and empties its slot (the loaded one: a
-// new empty project in its place); paste copies the clipboard into an empty
+// project to the project clipboard and empties its slot (the loaded one: an
+// empty dummy project, in no slot, is loaded instead; for now); paste copies the clipboard into an empty
 // slot (it stays on the clipboard).
 bool projectsMayCopy();
 bool projectCut(int p);

@@ -106,7 +106,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       int slot = menuSlot();
       if (slot < 0) {                                // the list's items: nothing yet
       } else if (shift) {                            // SHIFT+A on a slot: cut its project, or paste one into it
-        projectFilled(slot) ? projectCut(slot) : projectPaste(slot);   // (SHIFT+A or SHIFT+B)
+        bool loaded = slot == projectCurrent();
+        if (projectFilled(slot) ? projectCut(slot) : projectPaste(slot))   // (SHIFT+A or SHIFT+B)
+          if (loaded) takeProjectSelection();          // the loaded one cut: the dummy project's (track 1's waveform)
         drawMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
       } else {                                       // A: load it (an empty slot: a new project) once let go, back to the looper

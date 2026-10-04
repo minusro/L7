@@ -49,7 +49,7 @@ static void followProjectColor() {
   int p = projectCurrent();
   if (p == shownProject) return;
   shownProject = p;
-  ACCENT = PROJECT_COLORS[p];
+  ACCENT = p >= 0 ? PROJECT_COLORS[p] : LOGO_COLOR;   // (the dummy project: the splash's turquoise)
   ACCENT_DARK = blend565(ACCENT, BG, 128);
   uiGeneration++;
   for (int i = 0; i < ROWS; i++) drawTrack(i);

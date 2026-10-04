@@ -997,7 +997,7 @@ Session loadSession() {
   f.close();
   s.bpm = constrain(s.bpm, MIN_BPM, MAX_BPM);
   s.master = constrain(s.master, 0, MASTER_VOLUME_MAX);
-  s.project = constrain(s.project, 0, PROJECTS - 1);
+  s.project = constrain(s.project, -1, PROJECTS - 1);   // (-1, "project=0": the dummy project)
   return s;
 }
 

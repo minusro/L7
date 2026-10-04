@@ -12,7 +12,7 @@ static bool tempoDirty = false;
 static int savedRow = -1, savedCell = -1;      // the selection the project holds
 static int savedMaster = MASTER_VOLUME_UNITY;   // the master volume session.txt holds
 static int savedProject = 0;                    // and the loaded project
-static int savedMenu = -1, bootMenu = -1;       // and the menu (open: its selection; -1: closed)
+static int savedMenu = -1, bootMenu = -1;       // and the menu (its selection, + 1000 open)
 static int bootProject = 0;
 
 // ---- Tempo: MIN_BPM-MAX_BPM, whatever the loops were recorded at
@@ -52,16 +52,20 @@ void beginSession() {
 int sessionProject() { return bootProject; }
 int sessionMenu() { return bootMenu; }
 
-void takeProjectSelection() {
+void takeProjectSelection(bool orTrack1) {
   int row, cell;
   projectSelection(row, cell);
-  if (row >= 0 && row < ROWS && cell >= 0 && cell < CELLS) {   // (none saved: as it is)
-    selected = row;
-    selectedCell = cell;
+  if (!(row >= 0 && row < ROWS && cell >= 0 && cell < CELLS)) {   // none saved: track 1's waveform, or as it is
+    mainSelection(row, cell);
+    if (orTrack1) {
+      row = NUM_TRACKS - 1;
+      cell = WAVE_CELL;
+    }
   }
-  savedRow = selected;
-  savedCell = selectedCell;
-  projectSetSelection(selected, selectedCell);
+  setMainSelection(row, cell);
+  savedRow = row;
+  savedCell = cell;
+  projectSetSelection(row, cell);
 }
 
 static bool sessionDirty() {
