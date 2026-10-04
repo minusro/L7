@@ -22,8 +22,8 @@
 // brightness unless selected; an outline (and letter) when empty, filled
 // (letter black) when it holds a project; the loaded project's light grey
 // (white when selected). The selected item's frame looks and behaves as the
-// looper's cells' (frameColor()), corners cut: on a card two blocks thick,
-// touching it (the diagonal too); round a list item's label (centred, light
+// looper's cells' (frameColor()), corners cut: on a card a block of space
+// out (the diagonal too); round a list item's label (centred, light
 // grey, white when selected) three blocks out.
 #include "ui.h"
 #include "ui_font.h"
@@ -124,8 +124,9 @@ static void drawItem(int k) {
   Shape s = itemShape(k);
   bool sel = k == menuSel && !onStatus;
   uint16_t frame = sel ? frameColor() : BG;
-  if (k < CARDS) {                                // a project slot: its frame two blocks thick, on it
-    fillRing(s, 2, 0, frame, true);
+  if (k < CARDS) {                                // a project slot: its frame a block out
+    fillRing(s, 2, 1, frame, true);
+    fillRing(s, 1, 0, BG);
     uint16_t color = sel ? PROJECT_COLORS[k] : darker(PROJECT_COLORS[k]);
     bool filled = projectFilled(k), loaded = k == projectCurrent();
     if (loaded) color = sel ? INK : LIGHT;

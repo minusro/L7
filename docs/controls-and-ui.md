@@ -157,8 +157,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   TO ALS" and "USB DATA MODE" (nothing yet), centred, light grey (white
   when selected). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
-  or B is held, corners cut; on a card two blocks thick, touching it
-  (following its diagonal); round a list item's label, three blocks out. On a card the
+  or B is held, corners cut; round a card one block out (following its
+  diagonal); round a list item's label, three blocks out. On a card the
   action button shows load (a folder) or, empty, new (a plus); with SHIFT,
   cut or paste (dark grey when it can't act: playing, recording, clipboard
   empty); on the list, a diskette (export) and the USB trident (data mode),
