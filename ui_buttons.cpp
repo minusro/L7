@@ -93,9 +93,10 @@ void noteActionPress() {
   if (heldAction >= 0 && unavailable(STATUS_ROW, heldAction)) heldAction = -1;   // (nothing happens: no pressed look)
 }
 
-// B + arrows adjusting a cell: the button looks pressed while an arrow is down.
+// B + arrows adjusting a cell: the button looks pressed while an arrow is down,
+// and while A is held with B (A does nothing yet: for finer adjusting later).
 static bool adjusting() {
-  return board.keys() & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN);
+  return board.keys() & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN | m8::BTN_EDIT);
 }
 
 // The track's own state.
