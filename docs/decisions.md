@@ -46,15 +46,14 @@
 * A project is a list of scenes plus the state that belongs to none of
   them: which scene is selected, and the main screen's last selected cell
   (more may come later).
-* The master volume is not part of a project: it stays global.
 * Projects can be saved separately (several on the card). A project file
   holds no audio, only references to the sample files its scenes use.
 * The loaded project is autosaved.
 * Loading, cut and paste all work while playing (copies in the background).
-* The tempo is the project's (agreed 2026-10-04): changing it in one scene
-  changes it in all of them. New projects start with the tempo last set by
-  hand (120 BPM before any); loading a project without changing its tempo
-  leaves that as it was.
+* The tempo and the master volume are the project's (agreed 2026-10-04):
+  changing one in a scene changes it in all of them. New projects start with
+  the tempo and master volume last set by hand (before any: 120 BPM, 100%);
+  loading a project without changing them leaves those as they were.
 
 ## L7: 7 tracks (agreed 2026-10-04)
 

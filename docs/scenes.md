@@ -7,13 +7,14 @@ saved: the tempo belongs to the project, the same in all its scenes).
 ## Projects
 
 A project is a scene list with its current scene, the looper's selected
-row and cell, and its tempo (block 0: `tempo10`, tenths of a BPM, in the
-place of a 250th scene: 249 scenes at most; 0 in a project saved before, which
-then takes its current scene's tempo). Changing the tempo, in any scene,
-changes the project's. The master volume is global, in `session.txt`, which
-also names the loaded project and keeps the tempo last set by hand
-(`newbpm=`, 120 before any): a new project starts with it. Loading a project
-doesn't change it. Twelve slots:
+row and cell, its tempo and its master volume (block 0: `volume1`, the
+level + 1, and `tempo10`, tenths of a BPM, in the places of a 249th and 250th
+scene: 248 scenes at most; 0 in a project saved before, which then keeps the
+level playing / its current scene's tempo). Changing either, in any scene,
+changes the project's. `session.txt` names the loaded project and keeps the
+tempo and master volume last set by hand (`newbpm=`, `newvolume=`; before
+any: 120 BPM, 100%): a new project starts with them. Loading a project
+doesn't change them. Twelve slots:
 `/L7/projects/1.dat` … `12.dat`, and `clip.dat` for the project clipboard,
 all made once at full size; an empty slot's block 0 is zeros. Project files
 hold no audio: scenes name their samples. The first version's

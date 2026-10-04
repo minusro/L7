@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
   transport.running = false;
   recording.mode = Recording::Idle;
   std::system(("rm -rf " + simRoot + " && mkdir -p " + simRoot + "/L7").c_str());
-  scenesBegin([] { return bpm; }, loadTempo, 0, newProjectTempo);
+  scenesBegin([] { return bpm; }, loadTempo, 0, newProjectTempo, newProjectVolume);
   projectLoad(3);
   projectLoad(5);
   projectLoad(10);

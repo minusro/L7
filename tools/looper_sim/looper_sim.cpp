@@ -98,6 +98,14 @@ static void tempoByHand(float b) {
   simNewBpm = b;
   projectTempoChanged();
 }
+// And the master volume (the app's stepMasterVolume()).
+static int simNewMaster = MASTER_VOLUME_UNITY;
+static int simNewVolume() { return simNewMaster; }
+static void volumeByHand(int v) {
+  setMasterVolume(v);
+  simNewMaster = v;
+  projectVolumeChanged();
+}
 
 #include <map>
 static std::map<std::string, uint32_t> dropStages;   // what loop() was doing when tracks ran dry
@@ -390,7 +398,7 @@ int main(int argc, char **argv) {
   }
   printf("first boot (with track 5 in the older one-file-per-track format)\n");
   storageBegin([](const char *m) { if (*m) printf("  (%s)\n", m); });
-  scenesBegin(simTempo, simSetTempo, 0, simNewTempo);
+  scenesBegin(simTempo, simSetTempo, 0, simNewTempo, simNewVolume);
   check(sceneCount() == 1 && sceneCurrent() == 1, "scenes start with what's on the tracks as scene 1");
   {
     const Track &tr = tracks[4];
@@ -821,7 +829,7 @@ int main(int argc, char **argv) {
     int scenes = sceneCount(), scene = sceneCurrent();
     for (int i = 0; i < 20; i++) serviceScenes();  // anything left saved
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo, 0, simNewTempo);
+    scenesBegin(simTempo, simSetTempo, 0, simNewTempo, simNewVolume);
     check(sceneCount() == scenes && sceneCurrent() == scene, "scenes and the current one restored");
     bool same = true;
     for (int t = 0; t < NUM_TRACKS; t++) {
@@ -1496,7 +1504,7 @@ int main(int argc, char **argv) {
     runUntilIdle();
     for (int i = 0; i < 20; i++) serviceScenes();
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo, 2, simNewTempo);
+    scenesBegin(simTempo, simSetTempo, 2, simNewTempo, simNewVolume);
     check(projectCurrent() == 2 && sceneCount() == scenes && projectFilled(5) && projectFilled(2) && !projectFilled(1) && projectClipboardFull(),
           "after a power cycle: the slots as they were");
     {
@@ -1515,28 +1523,33 @@ int main(int argc, char **argv) {
     }
   }
 
-  printf("projects: one tempo each; new ones take the last one set by hand\n");
+  printf("projects: one tempo and master volume each; new ones take the last set by hand\n");
   {
     lastAction = "project tempo";
-    auto at = [](float b) { return fabsf(simTempo() - b) < 0.05f; };
+    auto at = [](float b, int v) { return fabsf(simTempo() - b) < 0.05f && masterVolume() == v; };
+    const int U = MASTER_VOLUME_UNITY;
     check(projectLoad(2) && sceneCount() >= 2, "project 3");
     tempoByHand(133);
+    volumeByHand(U - 2);
     for (int i = 0; i < 5; i++) block();
     int pos = sceneCurrent();
-    check((sceneStep(-1) || sceneStep(1)) && sceneCurrent() != pos && at(133), "another scene: the same tempo");
-    check(sceneGoEmpty() && at(133), "the empty scene too");
-    check(projectLoad(3) && sceneCount() == 0 && at(133), "a new project (slot 4): the tempo last set by hand");
+    check((sceneStep(-1) || sceneStep(1)) && sceneCurrent() != pos && at(133, U - 2), "another scene: the same tempo and master volume");
+    check(sceneGoEmpty() && at(133, U - 2), "the empty scene too");
+    check(projectLoad(3) && sceneCount() == 0 && at(133, U - 2), "a new project (slot 4): the tempo and volume last set by hand");
     tempoByHand(97);
-    check(projectLoad(2) && at(133), "project 3 again: its own tempo");
-    check(projectLoad(4) && at(97), "another new project (slot 5): 97, the last set by hand (loading project 3 didn't count)");
-    check(projectLoad(2) && at(133), "and project 3");
+    volumeByHand(U + 3);
+    check(projectLoad(2) && at(133, U - 2), "project 3 again: its own tempo and volume");
+    check(projectLoad(4) && at(97, U + 3), "another new project (slot 5): 97, 100% + 3 steps, the last set by hand (loading project 3 didn't count)");
+    check(projectLoad(2) && at(133, U - 2), "and project 3");
     for (int i = 0; i < 20; i++) serviceScenes();
-    simSetTempo(120);                              // (power off: the tempo forgotten)
+    simSetTempo(120);                              // (power off: the tempo and level forgotten)
+    setMasterVolume(U);
     for (int i = 0; i < 5; i++) block();
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo, 2, simNewTempo);
+    scenesBegin(simTempo, simSetTempo, 2, simNewTempo, simNewVolume);
     for (int i = 0; i < 5; i++) block();
-    check(projectCurrent() == 2 && at(133), "after a power cycle: project 3's tempo");
+    check(projectCurrent() == 2 && at(133, U - 2), "after a power cycle: project 3's tempo and volume");
+    volumeByHand(U);                               // (the rest at 100%)
     check(projectDelete(3) && projectDelete(4), "(the new ones deleted)");
   }
 

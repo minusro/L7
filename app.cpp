@@ -44,11 +44,18 @@ bool setTempo(float b) {
 bool loadTempo(float b) { return changeTempo(b); }
 float newProjectTempo() { return newBpm; }
 
-// ---- Master volume (steps, config.h): kept in the session
+// ---- Master volume (steps, config.h): the project's; new projects take the
+// last one set by hand (kept in the session).
+static int newMaster = MASTER_VOLUME_UNITY, savedNewMaster = MASTER_VOLUME_UNITY;
+
 void stepMasterVolume(int by) {
   setMasterVolume(masterVolume() + by);
+  newMaster = masterVolume();                      // new projects start with it
+  projectVolumeChanged();                          // the loaded project keeps it
   changedMs = millis();
 }
+
+int newProjectVolume() { return newMaster; }
 
 // ---- Session (tempo, master volume, the loaded project); the selection is the project's
 void beginSession() {
@@ -61,6 +68,7 @@ void beginSession() {
   }
   setMasterVolume(s.master);
   savedMaster = s.master;
+  newMaster = savedNewMaster = s.newMaster;
   savedProject = bootProject = s.project;
   savedMenu = bootMenu = s.menu;
 }
@@ -85,7 +93,8 @@ void takeProjectSelection(bool orTrack1) {
 }
 
 static bool sessionDirty() {
-  return tempoDirty || masterVolume() != savedMaster || projectCurrent() != savedProject || menuState() != savedMenu;
+  return tempoDirty || masterVolume() != savedMaster || newMaster != savedNewMaster || projectCurrent() != savedProject ||
+         menuState() != savedMenu;
 }
 
 static void writeSession() {
@@ -93,11 +102,13 @@ static void writeSession() {
   s.bpm = bpm;
   s.newBpm = newBpm;
   s.master = masterVolume();
+  s.newMaster = newMaster;
   s.project = projectCurrent();
   s.menu = menuState();
   saveSession(s);
   savedMenu = s.menu;
   savedMaster = s.master;
+  savedNewMaster = s.newMaster;
   savedProject = s.project;
   tempoDirty = false;
 }
