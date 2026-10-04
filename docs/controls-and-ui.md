@@ -45,7 +45,8 @@ Other cells with B + arrows: filter (LEFT/RIGHT move, UP/DOWN width; width
 scales from the edge at the edge), volume (UP/DOWN: 0–5, 7.5 dB steps, unity
 at 4) and balance (LEFT/RIGHT: ±5; each step moves one channel's level by a
 line, so every press shows),
-tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–240 BPM).
+tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–240 BPM),
+the clock cell: the master volume (any arrow a step; B twice: back to unity).
 
 Timing constants (input.cpp): key repeat after 200 ms, every 50 ms;
 double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
@@ -121,7 +122,11 @@ A recording track's waveform area is in the accent colour (a block of black betw
   and number while SHIFT is held, or B alone on the scene cell; the tempo and
   its tag while B alone is held on its cell. The clock: stopped, dark grey (selected: 50% grey); running, 50% grey with
   light grey on each beat's first step (selected: light grey, white on the
-  first step), the accent colour on 1.1.1.
+  first step), the accent colour on 1.1.1. While B alone is held on the clock
+  cell it shows the master volume instead: 22 vertical lines across the cell
+  (one per step, 1.5 dB each, the top one unity), dark accent up to the
+  volume and dark grey above it; their upper halves meter the left output, the
+  lower halves the right (accent, the top line 0 dBFS).
 * Track buttons: the track's number (tracks count from the bottom: 1 is
   just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent

@@ -6,7 +6,7 @@
 |---|---|
 | `m8_looper.ino` | `setup()` / `loop()`, the key list (header comment), power button, freeze detector, splash |
 | `M8Board.*` | Board access: display (ILI9341_t3n), keys (SX1508 on variant B), headphone sense, speaker enable, MIDI ports |
-| `engine.*` | Audio interrupt (`LooperEngine::update()`): master clock, varispeed playback from the track rings, filters, volume/balance, input capture and monitoring, MIDI clock scheduling |
+| `engine.*` | Audio interrupt (`LooperEngine::update()`): master clock, varispeed playback from the track rings, filters, volume/balance, master volume and output meter, input capture and monitoring, MIDI clock scheduling |
 | `storage.*` | Everything on the SD card, all from `loop()`: streaming tracks into their rings, recording, sample files and the pool, track units, the clipboard, transport start/stop, clip changes while playing |
 | `scenes.*` | The scene list (`/looper/scenes.dat`), stepping, cut/paste/duplicate, the SHIFT hold |
 | `app.*` | Shared state: `board`, `bpm`, the selection (`selected` row, `selectedCell`), `setTempo()` |

@@ -151,6 +151,11 @@ float filterResponseDb(int lo, int hi, float hz);   // magnitude of the pair (an
 void setTrackMix(int t, int volume, int balance);   // steps (config.h), clamped
 float volumeGain(int volume);                       // linear gain of a volume step
 void takeTrackPeaks(int t, float &left, float &right);   // and start the next measurement
+// Master volume (config.h, steps 0..MASTER_VOLUME_MAX) on the final output,
+// and that output's peaks (full scale 1) since the last call.
+void setMasterVolume(int step);
+int masterVolume();
+void takeOutputPeaks(float &left, float &right);
 
 void midiBegin(HardwareSerial *port);   // port already started (Board::midiOutBegin)
 void midiSendNow(uint8_t status);        // transport start/stop messages
@@ -158,7 +163,7 @@ void midiSendNow(uint8_t status);        // transport start/stop messages
 class LooperEngine : public AudioStream {
 public:
   LooperEngine() : AudioStream(2, inputQueue_) {}
-  float masterGain = 0.7f;
+  float masterGain = 0.7f;                         // the tracks' mix, before the master volume (headroom)
   bool monitor = true;
   void update() override;
 

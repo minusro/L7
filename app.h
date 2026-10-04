@@ -17,6 +17,8 @@ extern int selectedCell;                           // cell in the row (ui.h: FIL
 // In tenths of a BPM, limited to MIN_BPM-MAX_BPM. false (and no change)
 // while recording.
 bool setTempo(float b);
+// The master volume a step up (by 1) or down (-1); saved with the session.
+void stepMasterVolume(int by);
 // The session: the tempo and the selected row and cell, kept in session.txt.
 // beginSession() loads it (none saved: 120 BPM, track 1's waveform cell).
 // It's saved a while after it last changed, and only while stopped (saving

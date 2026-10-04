@@ -9,6 +9,10 @@ static constexpr uint32_t EDGE_HOLD_MS = 350;       // SHIFT+UP/DOWN's second ta
 // The selected track's current cell back to its defaults: the whole loop as
 // the range, the filter open, volume at unity and balance centred.
 static void resetCell() {
+  if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == CLOCK_CELL) {   // the master volume: unity
+    stepMasterVolume(MASTER_VOLUME_MAX - masterVolume());
+    return;
+  }
   if (selected == STATUS_ROW || !hasClip(selected)) return;
   const Track &tr = tracks[selected];
   if (selectedCell == WAVE_CELL) {
@@ -163,6 +167,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         long tenths = lroundf(bpm * 10);
         if (pressed & m8::BTN_UP) setTempo(tenths / 10 + 1);
         if (pressed & m8::BTN_DOWN) setTempo((tenths + 9) / 10 - 1);
+      } else if (onClock) {                          // the master volume, a step either way
+        if (pressed & (m8::BTN_LEFT | m8::BTN_DOWN)) stepMasterVolume(-1);
+        if (pressed & (m8::BTN_RIGHT | m8::BTN_UP)) stepMasterVolume(1);
       }
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats: any whole number of beats, up to the whole loop.

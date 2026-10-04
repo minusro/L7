@@ -10,6 +10,7 @@ int selectedCell = 0;                       // cell in the row (0: the waveform,
 static uint32_t changedMs = 0;                // when the tempo or the selection last changed
 static bool tempoDirty = false;
 static int savedRow = -1, savedCell = -1;      // the selection session.txt holds
+static int savedMaster = MASTER_VOLUME_MAX;     // and the master volume
 
 // ---- Tempo: MIN_BPM-MAX_BPM, whatever the loops were recorded at
 bool setTempo(float b) {
@@ -25,7 +26,13 @@ bool setTempo(float b) {
   return true;
 }
 
-// ---- Session (tempo, selection)
+// ---- Master volume (steps, config.h): kept in the session
+void stepMasterVolume(int by) {
+  setMasterVolume(masterVolume() + by);
+  changedMs = millis();
+}
+
+// ---- Session (tempo, selection, master volume)
 void beginSession() {
   Session s = loadSession();
   bpm = roundf(s.bpm * 10) / 10;
@@ -35,16 +42,22 @@ void beginSession() {
   }
   savedRow = selected;
   savedCell = selectedCell;
+  setMasterVolume(s.master);
+  savedMaster = s.master;
 }
 
-static bool sessionDirty() { return tempoDirty || selected != savedRow || selectedCell != savedCell; }
+static bool sessionDirty() {
+  return tempoDirty || selected != savedRow || selectedCell != savedCell || masterVolume() != savedMaster;
+}
 
 static void writeSession() {
   Session s;
   s.bpm = bpm;
   s.row = selected;
   s.cell = selectedCell;
+  s.master = masterVolume();
   saveSession(s);
+  savedMaster = s.master;
   tempoDirty = false;
   savedRow = selected;
   savedCell = selectedCell;

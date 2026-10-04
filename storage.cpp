@@ -980,16 +980,18 @@ Session loadSession() {
     if (!strncmp(line, "bpm=", 4)) s.bpm = strtof(line + 4, nullptr);
     else if (!strncmp(line, "row=", 4)) s.row = (int)strtol(line + 4, nullptr, 10);
     else if (!strncmp(line, "cell=", 5)) s.cell = (int)strtol(line + 5, nullptr, 10);
+    else if (!strncmp(line, "master=", 7)) s.master = (int)strtol(line + 7, nullptr, 10);
   }
   f.close();
   s.bpm = constrain(s.bpm, MIN_BPM, MAX_BPM);
+  s.master = constrain(s.master, 0, MASTER_VOLUME_MAX);
   return s;
 }
 
 void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/looper/session.txt", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nrow=%d\ncell=%d\n", s.bpm, s.row, s.cell);
+  f.printf("bpm=%.2f\nrow=%d\ncell=%d\nmaster=%d\n", s.bpm, s.row, s.cell, s.master);
   f.close();
 }
 

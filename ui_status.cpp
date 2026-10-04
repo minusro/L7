@@ -27,6 +27,48 @@ static constexpr int INSET = 2 * PX;               // text from the cell's edges
 static constexpr int STATUS_CELLS = TEMPO_CELL + 1;
 static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX : cell == CLOCK_CELL ? CLOCK_BOX : SCENE_BOX; }
 
+// ---- The master volume: in the clock cell while B alone is held on it (B +
+// arrows change it). A vertical line per step in every other column, filling
+// the cell inside the border's block of space; up to the volume: the dark
+// accent, above it: dark grey. Each line's
+// upper half is the left channel's meter, its lower half the right's: the
+// accent colour up to the output's level, on the same scale (the top line:
+// 0 dBFS), falling at MV_FALL_DB_PER_S.
+static constexpr int MV_COLS = CLOCK_BOX.w / PX, MV_ROWS = STATUS_H / PX;   // 47 x 13, the border's included
+static constexpr int MV_LINES = (MV_COLS - 4 + 1) / 2;                     // columns 2, 4 ... 44
+static_assert(MV_LINES == MASTER_VOLUME_MAX, "a line per master volume step");
+static constexpr int MV_HALF = (MV_ROWS - 4 - 1) / 2;                       // rows 2-5 left, 7-10 right
+static constexpr float MV_FALL_DB_PER_S = 24;
+
+static void drawMasterVolume(bool full) {
+  static uint16_t shown[MV_LINES][2];
+  static float meterDb[2] = {-200, -200};
+  static uint32_t lastMs = 0;
+  auto &t = board.tft();
+  const int top = rowTop(STATUS_ROW);
+  float peak[2];
+  takeOutputPeaks(peak[0], peak[1]);
+  uint32_t now = millis();
+  float fall = (now - lastMs) * (MV_FALL_DB_PER_S / 1000);
+  lastMs = now;
+  if (full) {
+    t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, BG);   // (inside the border)
+    meterDb[0] = meterDb[1] = -200;
+  }
+  int level = masterVolume();
+  for (int ch = 0; ch < 2; ch++) {
+    float db = peak[ch] > 0 ? 20 * log10f(peak[ch]) : -200.0f;
+    meterDb[ch] = max(db, meterDb[ch] - fall);
+    int lit = constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_MAX + 0.5f), 0, MV_LINES);
+    for (int j = 0; j < MV_LINES; j++) {
+      uint16_t color = j < lit ? ACCENT : j < level ? ACCENT_DARK : DARK;
+      if (!full && color == shown[j][ch]) continue;
+      shown[j][ch] = color;
+      t.fillRect(CLOCK_BOX.x + (2 + 2 * j) * PX, top + (2 + ch * (MV_HALF + 1)) * PX, PX, MV_HALF * PX, color);
+    }
+  }
+}
+
 // A cell's border (the frame), each side in its colour (borderAt(): the
 // two cells share the side between them).
 static void drawFrame(int cell) {
@@ -44,7 +86,8 @@ void drawStatus() {
   static uint32_t drawn = 0;                       // uiGeneration when the cells were last cleared
   auto &t = board.tft();
   int top = rowTop(STATUS_ROW);
-  if (drawn != uiGeneration) {
+  bool cleared = drawn != uiGeneration;
+  if (cleared) {
     drawn = uiGeneration;
     for (int c = 0; c < STATUS_CELLS; c++) t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, BG);
     shownBorders = ~0ull;
@@ -85,7 +128,16 @@ void drawStatus() {
     drawText(numRight - w, textY, text, ink, BG);
   }
 
-  // The clock.
+  // The clock, or the master volume while B alone is held on its cell.
+  static bool shownVolume = false;
+  bool volume = cell == CLOCK_CELL && bAlone();
+  if (volume) {
+    drawMasterVolume(!shownVolume || cleared);
+    shownVolume = true;
+  } else if (shownVolume) {
+    t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, BG);   // (the clock again)
+    shownVolume = false;
+  }
   noInterrupts();
   int32_t beat = transport.beat;
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
@@ -101,7 +153,7 @@ void drawStatus() {
   bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0, here = cell == CLOCK_CELL;
   uint16_t clockInk = !running ? (here ? DIM : DARK) : first ? ACCENT
                     : step == 0 ? (here ? INK : LIGHT) : (here ? LIGHT : DIM);
-  {
+  if (!volume) {
     // Centred (on the block grid); what longer text left either side cleared.
     int w = textWidth(text), inL = CLOCK_BOX.x + INSET, inR = CLOCK_BOX.x + CLOCK_BOX.w - INSET;
     int x = CLOCK_BOX.x + (CLOCK_BOX.w - w) / 2 / PX * PX;

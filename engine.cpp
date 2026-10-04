@@ -94,6 +94,22 @@ void setTrackMix(int t, int volume, int balance) {
   interrupts();
 }
 
+static int masterStep = MASTER_VOLUME_MAX;
+static volatile float outputGain = 1.0f;          // the master volume's
+static volatile float outPeakL = 0, outPeakR = 0;
+void setMasterVolume(int step) {
+  masterStep = constrain(step, 0, MASTER_VOLUME_MAX);
+  outputGain = masterStep ? powf(10.0f, (masterStep - MASTER_VOLUME_MAX) * MASTER_STEP_DB / 20) : 0.0f;
+}
+int masterVolume() { return masterStep; }
+void takeOutputPeaks(float &left, float &right) {
+  noInterrupts();
+  left = outPeakL;
+  right = outPeakR;
+  outPeakL = outPeakR = 0;
+  interrupts();
+}
+
 void takeTrackPeaks(int t, float &left, float &right) {
   Track &tr = tracks[t];
   noInterrupts();
@@ -246,6 +262,8 @@ void LooperEngine::update() {
 
   // Resampling: the output goes in the input history (what's recorded) instead.
   const bool captureOutput = recording.resample && recording.mode != Recording::Idle;
+  const float outGain = outputGain;
+  float outPeak[2] = {0, 0};
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
     int16_t l = inL ? inL->data[i] : 0, r = inR ? inR->data[i] : 0;
     const uint32_t at = transport.now;
@@ -308,6 +326,10 @@ void LooperEngine::update() {
     }
     transport.now = transport.now + 1;
 
+    mixL *= outGain;                                 // the master volume
+    mixR *= outGain;
+    outPeak[0] = max(outPeak[0], fabsf(mixL));
+    outPeak[1] = max(outPeak[1], fabsf(mixR));
     outL->data[i] = (int16_t)constrain(mixL, -32767.0f, 32767.0f);
     outR->data[i] = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
     if (captureOutput) inputRing[at % INPUT_FRAMES] = (uint16_t)outL->data[i] | ((uint32_t)(uint16_t)outR->data[i] << 16);
@@ -325,6 +347,9 @@ void LooperEngine::update() {
     if (peakL[t] > tr.peakL * 32768) tr.peakL = peakL[t] / 32768;
     if (peakR[t] > tr.peakR * 32768) tr.peakR = peakR[t] / 32768;
   }
+
+  if (outPeak[0] > outPeakL * 32768) outPeakL = outPeak[0] / 32768;
+  if (outPeak[1] > outPeakR * 32768) outPeakR = outPeak[1] / 32768;
 
   transmit(outL, 0);
   transmit(outR, 1);
