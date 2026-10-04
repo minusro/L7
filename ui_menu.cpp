@@ -19,13 +19,12 @@
 //
 // A card: a block shape, its bottom right corner cut diagonally (a third of
 // its height), in its slot's colour (colors.h): an outline when empty,
-// filled when it holds a project; the loaded project's light grey (white
-// when selected). Its letter, A-L (the project's name): dark grey when
-// empty, black on a project, the slot's colour on the loaded one. The
-// selected item's frame looks and behaves as the looper's cells'
-// (frameColor()), corners cut, a block out from a card (the diagonal too),
-// three from the list's box (the longest label's size, centred; labels
-// left-aligned, light grey, white when selected).
+// filled when it holds a project; the loaded project's card full size, the
+// others 75%. Its letter, A-L (the project's name): grey when empty, black
+// on a project. The selected item's frame looks and behaves as the looper's
+// cells' (frameColor()), corners cut, a block out from a card (the diagonal
+// too), three from the list's box (the longest label's size, centred;
+// labels left-aligned, light grey, white when selected).
 #include "ui.h"
 #include "ui_font.h"
 
@@ -97,12 +96,16 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 // The list: centred under them, an item every 13 rows from row 78, its frame
 // round its label with 3 blocks of space.
 static constexpr int CARD_W = 32, CARD_H = 18, CARD_CUT = CARD_H / 3, CARD_GAP = 6;
+static constexpr int SMALL_W = CARD_W * 3 / 4, SMALL_H = 14;   // the cards of projects not loaded: 24 x 14 (75%)
 static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 4;
 static constexpr int LIST_Y = 78, LIST_PITCH = 13, LIST_SPACE = 3;
 
 static Shape itemShape(int k) {
-  if (k < CARDS)
-    return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (k / COLS) * (CARD_H + CARD_GAP), CARD_W, CARD_H, CARD_CUT};
+  if (k < CARDS) {                                // (the loaded project's full size; the others 75%, centred in its place)
+    Shape s = {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (k / COLS) * (CARD_H + CARD_GAP), CARD_W, CARD_H, CARD_CUT};
+    if (k != projectCurrent()) s = {s.x + (CARD_W - SMALL_W) / 2, s.y + (CARD_H - SMALL_H) / 2, SMALL_W, SMALL_H, SMALL_H / 3};
+    return s;
+  }
   // A list item: the box fitting the longest label, centred (its label
   // left-aligned in it).
   int w = 0;
@@ -126,14 +129,18 @@ static void drawItem(int k) {
   bool sel = k == menuSel && !onStatus;
   uint16_t frame = sel ? frameColor() : BG;
   if (k < CARDS) {                                // a project slot: its frame a block out
+    Shape full = {s.x, s.y, CARD_W, CARD_H, CARD_CUT};
+    if (s.w != CARD_W) {                          // small: the full size's place cleared (it may have been loaded)
+      full.x -= (CARD_W - SMALL_W) / 2;
+      full.y -= (CARD_H - SMALL_H) / 2;
+      fillRing(full, 2, -CARD_W, BG);
+    }
     fillRing(s, 2, 1, frame, true);
     fillRing(s, 1, 0, BG);
     uint16_t color = PROJECT_COLORS[k];
-    bool filled = projectFilled(k), loaded = k == projectCurrent();
-    if (loaded) color = sel ? INK : LIGHT;
-    // Its letter (the project's name): black on a project, the slot's colour
-    // on the loaded one, dark grey on an empty slot.
-    uint16_t letter = !filled ? DARK : loaded ? PROJECT_COLORS[k] : BG;
+    bool filled = projectFilled(k);
+    // Its letter (the project's name): black on a project, grey on an empty slot.
+    uint16_t letter = filled ? BG : DIM;
     if (filled) {
       fillRing(s, 0, -s.w, color);
     } else {                                      // empty: an outline (the shape's edge)

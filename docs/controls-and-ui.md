@@ -151,9 +151,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   (`PROJECT_COLORS`: twelve pastels, rose to blush, picked by the author; the
   loaded project's is the app's accent colour, `ACCENT_DARK` at half its
   brightness; before one is loaded, the splash's turquoise): an outline when
-  empty, filled when it holds a project, the loaded project's filled light
-  grey (white when selected). The letter (the project's name): dark grey when
-  empty, black on a project, the slot's colour on the loaded one. Under them
+  empty, filled when it holds a project; the loaded project's card full
+  size, the others 75% (24×14, centred in their place). The letter (the
+  project's name): grey when empty, black on a project. Under them
   a list, "EXPORT TO ALS" and "USB DATA MODE" (nothing yet): a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
   selected). The action button takes the item's colour: on a card, its
