@@ -163,7 +163,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   pastels, rose to blush, picked by the author; the loaded project's is the
   app's accent colour, `ACCENT_DARK` at half its brightness; before one is
   loaded, the splash's turquoise). The loaded project's card is filled with
-  it, its letter (the project's name) black with a small black pause sign right of it; another
+  it, its letter (the project's name) black; another
   project's is a thick outline (two blocks) in its colour, the letter in it too.
   An empty slot is a grey outline, its letter in the slot's colour. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet). Four in

@@ -19,8 +19,8 @@
 //
 // A card: a block shape, its bottom right corner cut diagonally (3 blocks),
 // in its slot's colour (colors.h): the loaded project's
-// filled, its letter A-L (the project's name) black with a small pause sign
-// right of it; another project's a thick (two-block) outline, the letter in the
+// filled, its letter A-L (the project's name) black;
+// another project's a thick (two-block) outline, the letter in the
 // slot's colour; empty, a grey outline with the letter in the slot's colour. The selected item's frame looks and behaves as the looper's
 // cells' (frameColor()), corners cut, a block out from a card (the diagonal
 // too), three from the list's box (the longest label's size, centred;
@@ -179,11 +179,6 @@ static void drawItem(int k) {
       for (int r = 0; r < 5 && g->rows[r]; r++)
         for (int c = 0; c < w; c++)
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
-      if (loaded) {                               // a small pause sign right of it (two bars), black
-        int px = x0 + w + 2;
-        t.fillRect(px * PX, (y0 + 1) * PX, PX, 3 * PX, BG);
-        t.fillRect((px + 2) * PX, (y0 + 1) * PX, PX, 3 * PX, BG);
-      }
     }
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
