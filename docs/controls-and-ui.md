@@ -13,9 +13,9 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (as B+A) on the scene cell, start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
-| B + A | Open the menu (arrows move its selection: cards, list); in the menu, A and B held together close it (on release) |
-| A or B (menu, on a project slot) | Once let go: load its project (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
-| SHIFT + A or B (menu, on a slot) | Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Only while stopped |
+| B + A | Open the menu (arrows move its selection: cards, list); in the menu, B+A closes it (on release; not with the dummy project loaded) |
+| A (menu, on a project slot) | Once let go: load its project (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
+| SHIFT + A (menu, on a slot) | Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Only while stopped |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT twice (second tap held) + A | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
@@ -143,11 +143,11 @@ A recording track's waveform area is in the accent colour (a block of black betw
   drawing code to PNGs (see build-and-test.md).
 * Menu (`ui_menu.cpp`): opened with B+A (or A on the scene cell), it takes
   the place of the track rows and the status row's cells, across the whole
-  width; of the status row only the action button shows. On its items A or
-  B runs the action button's action when let go; A and B held together close
-  the menu instead (the button shows the small arrow right, as for load), as does loading a
-  project. Not while the dummy project is loaded (the icon dark grey): a
-  project has to be loaded first.
+  width; of the status row only the action button shows. On its items A
+  runs the action button's action when let go. B held shows the way out (a
+  small arrow right, in the loaded project's colour) and B+A closes the menu,
+  as does loading a project; not while the dummy project is loaded (the
+  button grey, disabled): a project has to be loaded first.
   Twelve project cards (three rows of four, 26×14 blocks, 6 apart, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve

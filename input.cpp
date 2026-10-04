@@ -78,24 +78,23 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       lastShiftTap = shiftTwice ? 0 : millis();
     }
   }
-  // The menu's items: the arrows move its selection; A or B runs the action
-  // button's action once let go (on the item it was pressed on); A and B held
-  // together close the menu instead (not while the dummy project is loaded).
-  static bool armed = false, closing = false, shifted = false;   // A/B down: its action waits; both: close; SHIFT with it
+  // The menu's items: the arrows move its selection; A runs the action
+  // button's action once let go (on the item it was pressed on); with B held
+  // (before or meanwhile), B+A closes the menu instead (not while the dummy
+  // project is loaded).
+  static bool armed = false, closing = false, shifted = false;   // A down: its action waits; B with it: close; SHIFT with it
   static int armedSlot = -1;                         // the slot it was pressed on (-1: a list item)
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
-    const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
+    const uint8_t act = m8::BTN_EDIT;
     if (pressed & act) {
-      if (!armed) {
-        armed = true;
-        closing = false;
-        armedSlot = menuSlot();
-        shifted = shift;
-      }
-      if ((keys & act) == act) closing = true;
+      armed = true;
+      closing = false;
+      armedSlot = menuSlot();
+      shifted = shift;
       noteActionPress();                             // (the icon: what letting go will do)
     }
+    if (armed && opt) closing = true;
     if (armed && !(keys & act)) {                    // let go: act
       armed = false;
       if (closing) {                                 // (not with the dummy project loaded: a project must be chosen)
@@ -122,7 +121,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       }
       return;
     }
-    if (!(pressed & act)) {
+    if (!(pressed & (act | m8::BTN_OPT))) {
       bool went = menuKeys(pressed);
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) moved = went;
     }

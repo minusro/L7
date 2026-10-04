@@ -17,8 +17,9 @@
 // clipboard is empty). With B
 // held: open the menu (a small arrow left); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
-// While the menu is open (on its items A or B runs the action when let go;
-// both held together: a small arrow right, closing the menu): on its
+// While the menu is open (on its items A runs the action when let go; B
+// held: a small arrow right, B+A closing the menu, in the loaded project's
+// colour; grey, disabled, with the dummy project): on its
 // list's items, export to ALS (a diskette) and USB data mode (the USB
 // trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project or
@@ -49,7 +50,7 @@ static bool flashOn() {
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
   if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
-    if ((board.keys() & (m8::BTN_EDIT | m8::BTN_OPT)) == (m8::BTN_EDIT | m8::BTN_OPT)) return ICON_HOME;   // A+B: close it
+    if (board.keys() & m8::BTN_OPT) return ICON_HOME;   // B held: B+A closes it
     int slot = menuSlot();
     if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : ICON_USB;
     if (shift) return projectFilled(slot) ? ICON_CUT : ICON_PASTE;
@@ -119,8 +120,7 @@ static int buttonIcon(int i) {
     wasOpen = menuOpen();
     heldAction = -1;
   }
-  uint8_t act = menuOpen() && !menuOnStatus() ? m8::BTN_EDIT | m8::BTN_OPT : m8::BTN_EDIT;   // (the menu's items: B too)
-  if (heldAction >= 0 && !(board.keys() & act)) heldAction = -1;   // A released
+  if (heldAction >= 0 && !(board.keys() & m8::BTN_EDIT)) heldAction = -1;   // A released
   return heldAction >= 0 ? heldAction : actionIcon();
 }
 
@@ -166,7 +166,6 @@ static constexpr int PANEL_LEFT = 1;              // the selected track's panel'
 
 static bool unavailable(int i, int icon) {
   if (i != STATUS_ROW) return false;
-  if (icon == ICON_HOME && menuOpen() && projectCurrent() < 0) return true;   // no leaving the menu with the dummy project
   if (menuSlot() >= 0 && !menuOnStatus()) {        // a project slot: cut and paste only while stopped
     if (icon == ICON_CUT) return !projectsMayCopy();
     if (icon == ICON_PASTE) return !projectsMayCopy() || !projectClipboardFull();

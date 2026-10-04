@@ -1,10 +1,9 @@
 // ui_menu.cpp — the menu (see ui.h): in place of the track rows and the
 // status row's cells (only the action button shows), the screen's whole
-// width. Opened with B+A (or A on the scene cell); closed with A and B held
-// together, or by loading a project. Twelve cards (three rows of
+// width. Opened with B+A (or A on the scene cell); closed with B+A (not
+// while the dummy project is loaded), or by loading a project. Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT TO ALS" and "USB
-// DATA MODE" (nothing yet). A or B runs the action button's action when let
-// go. On a slot, A loads its project (an empty one: a new project there) and closes
+// DATA MODE" (nothing yet). A runs the action button's action when let go. On a slot, A loads its project (an empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project, or pastes one into an empty slot
 // (only while stopped).
 //
@@ -166,6 +165,7 @@ static void drawItem(int k) {
 // row), the accent colour.
 uint16_t menuActionColor() {
   if (!shown || onStatus) return ACCENT;
+  if (board.keys() & m8::BTN_OPT) return projectCurrent() >= 0 ? ACCENT : DIM;   // B: leaving (not with the dummy project)
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
   if (menuSel - CARDS == 1) return LIGHT;
   return projectHasClips() ? ACCENT : DIM;         // export: grey with nothing to export
