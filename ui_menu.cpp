@@ -172,11 +172,12 @@ static void drawItem(int k) {
   if (k < CARDS) {                                // a project slot: its frame a block out
     fillRing(s, 2, 1, frame, true);
     fillRing(s, 1, 0, BG);
-    if (sel)                                      // the frame's diagonal a row thicker, outwards: the block past
-      for (int r = s.y + s.h - s.cut; r < s.y + s.h + 2; r++) {   // its end on each row of the diagonal
-        int c0, c1;
-        if (rowSpan(s, 2, r, c0, c1, true)) t.fillRect((c1 + 1) * PX, r * PX, PX, PX, frame);
-      }
+    // The frame's diagonal a row thicker, outwards: the block past its end on
+    // each row of the diagonal (part of the frame: cleared with it, in BG).
+    for (int r = s.y + s.h - s.cut; r < s.y + s.h + 2; r++) {
+      int c0, c1;
+      if (rowSpan(s, 2, r, c0, c1, true)) t.fillRect((c1 + 1) * PX, r * PX, PX, PX, frame);
+    }
     uint16_t color = PROJECT_COLORS[k];
     bool filled = projectFilled(k), loaded = k == projectCurrent();
     // Its letter (the project's name): black on the loaded one, else in the slot's colour.
