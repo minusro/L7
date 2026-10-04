@@ -974,6 +974,33 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
 }
 
 // ---- Clipboard
+// Deletes the recordings not marked in `used` (bit n: sample n), keeping
+// what the tracks, the clipboard and a recording use; empty recording space
+// (the pool) isn't touched. Only stopped and idle (it changes the file system).
+int deleteSamplesExcept(const uint8_t *used) {
+  if (transport.running || recording.mode != Recording::Idle) return 0;
+  auto keep = [&](uint32_t n) { return n <= MAX_SAMPLES && (used[n / 8] >> (n % 8) & 1); };
+  int deleted = 0;
+  for (uint32_t n = 1; n <= MAX_SAMPLES; n++) {
+    if (!sampleOrder[n] || keep(n) || n == clipboard.sample) continue;
+    bool onTrack = false;
+    for (int t = 0; t < NUM_TRACKS; t++)
+      if (tracks[t].sample == n || changes[t].u.sample == n || (plans[t].on && plans[t].u.sample == n)) onTrack = true;
+    if (onTrack) continue;
+    char path[40];
+    samplePath(n, path, sizeof path);
+    debugStage = "SD remove (unused sample)";
+    if (!SD.sdfs.remove(path)) continue;
+    sampleOrder[n] = 0;
+    sampleTotal--;
+    for (int k = 0; k < untrimmedCount; k++)
+      if (untrimmed[k] == n) untrimmed[k--] = untrimmed[--untrimmedCount];
+    deleted++;
+  }
+  if (deleted) Serial.printf("deleted %d unused recording(s)\n", deleted);
+  return deleted;
+}
+
 bool clipboardFull() { return clipboard.sample != 0; }
 
 bool cutTrack(int t) {

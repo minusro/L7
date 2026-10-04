@@ -75,6 +75,10 @@ bool projectCopying(int p);    // slot p is being copied from or to (not loadabl
 // Empties slot p, the project gone (not to the clipboard); the loaded one:
 // the dummy project instead. false: recording.
 bool projectDelete(int p);
+// Deletes every recording no project uses (any track of any scene, muted or
+// not; the clipboards and the dummy project included), nor the tracks now.
+// Stopped only; at boot and when the menu opens. Returns how many.
+int deleteUnusedSamples();
 // The loaded project's selected row and cell (-1: none saved).
 void projectSelection(int &row, int &cell);
 void projectSetSelection(int row, int cell);

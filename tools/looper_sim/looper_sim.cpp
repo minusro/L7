@@ -1412,6 +1412,20 @@ int main(int argc, char **argv) {
     scenesBegin(simTempo, simSetTempo, 2);
     check(projectCurrent() == 2 && sceneCount() == scenes && projectFilled(5) && projectFilled(2) && !projectFilled(1) && projectClipboardFull(),
           "after a power cycle: the slots as they were");
+    {
+      uint32_t before = sampleCount(), playing = tracks[0].sample;
+      int deleted = deleteUnusedSamples();
+      bool kept = sampleExists(playing) && tracks[0].state != TrackState::Empty;
+      char m[120];
+      snprintf(m, sizeof m, "unused recordings deleted (%d of %u), the ones in use kept", deleted, before);
+      check(deleted > 0 && sampleCount() == before - deleted && kept, m);
+      check(deleteUnusedSamples() == 0, "a second time: nothing more");
+      transportStart();
+      runBeats(4);
+      checkSync(0, "playing on after the clean-up");
+      transportStop();
+      runUntilIdle();
+    }
   }
 
   printf("random sessions\n");

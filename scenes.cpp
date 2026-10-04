@@ -534,6 +534,29 @@ bool projectPaste(int p) {
   return true;
 }
 
+int deleteUnusedSamples() {
+  if (transport.running || busy() || job.on) return 0;
+  flushProject();
+  prepareUnits(nullptr);                           // (no prepared sample files open)
+  static uint8_t used[(9999 + 8) / 8];
+  memset(used, 0, sizeof used);
+  auto mark = [](const TrackUnit &u) { if (u.sample && u.sample <= 9999) used[u.sample / 8] |= 1 << (u.sample % 8); };
+  for (int p = 0; p <= DUMMY; p++) {               // every project's scenes (the clipboard's and the dummy's too)
+    FsFile f = openProject(p);
+    SceneList l;
+    if (!readList(f, l)) continue;
+    for (int i = 0; i < l.count; i++) {
+      SceneInfo s;
+      if (f.seekSet((uint64_t)(1 + l.slot[i]) * BLOCK) && f.read(&s, sizeof s) == (int)sizeof s && !memcmp(s.magic, "M8SC", 4))
+        for (const auto &u : s.units) mark(u);
+    }
+  }
+  for (int t = 0; t < NUM_TRACKS; t++) mark(unitOf(t));   // the tracks now (muted ones too)
+  if (clipFull)
+    for (const auto &u : clip.units) mark(u);      // the scene clipboard
+  return deleteSamplesExcept(used);
+}
+
 // Opens (or makes, at full size) project files 1-12, the clipboard's and the
 // dummy project's; the
 // scene list of the first version (/looper/scenes.dat) becomes project 1.

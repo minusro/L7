@@ -160,6 +160,7 @@ void setup() {
   transport.spb = spbForBpm(bpm);
   scenesBegin([] { return bpm; }, setTempo, sessionProject());
   takeProjectSelection(false);
+  deleteUnusedSamples();                           // recordings no project uses
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);

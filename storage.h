@@ -88,13 +88,17 @@ void clearTrack(int t);               // its sample stays on the card
 bool cutTrack(int t);
 bool pasteTrack(int t);
 bool clipboardFull();
+// Deletes the recordings (samples) not marked in `used` (bit n: sample n;
+// (MAX 9999 + 8) / 8 bytes) and not on a track, the clipboard or recording.
+// Stopped only (file-system changes); returns how many.
+int deleteSamplesExcept(const uint8_t *used);
 // The track's sample: the one recorded next (dir 1) or before (-1), wrapping
 // around; an empty track takes the oldest (1) or newest (-1). Needs at least
 // 2 samples on the card. Volume, balance, filter and mute stay; the range resets to
 // the whole loop. false: nothing changed.
 bool stepSample(int t, int dir);
 // Samples on the card holding recordings (0001-9999), including ones no
-// track plays.
+// track plays now (until deleteUnusedSamples(), scenes.h: no project's).
 uint32_t sampleCount();
 bool sampleExists(uint32_t n);
 // Loop range in beats: starts on any beat of the loop; any length from a beat
