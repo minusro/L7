@@ -96,9 +96,11 @@ no dropouts or overruns
 - animated splash screen V
 - playback state linked to menu state V
 - make it 7 tracks V
-- global tempo V
-- ableton export
-- usb data mode
+- per project tempo V
+- per project volume V
+- ableton export V
+- usb data mode V
+
 
 - crossfading between two scenes
 - overdubbing - not for now or ever maybe X
@@ -108,7 +110,7 @@ L8
 Loop8
 8L
 711
-L7
+L7 - this one V
 7Loop
 
 
