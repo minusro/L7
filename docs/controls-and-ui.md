@@ -160,8 +160,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   a list, "EXPORT ABLETON PROJECT", "ENTER USB DATA MODE" and, for trying the
   scrolling, "DUMMY 1"-"6" (nothing yet). Four in view at a time (an item
   every 12 rows, the last place in the status row's, level with the action
-  button); moving, the list scrolls so two items past the selection that way
-  stay in view where there are any, never past its ends (no empty places);
+  button); moving, the list scrolls so the item past the selection that way
+  stays in view where there is one, never past its ends (no empty places);
   with four or fewer, from the top of the room: a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
   selected). Going to the menu, the action button is light grey (and its icon while

@@ -138,11 +138,11 @@ static uint16_t frameColor() {
 static bool listInView(int k) { return k < CARDS || (k - CARDS >= listTop && k - CARDS < listTop + LIST_ROOM); }
 
 // Scrolls the list after its selection moved to item i (dir: 1 down, -1 up,
-// 0: just into view): two items past it that way stay in view where there
-// are any; the view never runs past the list's ends (no empty places).
+// 0: just into view): the item past it that way stays in view where there is
+// one; the view never runs past the list's ends (no empty places).
 static void scrollList(int i, int dir) {
-  if (dir > 0) listTop = max(listTop, min(i + 2, LIST - 1) - (LIST_ROOM - 1));
-  if (dir < 0) listTop = min(listTop, max(i - 2, 0));
+  if (dir > 0) listTop = max(listTop, min(i + 1, LIST - 1) - (LIST_ROOM - 1));
+  if (dir < 0) listTop = min(listTop, max(i - 1, 0));
   listTop = constrain(listTop, i - (LIST_ROOM - 1), i);   // (in view)
   listTop = constrain(listTop, 0, max(0, LIST - LIST_ROOM));
 }
@@ -178,7 +178,7 @@ static void drawItem(int k) {
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
     fillRing(s, LIST_SPACE, 0, BG);
     bool off = k - CARDS == 0 && !projectHasClips();   // export: nothing to export (no clips, or the dummy project)
-    drawText(s.x * PX, s.y * PX, LABELS[k - CARDS], off ? DIM : sel ? INK : LIGHT, BG);
+    drawText(s.x * PX, s.y * PX, LABELS[k - CARDS], off ? DIM : sel ? INK : LIGHT, BG, s.w * PX);   // (the whole box: a longer label scrolled away is covered)
   }
 }
 
@@ -196,7 +196,7 @@ uint16_t menuActionColor() {
 static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
-         (uint32_t)(listInView(k) ? 1 : 0) << 4 |
+         (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
          (uint32_t)(sel ? frameColor() : 0) << 8;
 }
 
@@ -204,19 +204,15 @@ void drawMenu() {
   static uint32_t shownKey[ITEMS];
   static uint32_t drawn = 0;                     // uiGeneration when last drawn whole
   if (!shown) return;
-  static int shownTop = -1;
   bool all = drawn != uiGeneration;
   if (all) {
     drawn = uiGeneration;
     board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);   // (where the track rows were)
     board.tft().fillRect(0, STATUS_TOP, BUTTON_X, 240 - STATUS_TOP, BG);   // and the status row's cells: only its button shows
-  } else if (shownTop != listTop) {               // scrolled: the list's room cleared, its items redrawn
-    Shape s = itemShape(CARDS + listTop);
-    board.tft().fillRect((s.x - LIST_SPACE - 1) * PX, (s.y - LIST_SPACE - 1) * PX, (s.w + 2 * LIST_SPACE + 2) * PX,
-                         ((LIST_ROOM - 1) * LIST_PITCH + s.h + 2 * LIST_SPACE + 2) * PX, BG);
-    for (int k = CARDS; k < ITEMS; k++) shownKey[k] = ~0u;
   }
-  shownTop = listTop;
+  // Scrolled: the items in view redraw over each other's places (their keys
+  // hold the place), each label drawn the box's whole width; no clearing
+  // first, which flickered.
   // Unselected first: frames that touch a neighbour's space don't get wiped.
   for (int pass = 0; pass < 2; pass++)
     for (int k = 0; k < ITEMS; k++) {
