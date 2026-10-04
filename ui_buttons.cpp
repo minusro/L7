@@ -141,8 +141,8 @@ PROGMEM static const Icon ICONS[] = {
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
   // MENU: the menu in miniature (ui_menu.cpp; redraw it when the menu's layout
-  // changes): three rows of four cards, the list's two items under them.
-  {11, 9, {"##.##.##.##", "...........", "##.##.##.##", "...........", "##.##.##.##", "...........", "...#####...", "...........", "...#####..."}},
+  // changes), simplified: cards (two rows of three), the list's two items under them.
+  {8, 7, {"##.##.##", "........", "##.##.##", "........", "..####..", "........", "..####.."}},
   {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // HOME (out of the menu: the small arrow right, as LOAD)
   {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
           "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
