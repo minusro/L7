@@ -41,9 +41,9 @@
 //   SHIFT+LEFT/RIGHT the track's sample: previous / next on the card (empty track:
 //                      newest / oldest); keeps volume, filter, mute; whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
-//   SHIFT twice+EDIT (second tap held) empty track: resample (record the output, from the
-//                      next bar line); then it moves to a new scene after this one (on the
-//                      same track). With a clip: overdub (not there yet)
+//   OPT+EDIT         empty track: resample (record the output, from the next bar line);
+//                      then it moves to a new scene after this one (on the same
+//                      track). With a clip: overdub (not there yet)
 //   SHIFT+UP/DOWN    newer / older scene (0*: empty; after the last, a copy of it);
 //                    on the status row's scene cell B+UP/DOWN does the same
 //                    (while playing: on the next bar line after SHIFT is let go; SCN
@@ -53,14 +53,13 @@
 //                    (N+1*); SHIFT+DOWN: to the empty scene (0*)
 //   OPT, SHIFT, EDIT paste the scene clipboard after the current scene (OPT pressed first)
 //   SHIFT, OPT, EDIT cut the scene (to the scene clipboard), go to the one before (SHIFT first)
-//   OPT+EDIT         open the menu (on A's release)
 //   EDIT/OPT/START (menu, project)   on release: load its project (empty slot: a new one), back to the looper
 //   SHIFT+EDIT/OPT (menu, slot)      cut its project (EDIT twice, SHIFT held: confirmed) / paste one into an empty slot (on release; playing: copied in the background)
 //   EDIT/OPT (menu list)             export Ableton project / enter USB data mode (nothing yet)
 //   SHIFT+OPT twice  insert a copy of the current scene after it
 //   PLAY             start from 1.1.1 / stop (then the menu, once PLAY is let go)
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
-//   EDIT (scene cell) open the menu (as OPT+EDIT)
+//   EDIT (scene cell) open the menu (on release; stopping the clock opens it too)
 //   EDIT (tempo cell) tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
 //                      tap starts from 1.1.1 (running: snaps to the nearest bar start)
 //   power (hold)     switch off

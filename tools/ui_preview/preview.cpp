@@ -23,8 +23,6 @@ void (*IntervalTimer::fn)() = nullptr;
 HardwareSerial midi;
 
 bool optBeforeShift() { return true; }             // (input.cpp isn't built here)
-static bool previewShiftTwice = false;
-bool shiftTwiceHeld() { return previewShiftTwice; }   // (SHIFT tapped twice and held)
 bool arrowsMoved() { return true; }
 int cutConfirmSlot() { return -1; }
 
@@ -157,13 +155,11 @@ int main(int argc, char **argv) {
   render(out + "/ui_scene_paste.png");
   board.heldKeys = 0;
   selected = 2;
-  previewShiftTwice = true;                        // SHIFT twice, held: overdub on a clip,
-  board.heldKeys = m8::BTN_SHIFT;
+  board.heldKeys = m8::BTN_OPT;                    // B held: overdub on a clip,
   render(out + "/ui_overdub.png");
   selected = 5;                                    // resample on an empty track
   render(out + "/ui_resample.png");
   selected = 2;
-  previewShiftTwice = false;
   board.heldKeys = 0;
   // Track 6 recording, 2 bars and a bit in (its live view: no audio saved yet).
   recording.track = 5;

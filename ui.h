@@ -119,8 +119,9 @@ int tagWidth(const char *text);
 extern uint32_t uiGeneration;
 
 // ---- The menu (ui_menu.cpp): a second view in place of the track rows
-// (the status row stays), opened with B+A and closed with A; the arrows move
-// its selection. While it's open the track rows aren't drawn.
+// and the status row's cells (only the action button stays), opened with A
+// on the scene cell or by stopping the clock, left by loading a project; the
+// arrows move its selection. While it's open the track rows aren't drawn.
 bool menuOpen();
 void openMenu();
 void closeMenu();

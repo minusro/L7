@@ -10,14 +10,14 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 |---|---|
 | UP/DOWN | Select row: tracks 8 (top) to 1 (bottom), status row (no wrapping); starts on track 1 |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo) |
-| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (as B+A) on the scene cell, start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
+| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu on the scene cell (on release), start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
-| B + A | Open the menu, once A is let go (arrows move its selection: cards, list; loading a project leaves it) |
+| B + A | On a track: resample / overdub (below). The menu opens with A on the scene cell, or by stopping the clock |
 | A, B or START (menu, on a project slot) | Once let go: load its project, from 1.1.1 (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
 | SHIFT + A or B (menu, on a slot) | On a project: the first A only asks (the icon turns into a question mark); a second A, SHIFT still held, cuts it once let go (letting go of SHIFT or moving cancels). Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Not while recording |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
-| SHIFT twice (second tap held) + A | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while held: a cassette (resample), the record dot with a plus (overdub) |
+| B + A (on a track) | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while B is held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
 | SHIFT + UP/DOWN | Newer / older scene (see scenes.md); B + UP/DOWN does the same on the status row's scene cell (double taps and holding B included) |
 | SHIFT + UP/DOWN twice, second held | To N+1\* / 0\* |
@@ -141,7 +141,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Colours: all in `colors.h`.
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
-* Menu (`ui_menu.cpp`): opened with B+A (or A on the scene cell), it takes
+* Menu (`ui_menu.cpp`): opened with A on the scene cell, or by stopping the
+  clock (START, or A on the clock cell, once that key is let go), it takes
   the place of the track rows and the status row's cells, across the whole
   width; of the status row only the action button shows. Opening it stops the
   clock. On its items A and B both act (SHIFT with them: cut and paste); on

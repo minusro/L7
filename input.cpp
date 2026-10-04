@@ -57,14 +57,9 @@ static void tapTempo() {
 static bool optFirst = false;
 bool optBeforeShift() { return optFirst; }
 
-// SHIFT tapped twice (within DOUBLE_TAP_MS), the second tap held: A records
-// another way while it's held: an empty track resamples (records the app's
-// output), one with a clip overdubs (not there yet).
-static bool shiftTwice = false;
 // The last arrow press moved the selection (not: already at the edge that way).
 static bool moved = false;
 bool arrowsMoved() { return moved; }
-bool shiftTwiceHeld() { return shiftTwice && (board.keys() & m8::BTN_SHIFT); }
 static int cutConfirm = -1;                       // see cutConfirmSlot()
 int cutConfirmSlot() { return cutConfirm; }
 
@@ -72,16 +67,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
-  {
-    static uint32_t lastShiftTap = 0;
-    if (!shift) shiftTwice = false;
-    if (pressed & m8::BTN_SHIFT) {
-      shiftTwice = millis() - lastShiftTap < DOUBLE_TAP_MS;
-      lastShiftTap = shiftTwice ? 0 : millis();
-    }
-  }
-  // B+A (or A on the scene cell) in the looper's view: the menu opens once A
-  // is let go; stopping the clock (START, A on the clock cell): once that key is.
+  // A on the scene cell in the looper's view: the menu opens once A is let
+  // go; stopping the clock (START, A on the clock cell): once that key is.
   static uint8_t menuOnRelease = 0;                  // the key to wait for
   if (menuOnRelease && !(keys & menuOnRelease)) {
     menuOnRelease = 0;
@@ -374,29 +361,31 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // press, running or not. A on the status row: the menu (scene cell), START
   // (clock cell), tap tempo (tempo cell); with SHIFT, on any of them: the same
   // as SHIFT+START.
-  // B+A: open the menu. With SHIFT too, the order they were pressed in:
+  // B+A on a track: resample / overdub. With SHIFT too, the order they were pressed in:
   // B then SHIFT, +A: paste the scene clipboard after the scene; SHIFT then
   // B, +A: cut the scene to it.
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
   bool edit = (pressed & m8::BTN_EDIT) && !opt;
   if ((pressed & m8::BTN_EDIT) && opt) {
-    if (!shift) menuOnRelease = m8::BTN_EDIT;        // (the menu opens once A is let go)
-    else sceneChanged = optFirst ? scenePaste() : sceneCut();
+    if (shift) {
+      sceneChanged = optFirst ? scenePaste() : sceneCut();
+    } else if (!onStatus && !recordingOn(selected) && recordQueued() != selected) {
+      // B+A on a track: an empty one resamples (records the app's output;
+      // queued behind a recording, as A records); one with a clip overdubs
+      // (to come).
+      if (tracks[selected].state == TrackState::Empty) recordPress(selected, true);
+    }
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = (transportKey || (edit && onClock)) && !shift;
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onScene) menuOnRelease = m8::BTN_EDIT;      // as B+A
+    if (onScene) menuOnRelease = m8::BTN_EDIT;      // the menu
     else if (onTempo) tapTempo();                  // (the clock cell: as START, below)
   }
   if (edit && !onStatus) {
     Track &tr = tracks[selected];
-    if (shiftTwice && !recordingOn(selected) && recordQueued() != selected) {
-      // SHIFT tapped twice and held, A: an empty track resamples (queued
-      // behind a recording, as A records); one with a clip overdubs (to come).
-      if (tracks[selected].state == TrackState::Empty) recordPress(selected, true);
-    } else if (shift) {
+    if (shift) {
       // SHIFT+A: cut the clip to the clipboard, or paste it onto an empty
       // track; recording (or queued): cancel it, the recording thrown away.
       if (hasClip(selected)) cutTrack(selected);

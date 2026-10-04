@@ -15,7 +15,7 @@
 // (an arrow up from a line), cancel a recording (X: thrown away at once) or,
 // on an empty track, paste (an arrow down to a line; dark grey while the
 // clipboard is empty). With B
-// held: open the menu (a small hamburger); with SHIFT too, paste a scene (B pressed
+// held: resample / overdub (below); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A runs the action when let go; B does
 // nothing): on its
@@ -25,12 +25,11 @@
 // (a question mark after the first A: a second A confirms) or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
-// the menu (as B+A) on the scene cell, start / stop (play / stop, as
+// the menu on the scene cell, start / stop (play / stop, as
 // START) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
 // start from 1.1.1 (play).
-// SHIFT tapped twice and held: resample (a cassette) on an
-// empty track, overdub (the record dot with a plus; not there yet: A does
-// nothing) on one with a clip.
+// B held on a track: resample (a cassette) on an empty track, overdub (the
+// record dot with a plus; not there yet: A does nothing) on one with a clip.
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
 enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_OVERDUB, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK };
@@ -55,16 +54,17 @@ static int actionIcon() {
     if (shift) return projectFilled(slot) ? (cutConfirmSlot() == slot ? ICON_CHECK : ICON_CUT) : ICON_PASTE;
     return projectFilled(slot) ? ICON_LOAD : ICON_NEW;
   }
-  if (board.keys() & m8::BTN_OPT)                  // B+A: the menu; with SHIFT, the scene
-    return !shift ? (menuOpen() ? ICON_HOME : ICON_MENU) : optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
-  if (selected == STATUS_ROW) {                    // restart / the menu (as B+A) / START / tap tempo
+  if (board.keys() & m8::BTN_OPT) {                // B+A: on a track resample / overdub; with SHIFT, the scene
+    if (shift) return optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
+    if (selected == STATUS_ROW || recordingOn(selected) || recordQueued() == selected) return ICON_NONE;
+    return tracks[selected].state == TrackState::Empty ? ICON_RESAMPLE : ICON_OVERDUB;
+  }
+  if (selected == STATUS_ROW) {                    // restart / the menu / START / tap tempo
     if (shift) return ICON_PLAY;
     int cell = selectedCellIn(STATUS_ROW);
     return cell == SCENE_CELL ? (menuOpen() ? ICON_HOME : ICON_MENU) : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_TAP;
   }
   const Track &tr = tracks[selected];
-  if (shiftTwiceHeld() && !recordingOn(selected) && recordQueued() != selected)   // SHIFT twice, held
-    return tr.state == TrackState::Empty ? ICON_RESAMPLE : ICON_OVERDUB;
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) || recordQueued() == selected ? ICON_DELETE : ICON_PASTE;
   if (recordQueued() == selected) return ICON_DELETE;   // takes it out of the queue
   if (recordingOn(selected)) {
