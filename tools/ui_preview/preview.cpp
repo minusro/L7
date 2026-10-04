@@ -86,8 +86,11 @@ static void render(const std::string &path) {
 
 int main(int argc, char **argv) {
   std::string out = argc > 1 ? argv[1] : ".";
-  showSplash();                                    // the splash, its hue cycle done and the line faded in
-  simMicros += 2600000;
+  showSplash();                                    // the splash: the L and the 7 sliding in
+  simMicros += 400000;
+  splashTick();
+  writePng(out + "/ui_splash_slide.png");
+  simMicros += 2200000;                            // its hue cycle done and the line faded in
   splashTick();
   writePng(out + "/ui_splash.png");
   transport.spb = spbForBpm(bpm);
