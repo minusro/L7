@@ -84,6 +84,5 @@ void showSplash() {
 void hideSplash() {
   while (millis() - shownAt < SPLASH_MIN_MS) delay(10);
   board.tft().fillScreen(BG);
-  uiGeneration++;                                // everything redraws in full
-  for (int i = 0; i < ROWS; i++) drawTrack(i);
+  uiGeneration++;                                // (the menu comes next: nothing of the looper's view drawn first)
 }

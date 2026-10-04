@@ -142,7 +142,7 @@ void mainSelection(int &row, int &cell); // the looper's selection (kept while t
 void setMainSelection(int row, int cell);   // and set (the menu open: for when it closes)
 
 // Splash screen (ui_splash.cpp): the logo while the looper starts. hideSplash()
-// waits until it has been up a moment, then draws the looper.
+// waits until it has been up a moment, then clears the screen (the menu follows).
 void showSplash();
 void hideSplash();
 int splashBottom();                    // y just below the logo (for startup messages)

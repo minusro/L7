@@ -15,8 +15,9 @@
 // (an arrow up from a line), cancel a recording (X: thrown away at once) or,
 // on an empty track, paste (an arrow down to a line; dark grey while the
 // clipboard is empty). With B
-// held alone on a cell it adjusts: four small arrows (B + arrows), black on
-// the accent colour (A pressed too: the pressed look); on an empty track: resample
+// held alone on a cell it adjusts: four small arrows round a + (B + arrows),
+// black on the accent colour; the pressed look (dark grey, the icon in the
+// accent colour) while an arrow is down; A does nothing then; on an empty track: resample
 // (the record dot with a plus: B+A); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A runs the action when let go; B does
@@ -84,7 +85,15 @@ static int actionIcon() {
 // The command A ran, shown dimmed while A is still held (-1: none).
 static int heldAction = -1;
 
-void noteActionPress() { heldAction = actionIcon(); }
+void noteActionPress() {
+  heldAction = actionIcon();
+  if (heldAction == ICON_ADJUST) heldAction = -1;  // (B held on a cell: A does nothing, the button stays)
+}
+
+// B + arrows adjusting a cell: the button looks pressed while an arrow is down.
+static bool adjusting() {
+  return board.keys() & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN);
+}
 
 // The track's own state.
 static int trackIcon(int i) {
@@ -189,13 +198,14 @@ static bool unavailable(int i, int icon) {
 static uint16_t actionColor(int icon) { return icon == ICON_MENU ? ACCENT : menuActionColor(); }
 
 static uint16_t buttonBackground(int i, int icon) {
-  if (i == STATUS_ROW) return heldAction >= 0 ? DARK : actionColor(icon);
+  if (i == STATUS_ROW) return heldAction >= 0 || (icon == ICON_ADJUST && adjusting()) ? DARK : actionColor(icon);
   return cellBackground(i, -1);
 }
 
 static uint16_t iconColor(int i, int icon) {
   uint16_t bg = buttonBackground(i, icon);
   if (i == STATUS_ROW) {
+    if (icon == ICON_ADJUST) return adjusting() ? ACCENT : BG;
     uint16_t c = actionColor(icon);                  // (grey: an item that can't act; its icon black, held too)
     return heldAction >= 0 ? (unavailable(i, icon) || c == DIM ? BG : c) : unavailable(i, icon) ? DARK : BG;
   }
