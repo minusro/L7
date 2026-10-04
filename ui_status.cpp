@@ -29,14 +29,15 @@ static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX 
 
 // ---- The master volume: in the clock cell while B alone is held on it (B +
 // arrows change it). A vertical line per step in every other column, filling
-// the cell inside the border's block of space; up to the volume: the dark
-// accent, the volume's own line white; above it: dark grey. Each line's
+// the cell inside the border's block of space: the volume's line white (the
+// first one at 0), the ones before it the dark accent, those after it dark
+// grey. Each line's
 // upper half is the left channel's meter, its lower half the right's: the
 // accent colour up to the output's level, on the same scale (the top line:
 // 0 dBFS), falling at MV_FALL_DB_PER_S. Shown again, it starts from silence.
 static constexpr int MV_COLS = CLOCK_BOX.w / PX, MV_ROWS = STATUS_H / PX;   // 47 x 13, the border's included
 static constexpr int MV_LINES = (MV_COLS - 4 + 1) / 2;                     // columns 2, 4 ... 44
-static_assert(MV_LINES == MASTER_VOLUME_MAX, "a line per master volume step");
+static_assert(MV_LINES == MASTER_VOLUME_MAX + 1, "a line per master volume step (0 included)");
 static constexpr int MV_HALF = (MV_ROWS - 4 - 1) / 2;                       // rows 2-5 left, 7-10 right
 static constexpr float MV_FALL_DB_PER_S = 24;
 
@@ -60,9 +61,10 @@ static void drawMasterVolume(bool full) {
   for (int ch = 0; ch < 2; ch++) {
     float db = peak[ch] > 0 ? 20 * log10f(peak[ch]) : -200.0f;
     meterDb[ch] = max(db, meterDb[ch] - fall);
-    int lit = constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_MAX + 0.5f), 0, MV_LINES);
+    // (Line j: step j's level, (j - MASTER_VOLUME_MAX) * MASTER_STEP_DB dB.)
+    int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_MAX + 0.5f) + 1, 0, MV_LINES);
     for (int j = 0; j < MV_LINES; j++) {
-      uint16_t color = j == level - 1 ? INK : j < lit ? ACCENT : j < level ? ACCENT_DARK : DARK;
+      uint16_t color = j == level ? INK : j < lit ? ACCENT : j < level ? ACCENT_DARK : DARK;
       if (!full && color == shown[j][ch]) continue;
       shown[j][ch] = color;
       t.fillRect(CLOCK_BOX.x + (2 + 2 * j) * PX, top + (2 + ch * (MV_HALF + 1)) * PX, PX, MV_HALF * PX, color);
