@@ -69,7 +69,7 @@ content uses the cell's full size.
 Style (after Elektron's screens): seven colours (`colors.h`) — black (`BG`),
 17% grey (`DARK`: background detail — outside the loop range, unlit volume lines, the selection frame while B is held, muted volume lines and filters), 44% grey
 (`DIM`: inactive — muted clips, idle icons and text; filter fills, the selection frame), light grey (`LIGHT`, 81%: unselected waveforms, labels, selected fills and lines), white (`INK`: active,
-selected) and the accent (`ACCENT`, green turquoise 48/230/170 for now, one constant; `ACCENT_DARK` at half brightness, light grey's role while editing: recording
+selected) and the accent (`ACCENT`: the loaded project's colour, green turquoise 48/230/170 before one is loaded; `ACCENT_DARK` at half brightness, light grey's role while editing: recording
 and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
 (`PX`), a 160×120 screen of chunky pixels. Selection: a 50% grey frame on the
 selected cell only (dark grey while B is held, with or without other keys;
@@ -146,9 +146,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   frames hidden; B+A, or A on the scene cell, closes it). Twelve project
   cards (three rows of four, 36×22 blocks, 4 apart): rectangles with the
   bottom right corner cut diagonally, the cut half their height. Each slot
-  has its colour (`PROJECT_COLORS`: twelve OKLCH hues 30° apart at the
-  accent's lightness and chroma, red to pink, the accent the 6th; blues and
-  reds as colourful as sRGB allows at that lightness): filled when it holds a
+  has its colour (`PROJECT_COLORS`: twelve pastels, rose to blush, picked by
+  the author; the loaded project's is the app's accent colour, `ACCENT_DARK`
+  at half its brightness; before one is loaded, the splash's turquoise):
+  filled when it holds a
   project, an outline when empty; the loaded one shows the looper's rows (the
   HOME icon) in black. Under them a list, "EXPORT LIVE SET" and "USB MODE"
   (nothing yet), 75% of the width, centred, labels left-aligned, light grey

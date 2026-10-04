@@ -1,5 +1,5 @@
 // ui_splash.cpp — the logo shown while the looper starts (see ui.h): "L8",
-// in the accent colour, in 2x2-pixel blocks, two track rows tall, in the middle of the screen,
+// in green turquoise (the accent before a project is loaded), in 2x2-pixel blocks, two track rows tall, in the middle of the screen,
 // with the copyright line under it in light grey, in the pixel font (ui_font.cpp).
 #include "ui.h"
 #include "ui_font.h"

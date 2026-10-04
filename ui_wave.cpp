@@ -262,6 +262,6 @@ void updatePlayheads() {
       int cols = max(1, edgeCol(tr.rangeStartBeat + tr.rangeBeats, loopBeats) - first);
       col = (first + min(cols - 1, (int)(inRange * cols / tr.rangeBeats))) % WAVE_COLS;
     }
-    movePlayhead(i, col, muted ? MUTED_HEAD : v.rangeInk == ACCENT ? INK : PLAYHEAD);
+    movePlayhead(i, col, muted ? MUTED_HEAD : v.rangeInk == ACCENT ? INK : ACCENT);
   }
 }

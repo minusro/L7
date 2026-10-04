@@ -20,24 +20,25 @@ constexpr uint16_t DARK = rgb565(44, 44, 44);       // 17% grey: in the backgrou
 constexpr uint16_t DIM = rgb565(112, 112, 112);     // 44% grey: inactive (muted clips, idle icons and text)
 constexpr uint16_t LIGHT = rgb565(208, 208, 208);   // 81% grey: light grey (unselected waveforms, labels, the selected filter)
 constexpr uint16_t INK = rgb565(255, 255, 255);     // white: what's active, selected, playing
-constexpr uint16_t ACCENT = rgb565(48, 230, 170);   // green turquoise: recording, and a scene change on its way
-constexpr uint16_t ACCENT_DARK = rgb565(24, 120, 72);   // the accent at about half brightness, a little greener: light grey's while editing
+// The accent colour: the loaded project's (setAccent(), ui.cpp); green
+// turquoise until one is loaded (the splash screen). Recording, a scene change
+// on its way, the action button, playheads. ACCENT_DARK: at half brightness
+// (light grey's while editing).
+inline uint16_t ACCENT = rgb565(48, 230, 170);
+inline uint16_t ACCENT_DARK = rgb565(24, 120, 72);
 
-// The project slots' colours (the menu): twelve hues a perceptual step apart
-// (OKLCH, 30 degrees), red to pink, at the accent's lightness and chroma (the
-// accent the 6th); hues that can't reach its chroma at that lightness as
-// colourful as they can be.
+// The project slots' colours (the menu), pastels: rose, peach, apricot,
+// butter, pistachio, mint, seafoam, sky, periwinkle, lavender, lilac, blush.
 constexpr uint16_t PROJECT_COLORS[12] = {
-    rgb565(255, 171, 177), rgb565(255, 176, 140), rgb565(255, 181, 62), rgb565(214, 202, 43),
-    rgb565(150, 220, 106), ACCENT, rgb565(0, 225, 225), rgb565(98, 214, 255),
-    rgb565(158, 201, 255), rgb565(190, 190, 255), rgb565(229, 171, 255), rgb565(255, 164, 216)};
+    rgb565(0xF4, 0xB6, 0xC2), rgb565(0xF8, 0xC8, 0xA8), rgb565(0xFA, 0xD9, 0xA1), rgb565(0xF7, 0xED, 0xA3),
+    rgb565(0xD6, 0xEB, 0xA8), rgb565(0xB5, 0xE3, 0xC4), rgb565(0xA8, 0xE0, 0xD8), rgb565(0xA9, 0xD6, 0xEE),
+    rgb565(0xB7, 0xC4, 0xF0), rgb565(0xCD, 0xB8, 0xEE), rgb565(0xE3, 0xB5, 0xE6), rgb565(0xF2, 0xB8, 0xD8)};
 
 // ---- Roles
-constexpr uint16_t PLAYHEAD = ACCENT;        // playing clips
 constexpr uint16_t MUTED_HEAD = BG;          // the selected muted clip (a cut through its waveform)
 
 // ---- Boot / errors
 constexpr uint16_t TEXT_PROGRESS = 0xFFE0;   // yellow: startup messages
-constexpr uint16_t LOGO_COLOR = ACCENT;      // the splash screen's logo
+constexpr uint16_t LOGO_COLOR = rgb565(48, 230, 170);   // the splash screen's logo (the accent before a project is loaded)
 constexpr uint16_t SPLASH_TEXT = LIGHT;      // and its copyright line
 constexpr uint16_t TEXT_ERROR = 0xF800;      // red: fatal errors

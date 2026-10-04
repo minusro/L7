@@ -42,7 +42,21 @@ void drawTrack(int i) {
   drawWave(i, recordingOn(i));
 }
 
+// The accent colour: the loaded project's (ACCENT_DARK at half its
+// brightness). A change redraws everything.
+static void followProjectColor() {
+  static int shownProject = -1;
+  int p = projectCurrent();
+  if (p == shownProject) return;
+  shownProject = p;
+  ACCENT = PROJECT_COLORS[p];
+  ACCENT_DARK = blend565(ACCENT, BG, 128);
+  uiGeneration++;
+  for (int i = 0; i < ROWS; i++) drawTrack(i);
+}
+
 void uiRefresh() {
+  followProjectColor();
   // Redraw a little at a time so SD streaming keeps going.
   static uint32_t lastDraw = 0;
   static int nextRow = 0;
