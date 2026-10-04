@@ -22,7 +22,7 @@
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A runs the action when let go; B does
 // nothing): on its
-// list's items, export Ableton project (a diskette) and enter USB data mode (the USB
+// list's items, export Ableton project (an arrow into a tray) and enter USB data mode (the USB
 // trident), nothing yet; on a project slot, load (a small play; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
 // (a question mark after the first A: a second A confirms) or
@@ -166,7 +166,7 @@ PROGMEM static const Icon ICONS[] = {
   {9, 9, {"....#....", "...###...", ".........", ".#..#..#.", "##.###.##", ".#..#..#.", ".........", "...###...", "....#...."}},   // ADJUST (B + arrows: four small arrows round a small +)
   {5, 7, {".#...", ".##..", ".###.", ".####", ".###.", ".##..", ".#..."}},   // LOAD (a small play, a block right of centre: back to the looper, playing it)
   {5, 5, {"..#..", "#.#.#", ".###.", "#.#.#", "..#.."}},   // NEW (a small asterisk)
-  {8, 9, {"######..", "#.....#.", "#..##.##", "#.....##", "########", "#......#", "#......#", "#......#", "########"}},   // SAVE (a diskette; a block right: its right edge where a 9-wide icon's is)
+  {8, 9, {"...##...", "...##...", "...##...", ".######.", "..####..", "...##...", "#......#", "#......#", "########"}},   // SAVE (an arrow down into a tray; a block right: centred on the backdrop)
   {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
   {5, 7, {".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."}},   // CHECK (a question mark: cut the project with a second A?)
   {9, 7, {"..#.#....", "..#.##...", "..#.###..", "..#.####.", "..#.###..", "..#.##...", "..#.#...."}},   // RESTART (|>: start from 1.1.1; a block right of centre)

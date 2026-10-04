@@ -186,7 +186,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   diagonal); round the list's box, three blocks out. On a card the
   action button shows load (a small play) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (dark grey when it can't act: recording, another copy under
-  way, clipboard empty); on the list, a diskette (export) and the USB trident (data mode),
+  way, clipboard empty); on the list, an arrow down into a tray (export) and the USB trident (data mode),
   doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the
   list; UP/DOWN go card row to card row and on into the list (back up: to
   the column it came from). The looper's own selection is kept
