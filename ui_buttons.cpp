@@ -284,9 +284,8 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   };
   if (icon == ICON_TAP) {
     // Condensed: T and A touch (T's stem and A's point keep them apart), 10
-    // blocks, centred in the backdrop. Inverted: the letters in the
-    // backdrop's colour, each traced by a one-block outline in the icon's
-    // (the blocks next to a letter's, diagonals too), using the full width.
+    // blocks, centred in the backdrop; the letters plain, in the icon's
+    // colour (black).
     const char *text = "TAP";
     const int w = textWidth(text) / PX - 1;
     int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, r0 = (rows - FONT_H / PX) / 2;   // (level with the status row's text)
@@ -299,18 +298,9 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
           if (g->rows[r][c] == '#') on[r][x + c] = true;
       x += glyphWidth(*g) + (*p == 'T' ? 0 : 1);
     }
-    auto letter = [&](int r, int c) { return r >= 0 && r < 5 && c >= 0 && c < w && on[r][c]; };
-    for (int r = -1; r <= 5; r++)
-      for (int c = -1; c <= w; c++) {
-        if (letter(r, c)) {
-          blockIn(c0 + c, r0 + r, bg);
-          continue;
-        }
-        bool near = false;
-        for (int dr = -1; dr <= 1; dr++)
-          for (int dc = -1; dc <= 1; dc++) near |= letter(r + dr, c + dc);
-        if (near) block(c0 + c, r0 + r);
-      }
+    for (int r = 0; r < 5; r++)
+      for (int c = 0; c < w; c++)
+        if (on[r][c]) block(c0 + c, r0 + r);
   } else if (icon != ICON_NONE) {
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
