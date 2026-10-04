@@ -157,8 +157,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   loaded, the splash's turquoise). A slot holding a project is filled with
   it, its letter (the project's name) black; the loaded one outlined white.
   An empty slot is a grey outline, its letter in the slot's colour. Under them
-  a list, "EXPORT ABLETON PROJECT", "ENTER USB DATA MODE" and, for trying the
-  scrolling, "DUMMY 1"-"6" (nothing yet). Four in view at a time (an item
+  a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet). Four in
+  view at a time (an item
   every 12 rows, the last place in the status row's, level with the action
   button); moving, the list scrolls so the item past the selection that way
   stays in view where there is one, never past its ends (no empty places);

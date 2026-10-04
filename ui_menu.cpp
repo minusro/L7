@@ -3,14 +3,14 @@
 // width. Opened with B+A (or A on the scene cell); left by loading a project
 // (A on the loaded one: just back). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
-// "ENTER USB DATA MODE" and six DUMMY items (nothing yet), scrolling, four in view. A runs
+// "ENTER USB DATA MODE" (nothing yet); it scrolls once it has more than four. A runs
 // the action button's action when let go. On a slot, A loads its project (an
 // empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project (a second A confirms), or pastes
 // one into an empty slot. START works here too.
 //
 // Items, in selection order: the cards 0-11 (rows of four, top first), then
-// the list's 12-19 (the looper's own selection is kept meanwhile and
+// the list's 12 and 13 (the looper's own selection is kept meanwhile and
 // comes back when the menu closes). UP/DOWN go card row to card row and on
 // into the list (back up: to the column it came from); LEFT/RIGHT through
 // everything in order. It opens on the loaded project's card (the dummy
@@ -31,9 +31,8 @@ uint32_t uiGeneration = 1;
 
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
-static constexpr int CARDS = PROJECTS, LIST = 8, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER USB DATA MODE", "DUMMY 1", "DUMMY 2",
-                                         "DUMMY 3", "DUMMY 4", "DUMMY 5", "DUMMY 6"};   // (DUMMY: for trying the scrolling)
+static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER USB DATA MODE"};
 static int listTop = 0;                          // the list's first item in view
 
 static bool shown = false;
