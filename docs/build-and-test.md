@@ -13,6 +13,17 @@ Libraries: ILI9341_t3n (KurtE), Audio, SD/SdFat (bundled).
 Use a separate `--build-path`: sharing the IDE's cache breaks builds. Check
 the `RAM1`/`RAM2` lines — both banks are nearly full.
 
+Uploading to the M8 over USB (it shows up as a Teensy 4.0; the port is the
+"Teensy Ports" row of `arduino-cli board list`, usually `usb:100000`):
+
+```sh
+"/Applications/Arduino IDE.app/Contents/Resources/app/lib/backend/resources/arduino-cli" \
+  upload -b teensy:avr:teensy40 -p usb:100000 --input-dir <the same build path> .
+```
+
+Working with Claude Code: after each firmware change, build and upload, so
+the latest sketch is always on the M8 to try.
+
 ## Simulator (`tools/looper_sim`)
 
 Runs engine.cpp, storage.cpp and scenes.cpp on the PC against stubs
