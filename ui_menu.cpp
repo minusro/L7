@@ -84,7 +84,8 @@ static bool rowSpan(const Shape &s, int d, int r, int &c0, int &c1, bool round =
   c1 = s.w - 1 + d;
   bool top = y == -d, bottom = y == s.h - 1 + d;
   if (s.cut) {                                    // a card: a block missing from the top left corner, and the
-    if (top) c0++;                                // bottom right cut diagonally (cut blocks); the others square
+    if (top && d >= 0) c0++;                      // bottom right cut diagonally (cut blocks); the others square
+                                                  // (inside the card, the outline's inner edge: no corner block)
     c1 = min(c1, s.w + s.h - s.cut - 2 + d - y);  // the diagonal: x + y at most this
   } else if (round && (top || bottom)) {          // the top and bottom rows: their corners cut
     c0++;
