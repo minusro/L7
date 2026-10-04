@@ -101,10 +101,12 @@ static void drawLine(int x, int y, const char *text, uint16_t color) {
   board.tft().writeRect(x, y, w, TEXT_H, px);
 }
 
-static constexpr int TEXT_DOWN = 4;                  // the text a little lower than the group's centring puts it, px
-static constexpr int TEXT_Y_SPLASH = LOGO_Y + LOGO_H + TEXT_GAP + TEXT_DOWN;
+// The text at the bottom, as far from the screen's edge (26 px) as it used to
+// be from the logo (the logo stays where the centring above puts it).
+static constexpr int TEXT_MARGIN = TEXT_GAP + 4;
+static constexpr int TEXT_Y_SPLASH = 240 - TEXT_MARGIN - TEXT_H;
 
-int splashBottom() { return TEXT_Y_SPLASH + TEXT_H; }
+int splashBottom() { return LOGO_Y + LOGO_H; }      // (startup messages go under the logo, above the text)
 
 // OKLCH (lightness, chroma, hue in degrees) to RGB565; a chroma out of sRGB's
 // reach at that lightness comes down until it fits.

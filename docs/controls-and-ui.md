@@ -201,7 +201,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   fading in (0–0.5 s) while the L slides in from the left and the 7 from the
   right (from 600 px off: still about at the screen's edges once well lit;
   cubic ease-out, in place at 1 s), its hue going
-  once round, with "© 2026 Daniel Stanciu" centred under it in light grey, in
+  once round, with "© 2026 Daniel Stanciu" centred at the bottom (26 px up, its old gap under the logo) in light grey, in
   the app's 3×5 block font (2×2 px blocks; 7×7 ©); 3.5 s; startup messages
-  print below it.
+  print under the logo.
 * Headphones plugged in → speaker off (sense pin 22 < 300).

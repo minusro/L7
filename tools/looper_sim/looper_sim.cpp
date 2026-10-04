@@ -1061,6 +1061,7 @@ int main(int argc, char **argv) {
     check(b2.sample != a[2].sample && trackMuted(4) && tracks[5].state == TrackState::Empty && spbB != spbA,
           "scene B set up");
     runBeats(1.3);
+    while (transport.beat % BEATS_PER_BAR != 1) block();   // early in a bar: the streams don't take A's clips yet
     // To A, and when each part of the change is heard.
     struct At { int32_t beat = -1; uint32_t sib = 0; void mark() { if (beat < 0) { beat = transport.beat; sib = transport.sampleInBeat; } } };
     At sw, tempo, unmute, start;
@@ -1406,7 +1407,7 @@ int main(int argc, char **argv) {
     runBeats(2);
     fromStart("the same clips start over from 1.1.1 too");
     for (int t = 0; t < NUM_TRACKS; t++)
-      if (tracks[t].state != TrackState::Empty) checkSync(t, "after the switch");
+      if (tracks[t].state == TrackState::Playing) checkSync(t, "after the switch");   // (muted ones are silent)
     check(projectCurrent() == 7 && projectCut(2) && !projectFilled(2) && projectCopying(2) && !projectsMayCopy() && !projectLoad(2),
           "cutting another project while playing: its slot empty at once, being copied");
     for (int i = 0; i < 2000 && projectCopying(2); i++) block();
@@ -1415,7 +1416,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < 2000 && projectCopying(2); i++) block();
     check(!projectCopying(2), "copied");
     for (int t = 0; t < NUM_TRACKS; t++)
-      if (tracks[t].state != TrackState::Empty) checkSync(t, "while copying");
+      if (tracks[t].state == TrackState::Playing) checkSync(t, "while copying");   // (muted ones are silent)
     transportStop();
     runUntilIdle();
     for (int i = 0; i < 20; i++) serviceScenes();
