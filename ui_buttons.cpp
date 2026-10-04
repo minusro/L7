@@ -181,9 +181,8 @@ static bool unavailable(int i, int icon) {
 // with icons in the accent colour while A is held. In the menu its colour
 // follows the item (menuActionColor()): a card's, or light grey on the
 // system-level ones (USB data mode). The tracks' buttons: black.
-// The action's colour: going to the menu light grey (system-level, like the
-// menu's own system items); otherwise the menu item's, or the accent.
-static uint16_t actionColor(int icon) { return icon == ICON_MENU ? LIGHT : menuActionColor(); }
+// The action's colour: the menu item's, or the accent (going to the menu too).
+static uint16_t actionColor(int icon) { return icon == ICON_MENU ? ACCENT : menuActionColor(); }
 
 static uint16_t buttonBackground(int i, int icon) {
   if (i == STATUS_ROW) return heldAction >= 0 ? DARK : actionColor(icon);

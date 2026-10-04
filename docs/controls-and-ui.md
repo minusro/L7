@@ -172,8 +172,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   stays in view where there is one, never past its ends (no empty places);
   with four or fewer, from the top of the room: a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
-  selected). Going to the menu, the action button is light grey (and its icon while
-  held; the selected track's panel stays grey then). The action button takes the item's colour: on a card, its
+  selected). Going to the menu, the action button is in the accent colour (and its
+  icon while held; the selected track's panel stays grey then). The action button takes the item's colour: on a card, its
   slot's; on project-level items (export) the accent (grey, the label too, with
   nothing to export: no clips in the project's tracks or scenes, or the dummy
   project); on system-level ones (USB data mode) light grey (its icon light
