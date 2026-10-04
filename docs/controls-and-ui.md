@@ -52,11 +52,11 @@ double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
 only what changed is redrawn (`uiGeneration` forces a full redraw, e.g. after
 the panel or splash). 9 rows of 26 px: 8 tracks from the top of the screen, a 2 px gap, then
 the status row; cells waveform | filter | volume | button (square). Columns:
-waveform x 0–179, filter 182–241, volume 244–291, button 294–319, with a
-block's space between each; the status row's two cells are half of x 0–291
-each (scene x 0–145, tempo 144–291). Cells share a one-block border with the
-cells above and below (and with one right next to it, as the status row's
-two are): the selection frame is drawn there (`borderAt()` in ui.cpp), so
+waveform x 0–187, filter 186–245, volume 244–291, then a block's space
+before the buttons (x 294–319); the status row's two cells are half of
+x 0–291 each (scene x 0–145, tempo 144–291). Cells share a one-block border
+with their neighbours (left, right, above and below; a cell only shares a
+side with one right next to it): the selection frame is drawn there (`borderAt()` in ui.cpp), so
 content uses the cell's full size.
 
 Style (after Elektron's screens): seven colours (`colors.h`) — black (`BG`),
@@ -72,7 +72,7 @@ None while the status row is selected. The status
 button (the action button) is grey with black icons (dark grey with icons in the accent colour while A is held), a block taller than the others (down to the status cells' bottom border), its top left corner cut.
 A recording track's waveform cell is in the accent colour.
 
-* Waveform (`ui_wave.cpp`): 86 columns, inside a block of space within
+* Waveform (`ui_wave.cpp`): 90 columns, inside a block of space within
   the frame (peaks up to 4 blocks each way from a two-block centre,
   square-root scale); light grey inside the loop range (white on the selected cell), dark grey outside (muted:
   50% grey range, dark grey outside). The start position: a short line
@@ -101,7 +101,7 @@ A recording track's waveform cell is in the accent colour.
 * Icons (`ui_buttons.cpp`): bitmaps of blocks; "TAP" in the pixel font.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  Status row (labels light grey, white on the selected cell): the scene cell
+  Status row (labels 50% grey, light grey on the selected cell): the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the tempo cell (the same width) (the clock on its left, the tempo on its right followed by an
   inverted BPM tag), then the button. In the accent colour: the scene's tag

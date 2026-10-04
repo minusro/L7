@@ -3,8 +3,8 @@
 
 // Status row, in the pixel font, each cell framed like the tracks' when the
 // row is selected:
-// The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are light grey,
-// white on the selected cell.
+// The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
+// light grey on the selected cell.
 //   first cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
@@ -63,7 +63,7 @@ void drawStatus() {
   float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
   snprintf(text, sizeof text, "%.1f", shown);
   int cell = selected == STATUS_ROW ? selectedCellIn(STATUS_ROW) : -1;
-  auto labelInk = [&](int c) -> uint16_t { return cell == c ? INK : LIGHT; };
+  auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };
   int tagY = top + (CELL_H - TAG_H) / 2, textY = top + (CELL_H - FONT_H) / 2;
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the

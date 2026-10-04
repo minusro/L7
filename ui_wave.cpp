@@ -22,9 +22,9 @@
 // Full redraws only happen when something changes; the playhead moves by
 // redrawing just its columns.
 
-static constexpr int BLOCK_COLS = WAVE_W / PX;                  // 90, the border's included
+static constexpr int BLOCK_COLS = WAVE_W / PX;                  // 94, the border's included
 static constexpr int WAVE_LEFT = 2;                            // the first waveform column (after the border and a space)
-static constexpr int WAVE_COLS = BLOCK_COLS - 2 * WAVE_LEFT;   // 86 waveform columns
+static constexpr int WAVE_COLS = BLOCK_COLS - 2 * WAVE_LEFT;   // 90 waveform columns
 static constexpr int BAND_ROWS = CELL_H / PX;                  // 14
 static constexpr int MID_ROW = 6, WAVE_REACH = 4;              // the line: rows 6-7; peaks: rows 2-11
 
