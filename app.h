@@ -19,11 +19,16 @@ extern int selectedCell;                           // cell in the row (ui.h: FIL
 bool setTempo(float b);
 // The master volume a step up (by 1) or down (-1); saved with the session.
 void stepMasterVolume(int by);
-// The session: the tempo and the selected row and cell, kept in session.txt.
-// beginSession() loads it (none saved: 120 BPM, track 1's waveform cell).
+// The session: the tempo, the master volume and the loaded project, kept in
+// session.txt. beginSession() loads it (none saved: 120 BPM, project 1).
 // It's saved a while after it last changed, and only while stopped (saving
 // rewrites a file, which can stall the card); saveSessionNow() saves it at
-// once if it changed (power off).
+// once if it changed (power off). The selected row and cell are the loaded
+// project's: kept in it a while after they change (and at power off).
 void beginSession();
+int sessionProject();                              // the project to load at boot
+// The loaded project's selection taken (after loading it; none saved: track
+// 1's waveform cell).
+void takeProjectSelection();
 void saveSessionWhenIdle();
 void saveSessionNow();

@@ -9,8 +9,10 @@ int selected = NUM_TRACKS - 1;              // row: a track, or STATUS_ROW (from
 int selectedCell = 0;                       // cell in the row (0: the waveform, ui.h WAVE_CELL)
 static uint32_t changedMs = 0;                // when the tempo or the selection last changed
 static bool tempoDirty = false;
-static int savedRow = -1, savedCell = -1;      // the selection session.txt holds
-static int savedMaster = MASTER_VOLUME_UNITY;   // and the master volume
+static int savedRow = -1, savedCell = -1;      // the selection the project holds
+static int savedMaster = MASTER_VOLUME_UNITY;   // the master volume session.txt holds
+static int savedProject = 0;                    // and the loaded project
+static int bootProject = 0;
 
 // ---- Tempo: MIN_BPM-MAX_BPM, whatever the loops were recorded at
 bool setTempo(float b) {
@@ -32,47 +34,72 @@ void stepMasterVolume(int by) {
   changedMs = millis();
 }
 
-// ---- Session (tempo, selection, master volume)
+// ---- Session (tempo, master volume, the loaded project); the selection is the project's
 void beginSession() {
   Session s = loadSession();
   bpm = roundf(s.bpm * 10) / 10;
-  if (s.row >= 0 && s.row < ROWS && s.cell >= 0 && s.cell < CELLS) {   // (none saved: track 1's waveform)
+  if (s.row >= 0 && s.row < ROWS && s.cell >= 0 && s.cell < CELLS) {   // (saved before projects kept it)
     selected = s.row;
     selectedCell = s.cell;
   }
-  savedRow = selected;
-  savedCell = selectedCell;
   setMasterVolume(s.master);
   savedMaster = s.master;
+  savedProject = bootProject = s.project;
+}
+
+int sessionProject() { return bootProject; }
+
+void takeProjectSelection() {
+  int row, cell;
+  projectSelection(row, cell);
+  if (row >= 0 && row < ROWS && cell >= 0 && cell < CELLS) {   // (none saved: as it is)
+    selected = row;
+    selectedCell = cell;
+  }
+  savedRow = selected;
+  savedCell = selectedCell;
+  projectSetSelection(selected, selectedCell);
 }
 
 static bool sessionDirty() {
-  return tempoDirty || selected != savedRow || selectedCell != savedCell || masterVolume() != savedMaster;
+  return tempoDirty || masterVolume() != savedMaster || projectCurrent() != savedProject;
 }
 
 static void writeSession() {
   Session s;
   s.bpm = bpm;
-  s.row = selected;
-  s.cell = selectedCell;
   s.master = masterVolume();
+  s.project = projectCurrent();
   saveSession(s);
   savedMaster = s.master;
+  savedProject = s.project;
   tempoDirty = false;
-  savedRow = selected;
-  savedCell = selectedCell;
+}
+
+// The selection (the looper's, not the menu's) into the project.
+static void keepSelection() {
+  int row, cell;
+  mainSelection(row, cell);
+  if (row == savedRow && cell == savedCell) return;
+  projectSetSelection(row, cell);
+  savedRow = row;
+  savedCell = cell;
 }
 
 void saveSessionWhenIdle() {
   static int row = -1, cell = -1;                 // the selection last seen here
-  if (selected != row || selectedCell != cell) {
-    row = selected;
-    cell = selectedCell;
+  int r, c;
+  mainSelection(r, c);
+  if (r != row || c != cell) {
+    row = r;
+    cell = c;
     changedMs = millis();
   }
+  if (millis() - changedMs > 2000) keepSelection();   // (written to the project when the buffers allow)
   if (sessionDirty() && !transport.running && millis() - changedMs > 2000) writeSession();
 }
 
 void saveSessionNow() {
+  keepSelection();
   if (sessionDirty()) writeSession();
 }

@@ -38,7 +38,7 @@
 * B+arrow range edits are ignored on a track while a clip change waits.
 * A switch replanned < 50 ms before its point goes to the next one.
 
-## Planned: projects (agreed 2026-10-04, not started)
+## Projects (agreed 2026-10-04; 8 slots in the menu, scenes.md)
 
 * A project is a list of scenes plus the state that belongs to none of
   them: which scene is selected, and the main screen's last selected cell
@@ -47,11 +47,10 @@
 * Projects can be saved separately (several on the card). A project file
   holds no audio, only references to the sample files its scenes use.
 * The loaded project is autosaved.
-* Today's `scenes.dat` + the row/cell in `session.txt` are in effect one
-  unnamed project.
+* Loading works while playing; cut and paste only while stopped.
 
 ## Open ideas (not started)
 
 * Overdub with undo (agreed early on as required).
-* Master effects; what the menu's boxes and buttons do.
+* Master effects; what the menu's buttons do.
 * Possibly: shrink the input history to give the track rings more RAM.

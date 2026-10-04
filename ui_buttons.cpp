@@ -17,7 +17,11 @@
 // clipboard is empty). With B
 // held: open the menu (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
-// While the menu is open: the looper's rows (A closes it, back to them). On the status row itself:
+// While the menu is open: the looper's rows (A closes it, back to them); on a
+// project slot, load (a folder; the loaded one too: back to it) or, on an
+// empty slot, new (a plus), closing the menu; with SHIFT, cut the project or
+// paste one into an empty slot (dark grey while it can't: playing, recording,
+// the project clipboard empty). On the status row itself:
 // the menu (as B+A) on the scene cell, start / stop (play / stop, as
 // START) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
 // start from 1.1.1 (play).
@@ -26,7 +30,7 @@
 // nothing) on one with a clip.
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_OVERDUB };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_OVERDUB, ICON_LOAD, ICON_NEW };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -42,7 +46,12 @@ static bool flashOn() {
 // What A does on the selected row (mirrors onKeys()).
 static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
-  if (menuOpen() && !menuOnStatus()) return ICON_HOME;   // A closes the menu
+  if (menuOpen() && !menuOnStatus()) {             // a project slot, or A closes the menu
+    int slot = menuSlot();
+    if (slot < 0 || (board.keys() & m8::BTN_OPT)) return ICON_HOME;
+    if (shift) return projectFilled(slot) ? ICON_CUT : ICON_PASTE;
+    return projectFilled(slot) ? ICON_LOAD : ICON_NEW;
+  }
   if (board.keys() & m8::BTN_OPT)                  // B+A: the menu; with SHIFT, the scene
     return !shift ? (menuOpen() ? ICON_HOME : ICON_MENU) : optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
   if (selected == STATUS_ROW) {                    // restart / the menu (as B+A) / START / tap tempo
@@ -139,6 +148,8 @@ PROGMEM static const Icon ICONS[] = {
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
   {10, 7, {".########.", "#........#", "#.##..##.#", "#.##..##.#", "#........#", "#.######.#", ".########."}},   // RESAMPLE (a cassette)
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // OVERDUB (record +)
+  {9, 7, {".###.....", "#...####.", "#.......#", "#.......#", "#.......#", "#.......#", "#########"}},   // LOAD (a folder)
+  {7, 7, {"...#...", "...#...", "...#...", "#######", "...#...", "...#...", "...#..."}},   // NEW (a plus)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
@@ -148,7 +159,14 @@ static constexpr int TRACK_ICON_CENTRE = 6;       // the column track rows' icon
 static constexpr int PANEL_LEFT = 1;              // the selected track's panel's first column (a block in)
 
 static bool unavailable(int i, int icon) {
-  return i == STATUS_ROW && ((icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()));
+  if (i != STATUS_ROW) return false;
+  if (menuSlot() >= 0 && !menuOnStatus()) {        // a project slot: cut and paste only while stopped
+    if (icon == ICON_CUT) return !projectsMayCopy();
+    if (icon == ICON_PASTE) return !projectsMayCopy() || !projectClipboardFull();
+    if (icon == ICON_LOAD || icon == ICON_NEW) return recording.mode != Recording::Idle && menuSlot() != projectCurrent();
+    return false;
+  }
+  return (icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull());
 }
 
 // The action button (the status row's): the accent colour with black icons; dark grey

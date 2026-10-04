@@ -81,7 +81,23 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (menuOpen() && !menuOnStatus()) {               // the menu's items: the arrows move its selection, A closes it
     if (pressed & m8::BTN_EDIT) {
       noteActionPress();
-      closeMenu();
+      int slot = menuSlot();
+      if (slot < 0 || opt) {
+        closeMenu();
+      } else if (shift) {                            // SHIFT+A on a slot: cut its project, or paste one into it
+        projectFilled(slot) ? projectCut(slot) : projectPaste(slot);
+        drawMenu();
+        for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
+      } else {                                       // A: load it (an empty slot: a new project), back to the looper
+        int row, cell;
+        mainSelection(row, cell);
+        projectSetSelection(row, cell);              // (the project left keeps its selection)
+        if (projectLoad(slot)) {
+          closeMenu();
+          takeProjectSelection();
+          for (int i = 0; i < ROWS; i++) drawTrack(i);
+        }
+      }
     } else {
       menuKeys(pressed);
     }

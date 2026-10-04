@@ -1,11 +1,14 @@
 // scenes.cpp — see scenes.h
 //
-// scenes.dat: block 0 is the list (which record slot is at each position,
-// how many, and the current position); blocks 1.. are the scenes' records,
-// in slots reused as scenes come and go. Inserting or removing a scene only
-// rewrites the list block.
+// A project file (/looper/projects/1.dat ... 8.dat; clip.dat the clipboard):
+// block 0 is the list (which record slot is at each position, how many, the
+// current position, and the selected row and cell); blocks 1.. are the
+// scenes' records, in slots reused as scenes come and go. Inserting or
+// removing a scene only rewrites the list block. All of them are made once at
+// full size; an empty slot's block 0 is zeros.
 #include "scenes.h"
 #include "storage.h"
+#include <utility>
 
 namespace looper {
 
@@ -17,15 +20,19 @@ struct SceneInfo {
 };
 struct SceneList {
   char magic[4];                                 // "M8SL"
-  uint16_t version, count, current, reserved;
+  uint16_t version, count, current;
+  uint8_t row, cell;                             // the selection, each + 1 (0: none saved)
   uint16_t slot[MAX_SCENES];                     // record slot of each scene, in list order
 };
 static constexpr uint32_t BLOCK = 512;
 static constexpr uint64_t FILE_BYTES = BLOCK * (1 + (uint64_t)MAX_SCENES);
 static_assert(sizeof(SceneList) <= BLOCK && sizeof(SceneInfo) <= BLOCK, "a block each");
 
-static FsFile file;
+static FsFile file;                              // the loaded project's
 static SceneList list;
+static int project = 0;                          // the loaded one (0-7)
+static bool filled[PROJECTS];                    // the slots holding a project
+static bool projectClip = false;                 // the project clipboard holds one
 static float (*getTempo)() = nullptr;
 static bool (*setTempo)(float) = nullptr;
 static bool changed = false;                     // the looper changed: the current scene must follow
@@ -289,31 +296,193 @@ void serviceScenes() {
   }
 }
 
-void scenesBegin(float (*getTempoFn)(), bool (*setTempoFn)(float)) {
+// ---- Projects
+
+static void projectPath(char *path, size_t n, int p) {   // p: 0-7, PROJECTS: the clipboard
+  if (p < PROJECTS) snprintf(path, n, "/looper/projects/%d.dat", p + 1);
+  else snprintf(path, n, "/looper/projects/clip.dat");
+}
+
+static FsFile openProject(int p) {
+  char path[40];
+  projectPath(path, sizeof path, p);
+  return SD.sdfs.open(path, O_RDWR);
+}
+
+static SceneList newList() {
+  SceneList l;
+  memset(&l, 0, sizeof l);
+  memcpy(l.magic, "M8SL", 4);
+  l.version = 1;
+  return l;
+}
+
+// A file's list (false: an empty slot).
+static bool readList(FsFile &f, SceneList &l) {
+  memset(&l, 0, sizeof l);
+  if (!f || !f.seekSet(0) || f.read(&l, sizeof l) != (int)sizeof l) return false;
+  return !memcmp(l.magic, "M8SL", 4) && l.count <= MAX_SCENES;
+}
+
+static bool writeBlockTo(FsFile &f, uint32_t block, const void *data, size_t n) {
+  uint8_t b[BLOCK] = {};
+  memcpy(b, data, n);
+  debugStage = "SD write (projects)";
+  bool ok = f.seekSet((uint64_t)block * BLOCK) && f.write(b, BLOCK) == (int)BLOCK;
+  return f.sync() && ok;
+}
+
+// The loaded project's changes, all written now.
+static void flushProject() {
+  commit();
+  writeRecordNow();
+  if (file) writeBlock(0, &list, sizeof list);
+  listDirty = false;
+}
+
+// Copies project `from` to `to` (0-7, PROJECTS: the clipboard): the scenes'
+// records, then the list (written last: a copy cut short leaves `to` empty).
+static bool copyProject(int from, int to) {
+  if (from == project) flushProject();
+  FsFile src = openProject(from), dst = openProject(to);
+  SceneList l;
+  if (!readList(src, l) || !dst) return false;
+  uint8_t b[BLOCK];
+  for (int i = 0; i < l.count; i++) {
+    uint64_t at = (uint64_t)(1 + l.slot[i]) * BLOCK;
+    if (!src.seekSet(at) || src.read(b, BLOCK) != (int)BLOCK) return false;
+    debugStage = "SD write (projects)";
+    if (!dst.seekSet(at) || dst.write(b, BLOCK) != (int)BLOCK) return false;
+  }
+  return writeBlockTo(dst, 0, &l, sizeof l);
+}
+
+static void clearProject(int p) {
+  FsFile f = openProject(p);
+  if (f) writeBlockTo(f, 0, "", 0);
+}
+
+void flushScenes() { flushProject(); }
+
+int projectCurrent() { return project; }
+bool projectFilled(int p) { return p >= 0 && p < PROJECTS && filled[p]; }
+bool projectClipboardFull() { return projectClip; }
+bool projectsMayCopy() { return !transport.running && !busy(); }
+
+void projectSelection(int &row, int &cell) {
+  row = list.row ? list.row - 1 : -1;
+  cell = list.cell ? list.cell - 1 : -1;
+}
+
+void projectSetSelection(int row, int cell) {
+  uint8_t r = row < 0 ? 0 : row + 1, c = cell < 0 ? 0 : cell + 1;
+  if (r == list.row && c == list.cell) return;
+  list.row = r;
+  list.cell = c;
+  listDirty = true;
+}
+
+// The looper on project p (its file open as `file`, its list in `list`): an
+// empty slot gets a new project (no scenes: the empty scene, the tempo
+// kept). apply: its current scene goes on the looper.
+static bool openAs(int p, bool apply_) {
+  FsFile f = openProject(p);
+  if (!f) return false;
+  SceneList l;
+  if (!readList(f, l)) {
+    l = newList();
+    if (!writeBlockTo(f, 0, &l, sizeof l)) return false;
+  }
+  l.current = min(l.current, (uint16_t)(l.count + 1));
+  file = std::move(f);
+  list = l;
+  project = p;
+  filled[p] = true;
+  recordSlot = -1;
+  listDirty = false;
+  changed = false;
+  if (apply_) {
+    loading = true;                               // (the scene's units go on as they are)
+    apply(sceneAt(min((int)list.current, (int)list.count)), false);   // N+1*: a copy of N
+    loading = false;
+  }
+  return true;
+}
+
+bool projectLoad(int p) {
+  if (p < 0 || p >= PROJECTS || busy()) return false;
+  if (p == project) return true;
+  target = -1;
+  prepareUnits(nullptr);
+  flushProject();
+  return openAs(p, true);
+}
+
+bool projectCut(int p) {
+  if (!projectsMayCopy() || !projectFilled(p) || !copyProject(p, PROJECTS)) return false;
+  projectClip = true;
+  clearProject(p);
+  filled[p] = false;
+  if (p == project) {                              // the loaded one: a new empty project in its place
+    file.close();
+    target = -1;
+    prepareUnits(nullptr);
+    openAs(p, false);
+    loading = true;
+    apply(emptyScene(), false);
+    loading = false;
+  }
+  return true;
+}
+
+bool projectPaste(int p) {
+  if (!projectsMayCopy() || !projectClip || p < 0 || p >= PROJECTS || filled[p]) return false;
+  if (!copyProject(PROJECTS, p)) return false;
+  filled[p] = true;
+  return true;
+}
+
+// Opens (or makes, at full size) project files 1-8 and the clipboard; the
+// scene list of the first version (/looper/scenes.dat) becomes project 1.
+static void makeProjectFiles() {
+  SD.sdfs.mkdir("/looper/projects");
+  char path[40];
+  projectPath(path, sizeof path, 0);
+  FsFile old = SD.sdfs.open("/looper/scenes.dat", O_RDONLY);
+  if (old) {
+    old.close();
+    if (!SD.sdfs.open(path, O_RDONLY)) SD.sdfs.rename("/looper/scenes.dat", path);
+  }
+  for (int p = 0; p <= PROJECTS; p++) {
+    FsFile f = openProject(p);
+    if (!f || f.fileSize() < FILE_BYTES) {          // first time: made at full size, empty
+      f.close();
+      projectPath(path, sizeof path, p);
+      f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
+      if (!f) continue;
+      f.preAllocate(FILE_BYTES);
+      uint8_t zero = 0;
+      f.seekSet(FILE_BYTES - 1);
+      f.write(&zero, 1);
+      writeBlockTo(f, 0, "", 0);
+    }
+    SceneList l;
+    bool full = readList(f, l);
+    if (p < PROJECTS) filled[p] = full;
+    else projectClip = full;
+  }
+}
+
+void scenesBegin(float (*getTempoFn)(), bool (*setTempoFn)(float), int loaded) {
   getTempo = getTempoFn;
   setTempo = setTempoFn;
-  file = SD.sdfs.open("/looper/scenes.dat", O_RDWR);
-  if (!file || file.fileSize() < FILE_BYTES) {    // first time: made at full size
-    file.close();
-    file = SD.sdfs.open("/looper/scenes.dat", O_RDWR | O_CREAT | O_TRUNC);
-    if (file) {
-      file.preAllocate(FILE_BYTES);
-      uint8_t zero = 0;
-      file.seekSet(FILE_BYTES - 1);
-      file.write(&zero, 1);
-    }
-  }
-  memset(&list, 0, sizeof list);
-  if (file) {
-    file.seekSet(0);
-    file.read(&list, sizeof list);
-  }
-  if (memcmp(list.magic, "M8SL", 4) || list.count > MAX_SCENES) {
+  makeProjectFiles();
+  loaded = constrain(loaded, 0, PROJECTS - 1);
+  if (!openAs(loaded, false)) {
     memset(&list, 0, sizeof list);
-    memcpy(list.magic, "M8SL", 4);
-    list.version = 1;
+    list = newList();
+    project = loaded;
   }
-  list.current = min(list.current, (uint16_t)(list.count + 1));
   recordSlot = -1;
   listDirty = true;
   // The looper holds clips but sits on the empty scene (first start with

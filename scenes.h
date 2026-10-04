@@ -4,20 +4,26 @@
 // Position 0 is the empty scene (0*), never stored: changing anything there
 // inserts a new scene 1 holding the change (the others move up one). Past the
 // last scene N is N+1*, a copy of N that becomes a scene once changed. On a
-// stored scene every change updates it. The list lives in /looper/scenes.dat,
-// made once at full size: saving only overwrites 512-byte blocks.
+// stored scene every change updates it.
+//
+// Projects: 8 slots, each a scene list with its current scene and the
+// selected row and cell (the master volume stays global). The loaded one is
+// saved as it changes. A slot's file holds no audio, only the scenes (which
+// name their samples): /looper/projects/1.dat ... 8.dat, made once at full
+// size: saving only overwrites 512-byte blocks.
 #pragma once
 #include <stdint.h>
 
 namespace looper {
 
-constexpr int MAX_SCENES = 250;
+constexpr int MAX_SCENES = 250, PROJECTS = 8;
 
-// After storageBegin(): loads the list. The tempo goes through the app
-// (rounding, limits): getTempo returns it, setTempo applies it.
-void scenesBegin(float (*getTempo)(), bool (*setTempo)(float));
+// After storageBegin(): loads project `project` (0-7). The tempo goes
+// through the app (rounding, limits): getTempo returns it, setTempo applies it.
+void scenesBegin(float (*getTempo)(), bool (*setTempo)(float), int project = 0);
 void sceneStateChanged();      // something in the looper changed: the current scene follows
 void serviceScenes();          // call from loop(): saves, one write at a time, when the buffers allow
+void flushScenes();            // everything waiting saved now (power off)
 
 // Moving around (false: nothing to do, or a recording is in progress).
 bool sceneStep(int dir);       // -1: older; 1: newer, up to N+1*
@@ -44,5 +50,24 @@ bool sceneHeld();              // a held selection not gone to yet
 // selection while there is one) and how many scenes are stored.
 int sceneCurrent();
 int sceneCount();
+
+// ---- Projects (slots 0-7)
+int projectCurrent();          // the loaded one
+bool projectFilled(int p);     // the slot holds a project (the loaded one always does)
+// Loads project p: its current scene goes on the looper (playing: on a bar
+// line, as a scene change). An empty slot: a new project there, on its empty
+// scene (the tracks cleared, the tempo kept). false: recording.
+bool projectLoad(int p);
+// Cut and paste (only while stopped: projectsMayCopy()): cut copies the
+// project to the project clipboard and empties its slot (the loaded one: a
+// new empty project in its place); paste copies the clipboard into an empty
+// slot (it stays on the clipboard).
+bool projectsMayCopy();
+bool projectCut(int p);
+bool projectPaste(int p);
+bool projectClipboardFull();
+// The loaded project's selected row and cell (-1: none saved).
+void projectSelection(int &row, int &cell);
+void projectSetSelection(int row, int cell);
 
 }  // namespace looper

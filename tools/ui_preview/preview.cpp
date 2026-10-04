@@ -181,9 +181,29 @@ int main(int argc, char **argv) {
   noteActionPress();
   render(out + "/ui_action_held.png");
   board.heldKeys = 0;
+  // Projects: 1 (loaded), 4 and 6 hold one; the rest empty.
+  transport.running = false;
+  recording.mode = Recording::Idle;
+  std::system(("rm -rf " + simRoot + " && mkdir -p " + simRoot + "/looper").c_str());
+  scenesBegin([] { return bpm; }, setTempo, 0);
+  projectLoad(3);
+  projectLoad(5);
+  projectLoad(0);
   selected = 1;                                    // the menu (B+A), its first box selected
   openMenu();
   render(out + "/ui_menu.png");
+  menuKeys(m8::BTN_RIGHT);                         // an empty slot: new
+  render(out + "/ui_menu_new.png");
+  board.heldKeys = m8::BTN_SHIFT;                  // SHIFT: paste (the clipboard empty: dark)
+  render(out + "/ui_menu_paste.png");
+  menuKeys(m8::BTN_RIGHT);
+  menuKeys(m8::BTN_RIGHT);                         // a project, SHIFT: cut
+  render(out + "/ui_menu_cut.png");
+  board.heldKeys = 0;
+  render(out + "/ui_menu_load.png");
+  menuKeys(m8::BTN_LEFT);
+  menuKeys(m8::BTN_LEFT);
+  menuKeys(m8::BTN_LEFT);
   menuKeys(m8::BTN_DOWN);                          // down twice: a button
   menuKeys(m8::BTN_DOWN);
   render(out + "/ui_menu_button.png");

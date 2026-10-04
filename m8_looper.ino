@@ -53,11 +53,13 @@
 //                    (N+1*); SHIFT+DOWN: to the empty scene (0*)
 //   OPT, SHIFT, EDIT paste the scene clipboard after the current scene (OPT pressed first)
 //   SHIFT, OPT, EDIT cut the scene (to the scene clipboard), go to the one before (SHIFT first)
-//   OPT+EDIT         open the panel (EDIT closes it)
+//   OPT+EDIT         open the menu (EDIT closes it)
+//   EDIT (menu, project slot)   load its project (empty slot: a new one), back to the looper
+//   SHIFT+EDIT (menu, slot)     cut its project / paste one into an empty slot (stopped only)
 //   SHIFT+OPT twice  insert a copy of the current scene after it
 //   PLAY             start from 1.1.1 / stop
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
-//   EDIT (scene cell) open the panel (as OPT+EDIT)
+//   EDIT (scene cell) open the menu (as OPT+EDIT)
 //   EDIT (tempo cell) tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
 //                      tap starts from 1.1.1 (running: snaps to the nearest bar start)
 //   power (hold)     switch off
@@ -114,6 +116,7 @@ static void handlePowerButton() {
       codec.volume(0.0f);
       flushHeaders();
       saveSessionNow();
+      flushScenes();
       board.powerOff();
     }
   }
@@ -155,7 +158,8 @@ void setup() {
   progress("");
   beginSession();                                  // the tempo and the selection
   transport.spb = spbForBpm(bpm);
-  scenesBegin([] { return bpm; }, setTempo);
+  scenesBegin([] { return bpm; }, setTempo, sessionProject());
+  takeProjectSelection();
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);

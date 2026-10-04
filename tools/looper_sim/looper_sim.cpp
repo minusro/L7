@@ -1334,6 +1334,52 @@ int main(int argc, char **argv) {
     feedRamp = true;
   }
 
+  printf("projects: a new one, back, cut and paste\n");
+  {
+    lastAction = "projects";
+    if (transport.running) transportStop();
+    runUntilIdle();
+    int scenes = sceneCount(), pos = sceneCurrent();
+    uint32_t sample0 = tracks[0].sample;
+    check(projectCurrent() == 0 && projectFilled(0) && !projectFilled(1), "project 1 loaded (the first version's scenes), slot 2 empty");
+    projectSetSelection(3, 1);
+    check(projectLoad(1) && projectCurrent() == 1 && projectFilled(1) && sceneCount() == 0 && sceneCurrent() == 0,
+          "an empty slot: a new project, on its empty scene");
+    bool empty = true;
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) empty = false;
+    int row, cell;
+    projectSelection(row, cell);
+    check(empty && row == -1, "its tracks empty, no selection saved");
+    check(projectLoad(0) && sceneCount() == scenes && sceneCurrent() == pos && tracks[0].sample == sample0,
+          "back to project 1: its scenes and tracks");
+    projectSelection(row, cell);
+    check(row == 3 && cell == 1, "with its selection");
+    check(projectCut(1) && !projectFilled(1) && projectClipboardFull(), "project 2 cut: its slot empty");
+    check(projectPaste(5) && projectFilled(5) && !projectPaste(5), "pasted into slot 6 (once: it's full then)");
+    check(projectCut(0) && projectCurrent() == 0 && projectFilled(0) && sceneCount() == 0, "the loaded one cut: a new empty project in its place");
+    check(projectPaste(2) && projectLoad(2) && sceneCount() == scenes && sceneCurrent() == pos && tracks[0].sample == sample0,
+          "pasted into slot 3 and loaded: project 1 as it was");
+    transportStart();
+    check(!projectsMayCopy() && !projectCut(2), "no cut or paste while playing");
+    check(projectLoad(5), "loading while playing");
+    waitScene();
+    runBeats(2);
+    empty = true;
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) empty = false;
+    check(empty, "on the next bar line: its (empty) scene");
+    check(projectLoad(2), "and back");
+    waitScene();
+    runBeats(2);
+    check(tracks[0].sample == sample0 && tracks[0].state != TrackState::Empty, "project 3's scene playing again");
+    transportStop();
+    runUntilIdle();
+    for (int i = 0; i < 20; i++) serviceScenes();
+    storageBegin([](const char *) {});
+    scenesBegin(simTempo, simSetTempo, 2);
+    check(projectCurrent() == 2 && sceneCount() == scenes && projectFilled(5) && !projectFilled(1) && projectClipboardFull(),
+          "after a power cycle: the slots as they were");
+  }
+
   printf("random sessions\n");
   for (unsigned seed = 1; seed <= (argc > 1 ? atoi(argv[1]) : 5); seed++) fuzz(600, seed);
 

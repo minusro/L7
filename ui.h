@@ -128,6 +128,8 @@ void drawMenu();                         // what changed (all of it after uiGene
 void menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items
 bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)
 void menuLeaveStatus();                  // from the status row back up to the menu's items
+int menuSlot();                          // the project slot selected in the menu (0-7), or -1
+void mainSelection(int &row, int &cell); // the looper's selection (kept while the menu is open)
 
 // Splash screen (ui_splash.cpp): the logo while the looper starts. hideSplash()
 // waits until it has been up a moment, then draws the looper.

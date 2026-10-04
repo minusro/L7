@@ -14,6 +14,8 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
 | B + A | Open / close the menu (A also closes it; arrows move its selection, down onto the status row too) |
+| A (menu, on a project slot) | Load its project (an empty slot: a new, empty project there) and close the menu; the loaded one: just close it. Not while recording |
+| SHIFT + A (menu, on a slot) | Cut its project to the project clipboard (the loaded one: a new empty project takes its place), or paste the clipboard into an empty slot. Only while stopped |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT twice (second tap held) + A | Empty track: **resample** — record the app's output (everything heard) from the next bar line, queued like a recording; A again stops it as usual. When it's saved it moves to a new scene, on the same track (see scenes.md). Track with a clip: overdub (not there yet: nothing happens). Icons while held: a cassette (resample), the record dot with a plus (overdub) |
 | SHIFT + LEFT/RIGHT | Previous / next sample in recording order (wraps; gapless) |
@@ -142,8 +144,16 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Menu (`ui_menu.cpp`): opened with B+A (or A on the scene cell), it takes
   the track rows' place (the status row stays, its frames hidden; the action
   button shows the looper's rows: A closes it). Eight boxes (two rows of four,
-  36×36 blocks) and two buttons, "EXPORT LIVE SET" and "USB MODE" (none do
-  anything yet): dark grey, the selected one framed grey (its label white);
+  36×18 blocks), the project slots, and two buttons, "EXPORT LIVE SET" and
+  "USB MODE" (nothing yet), the selected item framed grey. Each slot has its
+  colour (`PROJECT_COLORS`: eight OKLCH hues 45° apart at the accent's
+  lightness and chroma, red to pink, the accent the 4th; blues and reds as
+  colourful as sRGB allows at that lightness): filled when it holds a
+  project, an outline when empty; the loaded one shows the looper's rows (the
+  HOME icon) in black. On a slot the action button shows load (a folder) or,
+  empty, new (a plus); with SHIFT, cut or paste (dark grey when it can't act:
+  playing, recording, clipboard empty). The buttons: dark grey, their labels
+  light grey (white when selected);
   the arrows move along the rows and between them, and down from the buttons
   onto the status row, whose cells then work as in the looper's view (UP goes
   back to the buttons; A on the scene cell, or B+A, closes the menu). The

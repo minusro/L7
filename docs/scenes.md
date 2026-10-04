@@ -3,10 +3,32 @@
 A scene is a snapshot of the looper: the 8 track units and the tempo
 (`SceneInfo` {magic `M8SC`, version, float tempo (0: keep), units[8]}).
 
+## Projects
+
+A project is a scene list with its current scene and the looper's selected
+row and cell (the master volume and the tempo outside scenes are global, in
+`session.txt`, which also names the loaded project). Eight slots:
+`/looper/projects/1.dat` … `8.dat`, and `clip.dat` for the project clipboard,
+all made once at full size; an empty slot's block 0 is zeros. Project files
+hold no audio: scenes name their samples. The first version's
+`/looper/scenes.dat` becomes project 1.
+
+* Loading (A on a slot in the menu): the loaded project's changes are written
+  out, the other file opened and its current scene applied like a scene
+  change (playing: on a bar line). An empty slot gets a new project (no
+  scenes: the empty scene, the tempo kept). Not while recording.
+* Cut / paste (SHIFT+A): copies the used blocks (the records, then the list
+  last) to or from `clip.dat`; cut then zeroes the slot's block 0. Only while
+  stopped (many writes). Cutting the loaded project puts a new empty one in
+  its place (the tracks cleared).
+* The selection is saved in the list block (`row`, `cell`, each + 1; 0:
+  none) a couple of seconds after it changes, before loading another
+  project, and at power off.
+
 ## The list
 
-* Stored in `/looper/scenes.dat`: block 0 = `SceneList` {magic `M8SL`, version,
-  count, current, slot[250]}; scene records in blocks 1…, in slots reused as
+* Stored in the project's file: block 0 = `SceneList` {magic `M8SL`, version,
+  count, current, row, cell, slot[250]}; scene records in blocks 1…, in slots reused as
   scenes come and go (inserting/removing only rewrites block 0).
   `MAX_SCENES` = 250.
 * Position **0\*** is the empty scene, never stored; changing anything there

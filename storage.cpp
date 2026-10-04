@@ -7,7 +7,7 @@
 //                         the loop's length and tempo and its waveform overview.
 //   track1.unit ...       each track: the sample it plays and its settings
 //                         (loop range, mute, filter, volume and balance). 512 bytes.
-//   session.txt           the tempo.
+//   session.txt           the tempo, the loaded project, the master volume.
 // Older versions kept each track in a full-size track1.wav ... : at boot those
 // become samples (and the empty ones recording space).
 //
@@ -982,17 +982,19 @@ Session loadSession() {
     else if (!strncmp(line, "cell=", 5)) s.cell = (int)strtol(line + 5, nullptr, 10);
     // ("volume=": the master volume on today's scale; an older "master=" is left: 100% again)
     else if (!strncmp(line, "volume=", 7)) s.master = (int)strtol(line + 7, nullptr, 10);
+    else if (!strncmp(line, "project=", 8)) s.project = (int)strtol(line + 8, nullptr, 10) - 1;
   }
   f.close();
   s.bpm = constrain(s.bpm, MIN_BPM, MAX_BPM);
   s.master = constrain(s.master, 0, MASTER_VOLUME_MAX);
+  s.project = constrain(s.project, 0, PROJECTS - 1);
   return s;
 }
 
 void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/looper/session.txt", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nrow=%d\ncell=%d\nvolume=%d\n", s.bpm, s.row, s.cell, s.master);
+  f.printf("bpm=%.2f\nvolume=%d\nproject=%d\n", s.bpm, s.master, s.project + 1);
   f.close();
 }
 
