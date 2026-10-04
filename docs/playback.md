@@ -96,5 +96,6 @@ While the clock runs in a project without clips (none on its tracks or in
 its scenes, the dummy project included), the engine clicks on every beat: a
 small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
 and louder on the bar's first beat). It's added after the master volume and
-left out of what a resampling records. It stops once the project has a clip: once its first recording is
-completely done (it goes on while the recording finishes its bar).
+left out of what a resampling records. It stops once the project has a clip: on the bar line where its first
+recording ends and the clip starts playing (it goes on while the recording
+finishes its bar; that bar line itself doesn't click).

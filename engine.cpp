@@ -209,7 +209,12 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
   int32_t beat = transport.beat;
   tickInBeat_ = 0;
   nextTickAt_ = 0;
-  if (metronomeOn) startClick(beat % BEATS_PER_BAR == 0);
+  // The click (an empty project's), but not from where a finishing recording
+  // ends: its clip plays from there (loop() turns the click off a little later,
+  // once the recording is completely done).
+  bool recorded = recording.mode == Recording::Finishing &&
+                  beat >= recording.startBeat + (int32_t)(recording.loopBars * BEATS_PER_BAR);
+  if (metronomeOn && !recorded) startClick(beat % BEATS_PER_BAR == 0);
 
   if (beat % BEATS_PER_BAR == 0) {
     transport.lastBarSample = transport.now;
