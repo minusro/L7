@@ -13,7 +13,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (as B+A) on the scene cell, start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
-| B + A | Open / close the menu (arrows move its selection: cards, list, status row) |
+| B + A | Open the menu (arrows move its selection: cards, list; loading a project closes it) |
 | A or B (menu, on a project slot) | Once let go: load its project (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
 | SHIFT + A or B (menu, on a slot) | Cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Only while stopped |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
@@ -142,9 +142,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
 * Menu (`ui_menu.cpp`): opened with B+A (or A on the scene cell), it takes
-  the track rows' place across the whole width (the status row stays, its
-  frames hidden; B+A or A on the scene cell closes it, and so does loading a
-  project). On the menu's items A and B both run the action button's action.
+  the place of the track rows and the status row's cells, across the whole
+  width; of the status row only the action button shows. Loading a project
+  closes it (A on the loaded one: just closes it). On the menu's items A and B both run the action button's action.
   Twelve project cards (three rows of four, 26×14 blocks, 6 apart, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
@@ -156,8 +156,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   a list, "EXPORT TO ALS" and "USB DATA MODE" (nothing yet): a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
   selected). The action button takes the item's colour: on a card, its
-  slot's; on project-level items (export, the status row's cells) the
-  accent; on system-level ones (USB data mode) light grey (its icon light
+  slot's; on project-level items (export) the accent; on system-level ones (USB data mode) light grey (its icon light
   grey while pressed too). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
   or B is held, corners cut; round a card one block out (following its
@@ -165,11 +164,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   action button shows load (a folder) or, empty, new (a plus); with SHIFT,
   cut or paste (dark grey when it can't act: playing, recording, clipboard
   empty); on the list, a diskette (export) and the USB trident (data mode),
-  doing nothing yet. LEFT/RIGHT go through everything in order: the cards
-  row by row, the list, then the status row's cells (and back); UP/DOWN go card row to card row, from the last row into the list
-  (back up: to the column it came from), from the list's end onto the status
-  row (the cell last used there), whose cells then work as in the looper's
-  view, and back up to the list. The looper's own selection is kept
+  doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the
+  list; UP/DOWN go card row to card row and on into the list (back up: to
+  the column it came from). The looper's own selection is kept
   meanwhile and comes back when the menu closes; the menu remembers where its
   selection was for the next time Its selection is kept
   across power cycles too, and if it was open at power off it opens again at

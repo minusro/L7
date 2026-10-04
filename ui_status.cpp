@@ -85,6 +85,7 @@ static void drawFrame(int cell) {
 }
 
 void drawStatus() {
+  if (menuOpen()) return;                          // (the menu: only the action button shows on the status row)
   static uint64_t shownBorders = 0;                // the cells' borders (bordersOf())
   static uint32_t drawn = 0;                       // uiGeneration when the cells were last cleared
   auto &t = board.tft();

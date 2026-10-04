@@ -209,10 +209,6 @@ int main(int argc, char **argv) {
   render(out + "/ui_menu_button.png");
   menuKeys(m8::BTN_UP);                            // the list's first item: export
   render(out + "/ui_menu_export.png");
-  menuKeys(m8::BTN_DOWN);
-  menuKeys(m8::BTN_DOWN);                          // down again: the status row (its scene cell)
-  render(out + "/ui_menu_status.png");
-  menuLeaveStatus();
   closeMenu();
   return 0;
 }

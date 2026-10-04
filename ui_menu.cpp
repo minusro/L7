@@ -1,21 +1,19 @@
-// ui_menu.cpp — the menu (see ui.h): in place of the track rows, a second
-// view of the looper (the status row stays), the screen's whole width.
-// Opened with B+A (or A on the scene cell), closed the same way from the status row, or by loading a project. Twelve
-// cards (three rows of four), the project slots, and under them a list,
-// "EXPORT TO ALS" and "USB DATA MODE" (nothing yet). A and B both run
-// the action button's action. On a slot, A loads its project (an empty one: a new project there) and
-// closes the menu; with SHIFT, cuts the project, or pastes one into an empty
-// slot (only while stopped).
+// ui_menu.cpp — the menu (see ui.h): in place of the track rows and the
+// status row's cells (only the action button shows), the screen's whole
+// width. Opened with B+A (or A on the scene cell); closed by loading a
+// project (A on the loaded one: just closes it). Twelve cards (three rows of
+// four), the project slots, and under them a list, "EXPORT TO ALS" and "USB
+// DATA MODE" (nothing yet). A and B both run the action button's action. On
+// a slot, A loads its project (an empty one: a new project there) and closes
+// the menu; with SHIFT, cuts the project, or pastes one into an empty slot
+// (only while stopped).
 //
 // Items, in selection order: the cards 0-11 (rows of four, top first), then
-// the list's 12 and 13; below them the status row, which the menu's
-// selection reaches too (its cells then work as in the looper's view; the
-// looper's own selection is kept meanwhile and comes back when the menu
-// closes). UP/DOWN go card row to card row, from the last row into the list
-// (back up: to the column it came from), from the list's end onto the status
-// row (the cell last there) and back. LEFT/RIGHT go through everything in
-// order: the cards row by row, the list, the status row's cells (and back). The menu remembers where its selection
-// was for the next time it opens.
+// the list's 12 and 13 (the looper's own selection is kept meanwhile and
+// comes back when the menu closes). UP/DOWN go card row to card row and on
+// into the list (back up: to the column it came from); LEFT/RIGHT through
+// everything in order. The menu remembers where its selection was for the
+// next time it opens.
 //
 // A card: a block shape, its bottom right corner cut diagonally (about a
 // fifth of its height), in its slot's colour (colors.h): filled when it
@@ -185,6 +183,7 @@ void drawMenu() {
   if (all) {
     drawn = uiGeneration;
     board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);   // (where the track rows were)
+    board.tft().fillRect(0, STATUS_TOP, BUTTON_X, 240 - STATUS_TOP, BG);   // and the status row's cells: only its button shows
   }
   // Unselected first: frames that touch a neighbour's space don't get wiped.
   for (int pass = 0; pass < 2; pass++)
@@ -196,14 +195,7 @@ void drawMenu() {
     }
 }
 
-// Onto the status row, and back.
-static void toStatus() {
-  onStatus = true;
-  selected = STATUS_ROW;
-  selectedCell = statusCell;
-  drawMenu();
-  drawTrack(STATUS_ROW);
-}
+// Back from the status row (it can't be reached any more: kept for input.cpp).
 void menuLeaveStatus() {
   if (!onStatus) return;
   onStatus = false;
@@ -216,23 +208,14 @@ void menuLeaveStatus() {
   drawTrack(STATUS_ROW);
 }
 
-// The arrows: LEFT/RIGHT along a card row (no wrapping); UP/DOWN between the
-// card rows, the list's items and the status row.
+// The arrows: LEFT/RIGHT through every item in order; UP/DOWN between the
+// card rows and the list's items (no wrapping).
 bool menuKeys(uint8_t pressed) {
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   int k = menuSel;
-  // LEFT/RIGHT: through every item in order (the cards row by row, the list),
-  // on past the list's end onto the status row's first cell.
+  // LEFT/RIGHT: through every item in order (the cards row by row, the list).
   if (pressed & m8::BTN_LEFT && k > 0) k--;
-  if (pressed & m8::BTN_RIGHT) {
-    if (k == ITEMS - 1) {
-      movedHere = true;
-      statusCell = SCENE_CELL;
-      toStatus();
-      return true;
-    }
-    k++;
-  }
+  if (pressed & m8::BTN_RIGHT && k < ITEMS - 1) k++;
   if (k < CARDS) {
     int row = k / COLS;
     if (pressed & m8::BTN_UP && row > 0) k -= COLS;
@@ -240,14 +223,7 @@ bool menuKeys(uint8_t pressed) {
     if (k < CARDS) cardCol = k % COLS;
   } else if (!(pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
     if (pressed & m8::BTN_UP) k = k > CARDS ? k - 1 : CARDS - COLS + cardCol;
-    if (pressed & m8::BTN_DOWN) {
-      if (k == ITEMS - 1) {                        // below the list: the status row
-        movedHere = true;
-        toStatus();
-        return true;
-      }
-      k++;
-    }
+    if (pressed & m8::BTN_DOWN && k < ITEMS - 1) k++;
   }
   if (pressed & arrows) movedHere = k != menuSel;
   menuSel = k;
@@ -283,12 +259,7 @@ void closeMenu() {
 void restoreMenu(int state) {
   if (state < 0) return;
   int sel = state % 1000;
-  if (sel >= 100) {
-    onStatus = true;
-    statusCell = constrain(sel - 100, 0, TEMPO_CELL);
-  } else {
-    menuSel = constrain(sel, 0, ITEMS - 1);
-    if (menuSel < CARDS) cardCol = menuSel % COLS;
-  }
+  menuSel = constrain(sel, 0, ITEMS - 1);         // (saved on the status row, before it was hidden: the list's end)
+  if (menuSel < CARDS) cardCol = menuSel % COLS;
   if (state >= 1000) openMenu();
 }
