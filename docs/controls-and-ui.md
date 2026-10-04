@@ -166,7 +166,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   it, its letter (the project's name) black; another
   project's is a thick outline (two blocks) in its colour, the letter in it too.
   An empty slot is a grey outline, its letter in the slot's colour. In the bottom
-  left corner, the logo small (redrawn at 29 × 13 blocks, the status row's height), always
+  left corner, the logo small (redrawn at 30 × 13 blocks, the status row's height), always
   in the action button's colour (not its pressed look: it stays put while A is held). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER USB DATA MODE" (nothing yet). Four in
   view at a time (an item

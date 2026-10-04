@@ -147,7 +147,7 @@ void showSplash();
 void hideSplash();
 void splashTick();                       // the logo's colour cycle: call while starting up (hideSplash() finishes it)
 int splashBottom();                    // y just below the logo (for startup messages)
-void drawSmallLogo(int x, int y, uint16_t color);   // the logo small, 29 x 13 blocks (the menu's corner), top left at (x, y)
+void drawSmallLogo(int x, int y, uint16_t color);   // the logo small, 30 x 13 blocks (the menu's corner), top left at (x, y)
 
 // ---- Drawing (ui*.cpp)
 void drawTrack(int i);                   // ui.cpp: row i (a track or the status row), whatever changed

@@ -1,7 +1,8 @@
 // ui_splash.cpp — the logo shown while the looper starts (see ui.h): "L7",
 // italic (a column every three rows), the 7's right edge one 45-degree line
-// up to a sharp corner, the diagonal 10 blocks thick, cut by
-// horizontal lines widening downwards (80s),
+// up to a sharp corner, the diagonal 10 blocks thick; near the bottom two
+// cuts, each as thick as the line under it (80s; the L's foot starts above
+// them),
 // fading in from black, then its colour going once round all hues (from the
 // green turquoise accent back to it, eased in and out), fading out at the end, in 2x2-pixel blocks, 26 tall, in the middle of the screen,
 // with the copyright line under it in light grey (fading in), in the pixel font (ui_font.cpp).
@@ -23,18 +24,18 @@ PROGMEM static const char LOGO[][56] = {          // (in flash: const data would
     "....#######.......................##########...........",
     "....#######......................##########............",
     "....#######.....................##########.............",
-    ".......................................................",
+    "...#######.....................##########..............",
     "...#######....................##########...............",
-    "...#######...................##########................",
-    "..#######...................##########.................",
+    "...#################.........##########................",
+    "..#################.........##########.................",
     ".......................................................",
-    "..#################.......##########...................",
+    ".......................................................",
     ".#################.......##########....................",
+    ".#################......##########.....................",
     ".......................................................",
-    ".#################.....##########......................",
     ".......................................................",
     "#################....##########........................",
-    ".......................................................",
+    "#################...##########.........................",
 };
 static constexpr int LOGO_ROWS = sizeof LOGO / sizeof LOGO[0], LOGO_COLS = sizeof LOGO[0] - 1, LOGO_PIXEL = 2;
 // The logo and the copyright line under it centred together (the logo
@@ -109,23 +110,23 @@ static void drawLogo(uint16_t color) {
       if (LOGO[r][c] == '#') t.fillRect(LOGO_X + c * LOGO_PIXEL, LOGO_Y + r * LOGO_PIXEL, LOGO_PIXEL, LOGO_PIXEL, color);
 }
 
-// The logo small, for the menu's corner: drawn again at 29 x 13 blocks (the
+// The logo small, for the menu's corner: drawn again at 30 x 13 blocks (the
 // status row's height), not shrunk, so it stays in the UI's 2 x 2 blocks; the
-// cuts fewer (8 and 11) so the L keeps its foot.
-PROGMEM static const char SMALL_LOGO[][30] = {
-    "....####.......##############",
-    "...####.......##############.",
-    "...####.......#############..",
-    "...####.......############...",
-    "..####.............######....",
-    "..####............######.....",
-    "..####...........######......",
-    ".####...........######.......",
-    ".............................",
-    ".#########....######.........",
-    "#########....######..........",
-    ".............................",
-    "#########..######............",
+// same two cuts and lines, a block each.
+PROGMEM static const char SMALL_LOGO[][31] = {
+    "....#####......###############",
+    "...#####......###############.",
+    "...#####......##############..",
+    "...#####......#############...",
+    "..#####......#############....",
+    "..#####............######.....",
+    "..#####...........######......",
+    ".#####...........######.......",
+    ".##########.....######........",
+    "..............................",
+    "##########....######..........",
+    "..............................",
+    "##########..######............",
 };
 static constexpr int SMALL_ROWS = sizeof SMALL_LOGO / sizeof SMALL_LOGO[0], SMALL_COLS = sizeof SMALL_LOGO[0] - 1;
 
