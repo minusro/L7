@@ -100,11 +100,11 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
 // Cards: 26 x 14, the cut 3 (about a fifth), 6 apart, centred (4 from the top).
-// The list: centred under them, an item every 13 rows from row 66, its frame
+// The list: centred under them, an item every 12 rows from row 67, its frame
 // round its label with 3 blocks of space.
 static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6;
 static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 4;
-static constexpr int LIST_Y = 66, LIST_PITCH = 13, LIST_SPACE = 3;
+static constexpr int LIST_Y = 67, LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
 
 static Shape itemShape(int k) {
   if (k < CARDS)
