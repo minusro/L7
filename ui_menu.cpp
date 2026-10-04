@@ -35,6 +35,9 @@ uint32_t uiGeneration = 1;
 // no more than that, from the top of its room).
 static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
 static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "USB DRIVE MODE"};
+// The export item's label while exporting and after it ("EXPORTING 3/14",
+// "SAVED AS L7 A005"; none: its own), until the selection moves or the menu closes.
+static char exportText[24];
 static int listTop = 0;                          // the list's first item in view
 
 static bool shown = false;
@@ -188,7 +191,8 @@ static void drawItem(int k) {
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
     fillRing(s, LIST_SPACE, 0, BG);
     bool off = k - CARDS == 0 && !projectHasClips();   // export: nothing to export (no clips, or the dummy project)
-    drawText(s.x * PX, s.y * PX, LABELS[k - CARDS], off ? DIM : sel ? INK : LIGHT, BG, s.w * PX);   // (the whole box: a longer label scrolled away is covered)
+    const char *label = k == CARDS && exportText[0] ? exportText : LABELS[k - CARDS];
+    drawText(s.x * PX, s.y * PX, label, off ? DIM : sel ? INK : LIGHT, BG, s.w * PX);   // (the whole box: a longer label scrolled away is covered)
   }
 }
 
@@ -207,7 +211,7 @@ static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
-         (uint32_t)(sel ? frameColor() : 0) << 8;
+         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(k == CARDS && exportText[0]) << 30;
 }
 
 void drawMenu() {
@@ -273,14 +277,21 @@ bool menuKeys(uint8_t pressed) {
     if (pressed & m8::BTN_DOWN && k < ITEMS - 1) k++;
   }
   if (pressed & arrows) movedHere = k != menuSel;
+  if (k != menuSel) exportText[0] = 0;          // (the export's message: gone)
   if (k >= CARDS && k != menuSel) scrollList(k - CARDS, k > menuSel ? 1 : -1);
   menuSel = k;
   drawMenu();
   return movedHere;
 }
 
+void menuExportStatus(const char *text) {
+  snprintf(exportText, sizeof exportText, "%s", text ? text : "");
+  if (shown) drawItem(CARDS);                   // (now: the export holds up the loop)
+}
+
 void openMenu() {
   if (shown) return;
+  exportText[0] = 0;
   // A project with no clips at all (none recorded since it was made): gone,
   // the dummy project instead (one has to be chosen before leaving the menu).
   if (projectCurrent() >= 0 && recording.mode == Recording::Idle && recordQueued() < 0 && !projectHasClips() &&

@@ -168,7 +168,11 @@ A recording track's waveform area is in the accent colour (a block of black betw
   An empty slot is a grey outline, its letter in the slot's colour. In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
   in the action button's colour (not its pressed look: it stays put while A is held). Under them
-  a list, "EXPORT ABLETON PROJECT" and "USB DRIVE MODE" (nothing yet). Four in
+  a list, "EXPORT ABLETON PROJECT" and "USB DRIVE MODE" (nothing yet). Export
+  (the loaded project, if it has clips; on release) writes it as an Ableton
+  Live Set to `/Ableton/L7 A005/` (ableton.h), its label showing "EXPORTING
+  3/14" (samples copied, then the set) and then "SAVED AS L7 A005" (or "EXPORT
+  FAILED") until the selection moves. Four in
   view at a time (an item
   every 12 rows, the last place in the status row's, level with the action
   button); moving, the list scrolls so the item past the selection that way

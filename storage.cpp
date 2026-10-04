@@ -198,6 +198,45 @@ static void noteSample(uint32_t n, uint32_t order) {
   lastOrder = max(lastOrder, order);
 }
 uint32_t sampleCount() { return sampleTotal; }
+
+static bool openSample(uint32_t n, FsFile &f, SampleInfo &info, uint8_t *overview);
+
+bool sampleDetails(uint32_t n, SampleDetails &d) {
+  FsFile f;
+  SampleInfo info;
+  if (!sampleExists(n) || !openSample(n, f, info, nullptr)) return false;
+  d.frames = info.frames;
+  d.spb = info.spb;
+  d.loopBars = info.loopBars;
+  d.bytes = f.fileSize();
+  uint8_t tag = finalTag(n);
+  if (tag) snprintf(d.name, sizeof d.name, "%c%d%04u", tagLetter(tag), tagTrack(tag), (unsigned)n);
+  else snprintf(d.name, sizeof d.name, "%04u", (unsigned)n);
+  return true;
+}
+
+bool copySample(uint32_t n, const char *to, void (*progress)()) {
+  if (transport.running) return false;
+  char path[40];
+  samplePath(n, path, sizeof path);
+  FsFile from = SD.sdfs.open(path, O_RDONLY);
+  FsFile dst = SD.sdfs.open(to, O_RDWR | O_CREAT | O_TRUNC);
+  if (!from || !dst) return false;
+  uint64_t left = from.fileSize();
+  dst.preAllocate(left);
+  debugStage = "SD copy (export)";
+  bool ok = from.seekSet(0);
+  while (ok && left) {
+    size_t n4 = left < sizeof chunk ? (size_t)left : sizeof chunk;
+    ok = from.read(chunk, n4) == (int)n4 && dst.write(chunk, n4) == n4;
+    left -= n4;
+    if (progress) progress();
+  }
+  ok = dst.sync() && ok;
+  dst.close();
+  if (!ok) SD.sdfs.remove(to);
+  return ok;
+}
 bool sampleExists(uint32_t n) { return n >= 1 && n <= MAX_SAMPLES && sampleOrder[n]; }
 
 // Samples in the order of their names ("0001.wav" ... before "A10001.wav"

@@ -1,6 +1,7 @@
 // input.cpp — see input.h. The key list is at the top of m8_looper.ino.
 #include "input.h"
 #include "ui.h"
+#include "ableton.h"
 
 static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;   // held arrows
 static constexpr uint32_t DOUBLE_TAP_MS = 200;      // two taps of a key this close: a double tap
@@ -54,6 +55,21 @@ static void tapTempo() {
 
 // With SHIFT and B both held, which came first: A then pastes a scene (B
 // first) or cuts it (SHIFT first).
+// The loaded project exported as a Live Set (the menu's first list item),
+// its progress and then where it went shown in the item's place.
+static void exportToAbleton() {
+  int p = projectCurrent();
+  int n = exportProject(p, [](int done, int total) {
+    char b[24];
+    snprintf(b, sizeof b, "EXPORTING %d/%d", done, total);
+    menuExportStatus(b);
+  });
+  char b[24];
+  if (n) snprintf(b, sizeof b, "SAVED AS %s %c%03d", APP_NAME, 'A' + p, n);
+  else snprintf(b, sizeof b, "EXPORT FAILED");
+  menuExportStatus(b);
+}
+
 static bool optFirst = false;
 bool optBeforeShift() { return optFirst; }
 
@@ -84,6 +100,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // SHIFT still held and the selection still there, cuts it when let go.
   if (cutConfirm >= 0 && (!menuOpen() || !shift || menuSlot() != cutConfirm)) cutConfirm = -1;
   static int armedSlot = -1;                         // the slot it was pressed on (-1: a list item)
+  static int armedItem = -1;                         // or the list item
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
     const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT | (menuSlot() >= 0 && !shift ? m8::BTN_PLAY : 0);
@@ -91,12 +108,14 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if ((pressed & act) && !armed) {
       armed = true;
       armedSlot = menuSlot();
+      armedItem = menuListItem();
       shifted = shift;
     }
     if (armed && !(keys & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY))) {   // all let go: act
       armed = false;
       int slot = armedSlot;
-      if (slot < 0) {                                // the list's items: nothing yet
+      if (slot < 0) {                                // the list's items: export (USB drive mode: nothing yet)
+        if (armedItem == 0 && !shifted && projectCurrent() >= 0 && projectHasClips()) exportToAbleton();
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
         bool loaded = slot == projectCurrent();
         if (projectFilled(slot) && cutConfirm != slot) {   // the first tap: confirm with a second

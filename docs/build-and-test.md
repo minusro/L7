@@ -35,7 +35,7 @@ truncate; counts file-system changes and file creations).
 ```sh
 cd tools/looper_sim
 c++ -std=c++17 -O1 -Wno-macro-redefined -Istubs -I../.. \
-  ../../engine.cpp ../../storage.cpp ../../scenes.cpp looper_sim.cpp -o looper_sim
+  ../../engine.cpp ../../storage.cpp ../../scenes.cpp ../../ableton.cpp looper_sim.cpp -o looper_sim
 ./looper_sim          # all checks + 5 random 600 s sessions; ./looper_sim 0 skips the fuzzing
 ```
 
@@ -54,6 +54,22 @@ Measurements (printed as `info`, not pass/fail) use `realisticSd`: reads
 on the M8's card). `LOOPER_TRACE=1 ./looper_sim 0` prints the card
 operations before the first dropouts. input.cpp and ui*.cpp are not in the
 simulator — key handling and drawing are only tested on the device.
+
+The Live Set export's test writes real sets to `/tmp/looper_sim_sd/Ableton/`
+(open them in Live) and checks them with Python (gzip, XML, the tracks,
+devices, scenes, clips and copied samples).
+
+## Live Set templates (`tools/ableton/make_template.py`)
+
+`ableton_template.h` is made from a set Live saved
+(`docs/design/ableton/L7 Test 1 Project/L7 Test 1.als`, Live 11.3): its first
+track (the two Auto Filters kept, other devices left out), a clip slot, a
+clip, a scene and the set around them, with the fields the export fills in
+marked. Remake it after changing that set:
+
+```sh
+python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 1 Project/L7 Test 1.als" ableton_template.h
+```
 
 ## UI preview (`tools/ui_preview`)
 

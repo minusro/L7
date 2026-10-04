@@ -18,6 +18,8 @@
 
 namespace looper {
 
+struct TrackUnit;                                  // (storage.h)
+
 constexpr int MAX_SCENES = 249, PROJECTS = 12;   // (249: the list block keeps the tempo in the 250th's place)
 
 // After storageBegin(): loads project `project` (0-11; -1: the dummy one). The tempo goes
@@ -57,6 +59,10 @@ int sceneCurrent();
 int sceneCount();
 
 // ---- Projects (slots 0-11)
+// Reading project p (the Live Set export): its scene count and tempo (false:
+// an empty slot), and scene pos's (1..count) units, track by track.
+bool projectInfo(int p, int &scenes, float &tempo, int &current);   // current: its scene (0: the empty one)
+bool projectScene(int p, int pos, TrackUnit *units);
 int projectCurrent();          // the loaded one (-1: the dummy project, after the loaded one was cut)
 bool projectFilled(int p);     // the slot holds a project (the loaded one always does)
 // Loads project p: its current scene goes on the looper (playing: on a bar

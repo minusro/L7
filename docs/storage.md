@@ -3,6 +3,9 @@
 SdFat through `SD.sdfs` (SDIO, DMA mode). Everything lives in `/L7` (an
 older card's `/looper` is renamed to it at boot).
 
+Exports (Ableton Live Sets) go to `/Ableton/` (see ableton.h):
+`/Ableton/L7 A005/L7 A005.als` and its samples in `Samples/Imported/`.
+
 ## Files
 
 | Path | Contents |

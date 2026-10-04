@@ -68,6 +68,21 @@
   (project letter, track number, number; one count for all), and SHIFT +
   LEFT/RIGHT steps through them in name order.
 
+## Ableton Live Set export (agreed 2026-10-04)
+
+* The loaded project, to `/Ableton/<app name> <letter><001-999>/`: the next
+  number for that letter. Its samples are copied into the folder
+  (`Samples/Imported/`), so it stands on its own.
+* The set (Live 11): the project's tempo; 7 audio tracks (no Utility), each
+  with two Auto Filters, lowpass and highpass, fully open (as with no clip
+  playing); a scene per project scene; each track's clip there: Re-Pitch warp
+  mode, the loop and start position as in the app (a range across the
+  loop's end, which Live can't loop: the whole loop), deactivated where the
+  track is muted; the current scene's clips saved as playing (triggered when
+  the set opens).
+* Still to do: each clip's volume, pan and filter frequencies as clip
+  modulation envelopes (flat lines), waiting for an example set from Live.
+
 ## Open ideas (not started)
 
 * Master effects; what the menu's buttons do.

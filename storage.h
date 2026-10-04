@@ -103,6 +103,11 @@ int deleteSamplesExcept(const uint8_t *used);
 bool stepSample(int t, int dir);
 // Samples on the card holding recordings (0001-9999), including ones no
 // track plays now (until deleteUnusedSamples(), scenes.h: no project's).
+// For the Live Set export (ableton.cpp; stopped): sample n's details (its
+// name: "A30012", or "0012" for an older one) and a copy of its file.
+struct SampleDetails { uint32_t frames, spb, loopBars; uint64_t bytes; char name[12]; };
+bool sampleDetails(uint32_t n, SampleDetails &d);
+bool copySample(uint32_t n, const char *to, void (*progress)() = nullptr);
 uint32_t sampleCount();
 bool sampleExists(uint32_t n);
 // Loop range in beats: starts on any beat of the loop; any length from a beat

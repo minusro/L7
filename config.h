@@ -4,6 +4,7 @@
 
 namespace looper {
 
+constexpr const char *APP_NAME = "L7";            // the app's name (exports are named after it)
 constexpr int NUM_TRACKS = 7;
 constexpr int BEATS_PER_BAR = 4;                   // fixed 4/4
 constexpr uint32_t MAX_BARS = 32;                  // longest recording

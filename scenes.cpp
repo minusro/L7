@@ -552,6 +552,33 @@ static bool openAs(int p, bool apply_) {
   return true;
 }
 
+bool projectInfo(int p, int &scenes, float &tempo, int &current) {
+  if (p < 0 || p >= PROJECTS) return false;
+  if (p == project) flushProject();
+  FsFile f = openProject(p);
+  SceneList l;
+  if (!readList(f, l)) return false;
+  scenes = l.count;
+  current = min((int)l.current, (int)l.count);    // (N+1*: a copy of N)
+  tempo = l.tempo10 ? l.tempo10 / 10.0f : getTempo();   // (not kept yet: the tempo now)
+  return true;
+}
+
+bool projectScene(int p, int pos, TrackUnit *units) {
+  FsFile f = openProject(p);
+  SceneList l;
+  if (!readList(f, l) || pos < 1 || pos > l.count) return false;
+  SceneInfo s;
+  if (!f.seekSet((uint64_t)(1 + l.slot[pos - 1]) * BLOCK) || f.read(&s, sizeof s) != (int)sizeof s ||
+      memcmp(s.magic, "M8SC", 4))
+    return false;
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    units[t] = s.units[t];
+    upgradeUnit(units[t]);
+  }
+  return true;
+}
+
 void projectTempoChanged() {
   if (loading || tenths(getTempo()) == list.tempo10) return;
   list.tempo10 = tenths(getTempo());
