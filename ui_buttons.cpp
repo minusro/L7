@@ -25,14 +25,14 @@
 // (a question mark after the first A: a second A confirms) or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
-// the menu (a small stop) on the scene and clock cells, tap tempo
-// ("TAP") on the tempo cell; with SHIFT,
+// the menu (a small stop) on the scene cell, start from 1.1.1 (|>, as
+// SHIFT+START) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
 // start from 1.1.1 (play).
 // B held on a track: resample (a cassette) on an empty track, overdub (the
 // record dot with a plus; not there yet: A does nothing) on one with a clip.
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_OVERDUB, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_OVERDUB, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -60,9 +60,9 @@ static int actionIcon() {
     return tracks[selected].state == TrackState::Empty ? ICON_RESAMPLE : ICON_OVERDUB;
   }
   if (selected == STATUS_ROW) {                    // restart / the menu / tap tempo
-    if (shift) return ICON_PLAY;
+    if (shift) return ICON_RESTART;
     int cell = selectedCellIn(STATUS_ROW);
-    return cell == TEMPO_CELL ? ICON_TAP : ICON_MENU;   // the scene and clock cells: the menu
+    return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? ICON_RESTART : ICON_MENU;   // the clock cell: from 1.1.1
   }
   const Track &tr = tracks[selected];
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) || recordQueued() == selected ? ICON_DELETE : ICON_PASTE;
@@ -157,6 +157,7 @@ PROGMEM static const Icon ICONS[] = {
   {9, 9, {"#######..", "##.....#.", "##..##.##", "##.....##", "#########", "#.......#", "#.......#", "#.......#", "#########"}},   // SAVE (a diskette)
   {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
   {5, 7, {".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."}},   // CHECK (a question mark: cut the project with a second A?)
+  {7, 7, {"#.#....", "#.##...", "#.###..", "#.####.", "#.###..", "#.##...", "#.#...."}},   // RESTART (|>: start from 1.1.1)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
