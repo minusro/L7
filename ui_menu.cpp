@@ -17,7 +17,7 @@
 // everything in order. It opens on the loaded project's card (the dummy
 // project loaded: where its selection was).
 //
-// A card: a block shape, a block missing from each top corner and a 3 x 3 block from the bottom right,
+// A card: a block shape, a block missing from each top corner and a 2 x 2 block from each bottom one,
 // in its slot's colour (colors.h): the loaded project's
 // filled, its letter A-L (the project's name) black;
 // another project's a thick (two-block) outline, the letter in the
@@ -70,7 +70,7 @@ void setMainSelection(int row, int cell) {
 
 // ---- Shapes, in blocks: an item's content is w x h blocks from (x, y); a card
 // (cut > 0) has a block missing from each top corner and a cut x cut block
-// from the bottom right (0: a plain rectangle). shape(d) is the content
+// from each bottom corner (0: a plain rectangle). shape(d) is the content
 // grown by d blocks all round (the notch keeps its size); a frame is a ring
 // between two of them.
 struct Shape { int x, y, w, h, cut; };
@@ -84,12 +84,14 @@ static bool rowSpan(const Shape &s, int d, int r, int &c0, int &c1, bool round =
   c1 = s.w - 1 + d;
   bool top = y == -d, bottom = y == s.h - 1 + d;
   if (s.cut) {                                    // a card: a block missing from each top corner, and a
-    if (top) {                                    // cut x cut block from the bottom right (the notch keeps
-      c0++;                                       // its size as the shape grows or shrinks)
+    if (top) {                                    // cut x cut block from each bottom one (the notches keep
+      c0++;                                       // their size as the shape grows or shrinks)
       c1--;
     }
-    if (bottom && round) c0++;                    // (a frame: the bottom left corner too)
-    if (y >= s.h - s.cut + d) c1 = min(c1, s.w - s.cut + d - 1);
+    if (y >= s.h - s.cut + d) {
+      c0 = max(c0, s.cut - d);
+      c1 = min(c1, s.w - s.cut + d - 1);
+    }
   } else if (round && (top || bottom)) {          // the top and bottom rows: their corners cut
     c0++;
     c1--;
@@ -117,12 +119,12 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 }
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
-// Cards: 26 x 13, the cut 3, 6 apart across and 3 down (neighbouring
+// Cards: 21 x 14 (3 : 2), the notches 2, 6 apart across and 3 down (neighbouring
 // rows' frames share a row: only the selected one's shows), from 16 from the top.
 // The list: centred under them, an item every 12 rows from row 75, on down into the status row's place (its
 // cells are hidden in the menu; the action button is clear to the right), its frame
 // round its label with 3 blocks of space.
-static constexpr int CARD_W = 26, CARD_H = 13, CARD_CUT = 3, CARD_GAP = 6, CARD_VGAP = 3;
+static constexpr int CARD_W = 21, CARD_H = 14, CARD_CUT = 2, CARD_GAP = 6, CARD_VGAP = 3;
 static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 16;
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
 // The last place's frame level with the action button (from the status row's top).
