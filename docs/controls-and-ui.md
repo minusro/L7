@@ -13,7 +13,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (as B+A) on the scene cell, start/stop (as START; SHIFT+A as SHIFT+START) on the clock cell, tap tempo on the tempo cell |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
-| B + A | Open the menu (arrows move its selection: cards, list); in the menu, B+A closes it (on release; not with the dummy project loaded) |
+| B + A | Open the menu, once A is let go (arrows move its selection: cards, list); in the menu, B+A closes it (on release; not with the dummy project loaded) |
 | A (menu, on a project slot) | Once let go: load its project (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
 | SHIFT + A (menu, on a slot) | Once let go: cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Only while stopped |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |

@@ -78,6 +78,14 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       lastShiftTap = shiftTwice ? 0 : millis();
     }
   }
+  // B+A (or A on the scene cell) in the looper's view: the menu opens once A
+  // is let go.
+  static bool menuOnRelease = false;
+  if (menuOnRelease && !(keys & m8::BTN_EDIT)) {
+    menuOnRelease = false;
+    openMenu();
+    return;
+  }
   // The menu's items: the arrows move its selection; A runs the action
   // button's action once let go (on the item it was pressed on); with B held
   // (before or meanwhile), B+A closes the menu instead (not while the dummy
@@ -366,14 +374,14 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
   bool edit = (pressed & m8::BTN_EDIT) && !opt;
   if ((pressed & m8::BTN_EDIT) && opt) {
-    if (!shift) menuOpen() ? closeMenu() : openMenu();
+    if (!shift) menuOnRelease = true;                // (the menu opens once A is let go)
     else sceneChanged = optFirst ? scenePaste() : sceneCut();
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = (transportKey || (edit && onClock)) && !shift;
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onScene) menuOpen() ? closeMenu() : openMenu();   // as B+A
+    if (onScene) menuOnRelease = true;              // as B+A
     else if (onTempo) tapTempo();                  // (the clock cell: as START, below)
   }
   if (edit && !onStatus) {
