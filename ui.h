@@ -11,9 +11,9 @@
 // pixel font, and the selection shown by frames and inverted boxes.
 constexpr int PX = 2;
 // Vertical layout: rows every 26 px (13 blocks): the 8 tracks from the top
-// of the screen, then the status row 4 px (two blocks) lower.
+// of the screen, then the status row 6 px (three blocks) lower.
 constexpr int ROW_BAND = 26;                             // a row's height (its button's)
-constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2 * PX;   // 212
+constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 3 * PX;   // 214
 // Each track row: three cells, then the button (a square): the waveform, the
 // filter (its response curve), then volume and balance. A cell is its
 // content in a one-block border, shared with the cells above and below (a
@@ -25,9 +25,9 @@ constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2 * PX;   // 212
 //   waveform: x 0-187   filter: x 186-245   volume: x 244-291   button: x 294-319
 struct Cell { int x, w; };
 constexpr int CELL_H = ROW_BAND + PX;
-// The status row's cells: a band tall, framed all round (no row below shares
-// their bottom border): the tags, 9 blocks, a block from the frame each way.
-constexpr int STATUS_H = ROW_BAND;                       // y 212-237
+// The status row's cells: to the screen's bottom edge, framed all round (no
+// row below shares their bottom border).
+constexpr int STATUS_H = 240 - STATUS_TOP;               // y 214-239: the tags a block from the frame each way
 constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left to right
 constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
@@ -56,19 +56,19 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
 // cells and button show it as empty (and its controls don't act).
 inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !recordingOn(i); }
 
-// Background of a cell in row i (cell -1: the button): black, but grey
+// Background of a cell in row i (cell -1: the button): black, but the accent colour
 // for the status row's button (the action button; ui_buttons.cpp has its
 // colours) and the accent colour for a recording track's waveform cell.
 inline uint16_t cellBackground(int i, int cell) {
   if (cell == WAVE_CELL && recordingOn(i)) return ACCENT;
-  if (cell == -1 && i == STATUS_ROW) return DIM;
+  if (cell == -1 && i == STATUS_ROW) return ACCENT;
   return BG;
 }
-// Its frame: grey round the selected cell (dark grey while B alone is held:
-// B + arrows edit it), none elsewhere (BG).
+// Its frame: grey round the selected cell (dark grey while B is held, with
+// any other keys or none), none elsewhere (BG).
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != selectedCellIn(i)) return BG;
-  return board.keys() == m8::BTN_OPT ? DARK : DIM;
+  return board.keys() & m8::BTN_OPT ? DARK : DIM;
 }
 // B held as a modifier on its own (no SHIFT, A or START; arrows may be down).
 inline bool bAlone() {
