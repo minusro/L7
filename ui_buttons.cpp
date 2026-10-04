@@ -17,7 +17,7 @@
 // clipboard is empty). With B
 // held: open the panel (a menu icon); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
-// While the panel is open: a house (A closes it). On the status row itself:
+// While the panel is open: a page with its corner turned (A closes it). On the status row itself:
 // the panel (menu, as B+A) on the scene cell, start / stop (play / stop, as
 // START) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
 // start from 1.1.1 (play).
@@ -102,7 +102,7 @@ int trackNumber(int i) { return NUM_TRACKS - i; }
 
 static int buttonIcon(int i) {
   if (i != STATUS_ROW) return trackIcon(i);
-  if (panelOpen() && heldAction != ICON_HOME) heldAction = -1;   // just opened: the house, at once
+  if (panelOpen() && heldAction != ICON_HOME) heldAction = -1;   // just opened: its icon, at once
   if (heldAction >= 0 && !(board.keys() & m8::BTN_EDIT)) heldAction = -1;   // A released
   return heldAction >= 0 ? heldAction : actionIcon();
 }
@@ -126,7 +126,7 @@ PROGMEM static const Icon ICONS[] = {
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
   {7, 7, {".......", "#######", ".......", "#######", ".......", "#######", "......."}},   // MENU
-  {7, 7, {"...#...", "..###..", ".#####.", "#######", ".##.##.", ".##.##.", ".##.##."}},   // HOME
+  {7, 9, {"####...", "#..##..", "#..#.#.", "#..####", "#.....#", "#.....#", "#.....#", "#.....#", "#######"}},   // HOME (a page, its corner turned)
   {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
           "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
   {9, 9, {"#.#.#.#.#", "....#....", "#...#...#", "..#####..", "#..###..#",
