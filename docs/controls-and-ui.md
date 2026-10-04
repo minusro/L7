@@ -158,7 +158,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.
   Twelve project cards (three rows of four, 21×14 blocks (3:2), 6 apart across and 3 down, centred):
-  rectangles with a block missing from each top corner and a 2×2 block from each bottom corner, lettered
+  rectangles with a block missing from each corner but the bottom right, which is cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
   pastels, rose to blush, picked by the author; the loaded project's is the
   app's accent colour, `ACCENT_DARK` at half its brightness; before one is
@@ -187,7 +187,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   grey while pressed too). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
   is held (not B), corners cut; round a card one block out (following its
-  notches); round the list's box, three blocks out. On a card the
+  diagonal); round the list's box, three blocks out. On a card the
   action button shows load (a small play) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (the button grey when it can't act: recording, another copy
   under way, clipboard empty); on the list, an arrow down into a tray (export) and the USB trident (drive mode),
