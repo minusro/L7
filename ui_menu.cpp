@@ -105,12 +105,13 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 }
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
-// Cards: 26 x 14, the cut 3 (about a fifth), 6 apart across and 4 down, centred (14 from the top).
+// Cards: 26 x 14, the cut 3 (about a fifth), 6 apart across and 3 down (neighbouring
+// rows' frames share a row: only the selected one's shows), centred (15 from the top).
 // The list: centred under them, an item every 12 rows from row 75, on down into the status row's place (its
 // cells are hidden in the menu; the action button is clear to the right), its frame
 // round its label with 3 blocks of space.
-static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6, CARD_VGAP = 4;
-static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 14;
+static constexpr int CARD_W = 26, CARD_H = 14, CARD_CUT = 3, CARD_GAP = 6, CARD_VGAP = 3;
+static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 15;
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
 // The last place's frame level with the action button (from the status row's top).
 static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
@@ -220,12 +221,15 @@ void drawMenu() {
   // hold the place), each label drawn the box's whole width; no clearing
   // first, which flickered.
   // Unselected first: frames that touch a neighbour's space don't get wiped.
+  // (Anything redrawn: the selected one again after it, its frame on top.)
+  bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)
     for (int k = 0; k < ITEMS; k++) {
       uint32_t key = itemKey(k);
-      if ((key & 1) != pass || (!all && key == shownKey[k])) continue;
+      if ((key & 1) != pass || (!all && key == shownKey[k] && !(pass && redrawn))) continue;
       shownKey[k] = key;
       drawItem(k);
+      redrawn = true;
     }
 }
 
