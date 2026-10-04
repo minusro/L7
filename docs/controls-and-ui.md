@@ -161,7 +161,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   "MENU ITEM 3" and "4" (nothing yet; an item every 10 rows, their frames
   overlapping: only the selected one's shows): a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
-  selected). The action button takes the item's colour: on a card, its
+  selected). Going to the menu, the action button is light grey (and its icon while
+  held; the selected track's panel stays grey then). The action button takes the item's colour: on a card, its
   slot's; on project-level items (export) the accent (grey, the label too, with
   nothing to export: no clips in the project's tracks or scenes, or the dummy
   project); on system-level ones (USB data mode, the placeholders: no icon) light grey (its icon light

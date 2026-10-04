@@ -180,16 +180,19 @@ static bool unavailable(int i, int icon) {
 // with icons in the accent colour while A is held. In the menu its colour
 // follows the item (menuActionColor()): a card's, or light grey on the
 // system-level ones (USB data mode). The tracks' buttons: black.
+// The action's colour: going to the menu light grey (system-level, like the
+// menu's own system items); otherwise the menu item's, or the accent.
+static uint16_t actionColor(int icon) { return icon == ICON_MENU ? LIGHT : menuActionColor(); }
+
 static uint16_t buttonBackground(int i, int icon) {
-  (void)icon;
-  if (i == STATUS_ROW) return heldAction >= 0 ? DARK : menuActionColor();
+  if (i == STATUS_ROW) return heldAction >= 0 ? DARK : actionColor(icon);
   return cellBackground(i, -1);
 }
 
 static uint16_t iconColor(int i, int icon) {
   uint16_t bg = buttonBackground(i, icon);
   if (i == STATUS_ROW) {
-    uint16_t c = menuActionColor();                  // (grey: an item that can't act; its icon black, held too)
+    uint16_t c = actionColor(icon);                  // (grey: an item that can't act; its icon black, held too)
     return heldAction >= 0 ? (unavailable(i, icon) || c == DIM ? BG : c) : unavailable(i, icon) ? DARK : BG;
   }
   if (unavailable(i, icon)) return DARK;
@@ -200,7 +203,7 @@ static uint16_t iconColor(int i, int icon) {
 
 // The selected track's panel: grey; in the
 // accent colour while A is held, with the action button (acting on the track).
-static uint16_t markColor() { return heldAction >= 0 ? ACCENT : DIM; }
+static uint16_t markColor() { return heldAction >= 0 && heldAction != ICON_MENU ? ACCENT : DIM; }   // (going to the menu: not the track)
 
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
