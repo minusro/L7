@@ -50,7 +50,7 @@ static constexpr int LOGO_W = 138, LOGO_H = 65;     // (55 x 26 units at 2.5: dr
 static constexpr int TEXT_GAP = 22;               // logo to text (the copyright sign's top), px
 static constexpr int TEXT_PX = 2, TEXT_ROWS = 7, TEXT_H = TEXT_ROWS * TEXT_PX;   // the app's font blocks; the text's block rows (the copyright sign's)
 static constexpr int GROUP_H = LOGO_H + TEXT_GAP + TEXT_H;   // logo, gap, text
-static constexpr int GROUP_DOWN = 8;                 // the group sits this far below the middle, px
+static constexpr int GROUP_DOWN = 16;                // the group sits this far below the middle, px
 static constexpr int LOGO_RIGHT = 8;                 // the logo this far right of the middle, px (the text stays centred)
 static constexpr int LOGO_X = (320 - LOGO_W) / 2 + LOGO_RIGHT, LOGO_Y = (240 - GROUP_H) / 2 + GROUP_DOWN;
 // The splash's animation, in ms from showSplash(): the logo fades in from
@@ -63,6 +63,10 @@ static constexpr uint32_t LOGO_FADE_MS = 500, HUE_MS = 2000, TEXT_FROM_MS = 1500
 // slowing down (cubic ease-out) until they're in place at 1 s.
 static constexpr uint32_t SLIDE_MS = 1000;
 static constexpr int SLIDE_PX = 600;
+// And the copyright line drops into place from 16 px (8 blocks) higher as it
+// fades in, slowing down the same way, in place 1 s after its fade starts.
+static constexpr uint32_t DROP_MS = 1000;
+static constexpr int DROP_PX = 16;
 static constexpr uint32_t OUT_FROM_MS = 3500, OUT_MS = 500;
 static constexpr uint32_t SPLASH_MIN_MS = OUT_FROM_MS + OUT_MS;
 static uint32_t shownAt = 0;
@@ -157,6 +161,7 @@ static int copyrightX = 0;
 // copyright line fading in.
 void splashTick() {
   static uint16_t shownLogo = 0, shownText = 0;
+  static int shownTextY = -1;
   static int shownShift = -1;
   uint32_t ms = millis() - shownAt;
   uint16_t logo;
@@ -177,9 +182,14 @@ void splashTick() {
   }
   uint32_t into = ms < TEXT_FROM_MS ? 0 : min(ms - TEXT_FROM_MS, TEXT_FADE_MS);
   uint16_t text = blend565(blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / TEXT_FADE_MS)), BG, out);
-  if (text != shownText) {
+  float drop = 1 - min(1.0f, (ms < TEXT_FROM_MS ? 0 : ms - TEXT_FROM_MS) / (float)DROP_MS);   // of the drop
+  int y = TEXT_Y_SPLASH - (int)lroundf(DROP_PX * drop * drop * drop);
+  if (text != shownText || y != shownTextY) {
+    if (shownTextY >= 0 && y > shownTextY)       // moved down: what it left above cleared
+      board.tft().fillRect(copyrightX, shownTextY, textWidthPx(COPYRIGHT), y - shownTextY, BG);
     shownText = text;
-    drawLine(copyrightX, TEXT_Y_SPLASH, COPYRIGHT, text);
+    shownTextY = y;
+    drawLine(copyrightX, y, COPYRIGHT, text);
   }
 }
 
