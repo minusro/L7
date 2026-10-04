@@ -126,7 +126,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   cell it shows the master volume instead: 22 vertical lines across the cell
   (one per step, 1.5 dB each, the top one unity), dark accent up to the
   volume and dark grey above it; their upper halves meter the left output, the
-  lower halves the right (accent, the top line 0 dBFS).
+  lower halves the right (the top line 0 dBFS): accent up to the level now, a
+  white line at the meter's (falling) peak, from silence each time it shows.
 * Track buttons: the track's number (tracks count from the bottom: 1 is
   just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent
