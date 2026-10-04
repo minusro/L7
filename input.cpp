@@ -79,9 +79,24 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
   }
   // The menu's items: the arrows move its selection; A or B (either, or both
-  // at once) runs the action button's action.
+  // at once) runs the action button's action. Loading (or adding) a project
+  // waits until they're let go.
+  static int loadOnRelease = -1;                     // the slot to load then, or -1
   if (menuOpen() && !menuOnStatus()) {
     uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
+    if (loadOnRelease >= 0 && !(keys & act)) {
+      int slot = loadOnRelease;
+      loadOnRelease = -1;
+      int row, cell;
+      mainSelection(row, cell);
+      projectSetSelection(row, cell);                // (the project left keeps its selection)
+      if (projectLoad(slot)) {
+        closeMenu();
+        takeProjectSelection();
+        for (int i = 0; i < ROWS; i++) drawTrack(i);
+        return;
+      }
+    }
     if ((pressed & act) && !((keys & ~pressed) & act)) {   // (the second of the two: nothing more)
       noteActionPress();
       int slot = menuSlot();
@@ -90,15 +105,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         projectFilled(slot) ? projectCut(slot) : projectPaste(slot);   // (SHIFT+A or SHIFT+B)
         drawMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
-      } else {                                       // A: load it (an empty slot: a new project), back to the looper
-        int row, cell;
-        mainSelection(row, cell);
-        projectSetSelection(row, cell);              // (the project left keeps its selection)
-        if (projectLoad(slot)) {
-          closeMenu();
-          takeProjectSelection();
-          for (int i = 0; i < ROWS; i++) drawTrack(i);
-        }
+      } else {                                       // A: load it (an empty slot: a new project) once let go, back to the looper
+        loadOnRelease = slot;
       }
     } else if (!(pressed & act)) {
       bool went = menuKeys(pressed);
