@@ -3,14 +3,14 @@
 // width. Opened with B+A (or A on the scene cell); left by loading a project
 // (A on the loaded one: just back). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
-// "ENTER USB DATA MODE" (nothing yet; room left under them for two more). A runs
+// "ENTER USB DATA MODE" and six DUMMY items (nothing yet), scrolling, four in view. A runs
 // the action button's action when let go. On a slot, A loads its project (an
 // empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project (a second A confirms), or pastes
 // one into an empty slot. START works here too.
 //
 // Items, in selection order: the cards 0-11 (rows of four, top first), then
-// the list's 12 and 13 (the looper's own selection is kept meanwhile and
+// the list's 12-19 (the looper's own selection is kept meanwhile and
 // comes back when the menu closes). UP/DOWN go card row to card row and on
 // into the list (back up: to the column it came from); LEFT/RIGHT through
 // everything in order. It opens on the loaded project's card (the dummy
@@ -29,10 +29,12 @@
 
 uint32_t uiGeneration = 1;
 
-// The list: its items, in the room for LIST_ROOM (two more to come: their
-// places stay empty for now).
-static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER USB DATA MODE"};
+// The list: its items, LIST_ROOM of them in view at a time (scrolling; with
+// no more than that, from the top of its room).
+static constexpr int CARDS = PROJECTS, LIST = 8, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER USB DATA MODE", "DUMMY 1", "DUMMY 2",
+                                         "DUMMY 3", "DUMMY 4", "DUMMY 5", "DUMMY 6"};   // (DUMMY: for trying the scrolling)
+static int listTop = 0;                          // the list's first item in view
 
 static bool shown = false;
 static int menuSel = 0;                          // the selected item
@@ -120,7 +122,7 @@ static Shape itemShape(int k) {
   // left-aligned in it).
   int w = 0;
   for (const char *label : LABELS) w = max(w, textWidth(label) / PX);
-  return {(320 / PX - w) / 2, LIST_Y + (k - CARDS) * LIST_PITCH, w, FONT_H / PX, 0};
+  return {(320 / PX - w) / 2, LIST_Y + (k - CARDS - listTop) * LIST_PITCH, w, FONT_H / PX, 0};   // (in view: listInView())
 }
 
 // The selected item's frame, as the looper's cells': light grey; white while
@@ -133,7 +135,20 @@ static uint16_t frameColor() {
   return k & m8::BTN_EDIT ? DIM : k && !(k & ~arrows) && movedHere ? INK : LIGHT;
 }
 
+static bool listInView(int k) { return k < CARDS || (k - CARDS >= listTop && k - CARDS < listTop + LIST_ROOM); }
+
+// Scrolls the list after its selection moved to item i (dir: 1 down, -1 up,
+// 0: just into view): two items past it that way stay in view where there
+// are any; the view never runs past the list's ends (no empty places).
+static void scrollList(int i, int dir) {
+  if (dir > 0) listTop = max(listTop, min(i + 2, LIST - 1) - (LIST_ROOM - 1));
+  if (dir < 0) listTop = min(listTop, max(i - 2, 0));
+  listTop = constrain(listTop, i - (LIST_ROOM - 1), i);   // (in view)
+  listTop = constrain(listTop, 0, max(0, LIST - LIST_ROOM));
+}
+
 static void drawItem(int k) {
+  if (!listInView(k)) return;
   auto &t = board.tft();
   Shape s = itemShape(k);
   bool sel = k == menuSel && !onStatus;
@@ -181,6 +196,7 @@ uint16_t menuActionColor() {
 static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
+         (uint32_t)(listInView(k) ? 1 : 0) << 4 |
          (uint32_t)(sel ? frameColor() : 0) << 8;
 }
 
@@ -188,12 +204,19 @@ void drawMenu() {
   static uint32_t shownKey[ITEMS];
   static uint32_t drawn = 0;                     // uiGeneration when last drawn whole
   if (!shown) return;
+  static int shownTop = -1;
   bool all = drawn != uiGeneration;
   if (all) {
     drawn = uiGeneration;
     board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);   // (where the track rows were)
     board.tft().fillRect(0, STATUS_TOP, BUTTON_X, 240 - STATUS_TOP, BG);   // and the status row's cells: only its button shows
+  } else if (shownTop != listTop) {               // scrolled: the list's room cleared, its items redrawn
+    Shape s = itemShape(CARDS + listTop);
+    board.tft().fillRect((s.x - LIST_SPACE - 1) * PX, (s.y - LIST_SPACE - 1) * PX, (s.w + 2 * LIST_SPACE + 2) * PX,
+                         ((LIST_ROOM - 1) * LIST_PITCH + s.h + 2 * LIST_SPACE + 2) * PX, BG);
+    for (int k = CARDS; k < ITEMS; k++) shownKey[k] = ~0u;
   }
+  shownTop = listTop;
   // Unselected first: frames that touch a neighbour's space don't get wiped.
   for (int pass = 0; pass < 2; pass++)
     for (int k = 0; k < ITEMS; k++) {
@@ -210,6 +233,7 @@ void menuLeaveStatus() {
   onStatus = false;
   statusCell = selectedCellIn(STATUS_ROW);
   menuSel = ITEMS - 1;                           // the list's last item
+  scrollList(LIST - 1, 0);
   movedHere = true;
   selected = mainRow;
   selectedCell = mainCell;
@@ -235,6 +259,7 @@ bool menuKeys(uint8_t pressed) {
     if (pressed & m8::BTN_DOWN && k < ITEMS - 1) k++;
   }
   if (pressed & arrows) movedHere = k != menuSel;
+  if (k >= CARDS && k != menuSel) scrollList(k - CARDS, k > menuSel ? 1 : -1);
   menuSel = k;
   drawMenu();
   return movedHere;
@@ -280,5 +305,6 @@ void restoreMenu(int state) {
   int sel = state % 1000;
   menuSel = constrain(sel, 0, ITEMS - 1);         // (saved on the status row, before it was hidden: the list's end)
   if (menuSel < CARDS) cardCol = menuSel % COLS;
+  if (menuSel >= CARDS) scrollList(menuSel - CARDS, 0);
   if (state >= 1000) openMenu();
 }

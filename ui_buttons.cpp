@@ -51,7 +51,7 @@ static int actionIcon() {
   bool shift = board.keys() & m8::BTN_SHIFT;
   if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
     int slot = menuSlot();
-    if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : ICON_USB;
+    if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : menuListItem() == 1 ? ICON_USB : ICON_NONE;   // (DUMMY: none)
     if (shift) return projectFilled(slot) ? (cutConfirmSlot() == slot ? ICON_CHECK : ICON_CUT) : ICON_PASTE;
     return projectFilled(slot) ? ICON_LOAD : ICON_NEW;
   }

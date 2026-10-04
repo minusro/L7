@@ -208,6 +208,9 @@ int main(int argc, char **argv) {
   menuKeys(m8::BTN_LEFT);
   for (int i = 0; i < 4; i++) menuKeys(m8::BTN_DOWN);   // down to the list's second item
   render(out + "/ui_menu_button.png");
+  for (int i = 0; i < 4; i++) menuKeys(m8::BTN_DOWN);   // down the list: scrolled (DUMMY 5)
+  render(out + "/ui_menu_scrolled.png");
+  for (int i = 0; i < 4; i++) menuKeys(m8::BTN_UP);
   menuKeys(m8::BTN_UP);                            // the list's first item: export
   render(out + "/ui_menu_export.png");
   closeMenu();
