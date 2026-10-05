@@ -176,7 +176,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   writes everything out, then shows the card to a computer over USB as a
   mounted drive (USB mass storage, see usb_drive.h; it mounts like a flash
   drive on macOS, Windows and Linux) under a screen with the title going
-  round the hues and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
+  round the hues (the L7 logo, in the menu's corner place and size, in the same
+  colour at all times) and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
   COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or holding B
   for a second, leaves it by restarting the app (the computer may have changed
   any file). Four in

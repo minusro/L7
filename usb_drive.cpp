@@ -19,6 +19,13 @@ static void centred(int y, const char *text, uint16_t ink) {
   drawText((320 - w) / 2 / PX * PX, y, text, ink, BG);
 }
 
+// The title and the corner logo (where and as big as the menu's), in one colour; drawn over
+// themselves, no clearing first: no flicker.
+static void titleAndLogo(uint16_t c) {
+  drawText((320 - textWidth("STORAGE MODE")) / 2 / PX * PX, 88, "STORAGE MODE", c, BG);
+  drawSmallLogo(PX, STATUS_TOP, c);
+}
+
 #if defined(USB_SERIAL_MSC)
 extern "C" volatile uint8_t usb_configuration;
 
@@ -57,6 +64,7 @@ bool usbDriveMode() {
   auto &t = board.tft();
   t.fillScreen(BG);
   centred(88, "STORAGE MODE", hueCycle(0));
+  drawSmallLogo(PX, STATUS_TOP, hueCycle(0));
   centred(176, "EJECT OR HOLD B TO EXIT", DIM);
   uiGeneration++;
 
@@ -86,7 +94,7 @@ bool usbDriveMode() {
       uint16_t c = hueCycle((millis() % 4000) / 4000.0f);
       if (c != hue) {
         hue = c;
-        drawText((320 - textWidth("STORAGE MODE")) / 2 / PX * PX, 88, "STORAGE MODE", c, BG);   // (over itself: no clearing, no flicker)
+        titleAndLogo(c);
       }
     }
     int state = !usb_configuration ? 0 : usb_msc_host_seen() ? 2 : 1;
@@ -118,6 +126,7 @@ bool usbDriveMode() {
   auto &t = board.tft();
   t.fillScreen(BG);
   centred(88, "STORAGE MODE", hueCycle(0));
+  drawSmallLogo(PX, STATUS_TOP, hueCycle(0));
   centred(176, "EJECT OR HOLD B TO EXIT", DIM);
   uiGeneration++;
 
@@ -140,7 +149,7 @@ bool usbDriveMode() {
       uint16_t c = hueCycle((millis() % 4000) / 4000.0f);
       if (c != hue) {
         hue = c;
-        drawText((320 - textWidth("STORAGE MODE")) / 2 / PX * PX, 88, "STORAGE MODE", c, BG);   // (over itself: its box redrawn whole, no clearing first)
+        titleAndLogo(c);
       }
     }
     int state = !usb_configuration ? 0 : MTP ? 2 : 1;
