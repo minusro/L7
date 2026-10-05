@@ -1,4 +1,4 @@
-// usb_drive.h — USB drive mode: the SD card shown to a computer over USB.
+// usb_drive.h — Storage mode (USB drive mode): the SD card shown to a computer over USB.
 //
 // The card is shared with MTP, the protocol phones use: build with "USB Type:
 // Serial + MTP Disk (Experimental)" (arduino-cli: teensy:avr:teensy40:usb=serialmtp).

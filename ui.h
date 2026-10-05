@@ -140,7 +140,7 @@ int menuSlot();                          // the project slot selected in the men
 bool menuOnList();                       // the selection on the menu's list (EXPORT ABLETON PROJECT ...)
 uint16_t menuActionColor();
 uint16_t actionRestColor();              // the action button's colour when not pressed (ui_buttons.cpp; grey: it can't act)              // the action button's colour (the accent, a card's, light grey)
-int menuListItem();                      // which of its items (0: export, 1: USB drive mode), or -1
+int menuListItem();                      // which of its items (0: export, 1: storage mode), or -1
 void menuExportStatus(const char *text); // the export item's label for now ("EXPORTING 3/14"; nullptr: its own)
 // The menu's state for the session: its selection (an item, or 100 + the
 // status row's cell), + 1000 while it's open. restoreMenu() puts it back

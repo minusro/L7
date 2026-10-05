@@ -68,7 +68,7 @@
   `A13333`, `A23333` and `B43333` can all exist), and SHIFT + LEFT/RIGHT steps
   through them in name order.
 
-## USB drive mode (2026-10-05)
+## Storage mode, over USB (2026-10-05)
 
 * The Teensy 4 core has no USB mass-storage type, so the card is shared over
   MTP: the sketch is built with USB type "Serial + MTP Disk (Experimental)"

@@ -3,7 +3,7 @@
 // width. Opened with A on the scene cell, or by stopping the clock; left by loading a project
 // (A on the loaded one: just back). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
-// "USB DRIVE MODE" (nothing yet); it scrolls once it has more than four. A runs
+// "ENTER STORAGE MODE"; it scrolls once it has more than four. A runs
 // the action button's action when let go. On a slot, A loads its project (an
 // empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project (a second A confirms), or pastes
@@ -34,7 +34,7 @@ uint32_t uiGeneration = 1;
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
 static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "USB DRIVE MODE"};
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE"};
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), until the selection moves or the menu closes.
 static char exportText[24];
@@ -138,11 +138,14 @@ static Shape itemShape(int k) {
 
 // The selected item's frame, as the looper's cells': light grey; white while
 // only arrows are held and the last press moved the selection; grey while A
-// is held (B: no change, it only leads to leaving).
+// is held (B: no change, it only leads to leaving); on a card, in the
+// project's colour while an action button (A, B or START) is held.
 static bool movedHere = false;                   // the last arrow press moved the menu's selection
 static uint16_t frameColor() {
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
+  if (menuSel < CARDS && !onStatus && (k & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY)))
+    return PROJECT_COLORS[menuSel];                // an action button held on a card: its frame in the project's colour
   return k & m8::BTN_EDIT ? DIM : k && !(k & ~arrows) && movedHere ? INK : LIGHT;
 }
 
@@ -157,10 +160,6 @@ static void scrollList(int i, int dir) {
   listTop = constrain(listTop, i - (LIST_ROOM - 1), i);   // (in view)
   listTop = constrain(listTop, 0, max(0, LIST - LIST_ROOM));
 }
-
-// An action button held (A, B or START) on the selected item: a card then
-// looks pressed.
-static bool actionHeld() { return board.keys() & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY); }
 
 static void drawItem(int k) {
   if (!listInView(k)) return;
@@ -181,11 +180,7 @@ static void drawItem(int k) {
     bool filled = projectFilled(k), loaded = k == projectCurrent();
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
     uint16_t letter = loaded ? BG : filled ? color : sel ? LIGHT : DIM;   // (an empty slot's: grey, light grey when selected)
-    if (sel && actionHeld()) {                    // pressed, whatever it holds: filled in its colour, a thick white
-      fillRing(s, 0, -s.w, color);                // outline on top, the label black
-      fillRing(s, 0, -2, INK);
-      letter = BG;
-    } else if (loaded) {                          // the loaded one: filled
+    if (loaded) {                                 // the loaded one: filled
       fillRing(s, 0, -s.w, color);
     } else if (filled) {                          // a project: a thick outline, two blocks
       fillRing(s, 0, -2, color);
@@ -214,12 +209,12 @@ static void drawItem(int k) {
 }
 
 // The action button's colour: a card's, its slot's; the system-level list
-// items' (USB drive mode), light grey; the project's own (export, the status
+// items' (storage mode), light grey; the project's own (export, the status
 // row), the accent colour.
 uint16_t menuActionColor() {
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
-  if (menuSel - CARDS >= 1) return LIGHT;          // (USB drive mode: system-level)
+  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode: system-level)
   return projectHasClips() ? ACCENT : DIM;         // export: grey with nothing to export
 }
 
@@ -228,8 +223,7 @@ static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
-         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 |
-         (uint32_t)(k == CARDS && exportText[0]) << 30;
+         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(k == CARDS && exportText[0]) << 30;
 }
 
 void drawMenu() {

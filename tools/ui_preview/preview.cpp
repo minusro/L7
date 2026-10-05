@@ -210,9 +210,9 @@ int main(int argc, char **argv) {
   render(out + "/ui_menu_button.png");
   menuKeys(m8::BTN_UP);                            // the list's first item: export
   render(out + "/ui_menu_export.png");
-  menuKeys(m8::BTN_LEFT);                          // a card with A held: the pressed look
+  menuKeys(m8::BTN_LEFT);                          // a card with A held: its frame in the project's colour
   board.heldKeys = m8::BTN_EDIT;
-  render(out + "/ui_menu_pressed.png");
+  render(out + "/ui_menu_held.png");
   board.heldKeys = 0;
   closeMenu();
   return 0;

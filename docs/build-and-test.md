@@ -3,7 +3,7 @@
 ## Firmware
 
 Teensyduino 1.62, board `teensy:avr:teensy40`, **USB type "Serial + MTP Disk
-(Experimental)"** (`usb=serialmtp`, for USB drive mode, see usb_drive.h; with
+(Experimental)"** (`usb=serialmtp`, for storage mode, see usb_drive.h; with
 plain "Serial" the menu item does nothing), 600 MHz.
 Libraries: ILI9341_t3n (KurtE), Audio, SD/SdFat (bundled).
 

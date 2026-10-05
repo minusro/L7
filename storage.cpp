@@ -215,7 +215,7 @@ static_assert(SAMPLE_TAG_OFFSET + 4 <= WAV_DATA_OFFSET - 8, "the overview and na
 
 // The samples holding recordings: their ids, sorted (the order of their
 // names). In RAM1 (20 KB; RAM2 is left to the rings, and to the MTP buffers
-// of USB drive mode).
+// of storage mode).
 static uint32_t sampleIds[MAX_SAMPLES];
 static int sampleTotal = 0;
 static uint32_t lastOrder = 0;                   // the latest recording's order (kept in its header)

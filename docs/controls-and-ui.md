@@ -165,17 +165,14 @@ A recording track's waveform area is in the accent colour (a block of black betw
   loaded, the splash's turquoise). The loaded project's card is filled with
   it, its letter (the project's name) black; another
   project's is a thick outline (two blocks) in its colour, the letter in it too.
-  An empty slot is a grey outline, its letter grey (light grey when selected).
-  While an action button (A, B or START) is held on the selected card, whatever
-  it holds, it looks pressed: filled in its colour, with a thick white
-  outline on top and a black letter. In the bottom
+  An empty slot is a grey outline, its letter grey (light grey when selected). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
   in the action button's colour (not its pressed look: it stays put while A is held). Under them
-  a list, "EXPORT ABLETON PROJECT" and "USB DRIVE MODE". Export
+  a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/Ableton/L7 A005/` (ableton.h), its label showing "EXPORTING
   3/14" (samples copied, then the set) and then "SAVED AS L7 A005" (or "EXPORT
-  FAILED") until the selection moves. USB drive mode (A or B, on release):
+  FAILED") until the selection moves. Storage mode (A or B, on release):
   writes everything out, then shows the card to a computer over USB (MTP, see
   usb_drive.h: Windows/Linux file managers, on macOS an MTP app such as
   Android File Transfer) under a screen with the title going round the hues and
@@ -192,10 +189,11 @@ A recording track's waveform area is in the accent colour (a block of black betw
   icon while held; the selected track's panel stays grey then). The action button takes the item's colour: on a card, its
   slot's; on project-level items (export) the accent (grey, the label too, with
   nothing to export: no clips in the project's tracks or scenes, or the dummy
-  project); on system-level ones (USB drive mode) light grey (its icon light
+  project); on system-level ones (storage mode) light grey (its icon light
   grey while pressed too). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
-  is held (not B), corners cut; round a card one block out (following its
+  is held (not B; on a card, an action button A, B or START held turns it to the project's
+  colour), corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
   action button shows load (a small play) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (the button grey when it can't act: recording, another copy

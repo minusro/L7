@@ -30,11 +30,11 @@ bool usbDriveMode() {
 
   auto &t = board.tft();
   t.fillScreen(BG);
-  centred(88, "USB DRIVE MODE", hueCycle(0));
+  centred(88, "STORAGE MODE", hueCycle(0));
   centred(176, "HOLD B TO EXIT", DIM);
   uiGeneration++;
 
-  Serial.println("USB drive mode: started");
+  Serial.println("storage mode: started");
   MTP.begin();
   MTP.addFilesystem(SD, "L7");
 
@@ -53,7 +53,7 @@ bool usbDriveMode() {
       uint16_t c = hueCycle((millis() % 4000) / 4000.0f);
       if (c != hue) {
         hue = c;
-        drawText((320 - textWidth("USB DRIVE MODE")) / 2 / PX * PX, 88, "USB DRIVE MODE", c, BG);   // (over itself: its box redrawn whole, no clearing first)
+        drawText((320 - textWidth("STORAGE MODE")) / 2 / PX * PX, 88, "STORAGE MODE", c, BG);   // (over itself: its box redrawn whole, no clearing first)
       }
     }
     int state = !usb_configuration ? 0 : MTP ? 2 : 1;
@@ -61,7 +61,7 @@ bool usbDriveMode() {
       shown = state;
       static const char *const TEXT[3] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED"};
       centred(120, TEXT[state], state == 2 ? INK : LIGHT);
-      Serial.printf("USB drive mode: %s\n", TEXT[state]);
+      Serial.printf("storage mode: %s\n", TEXT[state]);
     }
     if (board.keys() & m8::BTN_OPT) {
       if (!heldSince) heldSince = millis();
