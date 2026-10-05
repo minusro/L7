@@ -4,10 +4,10 @@
 
 static constexpr int ALS_ID_BASE = 20000, ALS_TRACK_IDS = 122;
 // Each track's ids: ALS_ID_BASE + its place (0-6) * ALS_TRACK_IDS + these.
-static constexpr int ALS_VOLUME_MOD = 10;
-static constexpr int ALS_PAN_MOD = 4;
-static constexpr int ALS_LP_CUTOFF_MOD = 34;
-static constexpr int ALS_HP_CUTOFF_MOD = 82;
+static constexpr int ALS_VOLUME_AT = 9;
+static constexpr int ALS_PAN_AT = 3;
+static constexpr int ALS_LP_CUTOFF_AT = 33;
+static constexpr int ALS_HP_CUTOFF_AT = 81;
 
 PROGMEM static const char ALS_SET[] =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"

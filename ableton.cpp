@@ -119,6 +119,7 @@ static struct {
   TrackUnit unit;                                // the clip's
   SampleDetails sample;
   uint32_t loopStart, loopEnd, start;            // beats
+  int event;                                     // the next envelope event's id
 } x;
 
 static void putNumber(double v) {
@@ -160,6 +161,40 @@ static void clipSlots(bool freeze) {
     if (x.start >= x.loopEnd - x.loopStart) x.start = 0;
     emit(ALS_CLIP_SLOT);
   }
+}
+
+// ---- A clip's envelopes: its track's volume, balance (as pan) and filter points,
+// each a flat line (a value at the start and at 0), so the clip sets the
+// track's mixer and Auto Filters as the clip does in the app. Values as Live
+// keeps them: volume a gain (1: 0 dB), pan -1..1, a cutoff a note number
+// (Hz = 440 * 2^((n - 69) / 12), 20-135; 135 and 20: fully open).
+static float cutoffNote(float hz) { return constrain(69 + 12 * log2f(hz / 440.0f), 20.0f, 135.0f); }
+
+static void envelope(int id, int target, float value) {
+  char b[900];
+  snprintf(b, sizeof b,
+           "<ClipEnvelope Id=\"%d\">\n<EnvelopeTarget>\n<PointeeId Value=\"%d\" />\n</EnvelopeTarget>\n<Automation>\n<Events>\n"
+           "<FloatEvent Id=\"%d\" Time=\"-63072000\" Value=\"%.9g\" />\n<FloatEvent Id=\"%d\" Time=\"0\" Value=\"%.9g\" />\n</Events>\n"
+           "<AutomationTransformViewState>\n<IsTransformPending Value=\"false\" />\n<TimeAndValueTransforms />\n</AutomationTransformViewState>\n"
+           "</Automation>\n<LoopSlot>\n<Value />\n</LoopSlot>\n<ScrollerTimePreserver>\n<LeftTime Value=\"0\" />\n<RightTime Value=\"0\" />\n"
+           "</ScrollerTimePreserver>\n</ClipEnvelope>\n",
+           id, ALS_ID_BASE + x.place * ALS_TRACK_IDS + target, x.event, value, x.event + 1, value);
+  x.event += 2;
+  gz.puts(b);
+}
+
+static void clipEnvelopes() {
+  const TrackUnit &u = x.unit;
+  float gain = u.volume <= 0 ? 0.0f : powf(10.0f, (u.volume - VOLUME_UNITY) * VOLUME_STEP_DB / 20.0f);
+  float pan = (float)u.balance / BALANCE_MAX;
+  float lp = u.filterHi >= FILTER_MAX ? 135.0f : cutoffNote(filterStepHz(max((int)u.filterHi, 0)));
+  float hp = u.filterLo <= 0 ? 20.0f : cutoffNote(filterStepHz(min((int)u.filterLo, FILTER_MAX)));
+  gz.puts("<Envelopes>\n");
+  envelope(0, ALS_VOLUME_AT, gain);
+  envelope(1, ALS_PAN_AT, pan);
+  envelope(2, ALS_LP_CUTOFF_AT, lp);
+  envelope(3, ALS_HP_CUTOFF_AT, hp);
+  gz.puts("</Envelopes>\n");
 }
 
 static void field(char code) {
@@ -208,7 +243,7 @@ static void field(char code) {
     // tempo (its frames per beat; the file says 44100 Hz).
     case 'w': putNumber((double)x.sample.loopBars * BEATS_PER_BAR * x.sample.spb / 44100.0); break;
     case 'W': putNumber(x.sample.loopBars * BEATS_PER_BAR); break;
-    case 'E': gz.puts("<Envelopes />"); break;
+    case 'E': clipEnvelopes(); break;
   }
 }
 
@@ -283,6 +318,7 @@ int exportProject(int p, void (*progress)(int done, int total)) {
   if (p < 0 || p >= PROJECTS || transport.running || recording.mode != Recording::Idle) return 0;
   x.p = p;
   x.color = liveColorFor(PROJECT_COLORS[p]);
+  x.event = 1;
   int scenes, current;
   if (!projectInfo(p, scenes, x.tempo, current)) return 0;
   // Its scenes with clips (an empty one, as the empty scene 0* is, left out).

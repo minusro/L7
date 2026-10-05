@@ -132,8 +132,16 @@ loaded or pasted to (a short stall if playing), so saving never allocates.
   refuses control characters in names, so `patch.py` also lets it take a CR
   (re-run it after a Teensyduino update). Checked on a FAT disk image: macOS
   read the flags and the icon from such files.
-* Still to do: each clip's volume, pan and filter frequencies as clip
-  modulation envelopes (flat lines), waiting for an example set from Live.
+* Each clip has four clip envelopes, flat lines (a value at the start and at
+  0): its track's volume (a gain: 0 dB = 1, from the volume step), pan
+  (balance / BALANCE_MAX) and the two Auto Filters' cutoffs (a note number,
+  Hz = 440 * 2^((n - 69) / 12), 20-135; fully open: 135 lowpass, 20 highpass).
+  Every clip sets all four, so a clip with open filters resets what the one
+  before it left. They point at the parameters' automation targets (the
+  structure and ids as in a set with clip envelopes drawn in Live,
+  `docs/design/ableton/L7 Test 2 Project`). The scaling of volume and pan
+  isn't from a Live example (only the lowpass cutoff was drawn there): Live's
+  usual ranges, to be checked in Live.
 
 ## Open ideas (not started)
 

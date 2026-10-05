@@ -10,7 +10,8 @@
 // as the empty scene 0* is, left out; then one empty scene last), each track's clip in it
 // where the track has one: the sample in Re-Pitch warp mode, its loop and
 // start position as the track's range and start position, deactivated if the
-// track is muted there; the project's current scene's clips saved as playing.
+// track is muted there; the project's current scene's clips saved as playing;
+// each clip's volume, pan and filter points as flat clip envelopes.
 // Scenes are unnamed; the tracks and clips take the Live palette colour
 // nearest the project's. The folder has Live's icon on a Mac ("Icon\r" and
 // the AppleDouble files that give it, ableton_icon.h, tools/ableton/make_icon.py;

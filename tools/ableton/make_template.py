@@ -13,7 +13,7 @@ Fields:
          M its clip slots   F its freeze slots   S the slot playing when saved (-2: none)
   slot:  k its index
   clip:  c colour index   k index  b/e start/end  s/l loop start/end  r start, from the loop's start
-         o end marker  m name  E its envelopes  d disabled (muted)  p/P file path
+         o end marker  m name  E its envelopes (written by ableton.cpp)  d disabled (muted)  p/P file path
          z file size  u frames  w/W the second warp marker's seconds/beats
   scene: k its index   m its name
 """
@@ -77,16 +77,17 @@ def main(src, dst):
     ls = root.find('LiveSet')
     track0 = ls.find('Tracks')[0]
 
-    # The ids the clip envelopes point at (modulation targets): the mixer's
+    # The ids the clip envelopes point at (the parameters' automation targets, as in
+    # a set with clip envelopes: docs/design/ableton/L7 Test 2 Project): the mixer's
     # volume and pan, the two Auto Filters' cutoffs (lowpass first).
     mixer = track0.find('DeviceChain/Mixer')
-    want = {'VOLUME': mixer.find('Volume/ModulationTarget').get('Id'),
-            'PAN': mixer.find('Pan/ModulationTarget').get('Id')}
+    want = {'VOLUME': mixer.find('Volume/AutomationTarget').get('Id'),
+            'PAN': mixer.find('Pan/AutomationTarget').get('Id')}
     filters = [d for d in track0.find('DeviceChain/DeviceChain/Devices') if d.tag == 'AutoFilter']
     lp = [d for d in filters if d.find('FilterType/Manual').get('Value') == '0'][0]
     hp = [d for d in filters if d.find('FilterType/Manual').get('Value') == '1'][0]
-    want['LP_CUTOFF'] = lp.find('Cutoff/ModulationTarget').get('Id')
-    want['HP_CUTOFF'] = hp.find('Cutoff/ModulationTarget').get('Id')
+    want['LP_CUTOFF'] = lp.find('Cutoff/AutomationTarget').get('Id')
+    want['HP_CUTOFF'] = hp.find('Cutoff/AutomationTarget').get('Id')
 
     # ---- The track
     i, j = element(xml, '<AudioTrack Id="26">')
@@ -191,7 +192,7 @@ def main(src, dst):
         f.write('static constexpr int ALS_ID_BASE = %d, ALS_TRACK_IDS = %d;\n' % (ID_BASE, count))
         f.write('// Each track\'s ids: ALS_ID_BASE + its place (0-6) * ALS_TRACK_IDS + these.\n')
         for name in ['VOLUME', 'PAN', 'LP_CUTOFF', 'HP_CUTOFF']:
-            f.write('static constexpr int ALS_%s_MOD = %d;\n' % (name, places[name]))
+            f.write('static constexpr int ALS_%s_AT = %d;\n' % (name, places[name]))
         f.write('\n')
         f.write(lit('ALS_SET', s))
         f.write(lit('ALS_TRACK', track))

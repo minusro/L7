@@ -1627,6 +1627,29 @@ int main(int argc, char **argv) {
     int crc = cout ? pclose(cout) : -1;
     snprintf(m, sizeof m, "no scene named; the 7 tracks and every clip in Live colour %d, the nearest to the project's", colorIdx);
     check(crc == 0, m);
+    // Every clip's four envelopes (volume, pan, lowpass and highpass cutoff), pointing at its own track's parameters, values in range.
+    std::string ep = "python3 -c \"import gzip,sys,os,xml.etree.ElementTree as E\n"
+                     "d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read()); n=0; bad=0; vals=set()\n"
+                     "for t in r.find('LiveSet/Tracks'):\n"
+                     " m=t.find('DeviceChain/Mixer'); af=[a for a in t.iter('AutoFilter')]\n"
+                     " lp=[a for a in af if a.find('FilterType/Manual').get('Value')=='0'][0]; hp=[a for a in af if a.find('FilterType/Manual').get('Value')=='1'][0]\n"
+                     " want=[m.find('Volume/AutomationTarget').get('Id'),m.find('Pan/AutomationTarget').get('Id'),lp.find('Cutoff/AutomationTarget').get('Id'),hp.find('Cutoff/AutomationTarget').get('Id')]\n"
+                     " lim=[(0,2),(-1,1),(20,135),(20,135)]\n"
+                     " for c in t.iter('AudioClip'):\n"
+                     "  es=c.findall('Envelopes/Envelopes/ClipEnvelope'); n+=1\n"
+                     "  if [e.find('EnvelopeTarget/PointeeId').get('Value') for e in es]!=want: bad+=1; continue\n"
+                     "  for e,(lo,hi) in zip(es,lim):\n"
+                     "   v=[float(x.get('Value')) for x in e.findall('Automation/Events/FloatEvent')]\n"
+                     "   if len(v)!=2 or v[0]!=v[1] or not lo<=v[0]<=hi: bad+=1\n"
+                     "   vals.add(round(v[0],3))\n"
+                     "ids=[x.get('Id') for x in r.iter('FloatEvent') if x.get('Time') in ('0','-63072000')]\n"
+                     "print(n,bad); sys.exit(0 if n and not bad else 1)\" '" + dir + "'";
+    FILE *eout = popen(ep.c_str(), "r");
+    int envClips = -1, envBad = -1;
+    if (eout) { if (fscanf(eout, "%d %d", &envClips, &envBad) != 2) envClips = -1; }
+    int erc = eout ? pclose(eout) : -1;
+    snprintf(m, sizeof m, "each of the %d clip(s) has its 4 envelopes (volume, pan, lowpass, highpass) on its own track's parameters, values in range (%d wrong)", envClips, envBad);
+    check(erc == 0, m);
     // The folder's icon for a Mac: Icon<CR>, its AppleDouble file (Finder info + the icon's fork), and the folder's own.
     auto sizeOf = [](const std::string &path) { FILE *f = fopen(path.c_str(), "rb"); long n = -1; if (f) { fseek(f, 0, SEEK_END); n = ftell(f); fclose(f); } return n; };
     long iconSize = sizeOf(dir + "/Icon\r"), forkSize = sizeOf(dir + "/._Icon\r"), folderSize;
