@@ -157,7 +157,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   project loaded, one has to be loaded or made first. Opening the menu
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.
-  Twelve project cards (three rows of four, 21×15 blocks, 4 apart across and 3 down, centred):
+  Twelve project cards (three rows of four, 21×15 blocks, 3 apart across and 3 down, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
   pastels, rose to blush, picked by the author; the loaded project's is the

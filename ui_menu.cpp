@@ -112,12 +112,12 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 }
 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
-// Cards: 21 x 15, the cut 3, 4 apart across and 3 down (neighbouring
+// Cards: 21 x 15, the cut 3, 3 apart across and 3 down (neighbouring
 // rows' frames share a row: only the selected one's shows), the last row ending at row 64 (the first from 13).
 // The list: centred under them, an item every 12 rows from row 75, on down into the status row's place (its
 // cells are hidden in the menu; the action button is clear to the right), its frame
 // round its label with 3 blocks of space.
-static constexpr int CARD_W = 21, CARD_H = 15, CARD_CUT = 3, CARD_GAP = 4, CARD_VGAP = 3;
+static constexpr int CARD_W = 21, CARD_H = 15, CARD_CUT = 3, CARD_GAP = 3, CARD_VGAP = 3;
 static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 13;
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
 // The last place's frame level with the action button (from the status row's top).
