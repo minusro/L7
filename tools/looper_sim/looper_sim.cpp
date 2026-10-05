@@ -14,6 +14,7 @@
 #include "engine.h"
 #include "storage.h"
 #include "ableton.h"
+#include "colors.h"
 
 using namespace looper;
 
@@ -1580,6 +1581,8 @@ int main(int argc, char **argv) {
     }
     int playing = 0;                               // its tracks with a clip there: saved as playing
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) playing++;
+    char colorHex[8];
+    snprintf(colorHex, sizeof colorHex, "%02X%02X%02X", (PROJECT_COLORS[2] >> 11) * 255 / 31, ((PROJECT_COLORS[2] >> 5) & 63) * 255 / 63, (PROJECT_COLORS[2] & 31) * 255 / 31);
     int first = exportProject(2), second = exportProject(2);
     std::string dir = simRoot + "/Ableton/L7 C00" + std::to_string(first);
     char m[200];
@@ -1603,6 +1606,27 @@ int main(int argc, char **argv) {
     snprintf(m, sizeof m, "scene 2's clips (set scene %d) saved as playing: %d track(s) (%d have a clip there), %d other", index + 1, saved,
              playing, other);
     check(saved == playing && other == 0 && playing > 0, m);
+    // No scene named; every track and clip in the palette colour nearest the project's (Lab distance, worked out here on its own).
+    std::string cp = "python3 -c \"import gzip,sys,os,xml.etree.ElementTree as E\n"
+                     "P='FF94A6 FFA529 CC9927 F7F47C BFFB00 1AFF2F 25FFA8 5CFFE8 8BC5FF 5480E4 92A7FF D86CE4 E553A0 FFFFFF FF3636 F66C03 99724B FFF034 87FF67 3DC300 00BFAF 19E9FF 10A4EE 007DC0 886CE4 B677C6 FF39D4 D0D0D0 "
+                     "E2675A FFA374 D3AD71 EDFFAE D2E498 BAD074 9BC48D D4FDE1 CDF1F8 B9C1E3 CDBBE4 AE98E5 E5DCE1 A9A9A9 C6928B B78256 99836A BFBA69 A6BE00 7DB04D 88C2BA 9BB3C4 85A5C2 8393CC A595B5 BF9FBE BC7196 7B7B7B "
+                     "AF3333 A95131 724F41 DBC300 85961F 539F31 0A9C8E 236384 1A2F96 2F52A2 624BAD A34BAD CC2E6E 3C3C3C'.split()\n"
+                     "def lab(h):\n"
+                     " c=[((int(h[i:i+2],16)/255+0.055)/1.055)**2.4 if int(h[i:i+2],16)/255>0.04045 else int(h[i:i+2],16)/255/12.92 for i in (0,2,4)]\n"
+                     " x=(0.4124*c[0]+0.3576*c[1]+0.1805*c[2])/0.95047; y=0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; z=(0.0193*c[0]+0.1192*c[1]+0.9505*c[2])/1.08883\n"
+                     " f=lambda t: t**(1/3) if t>0.008856 else 7.787*t+16/116\n"
+                     " return (116*f(y)-16,500*(f(x)-f(y)),200*(f(y)-f(z)))\n"
+                     "d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)+'.als').read()); w=lab(sys.argv[2])\n"
+                     "n=min(range(70),key=lambda i:sum((a-b)**2 for a,b in zip(lab(P[i]),w)))\n"
+                     "t=r.find('LiveSet/Tracks'); cl=[c.find('Color').get('Value') for c in r.iter('AudioClip')]\n"
+                     "ok=all(x.find('Color').get('Value')==str(n) for x in t) and cl and all(v==str(n) for v in cl) and all(sc.find('Name').get('Value')=='' for sc in r.find('LiveSet/Scenes'))\n"
+                     "print(n); sys.exit(0 if ok else 1)\" '" + dir + "' " + colorHex;
+    FILE *cout = popen(cp.c_str(), "r");
+    int colorIdx = -1;
+    if (cout) { if (fscanf(cout, "%d", &colorIdx) != 1) colorIdx = -1; }
+    int crc = cout ? pclose(cout) : -1;
+    snprintf(m, sizeof m, "no scene named; the 7 tracks and every clip in Live colour %d, the nearest to the project's", colorIdx);
+    check(crc == 0, m);
   }
 
   printf("random sessions\n");

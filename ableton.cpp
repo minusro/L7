@@ -1,6 +1,8 @@
 // ableton.cpp — see ableton.h
 #include "ableton.h"
 #include "storage.h"
+#include "colors.h"
+#include <math.h>
 #ifndef PROGMEM
 #define PROGMEM                                    // (the simulator)
 #endif
@@ -63,10 +65,51 @@ static struct Gzip {
   }
 } gz;
 
+// ---- Colours: Live's clip palette (index 0-69, five rows of 14; from Live 11's
+// own scripts), and the nearest one to a colour, as the eye sees it (CIE Lab).
+static const uint32_t LIVE_PALETTE[70] = {
+    0xFF94A6, 0xFFA529, 0xCC9927, 0xF7F47C, 0xBFFB00, 0x1AFF2F, 0x25FFA8, 0x5CFFE8, 0x8BC5FF, 0x5480E4, 0x92A7FF, 0xD86CE4, 0xE553A0, 0xFFFFFF,
+    0xFF3636, 0xF66C03, 0x99724B, 0xFFF034, 0x87FF67, 0x3DC300, 0x00BFAF, 0x19E9FF, 0x10A4EE, 0x007DC0, 0x886CE4, 0xB677C6, 0xFF39D4, 0xD0D0D0,
+    0xE2675A, 0xFFA374, 0xD3AD71, 0xEDFFAE, 0xD2E498, 0xBAD074, 0x9BC48D, 0xD4FDE1, 0xCDF1F8, 0xB9C1E3, 0xCDBBE4, 0xAE98E5, 0xE5DCE1, 0xA9A9A9,
+    0xC6928B, 0xB78256, 0x99836A, 0xBFBA69, 0xA6BE00, 0x7DB04D, 0x88C2BA, 0x9BB3C4, 0x85A5C2, 0x8393CC, 0xA595B5, 0xBF9FBE, 0xBC7196, 0x7B7B7B,
+    0xAF3333, 0xA95131, 0x724F41, 0xDBC300, 0x85961F, 0x539F31, 0x0A9C8E, 0x236384, 0x1A2F96, 0x2F52A2, 0x624BAD, 0xA34BAD, 0xCC2E6E, 0x3C3C3C};
+
+static void labOf(uint32_t rgb, float lab[3]) {
+  float c[3];
+  for (int i = 0; i < 3; i++) {
+    float v = ((rgb >> (16 - 8 * i)) & 0xFF) / 255.0f;
+    c[i] = v <= 0.04045f ? v / 12.92f : powf((v + 0.055f) / 1.055f, 2.4f);
+  }
+  float xyz[3] = {(0.4124f * c[0] + 0.3576f * c[1] + 0.1805f * c[2]) / 0.95047f, 0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2],
+                  (0.0193f * c[0] + 0.1192f * c[1] + 0.9505f * c[2]) / 1.08883f};
+  for (float &t : xyz) t = t > 0.008856f ? cbrtf(t) : 7.787f * t + 16.0f / 116;
+  lab[0] = 116 * xyz[1] - 16;
+  lab[1] = 500 * (xyz[0] - xyz[1]);
+  lab[2] = 200 * (xyz[1] - xyz[2]);
+}
+
+// The palette index nearest to an RGB565 colour.
+static int liveColorFor(uint16_t c565) {
+  uint32_t rgb = (uint32_t)((c565 >> 11) * 255 / 31) << 16 | (uint32_t)(((c565 >> 5) & 63) * 255 / 63) << 8 | (uint32_t)((c565 & 31) * 255 / 31);
+  float want[3];
+  labOf(rgb, want);
+  int best = 0;
+  float bestD = 1e9f;
+  for (int i = 0; i < 70; i++) {
+    float lab[3];
+    labOf(LIVE_PALETTE[i], lab);
+    float d = 0;
+    for (int k = 0; k < 3; k++) d += (lab[k] - want[k]) * (lab[k] - want[k]);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+
 // ---- The set, from the templates: their fields filled in as they're written.
 static struct {
   int p, scenes, current, number;                // scenes: those with clips; current: its place among them (-1: none)
   uint8_t pos[MAX_SCENES];                       // each one's position in the project (1..)
+  int color;                                     // the project's colour, as a Live palette index
   float tempo;
   char dir[48], name[16];                        // "/Ableton/L7 A005", "L7 A005"
   int place;                                     // the track being written: 0-6 (Live's order)
@@ -136,6 +179,7 @@ static void field(char code) {
     // a track
     case 'I': putNumber(26 + x.place); break;
     case 'n': putNumber(x.place + 1); break;
+    case 'c': putNumber(x.color); break;               // a track's, a clip's: the project's colour
     case 'i': putNumber(ALS_ID_BASE + x.place * ALS_TRACK_IDS + x.ids++); break;
     case 'M': clipSlots(false); break;
     case 'S': {                                  // the current scene's clip, saved as playing
@@ -149,7 +193,7 @@ static void field(char code) {
     case 'k': putNumber(x.slot); break;
     case 'm':
       if (x.place < NUM_TRACKS) gz.puts(x.sample.name);   // a clip: its sample's
-      else putNumber(x.pos[x.slot]);                      // a scene: its number in the project
+      /* a scene: no name */
       break;
     case 'b': case 's': putNumber(x.loopStart); break;
     case 'e': case 'l': case 'o': putNumber(x.loopEnd); break;
@@ -197,6 +241,7 @@ static int nextNumber(char letter) {
 int exportProject(int p, void (*progress)(int done, int total)) {
   if (p < 0 || p >= PROJECTS || transport.running || recording.mode != Recording::Idle) return 0;
   x.p = p;
+  x.color = liveColorFor(PROJECT_COLORS[p]);
   int scenes, current;
   if (!projectInfo(p, scenes, x.tempo, current)) return 0;
   // Its scenes with clips (an empty one, as the empty scene 0* is, left out).

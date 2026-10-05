@@ -10,6 +10,8 @@
 // where the track has one: the sample in Re-Pitch warp mode, its loop and
 // start position as the track's range and start position, deactivated if the
 // track is muted there; the project's current scene's clips saved as playing.
+// Scenes are unnamed; the tracks and clips take the Live palette colour
+// nearest the project's.
 // Made from a set Live saved (ableton_template.h, made
 // by tools/ableton/make_template.py), written as gzip with stored blocks.
 #pragma once

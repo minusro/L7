@@ -9,10 +9,10 @@ with fields marked "\\001" + a letter for ableton.cpp to fill in.
 
 Fields:
   set:   N NextPointeeId   T tempo   R the tracks   C the scenes
-  track: I its list id   n its number   i a fresh id (in order: ALS_TRACK_IDS of them)
+  track: I its list id   n its number   c its colour index   i a fresh id (in order: ALS_TRACK_IDS of them)
          M its clip slots   F its freeze slots   S the slot playing when saved (-2: none)
   slot:  k its index
-  clip:  k index  b/e start/end  s/l loop start/end  r start, from the loop's start
+  clip:  c colour index   k index  b/e start/end  s/l loop start/end  r start, from the loop's start
          o end marker  m name  E its envelopes  d disabled (muted)  p/P file path
          z file size  u frames  w/W the second warp marker's seconds/beats
   scene: k its index   m its name
@@ -104,6 +104,7 @@ def main(src, dst):
             track = cut(track, m.group(0), m.start())
     track = field(track, r'<AudioTrack Id="(\d+)"', 'I')
     track = field(track, r'<EffectiveName Value="([^"]*)"', 'n')
+    track = field(track, r'<Color Value="([^"]*)"', 'c')
     track = re.sub(r'<MemorizedFirstClipName Value="[^"]*"', '<MemorizedFirstClipName Value=""', track)
     track = field(track, r'<SavedPlayingSlot Value="([^"]*)"', 'S')
     # The clip slots (the main sequencer's, then the freeze sequencer's).
@@ -139,6 +140,7 @@ def main(src, dst):
 
     clip = field(clip, r'<ClipSlot Id="(\d+)"', 'k')
     clip = field(clip, r'<AudioClip Id="(\d+)"', 'k')
+    clip = field(clip, r'<Color Value="([^"]*)"', 'c')
     for tag, code in [('CurrentStart', 'b'), ('CurrentEnd', 'e'), ('LoopStart', 's'), ('LoopEnd', 'l'),
                       ('StartRelative', 'r'), ('OutMarker', 'o'), ('HiddenLoopStart', 's'), ('HiddenLoopEnd', 'l'),
                       ('Name', 'm'), ('Disabled', 'd'), ('RelativePath', 'p'), ('Path', 'P'),

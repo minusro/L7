@@ -110,6 +110,9 @@
   loop's end, which Live can't loop: the whole loop), deactivated where the
   track is muted; the current scene's clips saved as playing (triggered when
   the set opens).
+* Scenes have no name. The 7 tracks and every clip are coloured with the
+  palette entry of Live (the 70 clip colours) nearest, by CIE Lab distance,
+  to the project's colour (plain RGB distance picked greys).
 * Still to do: each clip's volume, pan and filter frequencies as clip
   modulation envelopes (flat lines), waiting for an example set from Live.
 

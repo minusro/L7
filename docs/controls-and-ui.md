@@ -160,7 +160,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   Twelve project cards (three rows of four, 21×15 blocks, 3 apart across and 3 down, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
-  pastels, rose to blush, picked by the author; the loaded project's is the
+  pastels, mint round to seafoam, picked by the author; the loaded project's is the
   app's accent colour, `ACCENT_DARK` at half its brightness; before one is
   loaded, the splash's turquoise). The loaded project's card is filled with
   it, its letter (the project's name) black; another
