@@ -21,7 +21,7 @@
 // in its slot's colour (colors.h): the loaded project's
 // filled, its letter A-L (the project's name) black;
 // another project's a thick (two-block) outline, the letter in the
-// slot's colour; empty, a grey outline with the letter grey (light grey when selected). The selected item's frame looks and behaves as the looper's
+// slot's colour; empty, a grey outline with the letter grey (light grey when selected, its colour while an action button is held). The selected item's frame looks and behaves as the looper's
 // cells' (frameColor()), corners cut, a block out from a card (following its
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
@@ -141,10 +141,13 @@ static Shape itemShape(int k) {
 // is held (B: no change, it only leads to leaving); on a card, in the
 // project's colour while an action button (A, B or START) is held.
 static bool movedHere = false;                   // the last arrow press moved the menu's selection
+// An action button held (A, B or START).
+static bool actionHeld() { return board.keys() & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY); }
+
 static uint16_t frameColor() {
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
-  if (menuSel < CARDS && !onStatus && (k & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY)))
+  if (menuSel < CARDS && !onStatus && actionHeld())
     return PROJECT_COLORS[menuSel];                // an action button held on a card: its frame in the project's colour
   return k & m8::BTN_EDIT ? DIM : k && !(k & ~arrows) && movedHere ? INK : LIGHT;
 }
@@ -179,7 +182,7 @@ static void drawItem(int k) {
     uint16_t color = PROJECT_COLORS[k];
     bool filled = projectFilled(k), loaded = k == projectCurrent();
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
-    uint16_t letter = loaded ? BG : filled ? color : sel ? LIGHT : DIM;   // (an empty slot's: grey, light grey when selected)
+    uint16_t letter = loaded ? BG : filled || (sel && actionHeld()) ? color : sel ? LIGHT : DIM;   // (an empty slot's: grey, light grey when selected, its colour while an action button is held)
     if (loaded) {                                 // the loaded one: filled
       fillRing(s, 0, -s.w, color);
     } else if (filled) {                          // a project: a thick outline, two blocks
@@ -223,7 +226,7 @@ static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
-         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(k == CARDS && exportText[0]) << 30;
+         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(k == CARDS && exportText[0]) << 30;
 }
 
 void drawMenu() {
