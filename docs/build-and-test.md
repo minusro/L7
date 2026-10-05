@@ -2,14 +2,18 @@
 
 ## Firmware
 
-Teensyduino 1.62, board `teensy:avr:teensy40`, **USB type "Serial + MTP Disk
-(Experimental)"** (`usb=serialmtp`, for storage mode, see usb_drive.h; with
-plain "Serial" the menu item does nothing), 600 MHz.
+Teensyduino 1.62, board `teensy:avr:teensy40`, **USB type "Serial + Mass Storage
+(L7 patch)"** (`usb=serialmsc`, for storage mode, see usb_drive.h; with plain
+"Serial" the menu item does nothing), 600 MHz. That type isn't in Teensyduino:
+run `python3 tools/teensy_msc/patch.py` once (and again after a Teensyduino
+update; `--undo` restores the originals) before building. Without the patch,
+`usb=serialmtp` ("Serial + MTP Disk") also builds: storage mode then shows the
+card in an MTP app (Android File Transfer) instead of mounting it.
 Libraries: ILI9341_t3n (KurtE), Audio, SD/SdFat (bundled).
 
 ```sh
 "/Applications/Arduino IDE.app/Contents/Resources/app/lib/backend/resources/arduino-cli" \
-  compile -b teensy:avr:teensy40:usb=serialmtp --build-path <somewhere-outside-the-IDE-cache> .
+  compile -b teensy:avr:teensy40:usb=serialmsc --build-path <somewhere-outside-the-IDE-cache> .
 ```
 
 Use a separate `--build-path`: sharing the IDE's cache breaks builds. Check
@@ -20,7 +24,7 @@ Uploading to the M8 over USB (it shows up as a Teensy 4.0; the port is the
 
 ```sh
 "/Applications/Arduino IDE.app/Contents/Resources/app/lib/backend/resources/arduino-cli" \
-  upload -b teensy:avr:teensy40:usb=serialmtp -p usb:100000 --input-dir <the same build path> .
+  upload -b teensy:avr:teensy40:usb=serialmsc -p usb:100000 --input-dir <the same build path> .
 ```
 
 Working with Claude Code: after each firmware change, build and upload, so

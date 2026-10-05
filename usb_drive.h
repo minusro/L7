@@ -1,23 +1,31 @@
-// usb_drive.h — Storage mode (USB drive mode): the SD card shown to a computer over USB.
+// usb_drive.h — storage mode: the SD card shown to a computer over USB as a
+// mounted drive (USB mass storage), to copy files to and from it.
 //
-// The card is shared with MTP, the protocol phones use: build with "USB Type:
-// Serial + MTP Disk (Experimental)" (arduino-cli: teensy:avr:teensy40:usb=serialmtp).
-// Windows and Linux show it in the file manager; macOS needs an MTP app (OpenMTP,
-// Android File Transfer). A mounted drive (USB mass storage) was tried and
-// abandoned: Teensyduino has no such type for the Teensy 4 and the attempt
-// froze the M8 (branch usb-drive-msc).
+// Teensyduino has no mass-storage USB type for the Teensy 4, so the core is
+// patched (tools/teensy_msc/patch.py: a "Serial + Mass Storage" type, usb_msc.c
+// the bulk-only SCSI engine) and the sketch is built with it (arduino-cli:
+// teensy:avr:teensy40:usb=serialmsc; Arduino IDE: Tools > USB Type > "Serial +
+// Mass Storage (L7 patch)"). Outside storage mode the M8 answers the computer's
+// disk commands as an empty card reader (from a timer): without an answer macOS
+// keeps resetting the USB connection. An MTP build (usb=serialmtp, no patch;
+// shows in Android File Transfer, not as a drive) also works.
 //
-// usbDriveMode() takes the screen and the card until B has been held for a
-// second, then restarts the app (the computer may have changed any file).
+// usbDriveMode() writes everything out and takes the screen and the card until
+// the disk is ejected on the computer, or B has been held for a second, then
+// restarts the app (the computer may have changed any file).
 #pragma once
 
 namespace looper {
 
-// Called while in drive mode, to keep the app's watchdogs and the power
+// Called while in storage mode, to keep the app's watchdogs and the power
 // button going (set by the sketch).
 extern void (*usbDriveTick)();
 
-// false: this build has no MTP (nothing happened).
+// At start-up: with the mass-storage USB type, answers the computer's disk
+// commands from a timer from now on. Nothing for the MTP type.
+void usbDriveBegin();
+
+// false: this build has no mass storage or MTP (nothing happened).
 bool usbDriveMode();
 
 }  // namespace looper

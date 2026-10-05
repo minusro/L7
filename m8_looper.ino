@@ -170,6 +170,7 @@ void setup() {
   deleteUnusedSamples();                           // recordings no project uses
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   usbDriveTick = [] { loopCount++; handlePowerButton(); };   // (storage mode's own loop)
+  usbDriveBegin();
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();

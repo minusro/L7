@@ -70,21 +70,29 @@
 
 ## Storage mode, over USB (2026-10-05)
 
-* The Teensy 4 core has no USB mass-storage type, so the card is shared over
-  MTP: the sketch is built with USB type "Serial + MTP Disk (Experimental)"
-  (`usb=serialmtp`; the Arduino IDE's Tools > USB Type menu). The M8 then
-  always shows up on a computer as "Teensy MTP Disk"; the library answers the
-  host's basic requests from a timer, and only in drive mode does it touch the
-  card (`MTP.addFilesystem`). It keeps an index file, `/mtpindex.dat`, on the
-  card.
-* The app is stopped and written out first; leaving restarts it.
-* RAM: the MTP buffers need RAM2, so the recordings list (20 KB) moved to RAM1.
-* A mounted drive (USB mass storage) was tried and dropped (2026-10-05): the
-  core had to be patched with a new USB type and a SCSI engine
-  (`usb-drive-msc` branch), and the M8 froze as soon as the computer talked to
-  that interface (USB gone, torn graphics; cause not found, no debugger). A
-  watchdog left enabled by a test build also persists across resets until the
-  power is cycled.
+* The card is shown to a computer as a mounted drive (USB mass storage). The
+  Teensy 4 core has no such USB type, so `tools/teensy_msc/patch.py` adds one
+  to Teensyduino ("Serial + Mass Storage (L7 patch)", `usb=serialmsc`, flag
+  `USB_SERIAL_MSC`; reversible, everything behind that flag) with a bulk-only
+  SCSI engine (`usb_msc.c`). Read ~7.5 MB/s, write ~3 MB/s over USB 2.0 (the
+  card on the Teensy's SDIO).
+* Outside storage mode the M8 answers the computer's disk commands as an empty
+  card reader, from a timer (queued answers, never waited for, so safe in an
+  interrupt): unanswered, macOS resets the USB connection every ~11 s.
+* The app is stopped and written out first; the card is the computer's. Eject
+  on the computer (or hold B) restarts the app.
+* RAM: the recordings list (20 KB) is in RAM1, and the engine's buffer (16 KB)
+  too (RAM1 free ~78 KB).
+* A first attempt froze the M8 (USB gone, torn graphics) as soon as the computer
+  talked to it. Causes: one `transfer_t` queued twice in a row (the core links
+  a new transfer behind the endpoint's last, so it ended up pointing at itself),
+  and answers waited for inside an interrupt. A test watchdog (WDOG1) left
+  running by a test build persists across resets until power is cycled, which
+  confused the next tests. A clear-halt must reset the endpoint's data toggle
+  (patched into usb.c).
+* An MTP build (`usb=serialmtp`, no patch) also works, as a device in Android
+  File Transfer rather than a drive; the recordings list is in RAM1 for its
+  buffers too.
 
 ## Ableton Live Set export (agreed 2026-10-04)
 

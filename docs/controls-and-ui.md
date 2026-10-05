@@ -173,12 +173,13 @@ A recording track's waveform area is in the accent colour (a block of black betw
   Live Set to `/Ableton/L7 A005/` (ableton.h), its label showing "EXPORTING
   3/14" (samples copied, then the set) and then "SAVED AS L7 A005" (or "EXPORT
   FAILED") until the selection moves. Storage mode (A or B, on release):
-  writes everything out, then shows the card to a computer over USB (MTP, see
-  usb_drive.h: Windows/Linux file managers, on macOS an MTP app such as
-  Android File Transfer) under a screen with the title going round the hues and
-  the connection ("CONNECT A USB CABLE" / "WAITING FOR THE COMPUTER" /
-  "CONNECTED"); holding B for a second leaves it by restarting the app (the
-  computer may have changed any file). Four in
+  writes everything out, then shows the card to a computer over USB as a
+  mounted drive (USB mass storage, see usb_drive.h; it mounts like a flash
+  drive on macOS, Windows and Linux) under a screen with the title going
+  round the hues and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
+  COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or holding B
+  for a second, leaves it by restarting the app (the computer may have changed
+  any file). Four in
   view at a time (an item
   every 12 rows, the last place in the status row's, level with the action
   button); moving, the list scrolls so the item past the selection that way
