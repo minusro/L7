@@ -51,7 +51,7 @@ static constexpr int TEXT_GAP = 22;               // logo to text (the copyright
 static constexpr int TEXT_PX = 2, TEXT_ROWS = 7, TEXT_H = TEXT_ROWS * TEXT_PX;   // the app's font blocks; the text's block rows (the copyright sign's)
 static constexpr int GROUP_H = LOGO_H + TEXT_GAP + TEXT_H;   // logo, gap, text
 static constexpr int GROUP_DOWN = 16;                // the group sits this far below the middle, px
-static constexpr int LOGO_RIGHT = 16;                // the logo this far right of the middle, px (the text stays centred)
+static constexpr int LOGO_RIGHT = 12;                // the logo this far right of the middle, px (the text stays centred)
 static constexpr int LOGO_X = (320 - LOGO_W) / 2 + LOGO_RIGHT, LOGO_Y = (240 - GROUP_H) / 2 + GROUP_DOWN;
 // The splash's animation, in ms from showSplash(): the logo fades in from
 // black (0-500), then its colour goes once round the hues (500-2500); the
