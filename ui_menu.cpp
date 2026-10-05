@@ -158,6 +158,10 @@ static void scrollList(int i, int dir) {
   listTop = constrain(listTop, 0, max(0, LIST - LIST_ROOM));
 }
 
+// An action button held (A, B or START) on the selected item: a card then
+// looks pressed.
+static bool actionHeld() { return board.keys() & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY); }
+
 static void drawItem(int k) {
   if (!listInView(k)) return;
   auto &t = board.tft();
@@ -177,7 +181,11 @@ static void drawItem(int k) {
     bool filled = projectFilled(k), loaded = k == projectCurrent();
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
     uint16_t letter = loaded ? BG : filled ? color : sel ? LIGHT : DIM;   // (an empty slot's: grey, light grey when selected)
-    if (loaded) {                                 // the loaded one: filled
+    if (sel && actionHeld()) {                    // pressed, whatever it holds: filled in the dark colour, a thick outline
+      fillRing(s, 0, -s.w, blend565(color, BG, 128));   // in the colour, the label white
+      fillRing(s, 0, -2, color);
+      letter = INK;
+    } else if (loaded) {                          // the loaded one: filled
       fillRing(s, 0, -s.w, color);
     } else if (filled) {                          // a project: a thick outline, two blocks
       fillRing(s, 0, -2, color);
@@ -220,7 +228,8 @@ static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
-         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(k == CARDS && exportText[0]) << 30;
+         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 |
+         (uint32_t)(k == CARDS && exportText[0]) << 30;
 }
 
 void drawMenu() {

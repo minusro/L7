@@ -210,6 +210,10 @@ int main(int argc, char **argv) {
   render(out + "/ui_menu_button.png");
   menuKeys(m8::BTN_UP);                            // the list's first item: export
   render(out + "/ui_menu_export.png");
+  menuKeys(m8::BTN_LEFT);                          // a card with A held: the pressed look
+  board.heldKeys = m8::BTN_EDIT;
+  render(out + "/ui_menu_pressed.png");
+  board.heldKeys = 0;
   closeMenu();
   return 0;
 }
