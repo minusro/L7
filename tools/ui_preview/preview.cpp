@@ -93,6 +93,9 @@ int main(int argc, char **argv) {
   simMicros += 2200000;                            // its hue cycle done and the line faded in
   splashTick();
   writePng(out + "/ui_splash.png");
+  simMicros += 850000;                             // 3.45 s: everything in place, just before it fades out
+  splashTick();
+  writePng(out + "/ui_splash_hold.png");
   transport.spb = spbForBpm(bpm);
   transport.running = true;
   transport.beat = 37;

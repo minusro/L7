@@ -209,7 +209,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Splash (`ui_splash.cpp`): the "L7" logo (italic, the 7's right edge one
   45° line to a sharp corner, two equal cuts near the bottom; design options in
   `docs/design/`), drawn in full resolution from its shape (`drawL7()`, at any
-  scale: 138×65 px here, 8 px right of the middle; the menu's corner: 55×26),
+  scale: 138×65 px here, 16 px right of the middle; the menu's corner: 55×26),
   fading in (0–0.5 s) while the L slides in from the left and the 7 from the
   right (from 600 px off: still about at the screen's edges once well lit;
   cubic ease-out, in place at 1 s), its hue going
