@@ -17,12 +17,6 @@ void (*usbDriveTick)() = nullptr;
 static const char HINT[] = "EJECT OR HOLD B TO EXIT";
 static int textX() { return (320 - textWidth(HINT)) / 2 / PX * PX; }
 
-static void centred(int y, const char *text, uint16_t ink) {   // (the hint's row, when it's replaced)
-  int w = textWidth(text);
-  board.tft().fillRect(0, y, 320, FONT_H, BG);
-  drawText((320 - w) / 2 / PX * PX, y, text, ink, BG);
-}
-
 static void line(int y, const char *text, uint16_t ink) {
   board.tft().fillRect(0, y, 320, FONT_H, BG);
   drawText(textX(), y, text, ink, BG);
@@ -57,7 +51,7 @@ void usbDriveBegin() {
 [[noreturn]] static void restart(const char *why) {
   Serial.printf("storage mode: %s, restarting\n", why);
   cardSync();
-  centred(176, why, LIGHT);
+  line(176, why, LIGHT);
   delay(300);
   SCB_AIRCR = 0x05FA0004;                           // restart: the computer may have changed anything
   for (;;) {}
@@ -172,7 +166,7 @@ bool usbDriveMode() {
     if (board.keys() & m8::BTN_OPT) {
       if (!heldSince) heldSince = millis();
       if (millis() - heldSince >= 1000) {
-        centred(176, "RESTARTING", LIGHT);
+        line(176, "RESTARTING", LIGHT);
         delay(100);
         SCB_AIRCR = 0x05FA0004;                   // restart: the computer may have changed anything
         for (;;) {}
