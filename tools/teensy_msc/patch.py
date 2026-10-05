@@ -17,6 +17,8 @@ What it changes, in <teensyduino>/hardware/avr/1.62.0:
   cores/teensy4/usb_desc.c             its interface descriptor (high and full speed)
   cores/teensy4/usb.c                  configure hook, GET MAX LUN, bulk-only reset, a clear-halt that resets the toggle
   boards.txt                           the menu entry (Teensy 4.0)
+  libraries/SdFat/src/common/FsStructs.h  file names may contain a carriage return (the "Icon\\r" file
+                                       of a macOS folder icon, ableton.cpp); SdFat refuses control characters
 """
 import glob
 import os
@@ -183,6 +185,9 @@ def apply():
          "uint32_t usb_transfer_status(const transfer_t *transfer)\n{\n#if defined(MTP_INTERFACE) || defined(MSC_INTERFACE)"),
     ]):
         changed.append("usb.c")
+    if edit(os.path.join(plat, "libraries", "SdFat", "src", "common", "FsStructs.h"),
+            [("  return c < 0X20 || c == '\"'", "  return (c < 0X20 && c != 0X0D) /* L7_MSC: a CR is fine */ || c == '\"'")]):
+        changed.append("FsStructs.h")
     boards = os.path.join(plat, "boards.txt")
     b = open(boards).read()
     if MARK not in b:
@@ -205,7 +210,8 @@ def apply():
 def undo():
     plat = find_platform()
     core = os.path.join(plat, "cores", "teensy4")
-    for rel in ("cores/teensy4/usb_desc.h", "cores/teensy4/usb_desc.c", "cores/teensy4/usb.c", "boards.txt"):
+    for rel in ("cores/teensy4/usb_desc.h", "cores/teensy4/usb_desc.c", "cores/teensy4/usb.c", "boards.txt",
+                "libraries/SdFat/src/common/FsStructs.h"):
         path = os.path.join(plat, rel)
         if os.path.exists(path + ".l7orig"):
             shutil.move(path + ".l7orig", path)

@@ -113,6 +113,14 @@
 * Scenes have no name. The 7 tracks and every clip are coloured with the
   palette entry of Live (the 70 clip colours) nearest, by CIE Lab distance,
   to the project's colour (plain RGB distance picked greys).
+* The folder has Live's custom icon on a Mac: an empty `Icon<CR>` file, and
+  the AppleDouble files (`._Icon<CR>` with the icon as resource fork and the
+  invisible flag, `/Ableton/._<folder>` with the custom-icon flag) a Mac
+  itself writes on a FAT card for the folder's extended attributes. Written
+  by hand (ableton.cpp, icon data from tools/ableton/make_icon.py). SdFat
+  refuses control characters in names, so `patch.py` also lets it take a CR
+  (re-run it after a Teensyduino update). Checked on a FAT disk image: macOS
+  read the flags and the icon from such files.
 * Still to do: each clip's volume, pan and filter frequencies as clip
   modulation envelopes (flat lines), waiting for an example set from Live.
 

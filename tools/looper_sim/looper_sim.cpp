@@ -1627,6 +1627,12 @@ int main(int argc, char **argv) {
     int crc = cout ? pclose(cout) : -1;
     snprintf(m, sizeof m, "no scene named; the 7 tracks and every clip in Live colour %d, the nearest to the project's", colorIdx);
     check(crc == 0, m);
+    // The folder's icon for a Mac: Icon<CR>, its AppleDouble file (Finder info + the icon's fork), and the folder's own.
+    auto sizeOf = [](const std::string &path) { FILE *f = fopen(path.c_str(), "rb"); long n = -1; if (f) { fseek(f, 0, SEEK_END); n = ftell(f); fclose(f); } return n; };
+    long iconSize = sizeOf(dir + "/Icon\r"), forkSize = sizeOf(dir + "/._Icon\r"), folderSize;
+    folderSize = sizeOf(simRoot + "/Ableton/._L7 C00" + std::to_string(first));
+    snprintf(m, sizeof m, "the folder's Mac icon: Icon<CR> empty (%ld), ._Icon<CR> %ld bytes, the folder's ._ file %ld bytes", iconSize, forkSize, folderSize);
+    check(iconSize == 0 && forkSize == 0xEE2 + 62577 && folderSize == 0xEE2, m);
   }
 
   printf("random sessions\n");

@@ -11,7 +11,9 @@
 // start position as the track's range and start position, deactivated if the
 // track is muted there; the project's current scene's clips saved as playing.
 // Scenes are unnamed; the tracks and clips take the Live palette colour
-// nearest the project's.
+// nearest the project's. The folder has Live's icon on a Mac ("Icon\r" and
+// the AppleDouble files that give it, ableton_icon.h, tools/ableton/make_icon.py;
+// needs the SdFat patch of tools/teensy_msc/patch.py: names with a CR).
 // Made from a set Live saved (ableton_template.h, made
 // by tools/ableton/make_template.py), written as gzip with stored blocks.
 #pragma once

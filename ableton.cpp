@@ -10,6 +10,7 @@
 namespace looper {
 
 #include "ableton_template.h"
+#include "ableton_icon.h"
 
 // ---- gzip, its deflate data in stored (uncompressed) blocks: a block per
 // buffer full, an empty last one at the end, then the CRC-32 and the length.
@@ -238,6 +239,44 @@ static int nextNumber(char letter) {
   return highest < 999 ? highest + 1 : 0;
 }
 
+// ---- The folder's icon, as a Mac shows it (Live's own, as in any Live project).
+// macOS keeps a folder's custom icon as the resource fork of a file in it called
+// "Icon" and a carriage return, and its Finder flags as extended attributes; a
+// FAT card has no such thing, so macOS keeps them in AppleDouble files beside the
+// things they belong to ("._name"). Written here by hand: the Finder flags
+// (custom icon for the folder, invisible for the Icon file), the icon.
+static bool appleDouble(const char *path, uint16_t finderFlags, const uint8_t *rsrc, size_t rsrcSize) {
+  static uint8_t head[0xEE2];                    // the layout macOS writes: Finder info, an (empty) attribute block, the fork
+  memset(head, 0, sizeof head);
+  static const uint8_t magic[] = {0x00, 0x05, 0x16, 0x07, 0x00, 0x02, 0x00, 0x00};
+  memcpy(head, magic, sizeof magic);
+  memcpy(head + 8, "Mac OS X        ", 16);
+  auto be32 = [&](int at, uint32_t v) { for (int i = 0; i < 4; i++) head[at + i] = (uint8_t)(v >> (24 - 8 * i)); };
+  head[25] = 2;                                  // two entries: 9 (Finder info), 2 (resource fork)
+  be32(26, 9); be32(30, 0x32); be32(34, 0xEB0);
+  be32(38, 2); be32(42, 0xEE2); be32(46, (uint32_t)rsrcSize);
+  head[0x32 + 8] = (uint8_t)(finderFlags >> 8);  // (the Finder info: 32 bytes, its flags at 8)
+  head[0x32 + 9] = (uint8_t)finderFlags;
+  memcpy(head + 0x54, "ATTR", 4);               // the attributes' header, none in it
+  be32(0x54 + 8, 0xEE2);
+  be32(0x54 + 12, 0x78);
+  FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
+  bool ok = f && f.write(head, sizeof head) == sizeof head && (!rsrcSize || f.write(rsrc, rsrcSize) == rsrcSize);
+  if (f) f.close();
+  return ok;
+}
+
+static void folderIcon() {
+  char path[96];
+  snprintf(path, sizeof path, "%s/Icon\r", x.dir);
+  FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);   // (empty: its icon is the fork, in ._Icon)
+  if (f) f.close();
+  snprintf(path, sizeof path, "%s/._Icon\r", x.dir);
+  appleDouble(path, 0x4000, ALS_ICON, sizeof ALS_ICON);
+  snprintf(path, sizeof path, "/Ableton/._%s", x.name);
+  appleDouble(path, 0x0400, nullptr, 0);
+}
+
 int exportProject(int p, void (*progress)(int done, int total)) {
   if (p < 0 || p >= PROJECTS || transport.running || recording.mode != Recording::Idle) return 0;
   x.p = p;
@@ -298,6 +337,7 @@ int exportProject(int p, void (*progress)(int done, int total)) {
   x.place = NUM_TRACKS;                          // (not in a track)
   emit(ALS_SET);
   bool ok = gz.close();
+  folderIcon();
   if (progress) progress(total + 1, total + 1);
   return ok ? x.number : 0;
 }
