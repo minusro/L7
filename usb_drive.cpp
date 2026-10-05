@@ -13,16 +13,26 @@ namespace looper {
 
 void (*usbDriveTick)() = nullptr;
 
-static void centred(int y, const char *text, uint16_t ink) {
+// The screen's text is left-aligned with the hint at the bottom, which stays centred.
+static const char HINT[] = "EJECT OR HOLD B TO EXIT";
+static int textX() { return (320 - textWidth(HINT)) / 2 / PX * PX; }
+
+static void centred(int y, const char *text, uint16_t ink) {   // (the hint's row, when it's replaced)
   int w = textWidth(text);
   board.tft().fillRect(0, y, 320, FONT_H, BG);
   drawText((320 - w) / 2 / PX * PX, y, text, ink, BG);
 }
 
-// The title and the corner logo (where and as big as the menu's), in one colour; drawn over
+static void line(int y, const char *text, uint16_t ink) {
+  board.tft().fillRect(0, y, 320, FONT_H, BG);
+  drawText(textX(), y, text, ink, BG);
+}
+
+// The title and the corner logo (where and as big as the menu's), in one colour (light grey until the
+// computer is connected, then the hue cycle); drawn over
 // themselves, no clearing first: no flicker.
 static void titleAndLogo(uint16_t c) {
-  drawText((320 - textWidth("STORAGE MODE")) / 2 / PX * PX, 88, "STORAGE MODE", c, BG);
+  drawText(textX(), 88, "STORAGE MODE", c, BG);
   drawSmallLogo(PX, STATUS_TOP, c);
 }
 
@@ -63,9 +73,9 @@ bool usbDriveMode() {
 
   auto &t = board.tft();
   t.fillScreen(BG);
-  centred(88, "STORAGE MODE", hueCycle(0));
-  drawSmallLogo(PX, STATUS_TOP, hueCycle(0));
-  centred(176, "EJECT OR HOLD B TO EXIT", DIM);
+  line(88, "STORAGE MODE", LIGHT);
+  drawSmallLogo(PX, STATUS_TOP, LIGHT);
+  line(176, HINT, DIM);
   uiGeneration++;
 
   pollTimer.end();                                  // (polled from here from now on: reads and writes wait for the card)
@@ -74,7 +84,7 @@ bool usbDriveMode() {
 
   int shown = -1;
   uint32_t heldSince = 0, hueAt = 0;
-  uint16_t hue = 0;
+  uint16_t hue = LIGHT;
   while (board.keys() & (m8::BTN_EDIT | m8::BTN_OPT)) {   // (the press that came here, let go first)
     if (usbDriveTick) usbDriveTick();
     usb_msc_poll();
@@ -89,19 +99,19 @@ bool usbDriveMode() {
         Serial.printf("storage mode: command %02X\n", usb_msc_last_op);
     }
     if (usb_msc_ejected()) restart("EJECTED");
-    if (millis() - hueAt >= 40) {                   // the title's hue goes round, once in 4 s
+    int state = !usb_configuration ? 0 : usb_msc_host_seen() ? 2 : 1;
+    if (millis() - hueAt >= 40) {                   // the title and logo: light grey, and once connected the hue goes round, once in 4 s
       hueAt = millis();
-      uint16_t c = hueCycle((millis() % 4000) / 4000.0f);
+      uint16_t c = state == 2 ? hueCycle((millis() % 4000) / 4000.0f) : LIGHT;
       if (c != hue) {
         hue = c;
         titleAndLogo(c);
       }
     }
-    int state = !usb_configuration ? 0 : usb_msc_host_seen() ? 2 : 1;
     if (state != shown) {
       shown = state;
       static const char *const TEXT[3] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED"};
-      centred(120, TEXT[state], state == 2 ? INK : LIGHT);
+      line(120, TEXT[state], state == 2 ? INK : LIGHT);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
     if (board.keys() & m8::BTN_OPT) {
@@ -125,9 +135,9 @@ bool usbDriveMode() {
 
   auto &t = board.tft();
   t.fillScreen(BG);
-  centred(88, "STORAGE MODE", hueCycle(0));
-  drawSmallLogo(PX, STATUS_TOP, hueCycle(0));
-  centred(176, "EJECT OR HOLD B TO EXIT", DIM);
+  line(88, "STORAGE MODE", LIGHT);
+  drawSmallLogo(PX, STATUS_TOP, LIGHT);
+  line(176, HINT, DIM);
   uiGeneration++;
 
   Serial.println("storage mode: started");
@@ -136,7 +146,7 @@ bool usbDriveMode() {
 
   int shown = -1;
   uint32_t heldSince = 0, hueAt = 0;
-  uint16_t hue = 0;
+  uint16_t hue = LIGHT;
   while (board.keys() & (m8::BTN_EDIT | m8::BTN_OPT)) {   // (the press that came here, let go first)
     if (usbDriveTick) usbDriveTick();
     MTP.loop();
@@ -144,19 +154,19 @@ bool usbDriveMode() {
   for (;;) {
     if (usbDriveTick) usbDriveTick();
     MTP.loop();
-    if (millis() - hueAt >= 40) {                   // the title's hue goes round, once in 4 s
+    int state = !usb_configuration ? 0 : MTP ? 2 : 1;
+    if (millis() - hueAt >= 40) {                   // the title and logo: light grey, and once connected the hue goes round, once in 4 s
       hueAt = millis();
-      uint16_t c = hueCycle((millis() % 4000) / 4000.0f);
+      uint16_t c = state == 2 ? hueCycle((millis() % 4000) / 4000.0f) : LIGHT;
       if (c != hue) {
         hue = c;
         titleAndLogo(c);
       }
     }
-    int state = !usb_configuration ? 0 : MTP ? 2 : 1;
     if (state != shown) {
       shown = state;
       static const char *const TEXT[3] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED"};
-      centred(120, TEXT[state], state == 2 ? INK : LIGHT);
+      line(120, TEXT[state], state == 2 ? INK : LIGHT);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
     if (board.keys() & m8::BTN_OPT) {
