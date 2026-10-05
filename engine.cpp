@@ -297,7 +297,8 @@ void LooperEngine::update() {
     const uint32_t at = transport.now;
     inputRing[at % INPUT_FRAMES] = (uint16_t)l | ((uint32_t)(uint16_t)r << 16);
 
-    float mixL = monitor ? l : 0, mixR = monitor ? r : 0;
+    const float monL = monitor ? l : 0, monR = monitor ? r : 0;   // the input being monitored
+    float mixL = 0, mixR = 0;                        // the tracks
     if (running) {
       if (transport.sampleInBeat == 0) {
         if (transport.pendingSpb && transport.spbAtBeat >= 0 && transport.beat >= transport.spbAtBeat) {
@@ -354,15 +355,14 @@ void LooperEngine::update() {
     }
     transport.now = transport.now + 1;
 
-    mixL *= outGain;                                 // the master volume
-    mixR *= outGain;
-    if (captureOutput) {                             // (without the metronome)
-      int16_t cl = (int16_t)constrain(mixL, -32767.0f, 32767.0f), cr = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
+    if (captureOutput) {                             // (without the metronome) the tracks as they are, the master volume
+      int16_t cl = (int16_t)constrain(mixL + monL * outGain, -32767.0f, 32767.0f);   // only on the monitored input
+      int16_t cr = (int16_t)constrain(mixR + monR * outGain, -32767.0f, 32767.0f);
       inputRing[at % INPUT_FRAMES] = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
     }
     float click = clickSample() * outGain;
-    mixL += click;
-    mixR += click;
+    mixL = (mixL + monL) * outGain + click;          // the master volume
+    mixR = (mixR + monR) * outGain + click;
     outPeak[0] = max(outPeak[0], fabsf(mixL));
     outPeak[1] = max(outPeak[1], fabsf(mixR));
     outL->data[i] = (int16_t)constrain(mixL, -32767.0f, 32767.0f);

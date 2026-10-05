@@ -1343,6 +1343,8 @@ int main(int argc, char **argv) {
     uint32_t mutedSample = tracks[1].sample;
     feedRamp = false;
     runBeats(4);
+    setMasterVolume(MASTER_VOLUME_UNITY - 3);        // (the master volume is not in what's recorded)
+    const float masterNow = powf(10.0f, -3 * MASTER_STEP_DB / 20);
     // The output, by transport sample, while it records.
     std::vector<int16_t> outLog(44100 * 30);
     uint32_t logFrom = transport.now;
@@ -1363,11 +1365,12 @@ int main(int argc, char **argv) {
           "stopped: track 1 goes quiet where the loop ends");
     runUntilIdle();
     afterAudio = nullptr;
+    setMasterVolume(MASTER_VOLUME_UNITY);
     bool same = true;
     for (uint32_t f : {0u, 1000u, 30000u, 100000u, tracks[6].recordedFrames - 1})
-      if (wavLeft(6, f) != outLog[start + f - logFrom]) same = false;
+      if (fabsf(wavLeft(6, f) - outLog[start + f - logFrom] / masterNow) > 3) same = false;
     check(tracks[6].state == TrackState::Playing && tracks[6].loopBars == 2 && same && outLog[start + 1000 - logFrom] != 0,
-          "track 7 holds 2 bars of what was played");
+          "track 7 holds 2 bars of what was played, without the master volume (turned down 3 steps)");
     check(takeResampled() == 6 && takeResampled() == -1, "reported once as resampled");
     uint32_t sample = tracks[6].sample;
     int count = sceneCount(), pos = sceneCurrent();

@@ -82,7 +82,10 @@ ms to seconds and starves the streams. So:
 * **Resampling** (`recordPress(t, true)`, B+A on an empty track, offered only
   while a clip is playing unmuted): records the
   app's output instead of the input — the engine writes each output frame
-  into `inputRing` while it's on (`recording.resample`), no latency shift.
+  into `inputRing` while it's on (`recording.resample`), no latency shift. The
+  master volume isn't in it (the tracks as they are, with their own volume,
+  balance and filters); only the monitored audio input is scaled by it, as
+  it is on its way to the output.
   Always starts on a bar line (the history before the press holds input). A
   recording queued behind one of the other kind starts on the next bar line
   instead of where it ends. Stopped: the other playing tracks go quiet where
