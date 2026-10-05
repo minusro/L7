@@ -313,7 +313,7 @@ void openMenu() {
       projectDelete(projectCurrent()))
     takeProjectSelection();
   if (transport.running) transportStop();         // the menu: the clock stopped
-  deleteUnusedSamples();                           // recordings no project uses: gone
+  if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();   // recordings no project uses: gone
   shown = true;
   if (projectCurrent() >= 0) {                   // on the loaded project's card (the dummy project: where it was)
     onStatus = false;

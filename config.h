@@ -44,6 +44,11 @@ constexpr bool MIDI_OUT_ENABLED = true;
 // empty one up, else the next muted one; input.cpp, followRecording()).
 constexpr bool SELECT_NEXT_AFTER_RECORDING = false;
 
+// Delete the recordings no project uses any more (deleteUnusedSamples(),
+// scenes.cpp) whenever the menu opens. Off: they stay on the card (the function
+// is kept, e.g. for a menu command).
+constexpr bool DELETE_UNUSED_SAMPLES = false;
+
 // Waveform overview per track: OVERVIEW_COLS peak values over the whole loop,
 // stored in the WAV header. Peaks are gathered per PEAK_BIN_FRAMES while recording.
 constexpr int OVERVIEW_COLS = 286;                 // one per pixel: x = 30..315

@@ -92,7 +92,8 @@ bool projectCopying(int p);    // slot p is being copied from or to (not loadabl
 bool projectDelete(int p);
 // Deletes every recording no project uses (any track of any scene, muted or
 // not; the clipboards and the dummy project included), nor the tracks now.
-// Stopped only; at boot and when the menu opens. Returns how many.
+// Stopped only. Not called automatically while DELETE_UNUSED_SAMPLES (config.h)
+// is off. Returns how many.
 int deleteUnusedSamples();
 // Each scene keeps the looper's selection (row and cell): when leaving it
 // it's saved with the scene, and arriving there it comes back. get/set: the
