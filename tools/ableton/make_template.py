@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Makes ableton_template.h (the Live Set export's templates, ableton.cpp) from a
-Live Set saved by Ableton Live (docs/design/ableton/L7 Test 1 Project/L7 Test 1.als,
-Live 11.3): its first track (with its two Auto Filters; any other device left
-out), an empty clip slot, a clip, a scene and the set around them, as text
+Live Set saved by Ableton Live (docs/design/ableton/L7 Test 2 Project/L7 Test 2 Project.als,
+Live 11.3): its first track (with its two Auto Filters, highpass first, and a
+Utility; any other device left out), an empty clip slot, a clip, a scene and the set around them, as text
 with fields marked "\\001" + a letter for ableton.cpp to fill in.
 
-  python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 1 Project/L7 Test 1.als" ableton_template.h
+  python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 2 Project/L7 Test 2 Project.als" ableton_template.h
 
 Fields:
   set:   N NextPointeeId   T tempo   R the tracks   C the scenes
@@ -13,7 +13,7 @@ Fields:
          M its clip slots   F its freeze slots   S the slot playing when saved (-2: none)
   slot:  k its index
   clip:  c colour index   k index  b/e start/end  s/l loop start/end  r start, from the loop's start
-         o end marker  m name  E its envelopes (written by ableton.cpp)  d disabled (muted)  p/P file path
+         o end marker  m name  E its envelopes (written by ableton.cpp)  g its gain  d disabled (muted)  p/P file path
          z file size  u frames  w/W the second warp marker's seconds/beats
   scene: k its index   m its name
 """
@@ -78,12 +78,12 @@ def main(src, dst):
     track0 = ls.find('Tracks')[0]
 
     # The ids the clip envelopes point at (the parameters' automation targets, as in
-    # a set with clip envelopes: docs/design/ableton/L7 Test 2 Project): the mixer's
-    # volume and pan, the two Auto Filters' cutoffs (lowpass first).
-    mixer = track0.find('DeviceChain/Mixer')
-    want = {'VOLUME': mixer.find('Volume/AutomationTarget').get('Id'),
-            'PAN': mixer.find('Pan/AutomationTarget').get('Id')}
-    filters = [d for d in track0.find('DeviceChain/DeviceChain/Devices') if d.tag == 'AutoFilter']
+    # a set with clip envelopes: docs/design/ableton/L7 Test 2 Project): the Utility's
+    # balance (the pan), the two Auto Filters' cutoffs.
+    devices = track0.find('DeviceChain/DeviceChain/Devices')
+    utility = [d for d in devices if d.tag == 'StereoGain'][0]
+    want = {'BALANCE': utility.find('Balance/AutomationTarget').get('Id')}
+    filters = [d for d in devices if d.tag == 'AutoFilter']
     lp = [d for d in filters if d.find('FilterType/Manual').get('Value') == '0'][0]
     hp = [d for d in filters if d.find('FilterType/Manual').get('Value') == '1'][0]
     want['LP_CUTOFF'] = lp.find('Cutoff/AutomationTarget').get('Id')
@@ -92,14 +92,14 @@ def main(src, dst):
     # ---- The track
     i, j = element(xml, '<AudioTrack Id="26">')
     track = xml[i:j]
-    # Devices other than the Auto Filters out (the template's Utility).
+    # Devices other than the Auto Filters and the Utility out.
     k = track.index('<Devices>') + len('<Devices>')
     while True:
         m = re.compile(r'<(\w+) Id="\d+">').search(track, k)
         if not m or m.start() > track.index('</Devices>'):
             break
         a, b = element(track, m.group(0), m.start())
-        if m.group(1) == 'AutoFilter':
+        if m.group(1) in ('AutoFilter', 'StereoGain'):
             k = b
         else:
             track = cut(track, m.group(0), m.start())
@@ -126,7 +126,7 @@ def main(src, dst):
         count += 1
         return '<' + m.group(1) + ' Id="' + MARK + 'i"'
     track = re.sub(r'<(\w*(?:Target|Pointee)) Id="(\d+)"', fresh, track)
-    assert len(places) == 4, places
+    assert len(places) == 3, places
 
     # ---- Clip slots
     i, j = element(xml, '<ClipSlotList>', xml.index('<AudioTrack Id="26">'))
@@ -147,6 +147,7 @@ def main(src, dst):
                       ('Name', 'm'), ('Disabled', 'd'), ('RelativePath', 'p'), ('Path', 'P'),
                       ('OriginalFileSize', 'z'), ('DefaultDuration', 'u'), ('OtherTime', 'e')]:
         clip = field(clip, r'<' + tag + r' Value="([^"]*)"', code)
+    clip = field(clip, r'<SampleVolume Value="([^"]*)"', 'g')
     clip = re.sub(r'<OriginalCrc Value="[^"]*"', '<OriginalCrc Value="0"', clip)
     clip = re.sub(r'<DefaultSampleRate Value="[^"]*"', '<DefaultSampleRate Value="44100"', clip)
     clip = re.sub(r'<RelativePathType Value="[^"]*"', '<RelativePathType Value="3"', clip)
@@ -173,6 +174,8 @@ def main(src, dst):
     tempo_target = ls.find('MasterTrack/DeviceChain/Mixer/Tempo/AutomationTarget').get('Id')
     m = re.search(r'<PointeeId Value="' + tempo_target + r'" />\s*</EnvelopeTarget>\s*<Automation>\s*<Events>\s*<FloatEvent [^>]*Value="([^"]*)"', s)
     s = s[:m.start(1)] + MARK + 'T' + s[m.end(1):]
+    if '<Limiter Id="0">' in s[s.index('<MasterTrack'):]:     # (a Limiter on the master track of the example: not part of the export)
+        s = cut(s, '<Limiter Id="0">', s.index('<MasterTrack'))
     others = [int(v) for v in re.findall(r'<\w*(?:Target|Pointee) Id="(\d+)"', s)]
     assert max(others) < ID_BASE, max(others)
 
@@ -191,7 +194,7 @@ def main(src, dst):
                 '#pragma once\n\n')
         f.write('static constexpr int ALS_ID_BASE = %d, ALS_TRACK_IDS = %d;\n' % (ID_BASE, count))
         f.write('// Each track\'s ids: ALS_ID_BASE + its place (0-6) * ALS_TRACK_IDS + these.\n')
-        for name in ['VOLUME', 'PAN', 'LP_CUTOFF', 'HP_CUTOFF']:
+        for name in ['BALANCE', 'LP_CUTOFF', 'HP_CUTOFF']:
             f.write('static constexpr int ALS_%s_AT = %d;\n' % (name, places[name]))
         f.write('\n')
         f.write(lit('ALS_SET', s))

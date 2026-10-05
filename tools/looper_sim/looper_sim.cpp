@@ -1584,6 +1584,9 @@ int main(int argc, char **argv) {
     }
     int playing = 0;                               // its tracks with a clip there: saved as playing
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) playing++;
+    setTrackMix(NUM_TRACKS - 1, 3, 2);              // (on scene 2: track 1, Live's first: a lower volume, a balance and filter points)
+    setTrackFilter(NUM_TRACKS - 1, 8, 24);
+    trackChanged(NUM_TRACKS - 1);
     char colorHex[8];
     snprintf(colorHex, sizeof colorHex, "%02X%02X%02X", (PROJECT_COLORS[2] >> 11) * 255 / 31, ((PROJECT_COLORS[2] >> 5) & 63) * 255 / 63, (PROJECT_COLORS[2] & 31) * 255 / 31);
     int first = exportProject(2), second = exportProject(2);
@@ -1632,27 +1635,51 @@ int main(int argc, char **argv) {
     check(crc == 0, m);
     // Every clip's four envelopes (volume, pan, lowpass and highpass cutoff), pointing at its own track's parameters, values in range.
     std::string ep = "python3 -c \"import gzip,sys,os,xml.etree.ElementTree as E\n"
-                     "d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read()); n=0; bad=0; vals=set()\n"
+                     "d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read()); n=0; bad=0; dis=0; vals=set()\n"
                      "for t in r.find('LiveSet/Tracks'):\n"
                      " m=t.find('DeviceChain/Mixer'); af=[a for a in t.iter('AutoFilter')]\n"
                      " lp=[a for a in af if a.find('FilterType/Manual').get('Value')=='0'][0]; hp=[a for a in af if a.find('FilterType/Manual').get('Value')=='1'][0]\n"
-                     " want=[m.find('Volume/AutomationTarget').get('Id'),m.find('Pan/AutomationTarget').get('Id'),lp.find('Cutoff/AutomationTarget').get('Id'),hp.find('Cutoff/AutomationTarget').get('Id')]\n"
-                     " lim=[(0,2),(-1,1),(20,135),(20,135)]\n"
+                     " u=[d for d in t.iter('StereoGain')][0]; want=[u.find('Balance/AutomationTarget').get('Id'),hp.find('Cutoff/AutomationTarget').get('Id'),lp.find('Cutoff/AutomationTarget').get('Id')]\n"
+                     " lim=[(-1,1),(20,135),(20,135)]\n"
+                     " if [a.find('FilterType/Manual').get('Value') for a in af]!=['1','0'] or [d.tag for d in t.find('DeviceChain/DeviceChain/Devices')]!=['AutoFilter','AutoFilter','StereoGain']: bad+=1\n"
                      " for c in t.iter('AudioClip'):\n"
-                     "  es=c.findall('Envelopes/Envelopes/ClipEnvelope'); n+=1\n"
+                     "  es=c.findall('Envelopes/Envelopes/ClipEnvelope'); n+=1; dis+=c.find('Disabled').get('Value')=='true'; g=float(c.find('SampleVolume').get('Value'))\n"
+                     "  if not 0<=g<=2: bad+=1\n"
                      "  if [e.find('EnvelopeTarget/PointeeId').get('Value') for e in es]!=want: bad+=1; continue\n"
                      "  for e,(lo,hi) in zip(es,lim):\n"
                      "   v=[float(x.get('Value')) for x in e.findall('Automation/Events/FloatEvent')]\n"
                      "   if len(v)!=2 or v[0]!=v[1] or not lo<=v[0]<=hi: bad+=1\n"
                      "   vals.add(round(v[0],3))\n"
                      "ids=[x.get('Id') for x in r.iter('FloatEvent') if x.get('Time') in ('0','-63072000')]\n"
-                     "print(n,bad); sys.exit(0 if n and not bad else 1)\" '" + dir + "'";
+                     "print(n,bad,dis); sys.exit(0 if n and not bad else 1)\" '" + dir + "'";
     FILE *eout = popen(ep.c_str(), "r");
-    int envClips = -1, envBad = -1;
-    if (eout) { if (fscanf(eout, "%d %d", &envClips, &envBad) != 2) envClips = -1; }
+    int envClips = -1, envBad = -1, envOff = -1;
+    if (eout) { if (fscanf(eout, "%d %d %d", &envClips, &envBad, &envOff) != 3) envClips = -1; }
     int erc = eout ? pclose(eout) : -1;
-    snprintf(m, sizeof m, "each of the %d clip(s) has its 4 envelopes (volume, pan, lowpass, highpass) on its own track's parameters, values in range (%d wrong)", envClips, envBad);
+    snprintf(m, sizeof m, "each of the %d clip(s) (%d of them off) has a gain and its 3 envelopes (the Utility's balance, highpass, lowpass cutoff) on its own track's parameters, the filters in the order hp > lp, values in range (%d wrong)", envClips, envOff, envBad);
     check(erc == 0, m);
+    // Those values in the first track's clip of that scene: the gain from the volume step, the balance, the cutoffs.
+    {
+      char args[200];
+      snprintf(args, sizeof args, "%d %d %d %.4f %.4f", index, BALANCE_MAX, VOLUME_UNITY, (double)filterStepHz(8), (double)filterStepHz(24));
+      std::string vp = "python3 -c \"import gzip,sys,os,math,xml.etree.ElementTree as E\n"
+                       "d=sys.argv[1]; i,bm,vu,hz1,hz2=[float(a) for a in sys.argv[2:7]]; i=int(i)\n"
+                       "r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read()); t=r.find('LiveSet/Tracks')[0]\n"
+                       "c=t.findall('DeviceChain/MainSequencer/ClipSlotList/ClipSlot')[i].find('ClipSlot/Value/AudioClip')\n"
+                       "v=[float(e.find('Automation/Events/FloatEvent').get('Value')) for e in c.findall('Envelopes/Envelopes/ClipEnvelope')]\n"
+                       "note=lambda hz: 69+12*math.log2(hz/440)\n"
+                       "want=[float(c.find('SampleVolume').get('Value'))-10**((3-vu)*7.5/20), v[0]-2/bm, v[1]-note(hz1), v[2]-note(hz2)]\n"
+                       "print(*['%.4f'%w for w in want]); sys.exit(0 if all(abs(w)<0.01 for w in want) else 1)\" '" + dir + "' " + args;
+      FILE *vout = popen(vp.c_str(), "r");
+      char res[120] = {};
+      if (vout) { if (!fgets(res, sizeof res, vout)) res[0] = 0; }
+      int vrc = vout ? pclose(vout) : -1;
+      snprintf(m, sizeof m, "volume 3, balance 2, filter 8-24 on track 1 of scene 2: the clip's gain, the Utility's balance, the cutoffs as expected (differences %s)", res);
+      check(vrc == 0, m);
+    }
+    setTrackMix(NUM_TRACKS - 1, VOLUME_UNITY, 0);
+    setTrackFilter(NUM_TRACKS - 1, 0, FILTER_MAX);
+    trackChanged(NUM_TRACKS - 1);
     // The folder's icon for a Mac: Icon<CR>, its AppleDouble file (Finder info + the icon's fork), and the folder's own.
     auto sizeOf = [](const std::string &path) { FILE *f = fopen(path.c_str(), "rb"); long n = -1; if (f) { fseek(f, 0, SEEK_END); n = ftell(f); fclose(f); } return n; };
     long iconSize = sizeOf(dir + "/Icon\r"), forkSize = sizeOf(dir + "/._Icon\r"), folderSize;

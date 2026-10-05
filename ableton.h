@@ -5,13 +5,14 @@
 // its project folders) holds "L7 A005.als" and
 // the samples it plays, copied to Samples/Imported/ under their own names
 // (A30012.wav). The set: the project's tempo; 7 audio tracks (track 1 first,
-// as numbered on the screen), each with two Auto Filters (lowpass, highpass;
-// fully open); a scene per scene of the project that has clips (an empty one,
+// as numbered on the screen), each with two Auto Filters (highpass, lowpass;
+// fully open) and a Utility; a scene per scene of the project that has clips (an empty one,
 // as the empty scene 0* is, left out; then one empty scene last), each track's clip in it
 // where the track has one: the sample in Re-Pitch warp mode, its loop and
 // start position as the track's range and start position, deactivated if the
 // track is muted there; the project's current scene's clips saved as playing;
-// each clip's volume, pan and filter points as flat clip envelopes.
+// each clip's volume as its gain, its balance (the Utility's) and filter points as flat
+// clip envelopes (off clips too).
 // Scenes are unnamed; the tracks and clips take the Live palette colour
 // nearest the project's. The folder has Live's icon on a Mac ("Icon\r" and
 // the AppleDouble files that give it, ableton_icon.h, tools/ableton/make_icon.py;

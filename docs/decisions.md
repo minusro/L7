@@ -112,8 +112,8 @@ loaded or pasted to (a short stall if playing), so saving never allocates.
 * The folder is a Live project: it has an (empty) `Ableton Project Info`
   folder, so the clips' sample paths, relative to it, resolve (without it
   Live showed every sample offline).
-* The set (Live 11): the project's tempo; 7 audio tracks (no Utility), each
-  with two Auto Filters, lowpass and highpass, fully open (as with no clip
+* The set (Live 11): the project's tempo; 7 audio tracks, each
+  with two Auto Filters, highpass then lowpass, fully open, and a Utility (as with no clip
   playing); a scene per project scene with clips (empty ones, like 0*, left
   out); each track's clip there: Re-Pitch warp
   mode, the loop and start position as in the app (a range across the
@@ -132,16 +132,21 @@ loaded or pasted to (a short stall if playing), so saving never allocates.
   refuses control characters in names, so `patch.py` also lets it take a CR
   (re-run it after a Teensyduino update). Checked on a FAT disk image: macOS
   read the flags and the icon from such files.
-* Each clip has four clip envelopes, flat lines (a value at the start and at
-  0): its track's volume (a gain: 0 dB = 1, from the volume step), pan
-  (balance / BALANCE_MAX) and the two Auto Filters' cutoffs (a note number,
-  Hz = 440 * 2^((n - 69) / 12), 20-135; fully open: 135 lowpass, 20 highpass).
-  Every clip sets all four, so a clip with open filters resets what the one
-  before it left. They point at the parameters' automation targets (the
-  structure and ids as in a set with clip envelopes drawn in Live,
-  `docs/design/ableton/L7 Test 2 Project`). The scaling of volume and pan
-  isn't from a Live example (only the lowpass cutoff was drawn there): Live's
-  usual ranges, to be checked in Live.
+* Each clip carries its track's settings: the clip's own gain is the volume
+  (`SampleVolume`, linear: 0 dB = 1, from the volume step), and three flat
+  clip envelopes (a value at the start and at 0): the Utility's balance (the
+  pan, balance / BALANCE_MAX, -1..1) and the two Auto Filters' cutoffs (a
+  note number, Hz = 440 * 2^((n - 69) / 12), 20-135; fully open: 135 lowpass,
+  20 highpass). Every clip has all of them, off (muted) ones too, so a clip
+  with open filters resets what the one before it left. The envelopes point
+  at the parameters' automation targets (structure and ids as in a set with
+  clip envelopes drawn in Live, `docs/design/ableton/L7 Test 2 Project`, which
+  is now the template's source). The gain's scale and the balance's range are
+  Live's usual ones, not from a Live example: to be checked in Live.
+* A track's devices, in this order: Auto Filter highpass, Auto Filter
+  lowpass, Utility (its balance automated by the clips). The track's own
+  mixer volume and pan stay at their defaults. (The example's master
+  Limiter isn't in the export.)
 
 ## Open ideas (not started)
 

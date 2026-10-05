@@ -163,11 +163,12 @@ static void clipSlots(bool freeze) {
   }
 }
 
-// ---- A clip's envelopes: its track's volume, balance (as pan) and filter points,
-// each a flat line (a value at the start and at 0), so the clip sets the
-// track's mixer and Auto Filters as the clip does in the app. Values as Live
-// keeps them: volume a gain (1: 0 dB), pan -1..1, a cutoff a note number
-// (Hz = 440 * 2^((n - 69) / 12), 20-135; 135 and 20: fully open).
+// ---- A clip's envelopes: its track's balance (the Utility's, as pan) and filter
+// points, each a flat line (a value at the start and at 0), so the clip sets the
+// track's Utility and Auto Filters as the clip does in the app (the volume is the
+// clip's own gain). Values as Live keeps them: balance -1..1, a cutoff a note
+// number (Hz = 440 * 2^((n - 69) / 12), 20-135; 135 and 20: fully open). A
+// clip that is off (muted) has them too.
 static float cutoffNote(float hz) { return constrain(69 + 12 * log2f(hz / 440.0f), 20.0f, 135.0f); }
 
 static void envelope(int id, int target, float value) {
@@ -185,15 +186,13 @@ static void envelope(int id, int target, float value) {
 
 static void clipEnvelopes() {
   const TrackUnit &u = x.unit;
-  float gain = u.volume <= 0 ? 0.0f : powf(10.0f, (u.volume - VOLUME_UNITY) * VOLUME_STEP_DB / 20.0f);
   float pan = (float)u.balance / BALANCE_MAX;
   float lp = u.filterHi >= FILTER_MAX ? 135.0f : cutoffNote(filterStepHz(max((int)u.filterHi, 0)));
   float hp = u.filterLo <= 0 ? 20.0f : cutoffNote(filterStepHz(min((int)u.filterLo, FILTER_MAX)));
   gz.puts("<Envelopes>\n");
-  envelope(0, ALS_VOLUME_AT, gain);
-  envelope(1, ALS_PAN_AT, pan);
+  envelope(0, ALS_BALANCE_AT, pan);
+  envelope(1, ALS_HP_CUTOFF_AT, hp);
   envelope(2, ALS_LP_CUTOFF_AT, lp);
-  envelope(3, ALS_HP_CUTOFF_AT, hp);
   gz.puts("</Envelopes>\n");
 }
 
@@ -244,6 +243,9 @@ static void field(char code) {
     case 'w': putNumber((double)x.sample.loopBars * BEATS_PER_BAR * x.sample.spb / 44100.0); break;
     case 'W': putNumber(x.sample.loopBars * BEATS_PER_BAR); break;
     case 'E': clipEnvelopes(); break;
+    case 'g':                                    // the clip's gain: the track's volume (1: 0 dB)
+      putNumber(x.unit.volume <= 0 ? 0.0 : pow(10.0, (x.unit.volume - VOLUME_UNITY) * VOLUME_STEP_DB / 20.0));
+      break;
   }
 }
 
