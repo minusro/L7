@@ -53,7 +53,7 @@ bool usbDriveMode() {
       uint16_t c = hueCycle((millis() % 4000) / 4000.0f);
       if (c != hue) {
         hue = c;
-        centred(88, "USB DRIVE MODE", c);
+        drawText((320 - textWidth("USB DRIVE MODE")) / 2 / PX * PX, 88, "USB DRIVE MODE", c, BG);   // (over itself: its box redrawn whole, no clearing first)
       }
     }
     int state = !usb_configuration ? 0 : MTP ? 2 : 1;
