@@ -122,6 +122,9 @@ static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
 // The last place's frame level with the action button (from the status row's top).
 static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
+// With fewer items than places (two of four), they sit in the middle ones
+// (rows 2 and 3), not from the top.
+static constexpr int LIST_FIRST = LIST < LIST_ROOM ? (LIST_ROOM - LIST) / 2 : 0;
 
 // The logo in the bottom left corner, a block in, the status row's height.
 static constexpr int LOGO_X = PX, LOGO_Y = STATUS_TOP;
@@ -133,7 +136,7 @@ static Shape itemShape(int k) {
   // left-aligned in it).
   int w = 0;
   for (const char *label : LABELS) w = max(w, textWidth(label) / PX);
-  return {(320 / PX - w) / 2, LIST_Y + (k - CARDS - listTop) * LIST_PITCH, w, FONT_H / PX, 0};   // (in view: listInView())
+  return {(320 / PX - w) / 2, LIST_Y + (LIST_FIRST + k - CARDS - listTop) * LIST_PITCH, w, FONT_H / PX, 0};   // (in view: listInView())
 }
 
 // The selected item's frame, as the looper's cells': light grey; white while

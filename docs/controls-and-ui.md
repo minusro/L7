@@ -179,7 +179,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the connection ("CONNECT A USB CABLE" / "WAITING FOR THE COMPUTER" /
   "CONNECTED"); holding B for a second leaves it by restarting the app (the
   computer may have changed any file). Four in
-  view at a time (an item
+  view at a time (with fewer items than places, as now with two, they sit in the middle ones: rows 2 and 3) (an item
   every 12 rows, the last place in the status row's, level with the action
   button); moving, the list scrolls so the item past the selection that way
   stays in view where there is one, never past its ends (no empty places);
