@@ -167,8 +167,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   project's is a thick outline (two blocks) in its colour, the letter in it too.
   An empty slot is a grey outline, its letter grey (light grey when selected).
   While an action button (A, B or START) is held on the selected card, whatever
-  it holds, it looks pressed: filled in the dark version of its colour, with a
-  thick outline in the colour and a white letter. In the bottom
+  it holds, it looks pressed: filled in its colour, with a thick white
+  outline on top and a black letter. In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
   in the action button's colour (not its pressed look: it stays put while A is held). Under them
   a list, "EXPORT ABLETON PROJECT" and "USB DRIVE MODE". Export

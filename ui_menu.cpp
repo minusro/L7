@@ -181,10 +181,10 @@ static void drawItem(int k) {
     bool filled = projectFilled(k), loaded = k == projectCurrent();
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
     uint16_t letter = loaded ? BG : filled ? color : sel ? LIGHT : DIM;   // (an empty slot's: grey, light grey when selected)
-    if (sel && actionHeld()) {                    // pressed, whatever it holds: filled in the dark colour, a thick outline
-      fillRing(s, 0, -s.w, blend565(color, BG, 128));   // in the colour, the label white
-      fillRing(s, 0, -2, color);
-      letter = INK;
+    if (sel && actionHeld()) {                    // pressed, whatever it holds: filled in its colour, a thick white
+      fillRing(s, 0, -s.w, color);                // outline on top, the label black
+      fillRing(s, 0, -2, INK);
+      letter = BG;
     } else if (loaded) {                          // the loaded one: filled
       fillRing(s, 0, -s.w, color);
     } else if (filled) {                          // a project: a thick outline, two blocks
