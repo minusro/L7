@@ -112,7 +112,8 @@ bool stepSample(int t, int dir);
 // (until deleteUnusedSamples(), scenes.h: no project's), in the order of their
 // names: sampleAt(0 .. sampleCount() - 1).
 uint32_t sampleAt(int i);
-void sampleFile(uint32_t id, char *path, size_t size);   // its file now ("/L7/samples/A30012.wav"; tests)
+void sampleFile(uint32_t id, char *path, size_t size);   // its file now ("/L7/SAMPLES/A30012.wav"; tests)
+bool moveFile(const char *from, const char *to);        // renames a file (an older card's layout) unless `to` exists; true: moved
 // For the Live Set export (ableton.cpp; stopped): sample n's details (its
 // name: "A30012", or "0012" for an older one) and a copy of its file.
 struct SampleDetails { uint32_t frames, spb, loopBars; uint64_t bytes; char name[12]; };

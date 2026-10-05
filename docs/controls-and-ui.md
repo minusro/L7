@@ -170,7 +170,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in the action button's colour (not its pressed look: it stays put while A is held). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
-  Live Set to `/Ableton/L7 A005/` (ableton.h), its label showing "EXPORTING
+  Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
   3/14" (samples copied, then the set) and then "SAVED AS L7 A005" (or "EXPORT
   FAILED") until the selection moves. Storage mode (A or B, on release):
   writes everything out, then shows the card to a computer over USB as a
@@ -206,7 +206,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   meanwhile and comes back when the menu closes. The menu opens on the
   loaded project's card (with the dummy project: where its selection was,
   kept across power cycles too); if it was open at power off it opens again
-  at boot (session.txt).
+  at boot (DATA/SESSION.TXT).
 * Splash (`ui_splash.cpp`): the "L7" logo (italic, the 7's right edge one
   45° line to a sharp corner, two equal cuts near the bottom; design options in
   `docs/design/`), drawn in full resolution from its shape (`drawL7()`, at any

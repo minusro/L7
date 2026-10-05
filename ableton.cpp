@@ -112,7 +112,7 @@ static struct {
   uint8_t pos[MAX_SCENES];                       // each one's position in the project (1..)
   int color;                                     // the project's colour, as a Live palette index
   float tempo;
-  char dir[48], name[16];                        // "/Ableton/L7 A005", "L7 A005"
+  char dir[48], name[16];                        // "/L7/EXPORTS/L7 A005 Project", "L7 A005"
   int place;                                     // the track being written: 0-6 (Live's order)
   int ids;                                       // its fresh ids so far
   int slot;                                      // the clip slot or scene being written (0..)
@@ -219,19 +219,21 @@ static void emit(const char *t) {
   }
 }
 
-// ---- The folder: the next number for the project's letter.
+// ---- The folder: the next number for the project's letter; named as Live names its
+// projects, "L7 A005 Project".
+static const char FOLDER_SUFFIX[] = " Project";
 static int nextNumber(char letter) {
   char prefix[16];
   snprintf(prefix, sizeof prefix, "%s %c", APP_NAME, letter);
   size_t pl = strlen(prefix);
   int highest = 0;
-  FsFile dir = SD.sdfs.open("/Ableton", O_RDONLY), f;
+  FsFile dir = SD.sdfs.open("/L7/EXPORTS", O_RDONLY), f;
   char name[64];
   while (dir && f.openNext(&dir, O_RDONLY)) {
     f.getName(name, sizeof name);
     bool is = f.isDir();
     f.close();
-    if (!is || strlen(name) != pl + 3 || strncmp(name, prefix, pl)) continue;
+    if (!is || strlen(name) != pl + 3 + strlen(FOLDER_SUFFIX) || strncmp(name, prefix, pl) || strcmp(name + pl + 3, FOLDER_SUFFIX)) continue;
     int n = 0;
     for (int i = 0; i < 3; i++) n = name[pl + i] >= '0' && name[pl + i] <= '9' && n >= 0 ? n * 10 + name[pl + i] - '0' : -1;
     if (n > highest) highest = n;
@@ -273,7 +275,7 @@ static void folderIcon() {
   if (f) f.close();
   snprintf(path, sizeof path, "%s/._Icon\r", x.dir);
   appleDouble(path, 0x4000, ALS_ICON, sizeof ALS_ICON);
-  snprintf(path, sizeof path, "/Ableton/._%s", x.name);
+  snprintf(path, sizeof path, "/L7/EXPORTS/._%s%s", x.name, FOLDER_SUFFIX);
   appleDouble(path, 0x0400, nullptr, 0);
 }
 
@@ -296,11 +298,11 @@ int exportProject(int p, void (*progress)(int done, int total)) {
     x.pos[x.scenes++] = pos;
   }
   char letter = (char)('A' + p);
-  SD.sdfs.mkdir("/Ableton");
+  SD.sdfs.mkdir("/L7/EXPORTS");
   x.number = nextNumber(letter);
   if (!x.number) return 0;
   snprintf(x.name, sizeof x.name, "%s %c%03d", APP_NAME, letter, x.number);
-  snprintf(x.dir, sizeof x.dir, "/Ableton/%s", x.name);
+  snprintf(x.dir, sizeof x.dir, "/L7/EXPORTS/%s%s", x.name, FOLDER_SUFFIX);
   char path[96];
   SD.sdfs.mkdir(x.dir);
   snprintf(path, sizeof path, "%s/Ableton Project Info", x.dir);   // (what makes it a Live project:

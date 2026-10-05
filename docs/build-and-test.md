@@ -61,7 +61,7 @@ on the M8's card). `LOOPER_TRACE=1 ./looper_sim 0` prints the card
 operations before the first dropouts. input.cpp and ui*.cpp are not in the
 simulator — key handling and drawing are only tested on the device.
 
-The Live Set export's test writes real sets to `/tmp/looper_sim_sd/Ableton/`
+The Live Set export's test writes real sets to `/tmp/looper_sim_sd/L7/EXPORTS/`
 (open them in Live) and checks them with Python (gzip, XML, the tracks,
 devices, scenes, clips and copied samples).
 

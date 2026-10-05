@@ -11,14 +11,16 @@ row and cell, its tempo and its master volume (block 0: `volume1`, the
 level + 1, and `tempo10`, tenths of a BPM, in the places of a 249th and 250th
 scene: 248 scenes at most; 0 in a project saved before, which then keeps the
 level playing / its current scene's tempo). Changing either, in any scene,
-changes the project's. `session.txt` names the loaded project and keeps the
+changes the project's. `DATA/SESSION.TXT` names the loaded project and keeps the
 tempo and master volume last set by hand (`newbpm=`, `newvolume=`; before
 any: 120 BPM, 100%): a new project starts with them. Loading a project
 doesn't change them. Twelve slots:
-`/L7/projects/1.dat` … `12.dat`, and `clip.dat` for the project clipboard,
-all made once at full size; an empty slot's block 0 is zeros. Project files
-hold no audio: scenes name their samples. The first version's
-`/L7/scenes.dat` (from `/looper`) becomes project 1.
+`/L7/PROJECTS/A.L7P` … `L.L7P`, and `/L7/DATA/CLIP.DAT` for the project
+clipboard, each made once at full size; an empty slot has no file (made when
+the slot is first loaded or pasted to, removed when it's cut or deleted).
+Project files hold no audio: scenes name their samples. An older card's
+`/L7/projects/1.dat` … `12.dat`, `clip.dat`, `none.dat` and the first
+version's `/L7/scenes.dat` are moved to these names at boot.
 
 * Loading (A on a slot in the menu): the loaded project's changes are written
   out, the other file opened and its current scene applied. Playing: on the
@@ -29,11 +31,11 @@ hold no audio: scenes name their samples. The first version's
   that bar line. An empty slot gets a new project (no scenes: the empty
   scene, the tempo last set by hand). Not while recording.
 * Cut / paste (SHIFT+A): copies the used blocks (the records, then the list
-  last) to or from `clip.dat`; cut then zeroes the slot's block 0. Stopped: at
+  last) to or from `CLIP.DAT`; cut then removes the slot's file. Stopped: at
   once. Playing: in the background, a block per `serviceScenes()` pass when
   the buffers allow (as scene saves); meanwhile the slots involved can't be
   loaded and no other copy starts. Not while recording. Cutting the loaded project empties its slot too and
-  loads an empty dummy project (`none.dat`, in no slot, emptied each time it's
+  loads an empty dummy project (`DATA/NONE.DAT`, in no slot, emptied each time it's
   loaded; the accent then the splash's turquoise; for now), the tracks
   cleared. A new project (or the dummy) starts on track 1's waveform cell.
 * A project with no clips at all is deleted when the menu opens (its slot

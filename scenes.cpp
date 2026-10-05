@@ -1,12 +1,13 @@
 // scenes.cpp — see scenes.h
 //
-// A project file (/L7/projects/1.dat ... 12.dat; clip.dat the clipboard):
+// A project file (/L7/PROJECTS/A.L7P ... L.L7P, none for an empty slot;
+// /L7/DATA/CLIP.DAT the clipboard, NONE.DAT the dummy project's):
 // block 0 is the list (which record slot is at each position, how many, the
 // current position, the selected row and cell, and the project's tempo and
 // master volume: one for all its scenes); blocks 1.. are the
 // scenes' records, in slots reused as scenes come and go. Inserting or
 // removing a scene only rewrites the list block. All of them are made once at
-// full size; an empty slot's block 0 is zeros.
+// full size (a project's when its slot gets one).
 #include "scenes.h"
 #include "storage.h"
 #include <utility>
@@ -370,14 +371,38 @@ void serviceScenes() {
 // ---- Projects
 
 static void projectPath(char *path, size_t n, int p) {   // p: 0-11, CLIP, DUMMY
-  if (p < PROJECTS) snprintf(path, n, "/L7/projects/%d.dat", p + 1);
-  else snprintf(path, n, p == CLIP ? "/L7/projects/clip.dat" : "/L7/projects/none.dat");
+  if (p < PROJECTS) snprintf(path, n, "/L7/PROJECTS/%c.L7P", 'A' + p);
+  else snprintf(path, n, p == CLIP ? "/L7/DATA/CLIP.DAT" : "/L7/DATA/NONE.DAT");
 }
 
 static FsFile openProject(int p) {
   char path[40];
   projectPath(path, sizeof path, p);
   return SD.sdfs.open(path, O_RDWR);
+}
+
+// A new project file at full size, empty (a slot's file is made when it's first
+// used, and removed when it's emptied).
+static FsFile createProject(int p) {
+  char path[40];
+  projectPath(path, sizeof path, p);
+  FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
+  if (!f) return f;
+  f.preAllocate(FILE_BYTES);
+  uint8_t zero = 0;
+  f.seekSet(FILE_BYTES - 1);
+  f.write(&zero, 1);
+  uint8_t b[BLOCK] = {};
+  f.seekSet(0);
+  f.write(b, BLOCK);
+  f.sync();
+  return f;
+}
+
+static void removeProject(int p) {                // (its handles closed first)
+  char path[40];
+  projectPath(path, sizeof path, p);
+  SD.sdfs.remove(path);
 }
 
 static SceneList newList() {
@@ -430,6 +455,11 @@ static void endCopy(bool ok) {
   job.on = false;
   job.src.close();
   job.dst.close();
+  if (!ok && job.to < PROJECTS) {                // a paste that failed: no half project
+    removeProject(job.to);
+    filled[job.to] = false;
+  }
+  if (ok && job.clearFrom && job.from < PROJECTS) removeProject(job.from);   // a cut: the source goes
 }
 
 static void stepCopy() {
@@ -443,7 +473,6 @@ static void stepCopy() {
     return;
   }
   bool ok = writeBlockTo(job.dst, 0, &job.l, sizeof job.l);
-  if (ok && job.clearFrom) writeBlockTo(job.src, 0, "", 0);
   endCopy(ok);
 }
 
@@ -452,11 +481,14 @@ static bool startCopy(int from, int to, bool clearFrom) {
   if (from == project) flushProject();
   job.src = openProject(from);
   job.dst = openProject(to);
+  if (!job.dst && to < PROJECTS) job.dst = createProject(to);   // (an empty slot has no file yet)
   if (!readList(job.src, job.l) || !job.dst) {
     job.src.close();
     job.dst.close();
+    if (to < PROJECTS) removeProject(to);        // (the empty file just made)
     return false;
   }
+  if (clearFrom && from == project) file.close();   // (the loaded one cut: its file goes at the end)
   job.on = true;
   job.from = from;
   job.to = to;
@@ -469,11 +501,6 @@ static bool startCopy(int from, int to, bool clearFrom) {
 
 bool projectCopying(int p) { return job.on && (job.from == p || job.to == p); }
 static bool copyOn() { return job.on; }
-
-static void clearProject(int p) {
-  FsFile f = openProject(p);
-  if (f) writeBlockTo(f, 0, "", 0);
-}
 
 void flushScenes() { flushProject(); }
 
@@ -527,6 +554,7 @@ void projectSetSelection(int row, int cell) {
 static bool openAs(int p, bool apply_) {
   clipsKnown = -1;
   FsFile f = openProject(p);
+  if (!f && p < PROJECTS) f = createProject(p);   // an empty slot: its file made now
   if (!f) return false;
   SceneList l;
   if (p == DUMMY || !readList(f, l)) {
@@ -630,8 +658,11 @@ bool projectCut(int p) {
 
 bool projectDelete(int p) {
   if (!projectFilled(p) || busy() || projectCopying(p)) return false;
-  if (p == project) flushProject();
-  clearProject(p);
+  if (p == project) {
+    flushProject();
+    file.close();
+  }
+  removeProject(p);
   filled[p] = false;
   if (p == project) {                              // the loaded one: the dummy project instead (empty)
     file.close();
@@ -674,35 +705,36 @@ int deleteUnusedSamples() {
   return deleteUnmarkedSamples();
 }
 
-// Opens (or makes, at full size) project files 1-12, the clipboard's and the
-// dummy project's; the
-// scene list of the first version (/L7/scenes.dat, from /looper) becomes project 1.
+// The project files: those of an older card moved into the folders (1.dat ...
+// 12.dat of /L7/projects become A.L7P ... L.L7P; the first version's
+// /L7/scenes.dat project A), the clipboard's and the dummy project's made at
+// full size if missing, and a slot's file with no project in it removed.
 static void makeProjectFiles() {
-  SD.sdfs.mkdir("/L7/projects");
-  char path[40];
-  projectPath(path, sizeof path, 0);
-  FsFile old = SD.sdfs.open("/L7/scenes.dat", O_RDONLY);
-  if (old) {
-    old.close();
-    if (!SD.sdfs.open(path, O_RDONLY)) SD.sdfs.rename("/L7/scenes.dat", path);
+  char from[40], to[40];
+  projectPath(to, sizeof to, 0);
+  moveFile("/L7/scenes.dat", to);
+  for (int p = 0; p < PROJECTS; p++) {
+    snprintf(from, sizeof from, "/L7/PROJECTS/%d.dat", p + 1);
+    projectPath(to, sizeof to, p);
+    moveFile(from, to);
   }
+  moveFile("/L7/PROJECTS/clip.dat", "/L7/DATA/CLIP.DAT");
+  moveFile("/L7/PROJECTS/none.dat", "/L7/DATA/NONE.DAT");
   for (int p = 0; p <= DUMMY; p++) {
     FsFile f = openProject(p);
-    if (!f || f.fileSize() < FILE_BYTES) {          // first time: made at full size, empty
+    if (p >= PROJECTS && (!f || f.fileSize() < FILE_BYTES)) {   // first time: made at full size, empty
       f.close();
-      projectPath(path, sizeof path, p);
-      f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
-      if (!f) continue;
-      f.preAllocate(FILE_BYTES);
-      uint8_t zero = 0;
-      f.seekSet(FILE_BYTES - 1);
-      f.write(&zero, 1);
-      writeBlockTo(f, 0, "", 0);
+      f = createProject(p);
     }
     SceneList l;
     bool full = readList(f, l);
-    if (p < PROJECTS) filled[p] = full;
-    else if (p == CLIP) projectClip = full;
+    f.close();
+    if (p < PROJECTS) {
+      filled[p] = full;
+      if (!full) removeProject(p);                 // (an empty one of an older card, or a cut short)
+    } else if (p == CLIP) {
+      projectClip = full;
+    }
   }
 }
 

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <cstring>
+#include <strings.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <dirent.h>
@@ -37,6 +38,16 @@ public:
     close();
     std::string p = simRoot + path;
     path_ = path;
+    {                                      // its name as stored (the case it was made with)
+      const char *sl = strrchr(path, '/');
+      name_ = sl ? sl + 1 : path;
+      std::string parent = simRoot + std::string(path, sl ? sl - path : 0);
+      if (DIR *pd = opendir(parent.c_str())) {
+        while (struct dirent *e = readdir(pd))
+          if (!strcasecmp(e->d_name, name_.c_str())) { name_ = e->d_name; break; }
+        closedir(pd);
+      }
+    }
     struct stat st;
     bool existed = ::stat(p.c_str(), &st) == 0;
     if (existed && S_ISDIR(st.st_mode)) { dir_ = opendir(p.c_str()); return dir_ != nullptr; }

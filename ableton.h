@@ -1,7 +1,8 @@
 // ableton.h — a project exported as an Ableton Live Set (Live 11), on the card.
 //
-// /Ableton/L7 A005/ (APP_NAME, the project's letter, the next number for that
-// letter: one more than the highest there, 001-999) holds "L7 A005.als" and
+// /L7/EXPORTS/L7 A005 Project/ (APP_NAME, the project's letter, the next number for that
+// letter: one more than the highest there, 001-999, then " Project", as Live names
+// its project folders) holds "L7 A005.als" and
 // the samples it plays, copied to Samples/Imported/ under their own names
 // (A30012.wav). The set: the project's tempo; 7 audio tracks (track 1 first,
 // as numbered on the screen), each with two Auto Filters (lowpass, highpass;

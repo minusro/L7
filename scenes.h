@@ -12,8 +12,8 @@
 // tempo and master volume last set by hand (in any project; before any: 120
 // BPM, 100%). The loaded one is
 // saved as it changes. A slot's file holds no audio, only the scenes (which
-// name their samples): /L7/projects/1.dat ... 12.dat, made once at full
-// size: saving only overwrites 512-byte blocks.
+// name their samples): /L7/PROJECTS/A.L7P ... L.L7P (none for an empty slot),
+// made once at full size: saving only overwrites 512-byte blocks.
 #pragma once
 #include <stdint.h>
 

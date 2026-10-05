@@ -1,7 +1,7 @@
 // storage.cpp — see storage.h
 //
-// Files, in /L7 (an older /looper is renamed to it at boot):
-//   samples/A30001.wav ... every recording: the letter of the project loaded
+// Files, in /L7 (an older /looper is renamed to it at boot), in four folders:
+//   SAMPLES/A30001.wav ... every recording: the letter of the project loaded
 //                         when it was recorded, the number of the track it
 //                         was recorded on (1-7, as on the screen), then its
 //                         number (0001-9999), counting per project and track:
@@ -10,16 +10,23 @@
 //                         tracks stop using it. 16-bit stereo WAV whose
 //                         512-byte header carries, in its JUNK chunk, the
 //                         loop's length and tempo, its waveform overview and
-//                         its name (letter, track, number). Recording space
-//                         (the pool: NNNN.wav) has none yet: a recording
-//                         gets its name when it starts (scenes refer to it by
-//                         it), and its file is renamed once cut down to size
-//                         (stopped).
-//   track1.unit ...       each track: the sample it plays and its settings
-//                         (loop range, mute, filter, volume and balance). 512 bytes.
-//   session.txt           the tempo, the loaded project, the master volume, the menu open.
-// Older versions kept each track in a full-size track1.wav ... : at boot those
-// become samples (and the empty ones recording space).
+//                         its name (letter, track, number).
+//   PROJECTS/A.L7P ...    the 12 projects, A-L (scenes.cpp); an empty slot has no file.
+//   EXPORTS/              the Ableton projects (ableton.cpp).
+//   DATA/                 the rest: recording space (the pool: NNNN.wav, a
+//                         recording's file until it's named and moved to SAMPLES:
+//                         a recording gets its name when it starts (scenes
+//                         refer to it by it), and its file is renamed, into
+//                         SAMPLES, once cut down to size (stopped)),
+//                         TRACK1.UNIT ... each track: the sample it plays and
+//                         its settings (loop range, mute, filter, volume and
+//                         balance), 512 bytes; SESSION.TXT the tempo, the loaded
+//                         project, the master volume, the menu open; CLIP.DAT and
+//                         NONE.DAT (scenes.cpp).
+// (Older cards: /L7/samples, /projects, /Ableton and the files of /L7 itself
+// are moved into these at boot.) Older versions kept each track in a
+// full-size track1.wav ... : at boot those become samples (and the empty ones
+// recording space).
 //
 // Rule: nothing that changes the card's file system (create, resize, delete,
 // rename) happens while the transport runs. On a slow card those take
@@ -98,12 +105,17 @@ static void sampleName(uint32_t id, char *buf, size_t size) {
 static void samplePath(uint32_t id, char *buf, size_t size, bool named = false) {
   int u = named ? -1 : unnamedIndex(id);
   char name[16];
-  if (u >= 0) snprintf(name, sizeof name, "%04u", unnamed[u].file);
-  else sampleName(id, name, sizeof name);
-  snprintf(buf, size, "/L7/samples/%s.wav", name);
+  if (u >= 0) {                                  // a recording not named yet: in its recording space
+    snprintf(buf, size, "/L7/DATA/%04u.wav", unnamed[u].file);
+    return;
+  }
+  sampleName(id, name, sizeof name);
+  snprintf(buf, size, "/L7/SAMPLES/%s.wav", name);
 }
 void sampleFile(uint32_t id, char *path, size_t size) { samplePath(id, path, size); }
-static void unitPath(int t, char *buf, size_t size) { snprintf(buf, size, "/L7/track%d.unit", t + 1); }
+// Recording space number n's file (empty, or holding the recording not named yet).
+static void poolPath(uint32_t n, char *buf, size_t size) { snprintf(buf, size, "/L7/DATA/%04u.wav", (unsigned)n); }
+static void unitPath(int t, char *buf, size_t size) { snprintf(buf, size, "/L7/DATA/TRACK%d.UNIT", t + 1); }
 static void legacyPath(int t, char *buf, size_t size) { snprintf(buf, size, "/L7/track%d.wav", t + 1); }
 
 static int32_t posMod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; }
@@ -348,7 +360,7 @@ static bool poolBlocked = false;
 static bool createPoolFile() {
   if (poolCount >= POOL_SIZE || nextSample > MAX_NUMBER) return false;
   char path[40];
-  samplePath(nextSample, path, sizeof path);
+  poolPath(nextSample, path, sizeof path);
   if (transport.running) Serial.printf("no recording space left: creating %s while playing\n", path);
   debugStage = "SD create (sample file)";
   FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
@@ -1077,7 +1089,7 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
     bool space = f.fileSize() == SAMPLE_FILE_BYTES && poolCount < POOL_SIZE && nextSample <= MAX_NUMBER;
     if (space) writeSampleHeader(f, 0, 0, 0, nullptr);
     f.close();
-    samplePath(nextSample, to, sizeof to);
+    poolPath(nextSample, to, sizeof to);
     if (space && SD.sdfs.rename(from, to)) pool[poolCount++] = nextSample++;
     else SD.sdfs.remove(from);
     return;
@@ -1213,7 +1225,7 @@ bool stepSample(int t, int dir) {
 
 Session loadSession() {
   Session s;
-  FsFile f = SD.sdfs.open("/L7/session.txt", O_RDONLY);
+  FsFile f = SD.sdfs.open("/L7/DATA/SESSION.TXT", O_RDONLY);
   char line[32];
   // (Parsed by hand: sscanf would pull ~26 KB of Unicode tables into RAM.)
   while (f && f.fgets(line, sizeof line) > 0) {
@@ -1237,24 +1249,23 @@ Session loadSession() {
 }
 
 void saveSession(const Session &s) {
-  FsFile f = SD.sdfs.open("/L7/session.txt", O_WRONLY | O_CREAT | O_TRUNC);
+  FsFile f = SD.sdfs.open("/L7/DATA/SESSION.TXT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
   f.printf("bpm=%.2f\nnewbpm=%.2f\nvolume=%d\nnewvolume=%d\nproject=%d\nmenu=%d\n", s.bpm, s.newBpm, s.master, s.newMaster,
            s.project + 1, s.menu);
   f.close();
 }
 
-// Finds the samples: which hold recordings (cut down to size if needed),
-// which are recording space, and the next free number.
-static void scanSamples() {
-  sampleTotal = 0;
-  lastOrder = 0;
-  poolCount = 0;
-  untrimmedCount = 0;
-  unnamedCount = 0;
-  olderCount = 0;
-  memset(nextNumber, 0, sizeof nextNumber);
-  FsFile dir = SD.sdfs.open("/L7/samples", O_RDONLY);
+// One folder's files. SAMPLES: the recordings (cut down to size if needed);
+// DATA: recording space, empty or holding a recording not named yet. A card
+// from before the folders had recording space in SAMPLES: those files are
+// listed in `moves` (numbers), to be moved to DATA.
+static constexpr int MAX_MOVES = 128;
+static uint16_t moves[MAX_MOVES];
+static int moveCount = 0;
+
+static void scanFolder(const char *folder, bool data) {
+  FsFile dir = SD.sdfs.open(folder, O_RDONLY);
   FsFile f;
   char name[32];
   while (dir && f.openNext(&dir, O_RDONLY)) {
@@ -1262,6 +1273,7 @@ static void scanSamples() {
     unsigned n = 0;                              // "NNNN.wav", or "XYNNNN.wav" (project letter, track)
     size_t len = strlen(name);
     uint8_t tag = len == 10 ? tagOf(name[0], name[1] - '0') : 0;
+    if (data && tag) { f.close(); continue; }    // (DATA holds untagged names only)
     const char *num = name + (tag ? 2 : 0);
     bool digits = (len == 8 || tag) && !strcmp(num + 4, ".wav");
     for (int i = 0; digits && i < 4; i++) {
@@ -1278,26 +1290,56 @@ static void scanSamples() {
     if (!numbered) continue;
     if (tag) nextNumber[tag] = umax(nextNumber[tag], n + 1);
     else nextSample = umax(nextSample, n + 1);
+    bool recording = ok && playable(info) && !tag && headerTag && headerNumber;   // recorded, not named yet
+    bool space = ok && !playable(info) && info.frames == 0 && size == SAMPLE_FILE_BYTES;
+    if (!data && !tag && (recording || space)) {   // (an older card: recording space belongs in DATA)
+      if (moveCount < MAX_MOVES) moves[moveCount++] = (uint16_t)n;
+      continue;
+    }
     if (ok && playable(info)) {
       uint32_t id = tag ? idOf(tag, n) : n;
       if (tag && !headerNumber && olderCount < (int)(sizeof older / sizeof older[0])) {
         id = n;                                  // named by the version before: known by its number
         older[olderCount++] = {(uint16_t)n, tag};
-      } else if (!tag && headerTag && headerNumber && unnamedCount < (int)(sizeof unnamed / sizeof unnamed[0])) {
-        id = idOf(headerTag, headerNumber);      // recorded, not named yet
+      } else if (recording) {
+        if (unnamedCount >= (int)(sizeof unnamed / sizeof unnamed[0])) continue;
+        id = idOf(headerTag, headerNumber);
         unnamed[unnamedCount++] = {id, (uint16_t)n};
         nextNumber[headerTag] = umax(nextNumber[headerTag], headerNumber + 1);
+      } else if (data) {
+        continue;                                // (an untagged sample in DATA: not one of ours)
       }
       noteSample(id);
       lastOrder = max(lastOrder, info.version >= 2 && info.order ? info.order : n);
       if ((size > WAV_DATA_OFFSET + (uint64_t)info.frames * 4 || unnamedIndex(id) >= 0) && untrimmedCount < 64)
         untrimmed[untrimmedCount++] = id;
-    } else if (ok && info.frames == 0 && size == SAMPLE_FILE_BYTES && poolCount < POOL_SIZE) {
+    } else if (data && space && poolCount < POOL_SIZE) {
       int i = poolCount++;                       // keep the pool sorted
       while (i > 0 && pool[i - 1] > n) { pool[i] = pool[i - 1]; i--; }
       pool[i] = n;
     }
   }
+}
+
+// Finds the samples: which hold recordings, which are recording space, and
+// the next free number.
+static void scanSamples() {
+  sampleTotal = 0;
+  lastOrder = 0;
+  poolCount = 0;
+  untrimmedCount = 0;
+  unnamedCount = 0;
+  olderCount = 0;
+  moveCount = 0;
+  memset(nextNumber, 0, sizeof nextNumber);
+  scanFolder("/L7/SAMPLES", false);
+  for (int i = 0; i < moveCount; i++) {          // recording space from an older card, into DATA
+    char from[40], to[40];
+    snprintf(from, sizeof from, "/L7/SAMPLES/%04u.wav", moves[i]);
+    poolPath(moves[i], to, sizeof to);
+    SD.sdfs.rename(from, to);
+  }
+  scanFolder("/L7/DATA", true);
   for (int i = 0; i < olderCount; i++)          // (new files without a tag numbered past those)
     nextSample = umax(nextSample, older[i].number + 1u);
 }
@@ -1311,12 +1353,34 @@ static void renumberPool() {
   for (int i = 0; i < poolCount; i++) {
     if (pool[i] > highest || nextSample > MAX_NUMBER) continue;
     char from[40], to[40];
-    samplePath(pool[i], from, sizeof from);
-    samplePath(nextSample, to, sizeof to);
+    poolPath(pool[i], from, sizeof from);
+    poolPath(nextSample, to, sizeof to);
     if (SD.sdfs.rename(from, to)) pool[i] = nextSample++;
   }
   for (int i = 1; i < poolCount; i++)            // keep it sorted
     for (int j = i; j > 0 && pool[j - 1] > pool[j]; j--) { uint16_t x = pool[j]; pool[j] = pool[j - 1]; pool[j - 1] = x; }
+}
+
+bool moveFile(const char *from, const char *to) {
+  return SD.sdfs.exists(from) && !SD.sdfs.exists(to) && SD.sdfs.rename(from, to);
+}
+
+// A folder of the app's, made if missing, with its name's letter case as given
+// (a FAT card keeps the case a folder was made with; the older ones were lower case).
+static void ensureFolder(const char *path) {
+  FsFile d = SD.sdfs.open(path, O_RDONLY);
+  if (!d) {
+    SD.sdfs.mkdir(path);
+    return;
+  }
+  char name[32];
+  d.getName(name, sizeof name);
+  d.close();
+  const char *want = strrchr(path, '/') + 1;
+  if (!strcmp(name, want)) return;
+  char tmp[48];
+  snprintf(tmp, sizeof tmp, "%.*s/_%s", (int)(want - path - 1), path, want);
+  if (SD.sdfs.rename(path, tmp)) SD.sdfs.rename(tmp, path);
 }
 
 bool storageBegin(void (*progress)(const char *)) {
@@ -1327,7 +1391,18 @@ bool storageBegin(void (*progress)(const char *)) {
   if (!SD.sdfs.begin(SdioConfig(DMA_SDIO))) return false;
   if (!SD.sdfs.exists("/L7") && SD.sdfs.exists("/looper")) SD.sdfs.rename("/looper", "/L7");   // (the app's folder, renamed)
   SD.sdfs.mkdir("/L7");
-  SD.sdfs.mkdir("/L7/samples");
+  if (!SD.sdfs.exists("/L7/EXPORTS") && SD.sdfs.exists("/Ableton")) SD.sdfs.rename("/Ableton", "/L7/EXPORTS");   // (the exports' folder, moved)
+  ensureFolder("/L7/SAMPLES");
+  ensureFolder("/L7/PROJECTS");
+  ensureFolder("/L7/EXPORTS");
+  ensureFolder("/L7/DATA");
+  moveFile("/L7/session.txt", "/L7/DATA/SESSION.TXT");   // (the files of /L7 itself, an older card's, into DATA)
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    char from[40], to[40];
+    snprintf(from, sizeof from, "/L7/track%d.unit", t + 1);
+    unitPath(t, to, sizeof to);
+    moveFile(from, to);
+  }
   scanSamples();
   while (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);
   bool ok = true;
@@ -1861,7 +1936,7 @@ static void openPoolNext() {
   if (!poolCount || (poolNext && poolNextSample == pool[0])) return;
   poolNext.close();
   char path[40];
-  samplePath(pool[0], path, sizeof path);
+  poolPath(pool[0], path, sizeof path);
   debugStage = "SD open (sample file)";
   poolNext = SD.sdfs.open(path, O_RDWR);
   poolNextSample = poolNext ? pool[0] : 0;

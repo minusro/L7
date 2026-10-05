@@ -94,10 +94,20 @@
   File Transfer rather than a drive; the recordings list is in RAM1 for its
   buffers too.
 
+## Card layout (agreed 2026-10-05)
+
+`/L7` has four folders: `SAMPLES` (all samples; recordings end up here),
+`PROJECTS` (the 12 project files `A.L7P` … `L.L7P`; an empty project has no
+file), `EXPORTS` (the Ableton projects) and `DATA` (everything else the app
+needs, the temporary audio files too: recording space, and a recording's file
+until it's named and moved to `SAMPLES`). An older card is moved over at boot
+(see storage.md). A project's file is made at full size when its slot is first
+loaded or pasted to (a short stall if playing), so saving never allocates.
+
 ## Ableton Live Set export (agreed 2026-10-04)
 
-* The loaded project, to `/Ableton/<app name> <letter><001-999>/`: the next
-  number for that letter. Its samples are copied into the folder
+* The loaded project, to `/L7/EXPORTS/<app name> <letter><001-999> Project/`
+  (named as Live names its project folders): the next number for that letter. Its samples are copied into the folder
   (`Samples/Imported/`), so it stands on its own.
 * The folder is a Live project: it has an (empty) `Ableton Project Info`
   folder, so the clips' sample paths, relative to it, resolve (without it
@@ -116,7 +126,7 @@
   to the project's colour (plain RGB distance picked greys).
 * The folder has Live's custom icon on a Mac: an empty `Icon<CR>` file, and
   the AppleDouble files (`._Icon<CR>` with the icon as resource fork and the
-  invisible flag, `/Ableton/._<folder>` with the custom-icon flag) a Mac
+  invisible flag, `/L7/EXPORTS/._<folder>` with the custom-icon flag) a Mac
   itself writes on a FAT card for the folder's extended attributes. Written
   by hand (ableton.cpp, icon data from tools/ableton/make_icon.py). SdFat
   refuses control characters in names, so `patch.py` also lets it take a CR

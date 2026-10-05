@@ -400,12 +400,12 @@ int main(int argc, char **argv) {
     check(wavLeft(4, 0) == -500 && wavLeft(4, 1234) == 1234 % 1000 - 500 && wavLeft(4, legacyFrames - 1) == (int16_t)((legacyFrames - 1) % 1000 - 500),
           "its audio is intact in samples/0002.wav");
     struct stat st;
-    check(::stat((simRoot + "/looper").c_str(), &st) != 0 && ::stat((simRoot + "/L7/samples").c_str(), &st) == 0,
+    check(::stat((simRoot + "/looper").c_str(), &st) != 0 && ::stat((simRoot + "/L7/SAMPLES").c_str(), &st) == 0,
           "the app's folder moved from /looper to /L7");
     FILE *old = fopen((simRoot + "/L7/track5.wav").c_str(), "rb");
     check(!old && sampleCount() == 1, "the old track file is gone; one sample on the card");
     if (old) fclose(old);
-    FILE *low = fopen((simRoot + "/L7/samples/0001.wav").c_str(), "rb");
+    FILE *low = fopen((simRoot + "/L7/SAMPLES/0001.wav").c_str(), "rb");
     check(!low, "track 4's empty file renumbered after it (0001 gone)");
     if (low) fclose(low);
     clearTrack(4);
@@ -1584,13 +1584,13 @@ int main(int argc, char **argv) {
     char colorHex[8];
     snprintf(colorHex, sizeof colorHex, "%02X%02X%02X", (PROJECT_COLORS[2] >> 11) * 255 / 31, ((PROJECT_COLORS[2] >> 5) & 63) * 255 / 63, (PROJECT_COLORS[2] & 31) * 255 / 31);
     int first = exportProject(2), second = exportProject(2);
-    std::string dir = simRoot + "/Ableton/L7 C00" + std::to_string(first);
+    std::string dir = simRoot + "/L7/EXPORTS/L7 C00" + std::to_string(first) + " Project";
     char m[200];
     snprintf(m, sizeof m, "exported as L7 C%03d, then L7 C%03d (the next number for its letter)", first, second);
     check(first >= 1 && second == first + 1, m);
     // The set: valid gzip and XML, 7 tracks with two Auto Filters each, a clip
     // slot per scene on each, the scenes; every clip's sample copied.
-    std::string py = "python3 -c \"import gzip,sys,os,xml.etree.ElementTree as E; d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)+'.als').read()); "
+    std::string py = "python3 -c \"import gzip,sys,os,xml.etree.ElementTree as E; d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read()); "
                      "t=r.find('LiveSet/Tracks'); s=len(r.find('LiveSet/Scenes')); "
                      "ok=len(t)==7 and all(len(x.findall('.//Devices/AutoFilter'))==2 for x in t) and all(len(x.find('DeviceChain/MainSequencer/ClipSlotList'))==s for x in t); "
                      "c=[f.get('Value') for f in r.iter('RelativePath') if f.get('Value').startswith('Samples/')]; "
@@ -1616,7 +1616,7 @@ int main(int argc, char **argv) {
                      " x=(0.4124*c[0]+0.3576*c[1]+0.1805*c[2])/0.95047; y=0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; z=(0.0193*c[0]+0.1192*c[1]+0.9505*c[2])/1.08883\n"
                      " f=lambda t: t**(1/3) if t>0.008856 else 7.787*t+16/116\n"
                      " return (116*f(y)-16,500*(f(x)-f(y)),200*(f(y)-f(z)))\n"
-                     "d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)+'.als').read()); w=lab(sys.argv[2])\n"
+                     "d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read()); w=lab(sys.argv[2])\n"
                      "n=min(range(70),key=lambda i:sum((a-b)**2 for a,b in zip(lab(P[i]),w)))\n"
                      "t=r.find('LiveSet/Tracks'); cl=[c.find('Color').get('Value') for c in r.iter('AudioClip')]\n"
                      "ok=all(x.find('Color').get('Value')==str(n) for x in t) and cl and all(v==str(n) for v in cl) and all(sc.find('Name').get('Value')=='' for sc in r.find('LiveSet/Scenes'))\n"
@@ -1630,9 +1630,56 @@ int main(int argc, char **argv) {
     // The folder's icon for a Mac: Icon<CR>, its AppleDouble file (Finder info + the icon's fork), and the folder's own.
     auto sizeOf = [](const std::string &path) { FILE *f = fopen(path.c_str(), "rb"); long n = -1; if (f) { fseek(f, 0, SEEK_END); n = ftell(f); fclose(f); } return n; };
     long iconSize = sizeOf(dir + "/Icon\r"), forkSize = sizeOf(dir + "/._Icon\r"), folderSize;
-    folderSize = sizeOf(simRoot + "/Ableton/._L7 C00" + std::to_string(first));
+    folderSize = sizeOf(simRoot + "/L7/EXPORTS/._L7 C00" + std::to_string(first) + " Project");
     snprintf(m, sizeof m, "the folder's Mac icon: Icon<CR> empty (%ld), ._Icon<CR> %ld bytes, the folder's ._ file %ld bytes", iconSize, forkSize, folderSize);
     check(iconSize == 0 && forkSize == 0xEE2 + 62577 && folderSize == 0xEE2, m);
+  }
+
+  printf("a card from before the folders: moved into them at boot\n");
+  {
+    transportStop();
+    runUntilIdle();
+    for (int i = 0; i < 20; i++) serviceScenes();
+    flushHeaders();
+    flushScenes();
+    uint32_t samplesBefore = sampleCount();
+    bool filledBefore[PROJECTS];
+    for (int p = 0; p < PROJECTS; p++) filledBefore[p] = projectFilled(p);
+    int projectBefore = projectCurrent(), scenesBefore = sceneCount();
+    // The old layout: lower case folders, the projects as 1.dat..12.dat and clip.dat/none.dat in /projects, recording space beside the
+    // samples, the unit and session files in /L7, the exports in /Ableton.
+    std::string cmd = "python3 -c '" + std::string(R"PY(
+import os, sys, shutil
+root = sys.argv[1] + "/L7"
+os.chdir(root)
+for up, low in (("SAMPLES", "samples"), ("PROJECTS", "projects")):
+    os.rename(up, "_tmp"); os.rename("_tmp", low)
+for f in os.listdir("DATA"):
+    src = "DATA/" + f
+    if f.endswith(".wav"): dst = "samples/" + f
+    elif f.startswith("TRACK"): dst = f.lower()
+    elif f == "SESSION.TXT": dst = "session.txt"
+    elif f in ("CLIP.DAT", "NONE.DAT"): dst = "projects/" + f.lower()
+    else: continue
+    os.rename(src, dst)
+os.rmdir("DATA")
+for i, l in enumerate("ABCDEFGHIJKL"):
+    if os.path.exists("projects/%s.L7P" % l): os.rename("projects/%s.L7P" % l, "projects/%d.dat" % (i + 1))
+os.rename("EXPORTS", "../Ableton")
+)PY") + "' " + simRoot;
+    check(system(cmd.c_str()) == 0, "(the card put back to the older layout)");
+    storageBegin([](const char *) {});
+    scenesBegin(simTempo, simSetTempo, 2, simNewTempo, simNewVolume);
+    bool same = projectCurrent() == projectBefore && sceneCount() == scenesBefore && sampleCount() == samplesBefore && projectClipboardFull();
+    for (int p = 0; p < PROJECTS; p++) same &= projectFilled(p) == filledBefore[p];
+    check(same, "after the boot: the same projects, scenes and samples");
+    FILE *ls = popen(("cd " + simRoot + "/L7 && python3 -c \"import os; print(' '.join(sorted(os.listdir('.'))), '|', ' '.join(sorted(f for f in os.listdir('PROJECTS'))), '|', len([f for f in os.listdir('DATA') if f.endswith('.wav')]), '|', len([f for f in os.listdir('SAMPLES') if f.endswith('.wav')]), '|', ' '.join(os.listdir('EXPORTS')[:1]))\"").c_str(), "r");
+    char line[400] = {};
+    if (ls) { if (!fgets(line, sizeof line, ls)) line[0] = 0; pclose(ls); }
+    std::string got = line;
+    check(got.find("DATA EXPORTS PROJECTS SAMPLES |") == 0 && got.find(".dat") == std::string::npos && got.find("L7P") != std::string::npos &&
+          got.find("L7 C") != std::string::npos,
+          "folders DATA EXPORTS PROJECTS SAMPLES (upper case), projects as .L7P, the exports moved");
   }
 
   printf("random sessions\n");
