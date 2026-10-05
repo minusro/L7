@@ -145,8 +145,8 @@ loaded or pasted to (a short stall if playing), so saving never allocates.
   Live's usual ones, not from a Live example: to be checked in Live.
 * A track's devices, in this order: Auto Filter highpass, Auto Filter
   lowpass, Utility (its balance automated by the clips). The track's own
-  mixer volume and pan stay at their defaults. (The example's master
-  Limiter isn't in the export.)
+  mixer volume and pan stay at their defaults. The master track has a
+  Limiter, as in the example set (its ids made fresh, after the tracks').
 
 ## Open ideas (not started)
 

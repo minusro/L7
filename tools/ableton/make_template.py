@@ -8,7 +8,7 @@ with fields marked "\\001" + a letter for ableton.cpp to fill in.
   python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 2 Project/L7 Test 2 Project.als" ableton_template.h
 
 Fields:
-  set:   N NextPointeeId   T tempo   R the tracks   C the scenes
+  set:   N NextPointeeId   T tempo   R the tracks   C the scenes   L a fresh id of the master Limiter (in order)
   track: I its list id   n its number   c its colour index   i a fresh id (in order: ALS_TRACK_IDS of them)
          M its clip slots   F its freeze slots   S the slot playing when saved (-2: none)
   slot:  k its index
@@ -174,8 +174,11 @@ def main(src, dst):
     tempo_target = ls.find('MasterTrack/DeviceChain/Mixer/Tempo/AutomationTarget').get('Id')
     m = re.search(r'<PointeeId Value="' + tempo_target + r'" />\s*</EnvelopeTarget>\s*<Automation>\s*<Events>\s*<FloatEvent [^>]*Value="([^"]*)"', s)
     s = s[:m.start(1)] + MARK + 'T' + s[m.end(1):]
-    if '<Limiter Id="0">' in s[s.index('<MasterTrack'):]:     # (a Limiter on the master track of the example: not part of the export)
-        s = cut(s, '<Limiter Id="0">', s.index('<MasterTrack'))
+    # The master track's Limiter: its ids fresh too, after the tracks' (field L, in order).
+    a, b = element(s, '<Limiter Id="0">', s.index('<MasterTrack'))
+    id_pat = r'<(\w*(?:Target|Pointee)) Id="(\d+)"'
+    master_ids = len(re.findall(id_pat, s[a:b]))
+    s = s[:a] + re.sub(id_pat, lambda m: '<' + m.group(1) + ' Id="' + MARK + 'L"', s[a:b]) + s[b:]
     others = [int(v) for v in re.findall(r'<\w*(?:Target|Pointee) Id="(\d+)"', s)]
     assert max(others) < ID_BASE, max(others)
 
@@ -193,6 +196,7 @@ def main(src, dst):
                 '// saved by ' + root.get('Creator') + ' (see there for the fields). Don\'t edit.\n'
                 '#pragma once\n\n')
         f.write('static constexpr int ALS_ID_BASE = %d, ALS_TRACK_IDS = %d;\n' % (ID_BASE, count))
+        f.write('static constexpr int ALS_MASTER_IDS = %d;   // the master Limiter\'s, after the tracks\'\n' % master_ids)
         f.write('// Each track\'s ids: ALS_ID_BASE + its place (0-6) * ALS_TRACK_IDS + these.\n')
         for name in ['BALANCE', 'LP_CUTOFF', 'HP_CUTOFF']:
             f.write('static constexpr int ALS_%s_AT = %d;\n' % (name, places[name]))

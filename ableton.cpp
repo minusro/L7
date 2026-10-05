@@ -120,6 +120,7 @@ static struct {
   SampleDetails sample;
   uint32_t loopStart, loopEnd, start;            // beats
   int event;                                     // the next envelope event's id
+  int masterIds;                                 // the master Limiter's fresh ids so far
 } x;
 
 static void putNumber(double v) {
@@ -200,7 +201,8 @@ static void field(char code) {
   char b[96];
   switch (code) {
     // the set
-    case 'N': putNumber(ALS_ID_BASE + NUM_TRACKS * ALS_TRACK_IDS); break;
+    case 'N': putNumber(ALS_ID_BASE + NUM_TRACKS * ALS_TRACK_IDS + ALS_MASTER_IDS); break;
+    case 'L': putNumber(ALS_ID_BASE + NUM_TRACKS * ALS_TRACK_IDS + x.masterIds++); break;   // the master Limiter's
     case 'T': putNumber(x.tempo); break;
     case 'R':
       for (x.place = 0; x.place < NUM_TRACKS; x.place++) {
@@ -321,6 +323,7 @@ int exportProject(int p, void (*progress)(int done, int total)) {
   x.p = p;
   x.color = liveColorFor(PROJECT_COLORS[p]);
   x.event = 1;
+  x.masterIds = 0;
   int scenes, current;
   if (!projectInfo(p, scenes, x.tempo, current)) return 0;
   // Its scenes with clips (an empty one, as the empty scene 0* is, left out).

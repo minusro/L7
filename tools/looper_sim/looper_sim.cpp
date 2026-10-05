@@ -1680,6 +1680,17 @@ int main(int argc, char **argv) {
     setTrackMix(NUM_TRACKS - 1, VOLUME_UNITY, 0);
     setTrackFilter(NUM_TRACKS - 1, 0, FILTER_MAX);
     trackChanged(NUM_TRACKS - 1);
+    // The master track's Limiter, and every automation target / pointee id in the set unique, below NextPointeeId.
+    {
+      std::string ip = "python3 -c \"import gzip,sys,os,re,xml.etree.ElementTree as E\n"
+                       "d=sys.argv[1]; x=gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read().decode()\n"
+                       "ids=[int(v) for v in re.findall(r'<\\w*(?:Target|Pointee) Id=\\\"(\\d+)\\\"', x)]\n"
+                       "nxt=int(re.search(r'<NextPointeeId Value=\\\"(\\d+)\\\"', x).group(1)); r=E.fromstring(x)\n"
+                       "lim=[c.tag for c in r.find('LiveSet/MasterTrack/DeviceChain/DeviceChain/Devices')]\n"
+                       "print(len(ids), nxt, lim); sys.exit(0 if len(ids)==len(set(ids)) and max(ids)<nxt and lim==['Limiter'] else 1)\" '" + dir + "'";
+      int irc = system(ip.c_str());
+      check(irc == 0, "the master track has a Limiter, and every target/pointee id in the set is unique and below NextPointeeId");
+    }
     // The folder's icon for a Mac: Icon<CR>, its AppleDouble file (Finder info + the icon's fork), and the folder's own.
     auto sizeOf = [](const std::string &path) { FILE *f = fopen(path.c_str(), "rb"); long n = -1; if (f) { fseek(f, 0, SEEK_END); n = ftell(f); fclose(f); } return n; };
     long iconSize = sizeOf(dir + "/Icon\r"), forkSize = sizeOf(dir + "/._Icon\r"), folderSize;

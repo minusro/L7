@@ -6,7 +6,7 @@
 // the samples it plays, copied to Samples/Imported/ under their own names
 // (A30012.wav). The set: the project's tempo; 7 audio tracks (track 1 first,
 // as numbered on the screen), each with two Auto Filters (highpass, lowpass;
-// fully open) and a Utility; a scene per scene of the project that has clips (an empty one,
+// fully open) and a Utility; a Limiter on the master track; a scene per scene of the project that has clips (an empty one,
 // as the empty scene 0* is, left out; then one empty scene last), each track's clip in it
 // where the track has one: the sample in Re-Pitch warp mode, its loop and
 // start position as the track's range and start position, deactivated if the
