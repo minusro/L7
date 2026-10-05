@@ -11,7 +11,7 @@ row and cell, its tempo and its master volume (block 0: `volume1`, the
 level + 1, and `tempo10`, tenths of a BPM, in the places of a 249th and 250th
 scene: 248 scenes at most; 0 in a project saved before, which then keeps the
 level playing / its current scene's tempo). Changing either, in any scene,
-changes the project's. `DATA/SESSION.TXT` names the loaded project and keeps the
+changes the project's. `DATA/SESSION.DAT` names the loaded project and keeps the
 tempo and master volume last set by hand (`newbpm=`, `newvolume=`; before
 any: 120 BPM, 100%): a new project starts with them. Loading a project
 doesn't change them. Twelve slots:

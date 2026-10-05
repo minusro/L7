@@ -135,7 +135,7 @@ void trackRange(int t, uint32_t &startBeat, uint32_t &beats);
 uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats);
 
 // The session: the tempo, the loaded project (0-11; -1: the dummy one) and the master volume, in
-// session.txt. (row/cell: the selection, saved there before projects kept it;
+// SESSION.DAT. (row/cell: the selection, saved there before projects kept it;
 // -1: none.)
 // menu: the menu's selection, + 1000 if it was open (ui_menu.cpp menuState()); -1: none saved.
 struct Session {

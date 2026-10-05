@@ -13,14 +13,14 @@
 //                         its name (letter, track, number).
 //   PROJECTS/A.L7P ...    the 12 projects, A-L (scenes.cpp); an empty slot has no file.
 //   EXPORTS/              the Ableton projects (ableton.cpp).
-//   DATA/                 the rest: recording space (the pool: NNNN.wav, a
+//   DATA/                 the rest: recording space (the pool: NNNN.DAT, a
 //                         recording's file until it's named and moved to SAMPLES:
 //                         a recording gets its name when it starts (scenes
 //                         refer to it by it), and its file is renamed, into
 //                         SAMPLES, once cut down to size (stopped)),
-//                         TRACK1.UNIT ... each track: the sample it plays and
+//                         TRACK1.DAT ... each track: the sample it plays and
 //                         its settings (loop range, mute, filter, volume and
-//                         balance), 512 bytes; SESSION.TXT the tempo, the loaded
+//                         balance), 512 bytes; SESSION.DAT the tempo, the loaded
 //                         project, the master volume, the menu open; CLIP.DAT and
 //                         NONE.DAT (scenes.cpp).
 // (Older cards: /L7/samples, /projects, /Ableton and the files of /L7 itself
@@ -106,7 +106,7 @@ static void samplePath(uint32_t id, char *buf, size_t size, bool named = false) 
   int u = named ? -1 : unnamedIndex(id);
   char name[16];
   if (u >= 0) {                                  // a recording not named yet: in its recording space
-    snprintf(buf, size, "/L7/DATA/%04u.wav", unnamed[u].file);
+    snprintf(buf, size, "/L7/DATA/%04u.DAT", unnamed[u].file);
     return;
   }
   sampleName(id, name, sizeof name);
@@ -114,8 +114,8 @@ static void samplePath(uint32_t id, char *buf, size_t size, bool named = false) 
 }
 void sampleFile(uint32_t id, char *path, size_t size) { samplePath(id, path, size); }
 // Recording space number n's file (empty, or holding the recording not named yet).
-static void poolPath(uint32_t n, char *buf, size_t size) { snprintf(buf, size, "/L7/DATA/%04u.wav", (unsigned)n); }
-static void unitPath(int t, char *buf, size_t size) { snprintf(buf, size, "/L7/DATA/TRACK%d.UNIT", t + 1); }
+static void poolPath(uint32_t n, char *buf, size_t size) { snprintf(buf, size, "/L7/DATA/%04u.DAT", (unsigned)n); }
+static void unitPath(int t, char *buf, size_t size) { snprintf(buf, size, "/L7/DATA/TRACK%d.DAT", t + 1); }
 static void legacyPath(int t, char *buf, size_t size) { snprintf(buf, size, "/L7/track%d.wav", t + 1); }
 
 static int32_t posMod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r + m : r; }
@@ -1225,7 +1225,7 @@ bool stepSample(int t, int dir) {
 
 Session loadSession() {
   Session s;
-  FsFile f = SD.sdfs.open("/L7/DATA/SESSION.TXT", O_RDONLY);
+  FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_RDONLY);
   char line[32];
   // (Parsed by hand: sscanf would pull ~26 KB of Unicode tables into RAM.)
   while (f && f.fgets(line, sizeof line) > 0) {
@@ -1249,7 +1249,7 @@ Session loadSession() {
 }
 
 void saveSession(const Session &s) {
-  FsFile f = SD.sdfs.open("/L7/DATA/SESSION.TXT", O_WRONLY | O_CREAT | O_TRUNC);
+  FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
   f.printf("bpm=%.2f\nnewbpm=%.2f\nvolume=%d\nnewvolume=%d\nproject=%d\nmenu=%d\n", s.bpm, s.newBpm, s.master, s.newMaster,
            s.project + 1, s.menu);
@@ -1270,12 +1270,12 @@ static void scanFolder(const char *folder, bool data) {
   char name[32];
   while (dir && f.openNext(&dir, O_RDONLY)) {
     f.getName(name, sizeof name);
-    unsigned n = 0;                              // "NNNN.wav", or "XYNNNN.wav" (project letter, track)
+    unsigned n = 0;                              // "NNNN.wav" (in DATA: .DAT), or "XYNNNN.wav" (project letter, track)
     size_t len = strlen(name);
     uint8_t tag = len == 10 ? tagOf(name[0], name[1] - '0') : 0;
     if (data && tag) { f.close(); continue; }    // (DATA holds untagged names only)
     const char *num = name + (tag ? 2 : 0);
-    bool digits = (len == 8 || tag) && !strcmp(num + 4, ".wav");
+    bool digits = (len == 8 || tag) && !strcasecmp(num + 4, data ? ".DAT" : ".wav");
     for (int i = 0; digits && i < 4; i++) {
       if (num[i] < '0' || num[i] > '9') digits = false;
       n = n * 10 + (num[i] - '0');
@@ -1321,6 +1321,34 @@ static void scanFolder(const char *folder, bool data) {
   }
 }
 
+// Recording space of the layout before DATA had .DAT files (NNNN.wav) becomes NNNN.DAT.
+static void renameDataWavs() {
+  uint16_t nums[MAX_MOVES];
+  int count = 0;
+  {
+    FsFile dir = SD.sdfs.open("/L7/DATA", O_RDONLY), f;
+    char name[32];
+    while (dir && count < MAX_MOVES && f.openNext(&dir, O_RDONLY)) {
+      f.getName(name, sizeof name);
+      bool file = !f.isDir();
+      f.close();
+      unsigned n = 0;
+      bool ok = file && strlen(name) == 8 && !strcasecmp(name + 4, ".wav");
+      for (int i = 0; ok && i < 4; i++) {
+        ok = name[i] >= '0' && name[i] <= '9';
+        n = n * 10 + (name[i] - '0');
+      }
+      if (ok) nums[count++] = (uint16_t)n;
+    }
+  }
+  for (int i = 0; i < count; i++) {
+    char from[40], to[40];
+    snprintf(from, sizeof from, "/L7/DATA/%04u.wav", nums[i]);
+    poolPath(nums[i], to, sizeof to);
+    SD.sdfs.rename(from, to);
+  }
+}
+
 // Finds the samples: which hold recordings, which are recording space, and
 // the next free number.
 static void scanSamples() {
@@ -1339,6 +1367,7 @@ static void scanSamples() {
     poolPath(moves[i], to, sizeof to);
     SD.sdfs.rename(from, to);
   }
+  renameDataWavs();
   scanFolder("/L7/DATA", true);
   for (int i = 0; i < olderCount; i++)          // (new files without a tag numbered past those)
     nextSample = umax(nextSample, older[i].number + 1u);
@@ -1396,11 +1425,14 @@ bool storageBegin(void (*progress)(const char *)) {
   ensureFolder("/L7/PROJECTS");
   ensureFolder("/L7/EXPORTS");
   ensureFolder("/L7/DATA");
-  moveFile("/L7/session.txt", "/L7/DATA/SESSION.TXT");   // (the files of /L7 itself, an older card's, into DATA)
+  moveFile("/L7/session.txt", "/L7/DATA/SESSION.DAT");   // (the files of /L7 itself, an older card's, into DATA)
+  moveFile("/L7/DATA/SESSION.TXT", "/L7/DATA/SESSION.DAT");
   for (int t = 0; t < NUM_TRACKS; t++) {
     char from[40], to[40];
-    snprintf(from, sizeof from, "/L7/track%d.unit", t + 1);
     unitPath(t, to, sizeof to);
+    snprintf(from, sizeof from, "/L7/track%d.unit", t + 1);
+    moveFile(from, to);
+    snprintf(from, sizeof from, "/L7/DATA/TRACK%d.UNIT", t + 1);
     moveFile(from, to);
   }
   scanSamples();

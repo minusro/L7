@@ -1656,9 +1656,9 @@ for up, low in (("SAMPLES", "samples"), ("PROJECTS", "projects")):
     os.rename(up, "_tmp"); os.rename("_tmp", low)
 for f in os.listdir("DATA"):
     src = "DATA/" + f
-    if f.endswith(".wav"): dst = "samples/" + f
-    elif f.startswith("TRACK"): dst = f.lower()
-    elif f == "SESSION.TXT": dst = "session.txt"
+    if f.endswith(".DAT") and f[:4].isdigit(): dst = "samples/" + f[:4] + ".wav"
+    elif f.startswith("TRACK"): dst = f[:6].lower() + ".unit"
+    elif f == "SESSION.DAT": dst = "session.txt"
     elif f in ("CLIP.DAT", "NONE.DAT"): dst = "projects/" + f.lower()
     else: continue
     os.rename(src, dst)
@@ -1673,13 +1673,42 @@ os.rename("EXPORTS", "../Ableton")
     bool same = projectCurrent() == projectBefore && sceneCount() == scenesBefore && sampleCount() == samplesBefore && projectClipboardFull();
     for (int p = 0; p < PROJECTS; p++) same &= projectFilled(p) == filledBefore[p];
     check(same, "after the boot: the same projects, scenes and samples");
-    FILE *ls = popen(("cd " + simRoot + "/L7 && python3 -c \"import os; print(' '.join(sorted(os.listdir('.'))), '|', ' '.join(sorted(f for f in os.listdir('PROJECTS'))), '|', len([f for f in os.listdir('DATA') if f.endswith('.wav')]), '|', len([f for f in os.listdir('SAMPLES') if f.endswith('.wav')]), '|', ' '.join(os.listdir('EXPORTS')[:1]))\"").c_str(), "r");
+    FILE *ls = popen(("cd " + simRoot + "/L7 && python3 -c \"import os; print(' '.join(sorted(os.listdir('.'))), '|', ' '.join(sorted(f for f in os.listdir('PROJECTS'))), '|', len([f for f in os.listdir('DATA') if f.endswith('.DAT') and f[0].isdigit()]), '|', len([f for f in os.listdir('SAMPLES') if f.endswith('.wav')]), '|', ' '.join(os.listdir('EXPORTS')[:1]))\"").c_str(), "r");
     char line[400] = {};
     if (ls) { if (!fgets(line, sizeof line, ls)) line[0] = 0; pclose(ls); }
     std::string got = line;
     check(got.find("DATA EXPORTS PROJECTS SAMPLES |") == 0 && got.find(".dat") == std::string::npos && got.find("L7P") != std::string::npos &&
           got.find("L7 C") != std::string::npos,
           "folders DATA EXPORTS PROJECTS SAMPLES (upper case), projects as .L7P, the exports moved");
+  }
+
+  printf("a card with the folders but DATA's files named .wav, .UNIT and .TXT: renamed to .DAT at boot\n");
+  {
+    transportStop();
+    runUntilIdle();
+    flushHeaders();
+    flushScenes();
+    uint32_t samplesBefore = sampleCount();
+    Session session;
+    saveSession(session);                          // (the sim never writes one otherwise)
+    std::string cmd = "python3 -c '" + std::string(R"PY(
+import os, sys
+os.chdir(sys.argv[1] + "/L7/DATA")
+for f in os.listdir("."):
+    if f.endswith(".DAT") and f[:4].isdigit(): os.rename(f, f[:4] + ".wav")
+    elif f.startswith("TRACK"): os.rename(f, f[:6] + ".UNIT")
+    elif f == "SESSION.DAT": os.rename(f, "SESSION.TXT")
+)PY") + "' " + simRoot;
+    check(system(cmd.c_str()) == 0, "(DATA's files put back to the earlier names)");
+    storageBegin([](const char *) {});
+    scenesBegin(simTempo, simSetTempo, 2, simNewTempo, simNewVolume);
+    FILE *ls = popen(("cd " + simRoot + "/L7/DATA && ls | tr '\\n' ' '").c_str(), "r");
+    char line[600] = {};
+    if (ls) { if (!fgets(line, sizeof line, ls)) line[0] = 0; pclose(ls); }
+    std::string got = line;
+    check(sampleCount() == samplesBefore && got.find(".wav") == std::string::npos && got.find("UNIT") == std::string::npos &&
+          got.find("TXT") == std::string::npos && got.find("TRACK7.DAT") != std::string::npos && got.find("SESSION.DAT") != std::string::npos,
+          "after the boot: NNNN.DAT, TRACK1-7.DAT, SESSION.DAT, nothing lost");
   }
 
   printf("random sessions\n");

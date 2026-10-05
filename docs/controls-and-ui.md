@@ -208,7 +208,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   meanwhile and comes back when the menu closes. The menu opens on the
   loaded project's card (with the dummy project: where its selection was,
   kept across power cycles too); if it was open at power off it opens again
-  at boot (DATA/SESSION.TXT).
+  at boot (DATA/SESSION.DAT).
 * Splash (`ui_splash.cpp`): the "L7" logo (italic, the 7's right edge one
   45° line to a sharp corner, two equal cuts near the bottom; design options in
   `docs/design/`), drawn in full resolution from its shape (`drawL7()`, at any

@@ -24,7 +24,7 @@ int newProjectVolume();                  // the last master volume set by hand (
 // The master volume a step up (by 1) or down (-1); saved with the session.
 void stepMasterVolume(int by);
 // The session: the tempo, the master volume and the loaded project, kept in
-// session.txt. beginSession() loads it (none saved: 120 BPM, project 1).
+// SESSION.DAT. beginSession() loads it (none saved: 120 BPM, project 1).
 // It's saved a while after it last changed, and only while stopped (saving
 // rewrites a file, which can stall the card); saveSessionNow() saves it at
 // once if it changed (power off). The selected row and cell are the loaded
