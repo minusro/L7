@@ -80,7 +80,11 @@
   card reader, from a timer (queued answers, never waited for, so safe in an
   interrupt): unanswered, macOS resets the USB connection every ~11 s.
 * The app is stopped and written out first; the card is the computer's. Eject
-  on the computer (or hold B) restarts the app.
+  on the computer (or hold B) gives the card back: `storageForget()` and
+  `scenesForget()` drop everything held from it without touching it (not even
+  closing a file: the handles are stale), then the start-up sequence reads it
+  all again (`reloadFromCard()` in the sketch), no restart. The USB side goes back to
+  the empty card reader (`usb_msc_clear_host_state()`). (Before: a restart.)
 * RAM: the recordings list (20 KB) is in RAM1, and the engine's buffer (16 KB)
   too (RAM1 free ~78 KB).
 * A first attempt froze the M8 (USB gone, torn graphics) as soon as the computer

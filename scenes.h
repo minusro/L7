@@ -23,6 +23,11 @@ struct TrackUnit;                                  // (storage.h)
 
 constexpr int MAX_SCENES = 248, PROJECTS = 12;   // (248: the list block keeps the master volume and tempo in the 249th and 250th's places)
 
+// Drops the loaded project and everything read from the project files, without
+// touching the card (storage mode: see storageForget()); scenesBegin() loads it
+// again.
+void scenesForget();
+
 // After storageBegin(): loads project `project` (0-11; -1: the dummy one). The tempo goes
 // through the app (rounding, limits): getTempo returns it, setTempo applies a
 // project's as it loads (not a change by hand), newTempo and newVolume give

@@ -64,6 +64,7 @@ void usb_msc_set_media(const usb_msc_media_t *m)
 	media = m;
 	attention = m != NULL;                           // the computer is told a medium arrived
 }
+void usb_msc_clear_host_state(void) { host_seen = 0; ejected = 0; }
 int usb_msc_host_seen(void) { return host_seen; }
 int usb_msc_ejected(void) { return ejected; }
 uint32_t usb_msc_sectors_read(void) { return n_read; }

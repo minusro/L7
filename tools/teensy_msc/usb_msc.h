@@ -33,6 +33,8 @@ void usb_msc_reset_request(void);
 // What the host has done: 1 once it has sent anything since configure; and
 // 1 once it has ejected the disk (START STOP UNIT).
 int usb_msc_host_seen(void);
+// Forgets what the host has done (seen, ejected), for the next time a medium is shown.
+void usb_msc_clear_host_state(void);
 // The last command's opcode and how many there have been (for logging).
 extern volatile uint8_t usb_msc_last_op;
 extern volatile uint32_t usb_msc_commands;

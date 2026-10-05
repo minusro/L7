@@ -135,6 +135,21 @@ static void fatal(const char *msg) {
   for (;;) handlePowerButton();
 }
 
+// Back from storage mode: everything the app knew of the card is dropped and read
+// again, as at a start (the computer may have changed any file); the menu stays open.
+static void reloadFromCard() {
+  storageForget();
+  scenesForget();
+  if (!storageBegin([](const char *msg) { Serial.println(msg); }))
+    fatal("SD card missing or full: the looper needs ~100 MB free in /L7.");
+  beginSession();
+  transport.spb = spbForBpm(bpm);
+  scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo, newProjectVolume);
+  scenesSelection(mainSelection, setMainSelection);
+  takeProjectSelection(false);
+  if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();
+}
+
 void setup() {
   Serial.begin(115200);
   if (CrashReport) Serial.print(CrashReport);
@@ -167,9 +182,10 @@ void setup() {
   scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo, newProjectVolume);
   scenesSelection(mainSelection, setMainSelection);
   takeProjectSelection(false);
-  deleteUnusedSamples();                           // recordings no project uses
+  if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();   // recordings no project uses
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   usbDriveTick = [] { loopCount++; handlePowerButton(); };   // (storage mode's own loop)
+  usbDriveReload = reloadFromCard;
   usbDriveBegin();
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);

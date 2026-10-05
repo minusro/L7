@@ -1775,6 +1775,52 @@ for f in os.listdir("."):
           "after the boot: NNNN.DAT, TRACK1-7.DAT, SESSION.DAT, nothing lost");
   }
 
+  printf("back from storage mode: everything dropped and read from the card again\n");
+  {
+    transportStop();
+    runUntilIdle();
+    for (int i = 0; i < 20; i++) serviceScenes();
+    flushHeaders();
+    flushScenes();
+    int loaded = projectCurrent();
+    uint32_t sampleBefore[NUM_TRACKS];
+    TrackState stateBefore[NUM_TRACKS];
+    for (int t = 0; t < NUM_TRACKS; t++) { sampleBefore[t] = tracks[t].sample; stateBefore[t] = tracks[t].state; }
+    uint32_t samplesBefore = sampleCount();
+    int scenesBefore = sceneCount(), other = -1;
+    for (int p = 0; p < PROJECTS && other < 0; p++) if (p != loaded && projectFilled(p)) other = p;
+    // The computer: deletes another project's file and a sample no track plays, and leaves a stray file.
+    uint32_t gone = 0;
+    for (int i = 0; i < (int)sampleCount() && !gone; i++) {
+      bool used = false;
+      for (int t = 0; t < NUM_TRACKS; t++) used |= sampleBefore[t] == sampleAt(i);
+      if (!used) gone = sampleAt(i);
+    }
+    char gonePath[64] = {};
+    if (gone) sampleFile(gone, gonePath, sizeof gonePath);
+    std::string cmd = "rm -f " + simRoot + gonePath + " " + simRoot + "/L7/PROJECTS/" + std::string(1, (char)('A' + other)) + ".L7P; echo stray > " + simRoot + "/L7/STRAY.TXT";
+    check(other >= 0 && gone && system(cmd.c_str()) == 0, "(the computer deleted another project's file and a sample, and added a file)");
+    storageForget();
+    scenesForget();
+    bool forgot = true;
+    for (int t = 0; t < NUM_TRACKS; t++) forgot &= tracks[t].state == TrackState::Empty && tracks[t].sample == 0;
+    check(forgot && sampleCount() == 0, "dropped: every track empty, no samples known");
+    check(storageBegin([](const char *) {}), "the card read again");
+    scenesBegin(simTempo, simSetTempo, loaded, simNewTempo, simNewVolume);
+    bool same = true;
+    for (int t = 0; t < NUM_TRACKS; t++) same &= tracks[t].sample == sampleBefore[t] && tracks[t].state == stateBefore[t];
+    check(same && projectCurrent() == loaded && sceneCount() == scenesBefore, "the loaded project and its tracks as they were");
+    char m[160];
+    snprintf(m, sizeof m, "what the computer changed is seen: %u samples (one fewer than %u), project %c empty, the rest still there", sampleCount(), samplesBefore,
+             'A' + other);
+    check(sampleCount() == samplesBefore - 1 && !sampleExists(gone) && !projectFilled(other) && projectFilled(loaded), m);
+    transportStart();
+    runBeats(6);
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state == TrackState::Playing) checkSync(t, "after the reload");
+    transportStop();
+    runUntilIdle();
+  }
+
   printf("random sessions\n");
   for (unsigned seed = 1; seed <= (argc > 1 ? atoi(argv[1]) : 5); seed++) fuzz(600, seed);
 

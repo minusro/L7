@@ -182,8 +182,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   left-aligned with the "EJECT OR HOLD B TO EXIT" hint at the bottom;
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
   COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or holding B
-  for a second, leaves it by restarting the app (the computer may have changed
-  any file). Four in
+  for a second, leaves it with "LOADING": the app drops everything it knew of the card
+  and reads it all again, as at a start (the computer may have changed any
+  file), and the menu is back as it was. Four in
   view at a time (an item
   every 12 rows, the last place in the status row's, level with the action
   button); moving, the list scrolls so the item past the selection that way

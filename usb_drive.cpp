@@ -12,6 +12,7 @@
 namespace looper {
 
 void (*usbDriveTick)() = nullptr;
+void (*usbDriveReload)() = nullptr;
 
 // The screen's text is left-aligned with the hint at the bottom, which stays centred.
 static const char HINT[] = "EJECT OR HOLD B TO EXIT";
@@ -57,6 +58,25 @@ void usbDriveBegin() {
   for (;;) {}
 }
 
+// Back from the computer: the card is the app's again, and everything the app
+// knew of it is read again (the computer may have changed any file). Without a
+// reload function: a restart.
+static bool leave(const char *why) {
+  Serial.printf("storage mode: %s\n", why);
+  cardSync();
+  if (!usbDriveReload) restart(why);
+  usb_msc_set_media(nullptr);                       // (an empty card reader again, answered from the timer)
+  usb_msc_clear_host_state();
+  pollTimer.begin([] { usb_msc_poll(); }, 2000);
+  line(176, why, LIGHT);
+  uint32_t shownAt = millis();
+  usbDriveReload();
+  while (millis() - shownAt < 400) {}               // (the message stays readable)
+  board.tft().fillScreen(BG);
+  uiGeneration++;
+  return true;
+}
+
 bool usbDriveMode() {
   // Everything the app holds is written out; the card is the computer's now.
   if (recording.mode != Recording::Idle) return false;
@@ -92,7 +112,7 @@ bool usbDriveMode() {
       if (usb_msc_last_op != 0x28 && usb_msc_last_op != 0x2A && usb_msc_last_op != 0x00)
         Serial.printf("storage mode: command %02X\n", usb_msc_last_op);
     }
-    if (usb_msc_ejected()) restart("EJECTED");
+    if (usb_msc_ejected()) return leave("EJECTED");
     int state = !usb_configuration ? 0 : usb_msc_host_seen() ? 2 : 1;
     if (millis() - hueAt >= 40) {                   // the title and logo: light grey, and once connected the hue goes round, once in 4 s
       hueAt = millis();
@@ -110,7 +130,7 @@ bool usbDriveMode() {
     }
     if (board.keys() & m8::BTN_OPT) {
       if (!heldSince) heldSince = millis();
-      if (millis() - heldSince >= 1000) restart("RESTARTING");
+      if (millis() - heldSince >= 1000) return leave("LOADING");
     } else {
       heldSince = 0;
     }

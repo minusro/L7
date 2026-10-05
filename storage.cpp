@@ -1457,6 +1457,7 @@ bool storageBegin(void (*progress)(const char *)) {
     if (!createPoolFile()) break;
   }
   openPoolNext();
+  if (clipboard.sample && !sampleExists(clipboard.sample)) clipboard.sample = 0;   // (gone from the card: after storage mode)
   return ok && poolCount > 0;
 }
 
@@ -2306,6 +2307,57 @@ void serviceStorage() {
   serviceStreams();
   serviceRecorder();
   serviceHeaders();
+}
+
+// Drops everything held from the card, without touching it (not even closing a
+// file: the computer may have changed anything while it had the card, so the
+// handles and what was read are stale): every track empty, no file open, the
+// lists of samples and recording space forgotten. Stopped and not recording
+// only. storageBegin() then reads it all again, as at a start.
+void storageForget() {
+  noInterrupts();
+  for (auto &tr : tracks) {
+    tr.live = false;
+    tr.armed = false;
+    tr.stopping = false;
+    tr.sampleSwitch = false;
+  }
+  silencedTracks = 0;
+  interrupts();
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    Track &tr = tracks[t];
+    plans[t].on = false;
+    plans[t].file = FsFile();
+    changes[t].on = false;
+    tr.state = TrackState::Empty;
+    tr.sample = 0;
+    tr.file = FsFile();
+    tr.unitFile = FsFile();
+    tr.rangePending = false;
+    memset(tr.overview, 0, sizeof tr.overview);
+    tr.overviewVersion++;
+    prepared[t].want = 0;
+    prepared[t].sample = 0;
+    prepared[t].file = FsFile();
+    for (auto &fb : framesBefore[t]) fb.sample = 0;
+  }
+  preparing = false;
+  poolNext = FsFile();
+  poolNextSample = 0;
+  poolCount = 0;
+  poolBlocked = false;
+  queuedTrack = -1;
+  queuedResample = false;
+  finishedResample = -1;
+  headerDirty = 0;
+  writePending = false;
+  sdFailed = false;
+  sampleTotal = 0;
+  unnamedCount = 0;
+  untrimmedCount = 0;
+  olderCount = 0;
+  nextSample = 1;
+  clipboard.sample = 0;
 }
 
 }  // namespace looper

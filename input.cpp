@@ -117,7 +117,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       int slot = armedSlot;
       if (slot < 0) {                                // the list's items: export, storage mode
         if (armedItem == 0 && !shifted && projectCurrent() >= 0 && projectHasClips()) exportToAbleton();
-        if (armedItem == 1 && !shifted) usbDriveMode();   // (it restarts the app when B is held; no MTP in this build: nothing)
+        if (armedItem == 1 && !shifted && usbDriveMode()) drawMenu();   // (back from it: everything read from the card again)
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
         bool loaded = slot == projectCurrent();
         if (projectFilled(slot) && cutConfirm != slot) {   // the first tap: confirm with a second

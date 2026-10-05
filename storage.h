@@ -54,6 +54,10 @@ bool storageMayWrite();
 // Mount SD, load saved tracks; prepares recording space the first time
 // (progress messages go to `progress`). false = no card / no space.
 bool storageBegin(void (*progress)(const char *));
+// Drops everything held from the card without touching it (storage mode: the
+// computer may have changed any file), the tracks emptied; storageBegin() and
+// scenesBegin() then read it all again. Stopped and not recording only.
+void storageForget();
 void serviceStorage();               // call as often as possible from loop()
 
 void transportStart();               // from bar 1, all tracks in sync

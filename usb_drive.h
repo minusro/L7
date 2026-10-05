@@ -12,7 +12,9 @@
 //
 // usbDriveMode() writes everything out and takes the screen and the card until
 // the disk is ejected on the computer, or B has been held for a second, then
-// restarts the app (the computer may have changed any file).
+// gives them back: the app forgets everything it knew of the card and reads it
+// all again (usbDriveReload, as at a start: the computer may have changed any
+// file). Without a reload function (or in the MTP build) it restarts instead.
 #pragma once
 
 namespace looper {
@@ -20,6 +22,9 @@ namespace looper {
 // Called while in storage mode, to keep the app's watchdogs and the power
 // button going (set by the sketch).
 extern void (*usbDriveTick)();
+
+// Reads everything from the card again, as at a start (set by the sketch).
+extern void (*usbDriveReload)();
 
 // At start-up: with the mass-storage USB type, answers the computer's disk
 // commands from a timer from now on. Nothing for the MTP type.

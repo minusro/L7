@@ -738,6 +738,26 @@ static void makeProjectFiles() {
   }
 }
 
+// Drops the loaded project and everything read from the project files, without
+// touching the card (see storageForget()); scenesBegin() then loads it again.
+void scenesForget() {
+  file = FsFile();
+  job.on = false;
+  job.src = FsFile();
+  job.dst = FsFile();
+  recordSlot = -1;
+  listDirty = false;
+  changed = false;
+  loading = false;
+  holding = false;
+  target = -1;
+  clipFull = false;
+  projectClip = false;
+  clipsKnown = -1;
+  project = 0;
+  for (bool &f : filled) f = false;
+}
+
 void scenesBegin(float (*getTempoFn)(), bool (*setTempoFn)(float), int loaded, float (*newTempoFn)(), int (*newVolumeFn)()) {
   getTempo = getTempoFn;
   setTempo = setTempoFn;
