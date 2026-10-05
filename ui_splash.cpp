@@ -7,8 +7,7 @@
 // black, then its colour goes once round all hues (from the green turquoise
 // accent back to it, eased in and out), fading out at the end; as it fades
 // in, the L and the 7 slide in from the sides, in place at 1 s. With the
-// copyright line under it, white while the hue cycles (to 2.5 s) and light grey
-// after (fading in), centred, in the pixel
+// copyright line under it in light grey (fading in), centred, in the pixel
 // font (ui_font.cpp), as in the rest of the app (2 x 2-pixel blocks).
 #include "ui.h"
 #include "ui_font.h"
@@ -187,8 +186,7 @@ void splashTick() {
     drawLogo(logo, shift);
   }
   uint32_t into = ms < TEXT_FROM_MS ? 0 : min(ms - TEXT_FROM_MS, TEXT_FADE_MS);
-  uint16_t base = ms < LOGO_FADE_MS + HUE_MS ? INK : SPLASH_TEXT;   // (white while the logo's hue cycles, then light grey)
-  uint16_t text = blend565(blend565(base, BG, (uint8_t)(255 * into / TEXT_FADE_MS)), BG, out);
+  uint16_t text = blend565(blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / TEXT_FADE_MS)), BG, out);
   float toRise = 1 - min(1.0f, (ms < TEXT_FROM_MS ? 0 : ms - TEXT_FROM_MS) / (float)RISE_MS);   // of the rise
   int y = TEXT_Y_SPLASH - RISE_PX + (int)lroundf(RISE_PX * toRise * toRise * toRise);
   if (text != shownText || y != shownTextY) {
