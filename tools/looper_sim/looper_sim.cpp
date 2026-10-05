@@ -1600,9 +1600,9 @@ int main(int argc, char **argv) {
     int s = -1, clips = -1, saved = -1, other = -1;
     if (out) { if (fscanf(out, "%d %d %d %d", &s, &clips, &saved, &other) != 4) s = -1; }
     int rc = out ? pclose(out) : -1;
-    snprintf(m, sizeof m, "the set opens as gzip and XML: 7 tracks, two Auto Filters each, %d scene(s) (%d of the project's have clips), %d clip(s), "
+    snprintf(m, sizeof m, "the set opens as gzip and XML: 7 tracks, two Auto Filters each, %d scene(s) (%d of the project's have clips, and an empty last one), %d clip(s), "
              "their samples copied, a Live project (Ableton Project Info)", s, scenes, clips);
-    check(rc == 0 && s == scenes && clips > 0, m);
+    check(rc == 0 && s == scenes + 1 && clips > 0, m);
     snprintf(m, sizeof m, "scene 2's clips (set scene %d) saved as playing: %d track(s) (%d have a clip there), %d other", index + 1, saved,
              playing, other);
     check(saved == playing && other == 0 && playing > 0, m);

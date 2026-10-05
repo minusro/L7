@@ -110,6 +110,7 @@
   loop's end, which Live can't loop: the whole loop), deactivated where the
   track is muted; the current scene's clips saved as playing (triggered when
   the set opens).
+* An empty scene is added last (Live's usual spare one to launch into).
 * Scenes have no name. The 7 tracks and every clip are coloured with the
   palette entry of Live (the 70 clip colours) nearest, by CIE Lab distance,
   to the project's colour (plain RGB distance picked greys).

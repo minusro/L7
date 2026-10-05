@@ -134,9 +134,9 @@ static void emit(const char *t);
 static int trackAt(int place) { return NUM_TRACKS - 1 - place; }
 
 static void clipSlots(bool freeze) {
-  for (x.slot = 0; x.slot < x.scenes; x.slot++) {
+  for (x.slot = 0; x.slot <= x.scenes; x.slot++) {   // (one more than the scenes with clips: the empty last scene)
     TrackUnit units[NUM_TRACKS];
-    bool clip = !freeze && projectScene(x.p, x.pos[x.slot], units) && units[trackAt(x.place)].sample &&
+    bool clip = !freeze && x.slot < x.scenes && projectScene(x.p, x.pos[x.slot], units) && units[trackAt(x.place)].sample &&
                 sampleDetails(units[trackAt(x.place)].sample, x.sample);
     if (!clip) {
       emit(ALS_SLOT);
@@ -175,7 +175,7 @@ static void field(char code) {
       }
       break;
     case 'C':
-      for (x.slot = 0; x.slot < x.scenes; x.slot++) emit(ALS_SCENE);
+      for (x.slot = 0; x.slot <= x.scenes; x.slot++) emit(ALS_SCENE);   // (and an empty last one)
       break;
     // a track
     case 'I': putNumber(26 + x.place); break;
