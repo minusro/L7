@@ -33,8 +33,8 @@ uint32_t uiGeneration = 1;
 
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
-static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "USB DRIVE MODE"};
+static constexpr int CARDS = PROJECTS, LIST = 8, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "USB DRIVE MODE", "DUMMY 1", "DUMMY 2", "DUMMY 3", "DUMMY 4", "DUMMY 5", "DUMMY 6"};   // (the last six: placeholders, they do nothing)
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), until the selection moves or the menu closes.
 static char exportText[24];
