@@ -17,9 +17,10 @@
 // cell) and 50% grey outside; on a muted clip the range is 50% grey and the
 // rest dark grey. While B alone is held on the selected waveform cell (B +
 // arrows change the range), the range is in the accent colour, muted or not.
-// The start position: a dotted line the waveform's height (blocks of the
-// waveform's colour on rows 2, 4, 6, 9, 11 and 13, each inverting what's under it: the waveform's
-// pixels go black, the background's take the waveform's colour; the rest left as it is), on every track. The playhead is an accent-coloured line (white
+// The start position: a checkerboard line of 1-pixel squares, a block wide and the
+// waveform's height, in the column a bar line there would take; its squares invert
+// what's under them (the waveform's pixels go black, the background's take the
+// waveform's colour), on every track. The playhead is an accent-coloured line (white
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
 // A recording track's waveform area is in the accent colour (a block of black
@@ -52,6 +53,7 @@ struct WaveView {
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
   int rangeFirstPx = 0, rangePx = 0;               // and its pixel columns: right after the bar line's pixel at each edge
   int markCol = -1;                                // the start position's column; -1: none
+  int markEdge = 0;                                // and its edge's column (the range's colour there)
   int playCol = -1;                                // playhead / record head; -1: none
   uint16_t headColor = 0;                          // a line this colour; INVERT_HEAD: the column inverted
   uint16_t rangeInk = INK;                         // the waveform inside the loop range
@@ -89,12 +91,12 @@ static int edgeCol(uint32_t beat, uint32_t loopBeats) {
 }
 
 // The start position's line in waveform column c of view v: the waveform's
-// height (rows 2-13), marks on rows 2, 4, 6, 9, 11, 13
-// ("x0x0x00x0x0x") inverting the waveform under them, the waveform showing between; BG: no line there.
+// height (rows 2-13), a checkerboard of 1-pixel squares
+// inverting the waveform under them; BG: no line there.
 static constexpr int START_TOP = MID_ROW - WAVE_REACH, START_BOTTOM = MID_ROW + 1 + WAVE_REACH;   // rows 2-13
 static uint16_t startInk(const WaveView &v, int c) {
   if (!v.visible || v.live || c != v.markCol) return BG;
-  bool in = (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
+  bool in = (v.markEdge - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;   // (the colour of the range it's in)
   return in ? v.rangeInk : v.outInk;
 }
 
@@ -135,17 +137,13 @@ static void drawColumn(int i, int bc) {
           px[y * PX] = v.live ? ACCENT_DARK : BG;                                                 // (recording: the dark accent)
         break;
       }
-    if (uint16_t ink = startInk(v, c); ink != BG) {              // the start position: a dotted line (0: left as it is)
-      static const char LINE[] = "x0x0x00x0x0x";                // rows 2-13
-      static_assert(sizeof LINE - 1 == START_BOTTOM - START_TOP + 1, "a mark per row");
-      for (int r = START_TOP; r <= START_BOTTOM; r++)
-        if (LINE[r - START_TOP] == 'x')                           // a mark inverts what's under it, pixel by pixel:
-          for (int y = r * PX; y < (r + 1) * PX; y++)             // the background in the waveform's colour, the waveform in the background's
-            for (int x = 0; x < PX; x++) {
-              uint16_t &p = px[y * PX + x];
-              p = p == v.bg ? ink : v.bg;
-            }
-    }
+    if (uint16_t ink = startInk(v, c); ink != BG)                // the start position: a checkerboard line, 1-pixel squares, the
+      for (int y = START_TOP * PX; y < (START_BOTTOM + 1) * PX; y++)   // waveform's height; its squares invert what's under them
+        for (int x = 0; x < PX; x++)                              // (the background in the waveform's colour, the waveform in the background's)
+          if ((x + y) % 2 == 0) {
+            uint16_t &p = px[y * PX + x];
+            p = p == v.bg ? ink : v.bg;
+          }
     if (c == v.playCol) {                                         // on top: the playhead
       int reach = v.live ? 0 : 1;                                 // (a block past the waveform each way; recording: within its backdrop)
       for (int y = (MID_ROW - WAVE_REACH - reach) * PX; y < (MID_ROW + 2 + WAVE_REACH + reach) * PX; y++)
@@ -215,7 +213,9 @@ void drawWave(int i, bool recordingHere) {
     int firstPx = edgePx(first), endPx = edgePx(end);
     v.rangeFirstPx = firstPx % (WAVE_COLS * PX);
     v.rangePx = constrain(endPx - firstPx, 1, WAVE_COLS * PX);
-    v.markCol = edgeCol(startPosition(loopBeats, rs, rb), loopBeats) % WAVE_COLS;
+    int mark = edgeCol(startPosition(loopBeats, rs, rb), loopBeats) % WAVE_COLS;
+    v.markCol = mark == 0 ? 0 : mark - 1;          // (the column before its edge, as a bar line's: on the bar line at a bar start)
+    v.markEdge = mark;
   }
   for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
 }
