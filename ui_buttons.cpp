@@ -32,7 +32,7 @@
 // start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_HALVE, ICON_DOUBLE };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -65,7 +65,7 @@ static int actionIcon() {
   }
   if (selected == STATUS_ROW) {                    // restart / duplicate / play-stop / tap tempo
     int cell = selectedCellIn(STATUS_ROW);
-    if (shift) return cell == SCENE_CELL ? ICON_SCENE_DUP : ICON_RESTART;   // (SHIFT on the scene cell: duplicate it)
+    if (shift) return cell == SCENE_CELL ? ICON_SCENE_DUP : cell == TEMPO_CELL ? (tempoShiftHalves() ? ICON_HALVE : ICON_DOUBLE) : ICON_RESTART;   // (SHIFT: the scene cell duplicates it; the tempo cell halves / doubles it)
     return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_NEXT;   // the scene cell: the next scene
   }
   const Track &tr = tracks[selected];
@@ -176,6 +176,8 @@ PROGMEM static const Icon ICONS[] = {
   {9, 7, {"..#.#....", "..#.##...", "..#.###..", "..#.####.", "..#.###..", "..#.##...", "..#.#...."}},   // RESTART (|>: start from 1.1.1; a block right of centre)
   {7, 7, {"#.#.#.#", ".......", "#..#..#", "..###..", "#..#..#", ".......", "#.#.#.#"}},   // SCENE_DUP (a small + in a checkered square)
   {6, 7, {"#....#", "##...#", "###..#", "####.#", "###..#", "##...#", "#....#"}},   // NEXT (play, then a bar: the next scene)
+  {0, 0, {}},                                                                  // HALVE ("/2", text)
+  {0, 0, {}},                                                                  // DOUBLE ("X2", text)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
@@ -311,6 +313,19 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
       for (int r = 0; r < ROWS4; r++)
         for (int c = 0; c < w; c++)
           if (on[r][c]) block(c0 + c, r0 + copy * (ROWS4 + 1) + r);
+  } else if (icon == ICON_HALVE || icon == ICON_DOUBLE) {
+    // "/2" or "X2" in the pixel font (a block between), centred in the backdrop.
+    const char *text = icon == ICON_HALVE ? "/2" : "X2";
+    const int w = textWidth(text) / PX;
+    int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w + 1) / 2, r0 = (rows - FONT_H / PX) / 2, x = 0;
+    for (const char *p = text; *p; p++) {
+      const Glyph *g = glyphFor(*p);
+      if (!g) continue;
+      for (int r = 0; r < 5 && g->rows[r]; r++)
+        for (int c = 0; c < glyphWidth(*g); c++)
+          if (g->rows[r][c] == '#') block(c0 + x + c, r0 + r);
+      x += glyphWidth(*g) + 1;
+    }
   } else if (icon != ICON_NONE) {
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
