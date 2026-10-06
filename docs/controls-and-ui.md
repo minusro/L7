@@ -130,7 +130,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   small square, not selectable, no frame, with the edge mark: a small solid triangle (3×5
   blocks) pointing left, its tip 3 blocks from the left edge, dark grey on black (grey where LEFT would open the
   menu, a row's first cell; white while LEFT is held that opens it once let go, a dark grey strip along the left edge then too, the
-  screen's height and 3 blocks wide; the selection frame hidden meanwhile, and while UP / DOWN are held to open it, the arrow unchanged then) (the selected status row's dark grey
+  screen's height and 2 blocks wide, a black line a block wide right of it; the selection frame hidden meanwhile, and while UP / DOWN are held to open it, the arrow unchanged then) (the selected status row's dark grey
   ground starts at the scene cell's left edge), in the space from the screen's left edge to 2 blocks short of the scene cell's
   frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
   (an inverted SCN tag with the scene position,
@@ -186,8 +186,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in the colour the action button had for the item (`actionRestColor()`). Along the right
   edge, the "peep": a strip the screen's height (coloured from the status row's top down, where the action
   button is in the looper's view; black above) and 2 blocks wide (the action button's width while RIGHT is held that leaves
-  the menu once let go, nothing then above its coloured part (the menu's ground), whose top left corner is cut a
-  block, and a black line the screen's height a block wide left of it), in the loaded project's colour; with no project, none until RIGHT is held, then in the
+  the menu once let go, its coloured part's top left corner then cut a block, and a black line the screen's height
+  2 blocks wide left of it), in the loaded project's colour; with no project, none until RIGHT is held, then in the
   first empty slot's colour (where leaving makes a new project); no arrow. While an arrow is held that leaves the menu, the selection
   frame is hidden. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
