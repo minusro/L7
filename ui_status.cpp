@@ -155,12 +155,12 @@ void drawStatus() {
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
     // The menu cell: the edge mark, pointing left, on black (the selected
-    // row's ground starts after it): dark grey; grey where LEFT would go to
-    // the menu (a row's first cell); white while an arrow is held that goes
+    // row's ground starts after it): dark grey; white where LEFT would go to
+    // the menu (a row's first cell), and while an arrow is held that goes
     // there once let go.
     static uint16_t markInk = 0;
     bool leftLeaves = selectedCellIn(selected) == firstCellIn(selected);
-    uint16_t ink = screenSwitchPending() ? INK : leftLeaves ? DIM : DARK;
+    uint16_t ink = screenSwitchPending() || leftLeaves ? INK : DARK;
     if (cleared || ink != markInk) drawEdgeMark(false, 0, EDGE_W, top, ink, BG);
     markInk = ink;
   }

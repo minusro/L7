@@ -128,8 +128,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
   small square, not selectable, no frame, with the edge mark: a small arrow (an open 3×5
-  head, a chevron, on a shaft 5 blocks long) pointing left, 2 blocks from the left edge, dark grey on black (grey where LEFT would open the
-  menu, a row's first cell; white while an arrow is held that opens it once let go, the selection frame hidden meanwhile) (the selected status row's dark grey
+  head, a chevron, on a shaft 5 blocks long) pointing left, 2 blocks from the left edge, dark grey on black (white where LEFT would open the
+  menu, a row's first cell, and while an arrow is held that opens it once let go, the selection frame hidden meanwhile) (the selected status row's dark grey
   ground starts at the scene cell's left edge), in the space from the screen's left edge to 2 blocks short of the scene cell's
   frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
   (an inverted SCN tag with the scene position,
@@ -185,7 +185,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in the colour the action button had for the item (`actionRestColor()`). At the right
   edge, centred top to bottom, the looper's edge mark mirrored (an arrow pointing right in the middle of a strip along the right edge, the screen's height and a
   third as wide as the space right of the cards, in the loaded project's colour (black with
-  none); the arrow dark grey, light grey where RIGHT would leave the menu
+  none); the arrow dark grey, white where RIGHT would leave the menu
   (with none: RIGHT makes a new project), white while an arrow is held that leaves
   once let go (with none: the first empty slot's colour), the selection frame hidden meanwhile). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
