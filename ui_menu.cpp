@@ -168,6 +168,8 @@ static void scrollList(int i, int dir) {
   listTop = constrain(listTop, 0, max(0, LIST - LIST_ROOM));
 }
 
+static bool playPulse();
+
 static void drawItem(int k) {
   if (!listInView(k)) return;
   auto &t = board.tft();
@@ -205,7 +207,7 @@ static void drawItem(int k) {
       for (int r = 0; r < 5 && g->rows[r]; r++)
         for (int c = 0; c < w; c++)
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
-      if (loaded && transport.running) {          // the clock running: a small play icon right of the letter, as black
+      if (loaded && playPulse()) {                // the clock running: a small play icon right of the letter, as black, on the first half of each beat
         static const char *const PLAY[5] = {"#..", "##.", "###", "##.", "#.."};
         for (int r = 0; r < 5; r++)
           for (int c = 0; c < 3; c++)
@@ -240,13 +242,21 @@ uint16_t menuActionColor() {
   return projectHasClips() && !exportText[0] ? ACCENT : DIM;   // export: grey with nothing to export, or while its label shows
 }
 
+// The loaded card's play icon (the clock running): shown on the first half of each beat.
+static bool playPulse() {
+  noInterrupts();
+  bool on = transport.running && transport.sampleInBeat < transport.spb / 2;
+  interrupts();
+  return on;
+}
+
 // What an item shows: redrawn when it changes.
 static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
          (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
-         (uint32_t)(k == projectCurrent() && transport.running) << 24;
+         (uint32_t)(k == projectCurrent() && transport.running) << 24 | (uint32_t)(k == projectCurrent() && playPulse()) << 25;
 }
 
 void drawMenu() {
