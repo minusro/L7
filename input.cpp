@@ -149,10 +149,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
     return;
   }
-  // The menu's selection on the status row: as in the looper's view, but UP
+  // The menu's selection on the status row: as in the looper's view, but DOWN
   // (or LEFT from the scene cell) goes back to the menu's items.
   if (menuOpen() && !shift && !opt &&
-      ((pressed & m8::BTN_UP) || ((pressed & m8::BTN_LEFT) && selectedCellIn(STATUS_ROW) == SCENE_CELL))) {
+      ((pressed & m8::BTN_DOWN) || ((pressed & m8::BTN_LEFT) && selectedCellIn(STATUS_ROW) == SCENE_CELL))) {
     menuLeaveStatus();                               // (LEFT from its first cell too: the list's last item)
     moved = true;
     return;
@@ -372,8 +372,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
   } else {
     int row = selected, at = selectedCellIn(selected);
-    if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
-    if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
+    // (Rows are numbered from the bottom of the screen up: the status row, the one on top, last.)
+    if (pressed & m8::BTN_UP && selected < ROWS - 1) selected++;       // no wrapping
+    if (pressed & m8::BTN_DOWN && selected > 0) selected--;
     // To or from the status row: the cell below / above, the status row's having the menu cell to the left of the tracks' first.
     if (selected == STATUS_ROW && row != STATUS_ROW) selectedCell = at + 1;
     else if (row == STATUS_ROW && selected != STATUS_ROW) selectedCell = max(at - 1, 0);
@@ -447,7 +448,7 @@ static void selectAfterRecording(int t) {
   if (selected != t) return;                       // the user has moved on already
   for (TrackState want : {TrackState::Empty, TrackState::Muted}) {
     for (int k = 1; k < NUM_TRACKS; k++) {
-      int i = (t - k + NUM_TRACKS) % NUM_TRACKS;   // (the track numbered next: the row above)
+      int i = (t - k + NUM_TRACKS) % NUM_TRACKS;   // (the track numbered next: the row below)
       if (tracks[i].state == want) {
         selected = i;
         drawTrack(i);

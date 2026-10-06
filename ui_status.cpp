@@ -98,7 +98,7 @@ void drawStatus() {
   bool cleared = drawn != uiGeneration;
   if (cleared) {
     drawn = uiGeneration;
-    for (int c = 0; c < STATUS_CELLS; c++) t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, BG);
+    for (int c = 0; c < STATUS_CELLS; c++) t.fillRect(statusCell(c).x, top, statusCell(c).w, TRACKS_TOP - top, BG);   // (with the gap under it)
     shownBorders = ~0ull;
   }
   uint64_t borders = 0;

@@ -109,7 +109,7 @@ static void drawLine(int x, int y, const char *text, uint16_t color) {
 // The text near the bottom: it starts with its letters level with the status
 // row's text (the clock's), the copyright sign a block above, and rises
 // RISE_PX from there (the logo stays where the centring above puts it).
-static constexpr int TEXT_Y_SPLASH = STATUS_TOP + (STATUS_H - FONT_H) / 2 / PX * PX - TEXT_PX;
+static constexpr int TEXT_Y_SPLASH = 214 + (STATUS_H - FONT_H) / 2 / PX * PX - TEXT_PX;   // (where the status row's text was, at the bottom)
 
 int splashBottom() { return LOGO_Y + LOGO_H; }      // (startup messages go under the logo, above the text)
 
