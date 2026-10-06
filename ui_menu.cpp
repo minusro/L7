@@ -186,12 +186,12 @@ static void drawItem(int k) {
       if (rowSpan(s, 2, r, c0, c1, true)) t.fillRect((c1 + 1) * PX, r * PX, PX, PX, frame);
     }
     if (sel && upArrow(k)) {                      // the way back up to the looper: a small blocky arrow on the frame's top line
-      static const char *const P[2] = {"++0X0++", "00XXX00"};   // (the line: + the frame as it is; the row under it)
+      static const char *const P[2] = {"0000X0000", "++0XXX0++"};   // (the row above the line; the line: + the frame as it is)
       uint16_t ink = board.keys() & m8::BTN_UP ? DARK : LIGHT;
       int cx = s.x + s.w / 2;
       for (int r = 0; r < 2; r++)
-        for (int c = 0; c < 7; c++)
-          if (P[r][c] != '+') t.fillRect((cx + c - 3) * PX, (s.y - 2 + r) * PX, PX, PX, P[r][c] == 'X' ? ink : BG);
+        for (int c = 0; c < 9; c++)
+          if (P[r][c] != '+') t.fillRect((cx + c - 4) * PX, (s.y - 3 + r) * PX, PX, PX, P[r][c] == 'X' ? ink : BG);
     }
     uint16_t color = PROJECT_COLORS[k];
     bool filled = projectFilled(k), loaded = k == projectCurrent();

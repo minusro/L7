@@ -115,7 +115,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the line; the scene versions the same with a checkered square right round them.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  Status row (labels 50% grey, light grey on the selected cell): the selected cell's frame carries a small blocky down arrow over the middle of its bottom line (`00XXX00` above the line, `++0X0++` on it; light grey, dark grey while DOWN is held): DOWN opens the menu. The scene cell
+  Status row (labels 50% grey, light grey on the selected cell): the selected cell's frame carries a small blocky down arrow over the middle of its bottom line (`000XXX000` above the line, `++00X00++` on it; light grey, dark grey while DOWN is held): DOWN opens the menu. The scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -152,7 +152,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   new). Loading a project, or making a new one, doesn't start the clock either
   (playing: the project comes in on the next bar line). On its items A
   runs the action button's action when let go; B does nothing. The way out
-  is loading a project (A on the loaded one: just back), or UP on a card of the top row (once let go; its frame shows a small up arrow on its top line, light grey, dark grey while UP is held); with the dummy
+  is loading a project (A on the loaded one: just back), or UP on a card of the top row (once let go; its frame shows a small up arrow on its top line, `0000X0000` above it, `++0XXX0++` on it, light grey, dark grey while UP is held); with the dummy
   project loaded, one has to be loaded or made first. Opening the menu
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.
