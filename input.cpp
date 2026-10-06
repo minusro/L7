@@ -84,19 +84,32 @@ bool optBeforeShift() { return optFirst; }
 static bool moved = false;
 bool arrowsMoved() { return moved; }
 
-// The key whose release opens the menu (0: none waiting).
-static uint8_t menuOnRelease = 0;
-bool menuOpensOnRelease() { return menuOnRelease != 0; }
-
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
   // DOWN on the status row, the bottom one, in the looper's view (a fresh press,
   // not a held arrow repeating): the menu opens once DOWN is let go (the clock goes on).
+  static uint8_t menuOnRelease = 0;                  // the key to wait for
   if (menuOnRelease && !(keys & menuOnRelease)) {
     menuOnRelease = 0;
-    openMenu();
+    openMenu(true);                                  // (sliding in from below)
+    return;
+  }
+  // UP on a card of the menu's top row (a project loaded): back to the looper
+  // once UP is let go, as A on the loaded project's card.
+  static uint8_t leaveOnRelease = 0;
+  if (leaveOnRelease && !(keys & leaveOnRelease)) {
+    leaveOnRelease = 0;
+    if (menuUpLeaves()) {
+      closeMenu(true);                               // (sliding back down)
+      takeProjectSelection();
+      for (int i = 0; i < ROWS; i++) drawTrack(i);
+    }
+    return;
+  }
+  if (menuUpLeaves() && (pressed & m8::BTN_UP) && !repeat && !(keys & (m8::BTN_SHIFT | m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY))) {
+    leaveOnRelease = m8::BTN_UP;
     return;
   }
   // The menu's items: the arrows move its selection; A or B runs the action
@@ -137,7 +150,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         mainSelection(row, cell);
         projectSetSelection(row, cell);              // (the project left keeps its selection)
         if (projectLoad(slot)) {
-          closeMenu();
+          closeMenu(true);                           // (sliding back down)
           takeProjectSelection();
           metronomeOn = !projectHasClips();          // (now: its first beat clicks too)
           for (int i = 0; i < ROWS; i++) drawTrack(i);

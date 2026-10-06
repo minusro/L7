@@ -319,7 +319,46 @@ void menuExportStatus(const char *text, int nameAt) {
   if (shown) drawItem(CARDS);                   // (now: the export holds up the loop)
 }
 
-void openMenu() {
+// The slide between the looper's view and the menu (SLIDE_MS): opening, the
+// menu comes up from below, pushing the looper's view up; closing, the
+// reverse. Each frame draws both views in full, shifted (the display's
+// origin) and clipped to their part of the screen; the card is serviced
+// between frames so the tracks keep streaming.
+static constexpr uint32_t SLIDE_MS = 500;
+static void slide(bool toMenu) {
+  auto &t = board.tft();
+  uint32_t t0 = millis();
+  for (bool last = false; !last;) {
+    float f = min(1.0f, (millis() - t0) / (float)SLIDE_MS);
+    last = f >= 1;
+    float e = f < 0.5f ? 4 * f * f * f : 1 - powf(-2 * f + 2, 3) / 2;   // ease in and out
+    int d = (int)lroundf((toMenu ? e : 1 - e) * 240 / PX) * PX;        // how far up the menu is
+    if (d < 240) {                                 // the looper's view, shifted up by d
+      shown = false;
+      t.setOrigin(0, -d);
+      t.setClipRect(0, d, 320, 240 - d);
+      uiGeneration++;
+      t.fillRect(BUTTON_X - PX, 0, PX, 240, BG);   // (the space before the buttons: nothing draws it)
+      for (int i = 0; i < ROWS; i++) drawTrack(i);
+    }
+    if (d > 0) {                                   // the menu, under it
+      shown = true;
+      t.setOrigin(0, 240 - d);
+      t.setClipRect(0, 0, 320, d);
+      uiGeneration++;
+      drawMenu();
+      drawCells(STATUS_ROW);
+    }
+    t.setOrigin(0, 0);
+    t.setClipRect();
+    serviceStorage();
+  }
+  shown = toMenu;                                  // (its last frame drew that view whole, in place: nothing more to draw)
+}
+
+bool menuUpLeaves() { return shown && !onStatus && menuSel < COLS && projectCurrent() >= 0; }
+
+void openMenu(bool animate) {
   if (shown) return;
   // A project with no clips at all (none recorded since it was made): gone,
   // the dummy project instead (one has to be chosen before leaving the menu).
@@ -339,17 +378,26 @@ void openMenu() {
     selected = STATUS_ROW;
     selectedCell = statusCell;
   }
+  if (animate) {
+    shown = false;                               // (slide() shows each view in turn)
+    slide(true);
+    return;
+  }
   uiGeneration++;                                // the menu in full; the status row redraws too
   drawMenu();
   drawTrack(STATUS_ROW);
 }
 
-void closeMenu() {
+void closeMenu(bool animate) {
   if (!shown) return;
   exportText[0] = 0;                             // (the export's label goes with the menu)
   if (onStatus) statusCell = selectedCellIn(STATUS_ROW);
   selected = mainRow;
   selectedCell = mainCell;
+  if (animate) {
+    slide(false);
+    return;
+  }
   shown = false;
   board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);
   uiGeneration++;                                // everything redraws in full
