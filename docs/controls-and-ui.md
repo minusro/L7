@@ -117,7 +117,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
   small square with a hamburger icon, three bars: A opens the menu once let go,
-  the action button showing a hamburger too), then the scene cell
+  the action button showing a small arrow left), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -203,7 +203,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   is held (not B; on a card, an action button A or B held turns it to the project's
   colour), corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
-  action button shows load (a pencil: edit) or, empty, new (a small asterisk); with SHIFT,
+  action button shows load (a small arrow right) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (the button grey when it can't act: recording, another copy
   under way, clipboard empty); on the list, an arrow down into a tray (export) and the USB trident (drive mode),
   doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the

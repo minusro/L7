@@ -23,7 +23,7 @@
 // While the menu is open (on its items A runs the action when let go; B does
 // nothing): on its
 // list's items, export Ableton project (an arrow into a tray) and storage mode (the USB
-// trident), nothing yet; on a project slot, load (a pencil; the loaded one too: back to it) or, on an
+// trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
 // or paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
@@ -160,7 +160,7 @@ PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // TAP (text)
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
-  {7, 5, {"#######", ".......", "#######", ".......", "#######"}},   // MENU (a hamburger: to the menu)
+  {5, 5, {"..#..", ".##..", "#####", ".##..", "..#.."}},   // MENU (the small arrow left: to the menu, LOAD's reversed)
   {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // HOME (out of the menu: the small arrow right, as LOAD)
   {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
           "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
@@ -170,7 +170,7 @@ PROGMEM static const Icon ICONS[] = {
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // RESAMPLE (record +)
   {9, 9, {"....#....", "...###...", ".........", ".#..#..#.", "##.###.##", ".#..#..#.", ".........", "...###...", "....#...."}},   // ADJUST (B + arrows: four small arrows round a small +)
-  {9, 9, {".......#.", "......###", ".....###.", "....###..", "...###...", "..###....", ".###.....", ".##......", "#........"}},   // LOAD (a pencil: open the project to edit it)
+  {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // LOAD (a small arrow right: into the project)
   {5, 5, {"..#..", "#.#.#", ".###.", "#.#.#", "..#.."}},   // NEW (a small asterisk)
   {8, 9, {"...##...", "...##...", "...##...", ".######.", "..####..", "...##...", "#......#", "#......#", "########"}},   // SAVE (an arrow down into a tray; a block right: centred on the backdrop)
   {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
