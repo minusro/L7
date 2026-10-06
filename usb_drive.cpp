@@ -15,7 +15,7 @@ void (*usbDriveTick)() = nullptr;
 void (*usbDriveReload)() = nullptr;
 
 // The screen's text is left-aligned with the hint at the bottom, which stays centred.
-static const char HINT[] = "EJECT OR HOLD B TO EXIT";
+static const char HINT[] = "PRESS START TO RETURN";
 static int textX() { return (320 - textWidth(HINT)) / 2 / PX * PX; }
 
 static void line(int y, const char *text, uint16_t ink) {
@@ -97,9 +97,9 @@ bool usbDriveMode() {
   Serial.println("storage mode: started");
 
   int shown = -1;
-  uint32_t heldSince = 0, hueAt = 0;
+  uint32_t hueAt = 0;
   uint16_t hue = LIGHT;
-  while (board.keys() & (m8::BTN_EDIT | m8::BTN_OPT)) {   // (the press that came here, let go first)
+  while (board.keys() & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY)) {   // (the press that came here, let go first)
     if (usbDriveTick) usbDriveTick();
     usb_msc_poll();
   }
@@ -128,12 +128,7 @@ bool usbDriveMode() {
       line(120, TEXT[state], state == 2 ? INK : LIGHT);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
-    if (board.keys() & m8::BTN_OPT) {
-      if (!heldSince) heldSince = millis();
-      if (millis() - heldSince >= 1000) return leave("LOADING");
-    } else {
-      heldSince = 0;
-    }
+    if (board.keys() & m8::BTN_PLAY) return leave("LOADING");   // START: back to the app (ejecting on the computer does too)
   }
 }
 #elif defined(USB_MTPDISK) || defined(USB_MTPDISK_SERIAL)
@@ -159,9 +154,9 @@ bool usbDriveMode() {
   MTP.addFilesystem(SD, "L7");
 
   int shown = -1;
-  uint32_t heldSince = 0, hueAt = 0;
+  uint32_t hueAt = 0;
   uint16_t hue = LIGHT;
-  while (board.keys() & (m8::BTN_EDIT | m8::BTN_OPT)) {   // (the press that came here, let go first)
+  while (board.keys() & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY)) {   // (the press that came here, let go first)
     if (usbDriveTick) usbDriveTick();
     MTP.loop();
   }
@@ -183,16 +178,11 @@ bool usbDriveMode() {
       line(120, TEXT[state], state == 2 ? INK : LIGHT);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
-    if (board.keys() & m8::BTN_OPT) {
-      if (!heldSince) heldSince = millis();
-      if (millis() - heldSince >= 1000) {
-        line(176, "RESTARTING", LIGHT);
-        delay(100);
-        SCB_AIRCR = 0x05FA0004;                   // restart: the computer may have changed anything
-        for (;;) {}
-      }
-    } else {
-      heldSince = 0;
+    if (board.keys() & m8::BTN_PLAY) {            // START: back to the app, restarted (the computer may have changed anything)
+      line(176, "RESTARTING", LIGHT);
+      delay(100);
+      SCB_AIRCR = 0x05FA0004;
+      for (;;) {}
     }
   }
 }

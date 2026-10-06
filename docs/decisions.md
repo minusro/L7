@@ -80,7 +80,7 @@
   card reader, from a timer (queued answers, never waited for, so safe in an
   interrupt): unanswered, macOS resets the USB connection every ~11 s.
 * The app is stopped and written out first; the card is the computer's. Eject
-  on the computer (or hold B) gives the card back: `storageForget()` and
+  on the computer (or press START) gives the card back: `storageForget()` and
   `scenesForget()` drop everything held from it without touching it (not even
   closing a file: the handles are stale), then the start-up sequence reads it
   all again (`reloadFromCard()` in the sketch), no restart. The USB side goes back to

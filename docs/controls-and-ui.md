@@ -181,10 +181,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in the menu's corner place and size, in the same colour at all times):
   light grey until the computer is connected, then going round the hues; the
   texts (the messages that replace the hint, "EJECTED", "RESTARTING", too)
-  left-aligned with the "EJECT OR HOLD B TO EXIT" hint at the bottom;
+  left-aligned with the "PRESS START TO RETURN" hint at the bottom;
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
-  COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or holding B
-  for a second, leaves it with "LOADING": the app drops everything it knew of the card
+  COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or pressing START,
+  leaves it with "LOADING": the app drops everything it knew of the card
   and reads it all again, as at a start (the computer may have changed any
   file), and the menu is back as it was. Four in
   view at a time (an item
