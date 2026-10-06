@@ -39,7 +39,7 @@ constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
-constexpr Cell MENU_BOX = {0, STATUS_H - 3 * PX}, SCENE_BOX = {18, 102}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
+constexpr Cell MENU_BOX = {0, STATUS_H - 4 * PX}, SCENE_BOX = {16, 104}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
 // The cells a row has (the status row's: as many as a track row's).
 inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The selected cell in row i's terms (on the status row, never the menu cell's).

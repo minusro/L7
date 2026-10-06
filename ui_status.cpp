@@ -32,7 +32,7 @@ static constexpr int INSET = 2 * PX;               // text from the cell's edges
 void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground) {
   static const char *const CHEVRON_LEFT[5] = {"..#", ".##", "###", ".##", "..#"};   // (a filled triangle)
   constexpr int COLS = EDGE_W / PX, ROWS = STATUS_H / PX, CW = 3, CH = 5;
-  constexpr int C0 = COLS / 2 - 1, R0 = (ROWS - CH) / 2;   // (left: columns 3-5 of 9, 3 blocks from the edge)
+  constexpr int C0 = 3, R0 = (ROWS - CH) / 2;     // (left: columns 3-5, 3 blocks from the edge)
   static uint16_t px[STATUS_H * EDGE_W];
   for (int r = 0; r < ROWS; r++)
     for (int c = 0; c < COLS; c++) {
