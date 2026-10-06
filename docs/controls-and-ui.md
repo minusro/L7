@@ -119,7 +119,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
   small square, not selectable, with a grey chevron pointing down,
-  5×3 blocks, centred: DOWN on the status row opens the menu), then the scene cell
+  5×3 blocks, a block left of centre and a block nearer the bottom edge: DOWN on the status row opens the menu), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),

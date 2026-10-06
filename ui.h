@@ -47,10 +47,11 @@ inline int selectedCellIn(int i) {
   int c = min(selectedCell, cellCount(i) - 1);
   return i == STATUS_ROW ? max(c, SCENE_CELL) : c;
 }
-// The edge chevron's place: centred in the menu cell (x; y from the status
-// row's top; the row's 13 blocks: half a block nearer the edge than true
-// centre), and in the menu mirrored top to bottom (as far from the top).
-constexpr int CHEVRON_X = MENU_BOX.x + (MENU_BOX.w - 5 * PX) / 2 / PX * PX, CHEVRON_DY = (STATUS_H - 3 * PX) / 2 / PX * PX;
+// The edge chevron's place: in the menu cell, a block left of centre and a
+// block nearer the edge (x; y from the status row's top; the row's 13 blocks:
+// centred, it'd be half a block nearer the edge already), and in the menu
+// mirrored top to bottom (as far from the top).
+constexpr int CHEVRON_X = MENU_BOX.x + (MENU_BOX.w - 5 * PX) / 2 / PX * PX - PX, CHEVRON_DY = (STATUS_H - 3 * PX) / 2 / PX * PX + PX;
 constexpr int CHEVRON_TOP_Y = 240 - (STATUS_TOP + CHEVRON_DY + 3 * PX);
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }

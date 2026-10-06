@@ -115,8 +115,8 @@ no dropouts or overruns
 
 
 6oct26
-- menu redesign
-- startpoint checkerboard
+- menu redesign V
+- startpoint checkerboard V
 
 123456123456
 0x00x00x00x0
