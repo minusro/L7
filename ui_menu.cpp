@@ -17,16 +17,17 @@
 // everything in order. It opens on the loaded project's card (the dummy
 // project loaded: where its selection was).
 //
+// The ground: dark grey (MENU_BG), the whole screen's.
 // A card: a block shape, the bottom right corner cut diagonally (3 blocks),
 // in its slot's colour (colors.h): the loaded project's
 // filled, its letter A-L (the project's name) black;
 // another project's a thick (two-block) outline, the letter in the
-// slot's colour; empty, a grey outline with the letter grey (light grey when selected, its colour while an action button is held). The selected item's frame looks and behaves as the looper's
+// slot's colour; empty, a grey outline with the letter grey (its colour while an action button is held). The selected item's frame looks and behaves as the looper's
 // cells' (frameColor()), corners cut, a block out from a card (following its
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
 // logo small, always the action button's colour (not its pressed look). Top
-// left, the edge mark pointing up (the status row's menu cell's, flipped)
+// left, the edge mark, a black triangle pointing up (the status row's menu cell's, flipped)
 // while a project is loaded: only then do the edges lead out (menuLeavesOn()).
 #include "ui.h"
 #include "ui_font.h"
@@ -177,12 +178,12 @@ static void drawItem(int k) {
   auto &t = board.tft();
   Shape s = itemShape(k);
   bool sel = k == menuSel && !onStatus;
-  uint16_t frame = sel ? frameColor() : BG;
+  uint16_t frame = sel ? frameColor() : MENU_BG;
   if (k < CARDS) {                                // a project slot: its frame a block out
     fillRing(s, 2, 1, frame, true);
-    fillRing(s, 1, 0, BG);
+    fillRing(s, 1, 0, MENU_BG);
     // The frame's diagonal a row thicker, outwards: the block past its end on
-    // each row of the diagonal (part of the frame: cleared with it, in BG).
+    // each row of the diagonal (part of the frame: cleared with it, in the ground).
     for (int r = s.y + s.h - s.cut; r < s.y + s.h + 2; r++) {
       int c0, c1;
       if (rowSpan(s, 2, r, c0, c1, true)) t.fillRect((c1 + 1) * PX, r * PX, PX, PX, frame);
@@ -190,18 +191,18 @@ static void drawItem(int k) {
     uint16_t color = PROJECT_COLORS[k];
     bool filled = projectFilled(k), loaded = k == projectCurrent();
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
-    uint16_t letter = loaded ? BG : filled || (sel && actionHeld()) ? color : sel ? LIGHT : DIM;   // (an empty slot's: grey, light grey when selected, its colour while an action button is held)
+    uint16_t letter = loaded ? BG : filled || (sel && actionHeld()) ? color : DIM;   // (an empty slot's: grey, as its outline; its colour while an action button is held)
     if (loaded) {                                 // the loaded one: filled
       fillRing(s, 0, -s.w, color);
     } else if (filled) {                          // a project: a thick outline, two blocks
       fillRing(s, 0, -2, color);
-      fillRing(s, -2, -s.w, BG);
+      fillRing(s, -2, -s.w, MENU_BG);
       // (the diagonal a block thicker where it meets the right edge: two blocks inside its corner)
       t.fillRect((s.x + s.w - 3) * PX, (s.y + s.h - s.cut - 1) * PX, PX, PX, color);
       t.fillRect((s.x + s.w - 4) * PX, (s.y + s.h - s.cut) * PX, PX, PX, color);
     } else {                                      // empty: an outline (the shape's edge)
       fillRing(s, 0, -1, DIM);
-      fillRing(s, -1, -s.w, BG);
+      fillRing(s, -1, -s.w, MENU_BG);
     }
     const Glyph *g = glyphFor((char)('A' + k));
     if (g) {
@@ -218,7 +219,7 @@ static void drawItem(int k) {
     }
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
-    fillRing(s, LIST_SPACE, 0, BG);
+    fillRing(s, LIST_SPACE, 0, MENU_BG);
     bool off = k - CARDS == 0 && !projectHasClips();   // export: nothing to export (no clips, or the dummy project)
     const char *label = k == CARDS && exportText[0] ? exportText : LABELS[k - CARDS];
     uint16_t ink = off ? DIM : sel ? INK : LIGHT;
@@ -226,21 +227,21 @@ static void drawItem(int k) {
       char head[24];
       snprintf(head, sizeof head, "%.*s", exportNameAt, exportText);
       int w1 = textWidth(head) + PX;
-      drawText(s.x * PX, s.y * PX, head, ink, BG, w1);   // (the gap before the name cleared too)
-      drawText(s.x * PX + w1, s.y * PX, exportText + exportNameAt, PROJECT_COLORS[exportFor], BG, s.w * PX - w1);
+      drawText(s.x * PX, s.y * PX, head, ink, MENU_BG, w1);   // (the gap before the name cleared too)
+      drawText(s.x * PX + w1, s.y * PX, exportText + exportNameAt, PROJECT_COLORS[exportFor], MENU_BG, s.w * PX - w1);
     } else {
-      drawText(s.x * PX, s.y * PX, label, ink, BG, s.w * PX);   // (the whole box: a longer label scrolled away is covered)
+      drawText(s.x * PX, s.y * PX, label, ink, MENU_BG, s.w * PX);   // (the whole box: a longer label scrolled away is covered)
     }
   }
 }
 
 // The action button's colour: a card's, its slot's; the system-level list
-// items' (storage mode), light grey; the project's own (export, the status
+// items' (storage mode), grey; the project's own (export, the status
 // row), the accent colour.
 uint16_t menuActionColor() {
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
-  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode: system-level)
+  if (menuSel - CARDS >= 1) return DIM;            // (storage mode: system-level)
   return projectHasClips() && !exportText[0] ? ACCENT : DIM;   // export: grey with nothing to export, or while its label shows
 }
 
@@ -269,8 +270,8 @@ void drawMenu() {
   bool all = drawn != uiGeneration;
   if (all) {
     drawn = uiGeneration;
-    board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);   // (where the track rows were)
-    board.tft().fillRect(0, STATUS_TOP, BUTTON_X, 240 - STATUS_TOP, BG);   // and the status row's cells: only its button shows
+    board.tft().fillRect(0, 0, 320, STATUS_TOP, MENU_BG);   // (where the track rows were)
+    board.tft().fillRect(0, STATUS_TOP, BUTTON_X, 240 - STATUS_TOP, MENU_BG);   // and the status row's cells: only its button shows
   }
   // Scrolled: the items in view redraw over each other's places (their keys
   // hold the place), each label drawn the box's whole width; no clearing
@@ -286,7 +287,7 @@ void drawMenu() {
   bool leaves = projectCurrent() >= 0;           // top left: UP / DOWN at the edges leave the menu (a project loaded: menuLeavesOn())
   if (all || leaves != mark) {
     mark = leaves;
-    drawEdgeMark(0, false, leaves);
+    drawEdgeMark(0, false, leaves ? BG : MENU_BG, MENU_BG);
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)

@@ -34,7 +34,7 @@ constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: four cells (to the volume cells' edge), left
-// to right: the menu's (a small square with the edge mark, a chevron down:
+// to right: the menu's (a small square with the edge mark, a triangle down:
 // DOWN here opens the menu; not selectable), the scene (the widest), the clock
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
@@ -51,12 +51,12 @@ inline int selectedCellIn(int i) {
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // The edge mark: where the other screen is, at the screen's left edge, the
 // status row's height (the status row's menu cell; the menu's top left,
-// flipped). A dark grey backdrop (as the action button's, mirrored: two
-// blocks short of the scene cell's frame, its corner nearest the middle cut) with a
-// black chevron (5 x 3 blocks) in its middle, pointing down or up. shown
-// false: cleared.
-constexpr int EDGE_W = MENU_BOX.w - 2 * PX;      // (2 blocks short of the scene cell's frame now)
-void drawEdgeMark(int y, bool down, bool shown = true);
+// flipped): a small filled triangle (5 x 3 blocks) pointing down or up, in
+// the middle of the space left of the scene cell (2 blocks short of its
+// frame), in ink on the ground (the whole space). Dark grey on black in the
+// looper's view; black on the menu's dark grey.
+constexpr int EDGE_W = MENU_BOX.w - 2 * PX;
+void drawEdgeMark(int y, bool down, uint16_t ink, uint16_t ground);
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
 // A row's place on the screen from the top (0: the first track row), and back.
@@ -152,6 +152,8 @@ extern uint32_t uiGeneration;
 // and the status row's cells (only the action button stays), opened with A
 // with DOWN on the status row or UP on track 1, left by loading a project (or UP/DOWN off its edges); the
 // arrows move its selection. While it's open the track rows aren't drawn.
+// Its ground: dark grey (the whole screen, round the action button too).
+constexpr uint16_t MENU_BG = DARK;
 bool menuOpen();
 void openMenu();
 void closeMenu();

@@ -118,10 +118,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
-  small square, not selectable, no frame, with the edge mark: a dark grey backdrop
-  the row's height from the screen's left edge to two blocks short of the scene cell's frame,
-  its top right corner cut (the action button's mirrored), a black 5×3 chevron pointing
-  down in its middle: DOWN on the status row opens the menu), then the scene cell
+  small square, not selectable, no frame, with the edge mark: a small dark grey filled
+  triangle (5×3 blocks) pointing down, in the middle of the space from the screen's left
+  edge to two blocks short of the scene cell's frame: DOWN on the status row opens the menu), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -161,6 +160,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   project loaded, one has to be loaded or made first. Opening the menu
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.
+  The menu's ground is dark grey (`MENU_BG`), the whole screen's, round the action button
+  too (pressed, the button is black there instead of dark grey).
   Twelve project cards (three rows of four, 21×15 blocks, 3 apart across and 3 down, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
   A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
@@ -169,11 +170,11 @@ A recording track's waveform area is in the accent colour (a block of black betw
   loaded, the splash's turquoise). The loaded project's card is filled with
   it, its letter (the project's name) black; another
   project's is a thick outline (two blocks) in its colour, the letter in it too.
-  While the clock runs, the loaded project's card shows a small play icon right of its letter (both 2 blocks left of centre), black like it, on the first half of each beat (pulsing). An empty slot is a grey outline, its letter grey (light grey when selected; in the slot's colour while an action button is held). In the bottom
+  While the clock runs, the loaded project's card shows a small play icon right of its letter (both 2 blocks left of centre), black like it, on the first half of each beat (pulsing). An empty slot is a grey outline, its letter grey (selected too; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
   in the action button's colour (not its pressed look: it stays put while A is held). In the top
-  left corner, the status row's edge mark flipped (from the top edge, its bottom right corner cut,
-  the chevron pointing up), only while a project is loaded: only then do UP on the top row
+  left corner, the status row's edge mark flipped (black, pointing up, as far from the
+  top edge), only while a project is loaded: only then do UP on the top row
   and DOWN on the last item leave the menu. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
@@ -204,8 +205,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   icon while held; the selected track's panel stays grey then). The action button takes the item's colour: on a card, its
   slot's; on project-level items (export) the accent (grey, the label too, with
   nothing to export: no clips in the project's tracks or scenes, or the dummy
-  project); on system-level ones (storage mode) light grey (its icon light
-  grey while pressed too). The selected item's frame looks and behaves as the
+  project); on system-level ones (storage mode) grey (its icon grey
+  while pressed too). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
   is held (not B; on a card, an action button A or B held turns it to the project's
   colour), corners cut; round a card one block out (following its

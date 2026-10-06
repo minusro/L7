@@ -197,7 +197,7 @@ static bool unavailable(int i, int icon) {
 }
 
 // The action button (the status row's): the accent colour with black icons; dark grey
-// with icons in the accent colour while A is held. In the menu its colour
+// (in the menu, on its dark grey ground: black) with icons in the accent colour while A is held. In the menu its colour
 // follows the item (menuActionColor()): a card's, or light grey on the
 // system-level ones (storage mode). The tracks' buttons: black.
 // The action's colour: the menu item's, or the accent.
@@ -208,7 +208,8 @@ static bool cannotAct(int icon) { return unavailable(STATUS_ROW, icon) || action
 static uint16_t buttonBackground(int i, int icon) {
   if (i == STATUS_ROW) {
     if (cannotAct(icon)) return DIM;               // (no pressed look either)
-    return heldAction >= 0 || (icon == ICON_ADJUST && adjusting()) ? DARK : actionColor(icon);
+    if (heldAction >= 0 || (icon == ICON_ADJUST && adjusting())) return menuOpen() ? BG : DARK;   // pressed (the menu's ground is dark grey: black there)
+    return actionColor(icon);
   }
   return cellBackground(i, -1);
 }
@@ -320,15 +321,16 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
                  : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL || panel != BG ? BG : DARK;   // (empty: black on the panel)
     drawBadge(trackNumber(i), badge == BADGE_PLAYING, badge == BADGE_PLAYING || badge == BADGE_MUTED, frame, ink);
   }
-  if (i == STATUS_ROW && bg != BG)                 // the action button: from a block in (as the
+  const uint16_t ground = i == STATUS_ROW && menuOpen() ? MENU_BG : BG;   // (round the button: the menu's ground while it's open)
+  if (i == STATUS_ROW && bg != ground)             // the action button: from a block in (as the
     for (int y = 0; y < height; y++)               // tracks' panels), its top left corner cut
-      for (int x = 0; x < (PANEL_LEFT + (y < PX)) * PX; x++) px[y * BUTTON_W + x] = BG;
+      for (int x = 0; x < (PANEL_LEFT + (y < PX)) * PX; x++) px[y * BUTTON_W + x] = ground;
   auto &t = board.tft();
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(BUTTON_X, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin
   t.writeRect(BUTTON_X, top, BUTTON_W, height, px);
   int bottom = top + height, end = bgTop(i) + bgHeight(i);
-  if (bottom < end) t.fillRect(BUTTON_X, bottom, BUTTON_W, end - bottom, BG);   // the margin below
+  if (bottom < end) t.fillRect(BUTTON_X, bottom, BUTTON_W, end - bottom, ground);   // the margin below
 }
 
 // The row's button (the cells: drawWave(), drawFilter(), drawMix(),
