@@ -295,7 +295,7 @@ void drawMenu() {
   }
   // The edge mark: in a strip along the right edge, the screen's height, a
   // third as wide as the space right of the cards (the loaded project's
-  // colour; black with none), centred in it. Dark grey; black where
+  // colour; none with no project: the menu's ground), centred in it. Dark grey; black where
   // RIGHT would leave the menu (with no project: making a new one in the
   // first empty slot); while an arrow is held that leaves once let go, white
   // (with no project: that slot's colour).
@@ -304,7 +304,7 @@ void drawMenu() {
   constexpr int stripW = (320 - cardsRight) / 3 / PX * PX, stripX = 320 - stripW;
   bool loaded = projectCurrent() >= 0;
   int empty = menuFirstEmptySlot();
-  uint16_t strip = loaded ? ACCENT : BG;
+  uint16_t strip = loaded ? ACCENT : MENU_BG;   // (no project: no strip, the menu's ground)
   uint16_t ink = screenSwitchPending() ? (loaded ? INK : PROJECT_COLORS[max(empty, 0)])
                : menuLeavesOn(m8::BTN_RIGHT) ? BG : DARK;
   if (all || strip != shownStrip) {
