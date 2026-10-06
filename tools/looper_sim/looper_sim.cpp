@@ -731,6 +731,16 @@ int main(int argc, char **argv) {
     trackChanged(6);
     block();
     check(sceneCurrent() == 1 && sceneCount() == 4 && tracks[6].volume == 3, "changing 0* inserts a new scene 1");
+    // That scene has no clips: cutting it removes it, but the clipboard keeps the scene cut before (pasted back, it has track 2 muted).
+    check(sceneCut() && waitScene() && sceneCount() == 3 && sceneCurrent() == 0 && sceneClipboardFull(), "cutting a scene with no clips: it's gone, the clipboard still full");
+    check(scenePaste() && waitScene() && sceneCount() == 4 && sceneCurrent() == 1 && tracks[0].sample == s1 && tracks[1].state == TrackState::Muted,
+          "the clipboard still holds the scene cut before it");
+    check(sceneGoEmpty() && waitScene() && sceneCurrent() == 0 && sceneCut() && sceneCurrent() == 0 && sceneCount() == 4,
+          "cutting 0*: nothing happens (the clipboard too)");
+    check(sceneStep(1) && waitScene() && sceneCurrent() == 1, "(on to scene 1 again)");
+    check(sceneCut() && waitScene() && sceneCount() == 3, "(the pasted scene cut again, to put the old state back)");
+    check(sceneStep(1) && waitScene() && sceneCurrent() == 1, "(scene 1: the old one)");
+    check(sceneStep(-1) && waitScene() && sceneCurrent() == 0 && scenePaste() && waitScene() && sceneCount() == 4, "(and back: a new scene 1 as before)");
     check(sceneStep(1) && waitScene() && sceneCurrent() == 2 && tracks[0].sample == s1 && tracks[1].state == TrackState::Playing &&
           tracks[6].volume == VOLUME_UNITY, "the others moved up: old scene 1 is now 2");
     runBeats(4);

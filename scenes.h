@@ -44,7 +44,7 @@ void flushScenes();            // everything waiting saved now (power off)
 bool sceneStep(int dir);       // -1: older; 1: newer, up to N+1* (none while there are no scenes)
 bool sceneGoEmpty();           // to 0*
 bool sceneGoEnd();             // to N+1*
-bool sceneCut();               // to the scene clipboard; removed from the list, goes to the one before
+bool sceneCut();               // to the scene clipboard (not a scene with no clips: the clipboard keeps what it had); removed from the list, goes to the one before
 bool scenePaste();             // inserted after the current scene (or over N+1*), and selected
 bool sceneDuplicate();         // a copy inserted after the current scene, and selected
 bool sceneClipboardFull();

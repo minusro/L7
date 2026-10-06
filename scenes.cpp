@@ -275,12 +275,11 @@ bool sceneCut() {
   takeHeld();
   commit();
   if (busy()) return false;
-  clipFull = true;
-  if (list.current == 0) {                       // the empty scene: copied, stays
-    clip = emptyScene();
-    return true;
+  if (list.current == 0) return true;            // the empty scene: stays, the clipboard too
+  if (!liveEmpty()) {                            // (a scene with no clips: cut, but not to the clipboard, which keeps what it had)
+    clip = snapshot();
+    clipFull = true;
   }
-  clip = snapshot();
   if (list.current <= list.count) removeAt(list.current);   // N+1* was only a copy
   go(list.current - 1, true);
   return true;

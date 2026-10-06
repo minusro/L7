@@ -20,7 +20,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | SHIFT + LEFT/RIGHT | Previous / next sample in the order of their names (wraps; gapless): the same project and track's first, then the project's other tracks', then other projects' (storage.md) |
 | SHIFT + UP/DOWN | Newer / older scene (see scenes.md); B + UP/DOWN does the same on the status row's scene cell (double taps and holding B included) |
 | SHIFT + UP/DOWN twice, second held | To N+1\* / 0\* |
-| B, SHIFT, A / SHIFT, B, A | Paste scene (B first) / cut scene (SHIFT first) |
+| B, SHIFT, A / SHIFT, B, A | Paste scene (B first) / cut scene (SHIFT first; a scene with no clips on its tracks is removed but doesn't replace the clipboard, and cutting 0* does nothing) |
 | PLAY | Start from 1.1.1 / stop |
 | SHIFT + PLAY (or SHIFT + A on status) | Restart from 1.1.1 |
 
