@@ -284,13 +284,12 @@ void drawMenu() {
   }
   // The way out: a small triangle pointing left at the top left (as the
   // looper's at its bottom left, as far from the top edge), on any edge
-  // (menuLeavesOn()): black; grey where an arrow from the selection would
-  // leave the menu; white while one is held that leaves it once let go.
+  // (menuLeavesOn()): black; white while an arrow is held that leaves it
+  // once let go.
   // None when there's nowhere to go (no project, every slot full).
   static uint16_t markInk = 0xFFFF;
   bool canLeave = projectCurrent() >= 0 || menuFirstEmptySlot() >= 0;
-  bool atEdge = menuLeavesOn(m8::BTN_LEFT) || menuLeavesOn(m8::BTN_RIGHT) || menuLeavesOn(m8::BTN_UP) || menuLeavesOn(m8::BTN_DOWN);
-  uint16_t ink = !canLeave ? MENU_BG : screenSwitchPending() ? INK : atEdge ? DIM : BG;
+  uint16_t ink = !canLeave ? MENU_BG : screenSwitchPending() ? INK : BG;
   if (all || ink != markInk) {
     markInk = ink;
     drawEdgeMark(false, 0, EDGE_W, 240 - STATUS_TOP - STATUS_H, ink, MENU_BG);
