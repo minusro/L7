@@ -78,12 +78,12 @@ the button's height: two blocks of border above, left and below the 7×9
 badge; the accent colour while A is held, with the
 action button, showing just the number then, in black).
 None while the status row is selected. The status
-button (the action button) is the accent colour with black icons (dark grey with icons in the accent colour while A is held; grey with a black icon, held or not, when its action can't act now: paste with the clipboard empty, resample with nothing playing, ...), as tall as the status cells, a block in from the left like the track panels, its top left corner cut. On a track with a clip its icon is a speaker: crossed out while the track plays (A mutes it; a block right of the other), with sound waves while it's muted (A unmutes it).
+button (the action button) is the accent colour with black icons (dark grey with icons in the accent colour while A is held; grey with a black icon, held or not, when its action can't act now: paste with the clipboard empty, resample with nothing playing, ...), as tall as the status cells, a block in from the left like the track panels, its top left corner cut diagonally (3 blocks: 2 in the top row, 1 below). On a track with a clip its icon is a speaker: crossed out while the track plays (A mutes it; a block right of the other), with sound waves while it's muted (A unmutes it).
 A recording track's waveform area is in the accent colour (a block of black between it and the cell's border), the waveform growing on it in white, its bar lines in the dark accent.
 
 * Waveform (`ui_wave.cpp`): 90 columns, inside a block of space within
-  the frame (from a two-block centre line up to 5 blocks each way, a
-  block at a time: 11 heights, an odd extra block going above; square-root scale); light grey inside the loop range (white on the selected cell), 50% grey outside (muted:
+  the frame (drawn in pixels, not blocks: 180 pixel columns, a 2-pixel
+  centre line, the peaks up to 11 pixels each way, symmetric; square-root scale); light grey inside the loop range (white on the selected cell), 50% grey outside (muted:
   50% grey range, dark grey outside). On every track (recording too), a black line the
   waveform's height just before the start of each bar but the first (on the
   same column edges as the range, so the range's colour stops at them). The

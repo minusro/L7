@@ -320,8 +320,8 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     drawBadge(trackNumber(i), badge == BADGE_PLAYING, badge == BADGE_PLAYING || badge == BADGE_MUTED, frame, ink);
   }
   if (i == STATUS_ROW && bg != BG)                 // the action button: from a block in (as the
-    for (int y = 0; y < height; y++)               // tracks' panels), its top left corner cut
-      for (int x = 0; x < (PANEL_LEFT + (y < PX)) * PX; x++) px[y * BUTTON_W + x] = BG;
+    for (int y = 0; y < height; y++)               // tracks' panels), its top left corner cut diagonally (3 blocks: 2, then 1)
+      for (int x = 0; x < (PANEL_LEFT + max(0, 2 - y / PX)) * PX; x++) px[y * BUTTON_W + x] = BG;
   auto &t = board.tft();
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(BUTTON_X, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin

@@ -9,11 +9,10 @@
 //   1, 14   space (the playheads reach into it)
 // A black line the waveform's height just before each bar's start (but the
 // first's), on every track, while recording too.
-//   2 - 13  the waveform: a line along rows 7-8, the peaks reaching up to 5
-//           blocks above and below it, a block at a time (on an odd number
-//           of blocks, the one above gets the extra block): 11 heights, 2-12
-//           blocks. Heights go with the square root of the peak level (as
-//           the overview stores it).
+//   2 - 13  the waveform, in pixels (the only part not in blocks): a 2-pixel
+//           line along the middle, the peaks reaching up to 11 pixels above
+//           and below it, symmetric; 180 pixel columns. Heights go with the
+//           square root of the peak level (as the overview stores it).
 // The waveform is light grey inside the loop range (white on the selected
 // cell) and 50% grey outside; on a muted clip the range is 50% grey and the
 // rest dark grey. While B alone is held on the selected waveform cell (B +
@@ -34,14 +33,15 @@ static constexpr int WAVE_COLS = BLOCK_COLS - 2 * WAVE_LEFT;   // 90 waveform co
 static constexpr int BAND_ROWS = CELL_H / PX;                  // 16
 static constexpr int MID_ROW = 7, WAVE_REACH = 5;              // the line: rows 7-8; peaks: rows 2-13
 
-// Waveform reach above and below the line (blocks) for a stored overview
-// level (the square root of the peak, 0-255): in proportion, a block at a
-// time, the extra one of an odd count above.
-static void reachFor(uint8_t level, int &up, int &down) {
-  int extra = (level * 2 * WAVE_REACH + 127) / 255;   // 0-10 blocks beyond the 2-block line
-  up = (extra + 1) / 2;
-  down = extra / 2;
-}
+// The waveform in pixels: a 2-pixel line along the middle of rows 2-13 (pixel
+// rows 15-16 of the cell), the peaks reaching up to WAVE_REACH_PX pixels above
+// and below it (to the edges of rows 2 and 13), symmetric, a pixel at a time.
+static constexpr int WAVE_MID_Y = (MID_ROW + 1) * PX - 1;        // 15: the line's upper pixel row
+static constexpr int WAVE_REACH_PX = WAVE_REACH * PX + 1;      // 11
+static_assert(WAVE_MID_Y - WAVE_REACH_PX == (MID_ROW - WAVE_REACH) * PX, "the peaks reach the top of row 2");
+// Reach (pixels each way) for a stored overview level (the square root of the
+// peak, 0-255): in proportion.
+static int pixelReach(uint8_t level) { return (level * WAVE_REACH_PX + 127) / 255; }
 
 struct WaveView {
   bool visible = false;                            // something is shown (not an empty track)
@@ -68,10 +68,11 @@ static WaveView views[NUM_TRACKS];
 // The record head's look (not a colour the playheads use): its column inverted.
 static constexpr uint16_t INVERT_HEAD = 0x0001;
 
-// Level shown in column c: the peak of the stored overview columns
-// (OVERVIEW_COLS of them) that it covers.
-static uint8_t columnLevel(const uint8_t *src, int c) {
-  int a = c * OVERVIEW_COLS / WAVE_COLS, b = max(a + 1, (c + 1) * OVERVIEW_COLS / WAVE_COLS);
+// Level shown in pixel column p (0 .. WAVE_COLS * PX - 1): the peak of the
+// stored overview columns (OVERVIEW_COLS of them) that it covers.
+static uint8_t pixelLevel(const uint8_t *src, int p) {
+  const int cols = WAVE_COLS * PX;
+  int a = p * OVERVIEW_COLS / cols, b = max(a + 1, (p + 1) * OVERVIEW_COLS / cols);
   uint8_t m = 0;
   for (int k = a; k < b; k++) m = max(m, src[k]);
   return m;
@@ -95,47 +96,53 @@ static uint16_t startInk(const WaveView &v, int c) {
   return in ? v.rangeInk : v.outInk;
 }
 
-// Block column bc (0 and BLOCK_COLS - 1: the frame's), drawn whole.
+// Block column bc (0 and BLOCK_COLS - 1: the frame's), drawn whole: two
+// pixel columns. The waveform is drawn in pixels (each pixel column its own
+// peak, each pixel row a step); everything else (the frame, bar lines, the
+// start position, the playhead) in blocks.
 static void drawColumn(int i, int bc) {
   if (bc < 0 || bc >= BLOCK_COLS) return;
   const Track &tr = tracks[i];
   const WaveView &v = views[i];
-  uint16_t col[BAND_ROWS];
+  static uint16_t px[CELL_H * PX];                 // PX pixels wide, CELL_H tall
+  auto block = [&](int r, uint16_t color) {        // block row r, both pixel columns
+    for (int y = 0; y < PX; y++) px[(r * PX + y) * PX] = px[(r * PX + y) * PX + 1] = color;
+  };
   int c = bc - WAVE_LEFT;                          // waveform column
   for (int r = 0; r < BAND_ROWS; r++) {           // the border (the frame), round the background
     int b = borderAt(i, WAVE_CELL, r, bc, BAND_ROWS, BLOCK_COLS);
     // The background (a recording's accent colour) only behind the waveform:
     // a block of black between it and the border.
     bool behind = c >= 0 && c < WAVE_COLS && r >= MID_ROW - WAVE_REACH && r <= MID_ROW + 1 + WAVE_REACH;
-    col[r] = b >= 0 ? (uint16_t)b : behind ? v.bg : BG;
+    block(r, b >= 0 ? (uint16_t)b : behind ? v.bg : BG);
   }
   if (c >= 0 && c < WAVE_COLS && v.visible) {
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
     if (!v.live || c < v.liveFilled) {
       uint16_t ink = !in ? v.outInk : v.rangeInk;                // (live: all of it, on the coloured cell)
-      int up, down;
-      reachFor(columnLevel(v.live ? v.liveData : tr.overview, c), up, down);
-      for (int r = MID_ROW - up; r <= MID_ROW + 1 + down; r++)
-        col[r] = ink;
+      for (int sub = 0; sub < PX; sub++) {
+        int reach = pixelReach(pixelLevel(v.live ? v.liveData : tr.overview, c * PX + sub));
+        for (int y = WAVE_MID_Y - reach; y <= WAVE_MID_Y + 1 + reach; y++) px[y * PX + sub] = ink;
+      }
     }
     int bars = v.live ? (int)v.liveBars : (int)tr.loopBars;      // (recording: as it's shown so far)
     for (int b = 1; b < bars; b++)                                // bars 2 on: a black line just before each start
       if (edgeCol(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) == c + 1) {
-        for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) col[r] = v.live ? ACCENT_DARK : BG;   // (recording: the dark accent)
+        for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) block(r, v.live ? ACCENT_DARK : BG);   // (recording: the dark accent)
         break;
       }
     if (uint16_t ink = startInk(v, c); ink != BG)                 // the start position: a checkered line
-      for (int r = START_TOP; r <= START_BOTTOM; r++) col[r] = min(r - START_TOP, START_BOTTOM - r) % 3 ? v.bg : ink;
+      for (int r = START_TOP; r <= START_BOTTOM; r++) block(r, min(r - START_TOP, START_BOTTOM - r) % 3 ? v.bg : ink);
     if (c == v.playCol) {                                         // on top: the playhead
       int reach = v.live ? 0 : 1;                                 // (a block past the waveform each way; recording: within its backdrop)
-      for (int r = MID_ROW - WAVE_REACH - reach; r <= MID_ROW + 1 + WAVE_REACH + reach; r++)
-        col[r] = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
-               : col[r] == v.bg ? (v.bg == BG ? INK : BG) : v.bg;
+      for (int y = (MID_ROW - WAVE_REACH - reach) * PX; y < (MID_ROW + 2 + WAVE_REACH + reach) * PX; y++)
+        for (int x = 0; x < PX; x++) {
+          uint16_t &p = px[y * PX + x];
+          p = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
+            : p == v.bg ? (v.bg == BG ? INK : BG) : v.bg;
+        }
     }
   }
-  static uint16_t px[CELL_H * PX];
-  for (int r = 0; r < BAND_ROWS; r++)
-    for (int y = 0; y < PX; y++) px[(r * PX + y) * PX] = px[(r * PX + y) * PX + 1] = col[r];
   auto &t = board.tft();
   int x = WAVE_X + bc * PX, top = rowTop(i);
   t.writeRect(x, top, PX, CELL_H, px);
@@ -234,13 +241,14 @@ static void updateLive(int i) {
     for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
     return;
   }
-  uint8_t before[WAVE_COLS];
-  for (int c = 0; c < WAVE_COLS; c++) before[c] = columnLevel(v.liveData, c);
+  auto levels = [&](int c) { return (uint16_t)(pixelLevel(v.liveData, c * PX) << 8 | pixelLevel(v.liveData, c * PX + 1)); };   // (a block column's two pixel columns)
+  uint16_t before[WAVE_COLS];
+  for (int c = 0; c < WAVE_COLS; c++) before[c] = levels(c);
   memcpy(v.liveData, cols, OVERVIEW_COLS);
   int oldFilled = v.liveFilled;
   v.liveFilled = filled;
   for (int c = 0; c < WAVE_COLS; c++)
-    if (columnLevel(v.liveData, c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c + WAVE_LEFT);
+    if (levels(c) != before[c] || (c < filled) != (c < oldFilled)) drawColumn(i, c + WAVE_LEFT);
   movePlayhead(i, head, INVERT_HEAD);              // (on the coloured cell)
 }
 
