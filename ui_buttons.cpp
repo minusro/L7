@@ -160,8 +160,8 @@ PROGMEM static const Icon ICONS[] = {
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
   {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // HOME (out of the menu: the small arrow right, as LOAD)
-  {7, 7, {"#.#.#.#", "...#...", "#.###.#", ".#####.", "#.....#", ".#####.", "#.#.#.#"}},   // SCENE_CUT (in a checkered square, as SCENE_DUP: a triangle up over a line)
-  {7, 7, {"#.#.#.#", ".#####.", "#.###.#", "...#...", "#.....#", ".#####.", "#.#.#.#"}},   // SCENE_PASTE (a triangle down over a line)
+  {8, 8, {"#.#..#.#", "...##...", "#.####.#", ".######.", "........", "#......#", ".######.", "#.#..#.#"}},   // SCENE_CUT (in a checkered square, as SCENE_DUP: a triangle up over a line)
+  {8, 8, {"#.#..#.#", ".######.", "#.####.#", "...##...", "........", "#......#", ".######.", "#.#..#.#"}},   // SCENE_PASTE (a triangle down over a line)
   {10, 7, {"....#.....", "...##.....", ".####.#.#.", ".####..#..", ".####.#.#.", "...##.....", "....#....."}},   // MUTE (a block right of UNMUTE)
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // RESAMPLE (record +)
@@ -172,7 +172,7 @@ PROGMEM static const Icon ICONS[] = {
   {8, 9, {"...##...", "..####..", ".######.", "...##...", "...##...", "...##...", "#......#", "#......#", "########"}},   // USB (an arrow up out of a tray: SAVE reversed; a block right as it)
   {5, 7, {".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."}},   // CHECK (a question mark: cut the project with a second A?)
   {9, 7, {"..#.#....", "..#.##...", "..#.###..", "..#.####.", "..#.###..", "..#.##...", "..#.#...."}},   // RESTART (|>: start from 1.1.1; a block right of centre)
-  {7, 7, {"#.#.#.#", ".......", "#..#..#", "..###..", "#..#..#", ".......", "#.#.#.#"}},   // SCENE_DUP (a small + in a checkered square)
+  {8, 8, {"#.#..#.#", "...##...", "#..##..#", ".######.", ".######.", "#..##..#", "...##...", "#.#..#.#"}},   // SCENE_DUP (a + in a checkered square)
   {7, 5, {"#...#..", "##..##.", "###.###", "##..##.", "#...#.."}},   // NEXT (two small plays, a block apart: the next scene)
   {0, 0, {}},                                                                  // HALVE ("/2", text)
   {0, 0, {}},                                                                  // DOUBLE ("X2", text)
@@ -329,6 +329,10 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
     int c0 = track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE), r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
+    if (!track && (icon == ICON_SCENE_DUP || icon == ICON_SCENE_CUT || icon == ICON_SCENE_PASTE)) {
+      c0 = max((cols - 7) / 2, PANEL_LEFT + 1);    // (8 x 8: placed as 7 x 7 ones, a block bigger to the right and down)
+      r0 = (rows - 7) / 2;
+    }
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);

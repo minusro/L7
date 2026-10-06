@@ -144,6 +144,9 @@ int main(int argc, char **argv) {
   render(out + "/ui_status_tempo_edit.png");
   board.heldKeys = m8::BTN_SHIFT;                  // SHIFT held on the tempo: halve it (/2)
   render(out + "/ui_status_halve.png");
+  selectedCell = SCENE_CELL;                       // and on the scene: duplicate it
+  render(out + "/ui_status_dup.png");
+  selectedCell = TEMPO_CELL;
   selectedCell = SCENE_CELL;                       // B held on the scene: B + UP/DOWN step through them
   render(out + "/ui_status_scene_edit.png");
   board.heldKeys = 0;
