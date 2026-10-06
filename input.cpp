@@ -100,18 +100,17 @@ bool arrowsMoved() { return moved; }
 
 // A or B down on a menu item: its action waits for the keys to be let go.
 static bool armed = false, shifted = false;          // SHIFT with it
-static bool armedByB = false;                        // B pressed (not A): on a card, at once what holding A does
 static int armedSlot = -1;                           // the slot it was pressed on (-1: a list item)
 static int armedItem = -1;                           // or the list item
 static uint32_t armedAt = 0;
 static bool longDone = false;                        // held long on a card: loaded already
 static constexpr uint32_t LONG_PRESS_MS = 600;
 
-// A held on a project card (or B pressed there): its project loaded without
-// leaving the menu (not on an empty slot). Called every pass (pollKeys()).
+// A or B held on a project card: its project loaded without leaving the
+// menu (not on an empty slot). Called every pass (pollKeys()).
 static void menuLongPress() {
   if (!armed || longDone || shifted || armedSlot < 0 || !projectFilled(armedSlot) || !menuOpen() || menuOnStatus()) return;   // (not on an empty slot)
-  if (!armedByB && millis() - armedAt < LONG_PRESS_MS) return;
+  if (millis() - armedAt < LONG_PRESS_MS) return;
   longDone = true;
   if (armedSlot != projectCurrent() && projectLoad(armedSlot))
     metronomeOn = projectCurrent() >= 0 && !projectHasClips();   // (the selection stays as it is)
@@ -157,10 +156,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // button's action once let go (on the item it was pressed on); START starts /
   // stops the clock, as in the looper's view. The menu doesn't
   // start or stop the clock.
-  // SHIFT+A on a project: cuts it when let go (no confirmation). A held on a
-  // card (LONG_PRESS_MS), or B pressed there: its project loaded there and
-  // then, the menu staying open (menuLongPress()); letting go then does
-  // nothing more.
+  // SHIFT+A on a project: cuts it when let go (no confirmation). A or B held
+  // on a card (LONG_PRESS_MS): its project loaded there and then, the menu
+  // staying open (menuLongPress()); letting go then does nothing more. A and
+  // B do the same everywhere in the menu.
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
     if (pressed & m8::BTN_PLAY) {                    // START: the clock, as in the looper's view (SHIFT: from 1.1.1)
@@ -175,7 +174,6 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       armedSlot = menuSlot();
       armedItem = menuListItem();
       shifted = shift;
-      armedByB = (pressed & m8::BTN_OPT) && !(keys & m8::BTN_EDIT);
       armedAt = millis();
       longDone = false;
     }

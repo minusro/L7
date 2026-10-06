@@ -7,7 +7,7 @@
 // the item's action when let go. On a slot, A loads its project (an
 // empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project, or pastes
-// one into an empty slot. B acts as A (on a project's card: loads it at once, staying in the menu, as A held); START starts / stops the clock. Opening it stops
+// one into an empty slot (A or B held on a project's card: loaded, the menu staying open). B acts as A; START starts / stops the clock. Opening it stops
 // the clock; loading a project (or making a new one) starts it.
 //
 // Items: the cards 0-11 (A-L, rows of four, top first: A-D on top, I-L
