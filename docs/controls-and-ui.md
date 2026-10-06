@@ -83,7 +83,7 @@ too (round its panel and badges); the status row the same when it's selected (al
 light grey, the frame on the selected cell, the ground round the action button); anything dark grey on it is drawn black instead (a
 muted clip's filter fill and volume level, its waveform outside the range). The selected track's button gets a 50% grey panel behind its number (from a block in,
 the button's height: two blocks of border above, left and below the 7×9
-badge; the accent colour while A is held, with the
+badge; its bottom left corner cut a block; the accent colour while A is held, with the
 action button, showing just the number then, in black).
 None while the status row is selected. The status
 button (the action button) is the accent colour with black icons (dark grey with icons in the accent colour while A is held; grey with a black icon, held or not, when its action can't act now: paste with the clipboard empty, resample with nothing playing, ...), as tall as the status cells, a block in from the left like the track panels, its top left corner cut (a block). On a track with a clip its icon is a speaker: crossed out while the track plays (A mutes it; a block right of the other), with sound waves while it's muted (A unmutes it).
