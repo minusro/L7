@@ -27,8 +27,8 @@
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
 // logo small, in the item's colour (actionRestColor()). Along the right
-// edge, a narrow strip in the loaded project's colour with a black line
-// beside it, twice as wide while RIGHT is held to leave the menu (drawMenu()).
+// edge, a narrow strip in the loaded project's colour, twice as wide while
+// RIGHT is held to leave the menu (drawMenu()).
 #include "ui.h"
 #include "input.h"
 #include "ui_font.h"
@@ -295,19 +295,20 @@ void drawMenu() {
   }
   // The right edge (the looper's that way): a strip the screen's height, 2
   // blocks wide (4 while RIGHT is held that leaves the menu once let go), in
-  // the loaded project's colour (dark grey with no project), a black line a
-  // block wide left of it, always.
+  // the loaded project's colour; with no project, none until RIGHT is held,
+  // then in the colour of the first empty slot (where leaving makes one).
   static uint16_t shownStrip;
   static int shownW = 0;
-  constexpr int AREA = 5 * PX;                   // (the widest: 4 blocks and the line)
-  uint16_t strip = projectCurrent() >= 0 ? ACCENT : DARK;
-  int w = (screenSwitchKey() == m8::BTN_RIGHT ? 4 : 2) * PX;
+  constexpr int AREA = 4 * PX;                   // (the widest)
+  bool held = screenSwitchKey() == m8::BTN_RIGHT, loaded = projectCurrent() >= 0;
+  int empty = menuFirstEmptySlot();
+  uint16_t strip = loaded ? ACCENT : held && empty >= 0 ? PROJECT_COLORS[empty] : MENU_BG;
+  int w = (held ? 4 : 2) * PX;
   if (all || strip != shownStrip || w != shownW) {
     shownStrip = strip;
     shownW = w;
     auto &t = board.tft();
-    t.fillRect(320 - AREA, 0, AREA - w - PX, 240, MENU_BG);
-    t.fillRect(320 - w - PX, 0, PX, 240, BG);
+    t.fillRect(320 - AREA, 0, AREA - w, 240, MENU_BG);
     t.fillRect(320 - w, 0, w, 240, strip);
   }
   bool redrawn = false;

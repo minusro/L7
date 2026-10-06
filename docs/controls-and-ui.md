@@ -184,8 +184,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in from the left edge, 2 up from the status row's top: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). Along the right
   edge, a strip the screen's height and 2 blocks wide (4 while RIGHT is held that leaves the menu
-  once let go), in the loaded project's colour (dark grey with no project), a black line a block
-  wide left of it, always; no arrow. While an arrow is held that leaves the menu, the selection
+  once let go), in the loaded project's colour; with no project, none until RIGHT is held, then in the
+  first empty slot's colour (where leaving makes a new project); no arrow. While an arrow is held that leaves the menu, the selection
   frame is hidden. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
