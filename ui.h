@@ -126,8 +126,10 @@ inline uint16_t cellBackground(int i, int cell) {
 bool menuOpen();
 bool menuOnStatus();
 bool arrowsMoved();                      // input.cpp: the last arrow press moved the selection
+bool screenSwitchPending();               // (input.cpp) an arrow held that switches screens once let go
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != selectedCellIn(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
+  if (screenSwitchPending()) return BG;            // (going to the other screen: no frame meanwhile, the edge arrow bright)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   return k & m8::BTN_OPT ? DIM : k && !(k & ~arrows) && arrowsMoved() ? INK : LIGHT;

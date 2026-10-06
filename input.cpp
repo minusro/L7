@@ -522,6 +522,13 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (sceneChanged)
     for (int i = 0; i < ROWS; i++) drawTrack(i);
   drawTrack(selected);
+  static bool wasPending = false;                  // (the frame hidden or back: the rows sharing its borders too)
+  if (screenSwitchPending() != wasPending) {
+    wasPending = screenSwitchPending();
+    if (!menuOpen())
+      for (int r : {rowAbove(selected), rowBelow(selected)})
+        if (r >= 0 && r < NUM_TRACKS) drawTrack(r);
+  }
   if (prevSel != selected) {
     drawTrack(prevSel);
     for (int r : {rowAbove(selected), rowBelow(selected), rowAbove(prevSel), rowBelow(prevSel)})   // (sharing a border row with them: the ground there)

@@ -162,6 +162,7 @@ static bool actionHeld() { return board.keys() & (m8::BTN_EDIT | m8::BTN_OPT); }
 static uint16_t frameColor() {
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
+  if (screenSwitchPending()) return MENU_BG;       // (leaving: no frame meanwhile, the edge arrow bright)
   if (menuSel < CARDS && !onStatus && actionHeld())
     return PROJECT_COLORS[menuSel];                // an action button held on a card: its frame in the project's colour
   return k & m8::BTN_EDIT ? DIM : k && !(k & ~arrows) && movedHere ? INK : LIGHT;
