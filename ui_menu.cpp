@@ -284,12 +284,15 @@ void drawMenu() {
   }
   // The way out: a small triangle pointing left at the top left (as the
   // looper's at its bottom left, as far from the top edge), on any edge
-  // (menuLeavesOn()): black; white while an arrow is held that leaves it
-  // once let go.
+  // (menuLeavesOn()): black; while an arrow is held that leaves it once let
+  // go, the loaded project's colour (with none: the first empty slot's,
+  // where leaving makes one).
   // None when there's nowhere to go (no project, every slot full).
   static uint16_t markInk = 0xFFFF;
   bool canLeave = projectCurrent() >= 0 || menuFirstEmptySlot() >= 0;
-  uint16_t ink = !canLeave ? MENU_BG : screenSwitchPending() ? INK : BG;
+  int empty = menuFirstEmptySlot();
+  uint16_t lit = projectCurrent() >= 0 ? ACCENT : PROJECT_COLORS[max(empty, 0)];   // (the project going back to: the loaded one, or the new one)
+  uint16_t ink = !canLeave ? MENU_BG : screenSwitchPending() ? lit : BG;
   if (all || ink != markInk) {
     markInk = ink;
     drawEdgeMark(false, 0, EDGE_W, 240 - STATUS_TOP - STATUS_H, ink, MENU_BG);
