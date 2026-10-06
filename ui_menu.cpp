@@ -236,12 +236,12 @@ static void drawItem(int k) {
 }
 
 // The action button's colour: a card's, its slot's; the system-level list
-// items' (storage mode), grey; the project's own (export, the status
+// items' (storage mode), light grey; the project's own (export, the status
 // row), the accent colour.
 uint16_t menuActionColor() {
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
-  if (menuSel - CARDS >= 1) return DIM;            // (storage mode: system-level)
+  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode: system-level)
   return projectHasClips() && !exportText[0] ? ACCENT : DIM;   // export: grey with nothing to export, or while its label shows
 }
 

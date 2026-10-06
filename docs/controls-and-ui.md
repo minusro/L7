@@ -119,7 +119,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
   small square, not selectable, no frame, with the edge mark: a small dark grey filled
-  triangle (5×3 blocks) pointing down, in the middle of the space from the screen's left
+  triangle (5×3 blocks) pointing down, a block right of the middle of the space from the screen's left
   edge to two blocks short of the scene cell's frame: DOWN on the status row opens the menu), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
@@ -185,14 +185,14 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the export item's action button is greyed and A does nothing. Storage mode (A or B, on release):
   writes everything out, then shows the card to a computer over USB as a
   mounted drive (USB mass storage, see usb_drive.h; it mounts like a flash
-  drive on macOS, Windows and Linux) under a screen with the title (the L7 logo,
+  drive on macOS, Windows and Linux) under a grey screen with the title (the L7 logo,
   in the menu's corner place and size, in the same colour at all times):
   light grey until the computer is connected, then going round the hues; the
-  texts (the messages that replace the hint, "EJECTED", "RESTARTING", too)
+  status texts and the hint in black (the messages that replace the hint, "EJECTED", "RESTARTING", too),
   left-aligned with the "PRESS START TO RETURN" hint at the bottom;
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
   COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or pressing START,
-  leaves it with "WAIT" (normal grey; "EJECTED" after an eject): the app drops everything it knew of the card
+  leaves it with "WAIT" ("EJECTED" after an eject): the app drops everything it knew of the card
   and reads it all again, as at a start (the computer may have changed any
   file), and the menu is back as it was. Four in
   view at a time (an item
@@ -205,8 +205,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   icon while held; the selected track's panel stays grey then). The action button takes the item's colour: on a card, its
   slot's; on project-level items (export) the accent (grey, the label too, with
   nothing to export: no clips in the project's tracks or scenes, or the dummy
-  project); on system-level ones (storage mode) grey (its icon grey
-  while pressed too). The selected item's frame looks and behaves as the
+  project); on system-level ones (storage mode) light grey (its icon light
+  grey while pressed too). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
   is held (not B; on a card, an action button A or B held turns it to the project's
   colour), corners cut; round a card one block out (following its

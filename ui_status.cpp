@@ -31,7 +31,7 @@ static constexpr int INSET = 2 * PX;               // text from the cell's edges
 void drawEdgeMark(int y, bool down, uint16_t ink, uint16_t ground) {
   static const char *const TRIANGLE_DOWN[3] = {"#####", ".###.", "..#.."};
   constexpr int COLS = EDGE_W / PX, ROWS = STATUS_H / PX, TW = 5, TH = 3;
-  constexpr int C0 = (COLS - TW) / 2, R0 = (ROWS - TH) / 2;
+  constexpr int C0 = (COLS - TW) / 2 + 1, R0 = (ROWS - TH) / 2;   // (a block right of the middle)
   static uint16_t px[STATUS_H * EDGE_W];
   for (int r = 0; r < ROWS; r++)
     for (int c = 0; c < COLS; c++) {

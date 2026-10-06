@@ -51,9 +51,9 @@ inline int selectedCellIn(int i) {
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // The edge mark: where the other screen is, at the screen's left edge, the
 // status row's height (the status row's menu cell; the menu's top left,
-// flipped): a small filled triangle (5 x 3 blocks) pointing down or up, in
-// the middle of the space left of the scene cell (2 blocks short of its
-// frame), in ink on the ground (the whole space). Dark grey on black in the
+// flipped): a small filled triangle (5 x 3 blocks) pointing down or up, a
+// block right of the middle of the space left of the scene cell (2 blocks
+// short of its frame), in ink on the ground (the whole space). Dark grey on black in the
 // looper's view; black on the menu's dark grey.
 constexpr int EDGE_W = MENU_BOX.w - 2 * PX;
 void drawEdgeMark(int y, bool down, uint16_t ink, uint16_t ground);

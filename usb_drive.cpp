@@ -14,20 +14,23 @@ namespace looper {
 void (*usbDriveTick)() = nullptr;
 void (*usbDriveReload)() = nullptr;
 
-// The screen's text is left-aligned with the hint at the bottom, which stays centred.
+// The screen: grey (SCREEN), its title and logo light grey (then the hue
+// cycle), the status labels and the hint black. Its text is left-aligned with
+// the hint at the bottom, which stays centred.
+static constexpr uint16_t SCREEN = DIM;
 static const char HINT[] = "PRESS START TO RETURN";
 static int textX() { return (320 - textWidth(HINT)) / 2 / PX * PX; }
 
 static void line(int y, const char *text, uint16_t ink) {
-  board.tft().fillRect(0, y, 320, FONT_H, BG);
-  drawText(textX(), y, text, ink, BG);
+  board.tft().fillRect(0, y, 320, FONT_H, SCREEN);
+  drawText(textX(), y, text, ink, SCREEN);
 }
 
 // The title and the corner logo (where and as big as the menu's), in one colour (light grey until the
 // computer is connected, then the hue cycle); drawn over
 // themselves, no clearing first: no flicker.
 static void titleAndLogo(uint16_t c) {
-  drawText(textX(), 88, "STORAGE MODE", c, BG);
+  drawText(textX(), 88, "STORAGE MODE", c, SCREEN);
   drawSmallLogo(PX, STATUS_TOP, c);
 }
 
@@ -52,7 +55,7 @@ void usbDriveBegin() {
 [[noreturn]] static void restart(const char *why) {
   Serial.printf("storage mode: %s, restarting\n", why);
   cardSync();
-  line(176, why, LIGHT);
+  line(176, why, BG);
   delay(300);
   SCB_AIRCR = 0x05FA0004;                           // restart: the computer may have changed anything
   for (;;) {}
@@ -61,7 +64,7 @@ void usbDriveBegin() {
 // Back from the computer: the card is the app's again, and everything the app
 // knew of it is read again (the computer may have changed any file). Without a
 // reload function: a restart.
-static bool leave(const char *why, uint16_t ink = LIGHT) {
+static bool leave(const char *why, uint16_t ink = BG) {
   Serial.printf("storage mode: %s\n", why);
   cardSync();
   if (!usbDriveReload) restart(why);
@@ -86,10 +89,10 @@ bool usbDriveMode() {
   flushScenes();
 
   auto &t = board.tft();
-  t.fillScreen(BG);
+  t.fillScreen(SCREEN);
   line(88, "STORAGE MODE", LIGHT);
   drawSmallLogo(PX, STATUS_TOP, LIGHT);
-  line(176, HINT, DIM);
+  line(176, HINT, BG);
   uiGeneration++;
 
   pollTimer.end();                                  // (polled from here from now on: reads and writes wait for the card)
@@ -125,10 +128,10 @@ bool usbDriveMode() {
     if (state != shown) {
       shown = state;
       static const char *const TEXT[3] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED"};
-      line(120, TEXT[state], state == 2 ? INK : LIGHT);
+      line(120, TEXT[state], BG);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
-    if (board.keys() & m8::BTN_PLAY) return leave("WAIT", DIM);   // START: back to the app (ejecting on the computer does too)
+    if (board.keys() & m8::BTN_PLAY) return leave("WAIT");   // START: back to the app (ejecting on the computer does too)
   }
 }
 #elif defined(USB_MTPDISK) || defined(USB_MTPDISK_SERIAL)
@@ -143,10 +146,10 @@ bool usbDriveMode() {
   flushScenes();
 
   auto &t = board.tft();
-  t.fillScreen(BG);
+  t.fillScreen(SCREEN);
   line(88, "STORAGE MODE", LIGHT);
   drawSmallLogo(PX, STATUS_TOP, LIGHT);
-  line(176, HINT, DIM);
+  line(176, HINT, BG);
   uiGeneration++;
 
   Serial.println("storage mode: started");
@@ -175,11 +178,11 @@ bool usbDriveMode() {
     if (state != shown) {
       shown = state;
       static const char *const TEXT[3] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED"};
-      line(120, TEXT[state], state == 2 ? INK : LIGHT);
+      line(120, TEXT[state], BG);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
     if (board.keys() & m8::BTN_PLAY) {            // START: back to the app, restarted (the computer may have changed anything)
-      line(176, "RESTARTING", LIGHT);
+      line(176, "RESTARTING", BG);
       delay(100);
       SCB_AIRCR = 0x05FA0004;
       for (;;) {}
