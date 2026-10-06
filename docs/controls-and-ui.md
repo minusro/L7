@@ -203,7 +203,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   is held (not B; on a card, an action button A or B held turns it to the project's
   colour), corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
-  action button shows load (an open folder) or, empty, new (a small asterisk); with SHIFT,
+  action button shows load (a pencil: edit) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (the button grey when it can't act: recording, another copy
   under way, clipboard empty); on the list, an arrow down into a tray (export) and the USB trident (drive mode),
   doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the
