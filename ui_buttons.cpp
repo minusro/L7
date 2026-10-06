@@ -22,8 +22,8 @@
 // first) or cut it (SHIFT first): the track cut / paste icons in a square.
 // While the menu is open (on its items A runs the action when let go; B does
 // nothing): on its
-// list's items, export Ableton project (an arrow into a tray) and storage mode (the USB
-// trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
+// list's items, export Ableton project (an arrow into a tray) and storage mode (an
+// arrow up out of a tray, export's reversed), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
 // or paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
@@ -171,7 +171,7 @@ PROGMEM static const Icon ICONS[] = {
   {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // LOAD (a small arrow right: into the project)
   {5, 5, {"..#..", "#.#.#", ".###.", "#.#.#", "..#.."}},   // NEW (a small asterisk)
   {8, 9, {"...##...", "...##...", "...##...", ".######.", "..####..", "...##...", "#......#", "#......#", "########"}},   // SAVE (an arrow down into a tray; a block right: centred on the backdrop)
-  {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
+  {8, 9, {"...##...", "..####..", ".######.", "...##...", "...##...", "...##...", "#......#", "#......#", "########"}},   // USB (an arrow up out of a tray: SAVE reversed; a block right as it)
   {5, 7, {".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."}},   // CHECK (a question mark: cut the project with a second A?)
   {9, 7, {"..#.#....", "..#.##...", "..#.###..", "..#.####.", "..#.###..", "..#.##...", "..#.#...."}},   // RESTART (|>: start from 1.1.1; a block right of centre)
   {7, 7, {"#.#.#.#", ".......", "#..#..#", "..###..", "#..#..#", ".......", "#.#.#.#"}},   // SCENE_DUP (a small + in a checkered square)
@@ -307,7 +307,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
-    int c0 = track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_RESAMPLE), r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
+    int c0 = track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE), r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);
