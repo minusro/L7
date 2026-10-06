@@ -15,7 +15,8 @@
 // own selection is kept meanwhile and comes back when the menu closes).
 // UP/DOWN go card row to card row on the screen and on into the list (back
 // up: to the column it came from, on the A-D row); LEFT/RIGHT through
-// everything in reading order on the screen (I-L, E-H, A-D, the list). It opens on the loaded project's card (the dummy
+// everything from the bottom up: the list (storage mode, export), then A-L
+// (off a row's right end up to the next row's left end, and back). It opens on the loaded project's card (the dummy
 // project loaded: where its selection was).
 //
 // The ground: dark grey (MENU_BG), the whole screen's.
@@ -38,10 +39,15 @@ uint32_t uiGeneration = 1;
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
 static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
-// An item's place in reading order on the screen (the cards' rows top to
-// bottom: I-L, E-H, A-D; then the list), and back (the same swap).
+// A card's place in reading order on the screen (its rows top to bottom:
+// I-L, E-H, A-D); the list's items as they are.
 static int screenPos(int k) { return k < CARDS ? (CARD_ROWS - 1 - k / COLS) * COLS + k % COLS : k; }
-static int itemAt(int p) { return screenPos(p); }
+// LEFT/RIGHT's order, from the bottom of the screen up: the list's items
+// (its last first), then the cards A-L (right to left along a row: RIGHT off
+// a row's right end goes on to the row above, LEFT off its left end to the
+// row below; LEFT off A into the list).
+static int stepPos(int k) { return k < CARDS ? LIST + k : ITEMS - 1 - k; }
+static int stepItem(int p) { return p < LIST ? ITEMS - 1 - p : p - LIST; }
 static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE"};
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), kept (the menu closed and opened again,
@@ -330,11 +336,10 @@ void menuLeaveStatus() {
 bool menuKeys(uint8_t pressed) {
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   int k = menuSel;
-  // LEFT/RIGHT: through every item in reading order on the screen (the
-  // cards row by row from the top, the list).
-  int p = screenPos(k);
-  if (pressed & m8::BTN_LEFT && p > 0) k = itemAt(p - 1);
-  if (pressed & m8::BTN_RIGHT && p < ITEMS - 1) k = itemAt(p + 1);
+  // LEFT/RIGHT: through every item, from the bottom up (stepPos()).
+  int p = stepPos(k);
+  if (pressed & m8::BTN_LEFT && p > 0) k = stepItem(p - 1);
+  if (pressed & m8::BTN_RIGHT && p < ITEMS - 1) k = stepItem(p + 1);
   if (k < CARDS) {                                // (A-D the bottom row: UP goes on through the letters)
     int row = screenPos(k) / COLS;
     if (pressed & m8::BTN_UP && row > 0) k += COLS;

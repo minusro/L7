@@ -217,8 +217,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   action button shows load (a small arrow right) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (the button grey when it can't act: recording, another copy
   under way, clipboard empty); on the list, an arrow down into a tray (export) and an arrow up out of a tray (storage mode: export's reversed),
-  doing nothing yet. LEFT/RIGHT go through everything in reading order on the screen: the cards
-  row by row from the top (I–L, E–H, A–D), then the list; UP/DOWN go card row
+  doing nothing yet. LEFT/RIGHT go through everything from the bottom up: the list (storage mode,
+  export), then the cards A–L (RIGHT off a row's right end goes up to the next
+  row's left end, LEFT off a row's left end down to the row below's right end;
+  LEFT from A into the list); UP/DOWN go card row
   to card row and on into the list (back up: to the column it came from, on
   the A–D row). The looper's own selection is kept
   meanwhile and comes back when the menu closes. The menu opens on the
