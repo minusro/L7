@@ -29,14 +29,14 @@ static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
 // The edge mark (ui.h), built in a buffer and sent at once: the tip the
-// looper's 2 blocks from the left edge, the menu's 4 from the right (mirrored).
+// looper's 2 blocks from the left edge, the menu's 3 from the right (mirrored).
 void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground) {
-  // A filled triangle (3 x 5) with a 2-block stem behind its middle row: an arrow.
-  static const char *const ARROW_LEFT[5] = {"..#..", ".##..", "#####", ".##..", "..#.."};
+  // An arrow: an open head (a chevron, 3 x 5) on a shaft along its middle row.
+  static const char *const ARROW_LEFT[5] = {"..#..", ".#...", "#####", ".#...", "..#.."};
   constexpr int ROWS = STATUS_H / PX, CW = 5, CH = 5, R0 = (ROWS - CH) / 2;
   constexpr int MAX_W = EDGE_W + 2 * PX;          // (the menu's: wider, its arrow further in)
   const int w = right ? MAX_W : EDGE_W, cols = w / PX;
-  const int C0 = right ? 4 : 2;                    // the tip's blocks from its edge: the looper's 2, the menu's 4
+  const int C0 = right ? 3 : 2;                    // the tip's blocks from its edge: the looper's 2, the menu's 3
   static uint16_t px[STATUS_H * MAX_W];
   for (int r = 0; r < ROWS; r++)
     for (int c = 0; c < cols; c++) {

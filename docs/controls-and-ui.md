@@ -124,8 +124,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
-  small square, not selectable, no frame, with the edge mark: a small arrow (a filled 3×5
-  triangle with a 2-block stem behind its middle row) pointing left, 2 blocks from the left edge, dark grey (black on the selected status row's dark grey
+  small square, not selectable, no frame, with the edge mark: a small arrow (an open 3×5
+  head, a chevron, on a shaft 5 blocks long) pointing left, 2 blocks from the left edge, dark grey (black on the selected status row's dark grey
   ground), in the space from the screen's left edge to 2 blocks short of the scene cell's
   frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
   (an inverted SCN tag with the scene position,
@@ -179,7 +179,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; 2 blocks
   in from the left edge, 2 up from the status row's top: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). At the right
-  edge, centred top to bottom, the looper's edge mark mirrored (a black triangle pointing right, 4 blocks from the
+  edge, centred top to bottom, the looper's edge mark mirrored (a black arrow pointing right, 3 blocks from the
   right edge), only while a project is loaded: only then do RIGHT off the edge and UP off the top leave the menu. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
