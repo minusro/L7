@@ -5,7 +5,7 @@
 // row is selected:
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
-//   first cell: a small square with a small dark grey triangle pointing down
+//   first cell: a small square with two small dark grey triangles pointing down
 //     (DOWN on the status row opens the menu); not selectable, no frame.
 //   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
@@ -27,15 +27,14 @@
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
-// The edge chevron: a small filled triangle, 3 blocks wide and 2 high, in a
-// 5 x 3 box (where a chevron's outer blocks were left out), pointing down
-// (rows bottom-up: up).
+// The edge chevron: two small filled triangles, 3 blocks wide and 2 high,
+// one behind the other, pointing down (rows bottom-up: up).
 void drawEdgeChevron(int x, int y, bool down, uint16_t color) {
-  static const char *const ROWS_DOWN[3] = {".....", ".###.", "..#.."};
+  static const char *const ROWS_DOWN[4] = {"###", ".#.", "###", ".#."};
   auto &t = board.tft();
-  for (int r = 0; r < 3; r++)
-    for (int c = 0; c < 5; c++)
-      if (ROWS_DOWN[down ? r : 2 - r][c] == '#') t.fillRect(x + c * PX, y + r * PX, PX, PX, color);
+  for (int r = 0; r < 4; r++)
+    for (int c = 0; c < 3; c++)
+      if (ROWS_DOWN[down ? r : 3 - r][c] == '#') t.fillRect(x + c * PX, y + r * PX, PX, PX, color);
 }
 
 // The status row's cells: the scene's, the clock's and the tempo's (ui.h).
@@ -132,7 +131,7 @@ void drawStatus() {
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
-    // The menu cell: a small triangle down, dark grey (drawn when cleared: it never changes).
+    // The menu cell: two small triangles down, dark grey (drawn when cleared: it never changes).
     if (cleared) drawEdgeChevron(CHEVRON_X, top + CHEVRON_DY, true, DARK);
   }
   {
