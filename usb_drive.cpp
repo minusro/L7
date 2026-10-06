@@ -21,10 +21,11 @@ void (*usbDriveReload)() = nullptr;
 static constexpr uint16_t SCREEN = DIM;
 static const char HINT[] = "PRESS ANY KEY", HINT2[] = "TO DISCONNECT";   // (two lines)
 // The lines: the title, the connection's state 32 px under it, the hint 56 px
-// further down (its second line 16 px under its first), centred together top
-// to bottom (on the block grid), left-aligned with the menu's list.
+// further down (its second line 16 px under its first), together a line
+// (16 px) lower than centred top to bottom (on the block grid), left-aligned
+// with the menu's list.
 static constexpr int STATE_DY = 32, HINT_DY = STATE_DY + 56, HINT2_DY = HINT_DY + FONT_H + 3 * PX;
-static constexpr int TITLE_Y = (240 - (HINT2_DY + FONT_H)) / 2 / PX * PX;
+static constexpr int TITLE_Y = (240 - (HINT2_DY + FONT_H)) / 2 / PX * PX + FONT_H + 3 * PX;   // (a line lower than centred)
 static constexpr int STATE_Y = TITLE_Y + STATE_DY, HINT_Y = TITLE_Y + HINT_DY, HINT2_Y = TITLE_Y + HINT2_DY;
 static int textX() { return menuListX(); }
 
