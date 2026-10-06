@@ -185,8 +185,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). Along the right
   edge, the "peep": a strip the screen's height (coloured from the status row's top down, where the action
-  button is in the looper's view; black above) and 2 blocks wide (4 while RIGHT is held that leaves the menu
-  once let go), in the loaded project's colour; with no project, none until RIGHT is held, then in the
+  button is in the looper's view; black above) and 2 blocks wide (the action button's width while RIGHT is held that leaves
+  the menu once let go; the coloured part's top left corner cut a block), in the loaded project's colour; with no project, none until RIGHT is held, then in the
   first empty slot's colour (where leaving makes a new project); no arrow. While an arrow is held that leaves the menu, the selection
   frame is hidden. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
