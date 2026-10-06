@@ -278,12 +278,12 @@ void drawMenu() {
   if (!shown) return;
   dropStaleExport();                             // (the project changed, or another one loaded: the export's message goes)
   // While the peep is extended (LEFT or RIGHT held that leaves the menu), everything
-  // else moves left by as much as it grows and 2 blocks: drawn with the origin moved, all
+  // else moves left by as much as it grows and a block: drawn with the origin moved, all
   // of it again when that changes.
   constexpr int WIDE = BUTTON_W - PX, NARROW = 2 * PX;   // (the peep: held: the action button's width, its panel's from a block in)
   static int shownShift = 0;
   bool sideways = screenSwitchKey() == m8::BTN_RIGHT || screenSwitchKey() == m8::BTN_LEFT;   // (leaving off the left or right edge; not UP / DOWN)
-  int shift = sideways ? WIDE - NARROW + 2 * PX : 0;   // (as much as the peep grows, and 2 blocks: its black line)
+  int shift = sideways ? WIDE - NARROW + PX : 0;   // (as much as the peep grows, and a block)
   bool all = drawn != uiGeneration || shift != shownShift;
   auto &t = board.tft();
   if (all) {
