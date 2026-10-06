@@ -139,6 +139,7 @@ extern uint32_t uiGeneration;
 bool menuOpen();
 void openMenu();
 void closeMenu();
+bool menuUpLeaves();                     // UP leaves the menu (a card of the top row selected, a project loaded)
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)
 bool menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items (true: it moved)
 bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)

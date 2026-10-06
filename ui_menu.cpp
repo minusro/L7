@@ -319,6 +319,8 @@ void menuExportStatus(const char *text, int nameAt) {
   if (shown) drawItem(CARDS);                   // (now: the export holds up the loop)
 }
 
+bool menuUpLeaves() { return shown && !onStatus && menuSel < COLS && projectCurrent() >= 0; }
+
 void openMenu() {
   if (shown) return;
   // A project with no clips at all (none recorded since it was made): gone,
