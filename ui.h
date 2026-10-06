@@ -34,15 +34,29 @@ constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: four cells (to the volume cells' edge), left
-// to right: the menu's (a small square, a hamburger icon), the scene (the
-// widest), the clock (its width is the master volume's 22 lines) and the tempo.
-// Neighbouring cells share the side between them.
+// to right: the menu's (a small square with a dark grey double chevron down:
+// DOWN here opens the menu; not selectable), the scene (the widest), the clock
+// (its width is the master volume's 22 lines) and the tempo. Neighbouring
+// cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
 constexpr Cell MENU_BOX = {0, STATUS_H}, SCENE_BOX = {24, 96}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
 // The cells a row has (the status row's: as many as a track row's).
 inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
-// The selected cell in row i's terms.
-inline int selectedCellIn(int i) { return min(selectedCell, cellCount(i) - 1); }
+// The selected cell in row i's terms (on the status row, never the menu cell's).
+inline int selectedCellIn(int i) {
+  int c = min(selectedCell, cellCount(i) - 1);
+  return i == STATUS_ROW ? max(c, SCENE_CELL) : c;
+}
+// The edge chevrons' place: centred in the menu cell (x; y from the status
+// row's top), and in the menu mirrored top to bottom (as far from the top).
+constexpr int CHEVRONS_X = MENU_BOX.x + (MENU_BOX.w - 5 * PX) / 2 / PX * PX, CHEVRONS_DY = (STATUS_H - 6 * PX) / 2 / PX * PX;
+constexpr int CHEVRONS_TOP_Y = 240 - (STATUS_TOP + CHEVRONS_DY + 6 * PX);
+// The leftmost cell selectable in row i.
+inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
+// A small double chevron (5 x 6 blocks) at x, y, pointing down or up: the
+// screen's edge where the other screen is (the status row's menu cell, the
+// menu's top left).
+void drawEdgeChevrons(int x, int y, bool down, uint16_t color);
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
 // A row's place on the screen from the top (0: the first track row), and back.
@@ -166,6 +180,7 @@ void setMainSelection(int row, int cell);   // and set (the menu open: for when 
 // waits until it has been up a moment, then clears the screen (the menu follows).
 void showSplash();
 void hideSplash();
+void splashSlideIn();                    // the L and the 7 sliding in, played through (after showSplash())
 void splashTick();                       // the logo's colour cycle: call while starting up (hideSplash() finishes it)
 uint16_t hueCycle(float phase);          // the logo's hue at a phase (0-1) of one turn round the hues
 int splashBottom();                    // y just below the logo (for startup messages)

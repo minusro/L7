@@ -165,6 +165,7 @@ void setup() {
 
   board.tft().setTextWrap(false);
   showSplash();
+  splashSlideIn();                                 // (seen whole: the card's start would hold it up)
   auto progress = [](const char *msg) {          // under the logo
     auto &t = board.tft();
     t.setTextColor(TEXT_PROGRESS, BG);

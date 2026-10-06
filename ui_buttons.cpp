@@ -23,7 +23,7 @@
 // While the menu is open (on its items A runs the action when let go; B does
 // nothing): on its
 // list's items, export Ableton project (an arrow into a tray) and storage mode (the USB
-// trident), nothing yet; on a project slot, load (a small arrow right; the loaded one too: back to it) or, on an
+// trident), nothing yet; on a project slot, load (>>; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
 // or paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
@@ -32,7 +32,7 @@
 // start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_MENU, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -60,12 +60,11 @@ static int actionIcon() {
         recordQueued() != selected)
       return ICON_RESAMPLE;                          // an empty track: B+A resamples (unavailable with no clip playing unmuted)
     if (board.keys() & m8::BTN_PLAY) return ICON_NONE;
-    if (selected == STATUS_ROW) return selectedCellIn(STATUS_ROW) == MENU_CELL ? ICON_NONE : ICON_ADJUST;   // (the menu cell: nothing to adjust)
+    if (selected == STATUS_ROW) return ICON_ADJUST;
     return hasClip(selected) ? ICON_ADJUST : ICON_NONE;
   }
-  if (selected == STATUS_ROW) {                    // restart / the menu / tap tempo
+  if (selected == STATUS_ROW) {                    // restart / duplicate / play-stop / tap tempo
     int cell = selectedCellIn(STATUS_ROW);
-    if (cell == MENU_CELL) return shift ? ICON_NONE : ICON_MENU;   // (the hamburger: the menu)
     if (shift) return ICON_RESTART;
     return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_SCENE_DUP;   // the scene cell: duplicate the scene
   }
@@ -160,7 +159,6 @@ PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // TAP (text)
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
-  {5, 5, {"..#..", ".##..", "#####", ".##..", "..#.."}},   // MENU (the small arrow left: to the menu, LOAD's reversed)
   {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // HOME (out of the menu: the small arrow right, as LOAD)
   {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
           "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
@@ -170,7 +168,7 @@ PROGMEM static const Icon ICONS[] = {
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // RESAMPLE (record +)
   {9, 9, {"....#....", "...###...", ".........", ".#..#..#.", "##.###.##", ".#..#..#.", ".........", "...###...", "....#...."}},   // ADJUST (B + arrows: four small arrows round a small +)
-  {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // LOAD (a small arrow right: into the project)
+  {6, 5, {"#..#..", ".#..#.", "..#..#", ".#..#.", "#..#.."}},   // LOAD (>>: into the project)
   {5, 5, {"..#..", "#.#.#", ".###.", "#.#.#", "..#.."}},   // NEW (a small asterisk)
   {8, 9, {"...##...", "...##...", "...##...", ".######.", "..####..", "...##...", "#......#", "#......#", "########"}},   // SAVE (an arrow down into a tray; a block right: centred on the backdrop)
   {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
@@ -202,8 +200,8 @@ static bool unavailable(int i, int icon) {
 // with icons in the accent colour while A is held. In the menu its colour
 // follows the item (menuActionColor()): a card's, or light grey on the
 // system-level ones (storage mode). The tracks' buttons: black.
-// The action's colour: the menu item's, or the accent (going to the menu too).
-static uint16_t actionColor(int icon) { return icon == ICON_MENU ? ACCENT : menuActionColor(); }
+// The action's colour: the menu item's, or the accent.
+static uint16_t actionColor(int) { return menuActionColor(); }
 // An action that can't act now: grey (a menu item's own grey too: export with nothing to export).
 static bool cannotAct(int icon) { return unavailable(STATUS_ROW, icon) || actionColor(icon) == DIM; }
 
@@ -236,7 +234,7 @@ static uint16_t iconColor(int i, int icon) {
 
 // The selected track's panel: grey; in the
 // accent colour while A is held, with the action button (acting on the track).
-static uint16_t markColor() { return heldAction >= 0 && heldAction != ICON_MENU ? ACCENT : DIM; }   // (going to the menu: not the track)
+static uint16_t markColor() { return heldAction >= 0 ? ACCENT : DIM; }
 
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {

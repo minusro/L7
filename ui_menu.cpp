@@ -25,7 +25,9 @@
 // cells' (frameColor()), corners cut, a block out from a card (following its
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
-// logo small, always the action button's colour (not its pressed look).
+// logo small, always the action button's colour (not its pressed look). Top
+// left, a dark grey double chevron up (the status row's menu cell's, flipped)
+// while a project is loaded: only then do the edges lead out (menuLeavesOn()).
 #include "ui.h"
 #include "ui_font.h"
 
@@ -279,6 +281,12 @@ void drawMenu() {
   if (all || logo != actionRestColor()) {        // the logo, bottom left: the action button's colour (not its pressed look)
     logo = actionRestColor();
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
+  }
+  static bool chevrons;                          // the up chevrons shown
+  bool leaves = projectCurrent() >= 0;           // top left: UP / DOWN at the edges leave the menu (a project loaded: menuLeavesOn())
+  if (all || leaves != chevrons) {
+    chevrons = leaves;
+    drawEdgeChevrons(CHEVRONS_X, CHEVRONS_TOP_Y, false, leaves ? DARK : BG);
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)

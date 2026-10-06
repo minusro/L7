@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
   render(out + "/ui_status_scene_edit.png");
   board.heldKeys = 0;
   render(out + "/ui_status_scene.png");
-  selectedCell = MENU_CELL;                        // the hamburger cell: selectable, nothing to do yet
+  selectedCell = MENU_CELL;                        // LEFT to the menu cell: not selectable (stays on the scene cell)
   render(out + "/ui_status_menu.png");
   selectedCell = CLOCK_CELL;                       // the clock: A starts / stops (as START)
   render(out + "/ui_status_clock.png");

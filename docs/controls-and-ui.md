@@ -10,12 +10,12 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 |---|---|
 | UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. DOWN on the status row or UP on track 1 (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); in the menu, UP on a card of the top row or DOWN on the list's last item goes back once let go (unless no project is loaded) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: menu icon, scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform) |
-| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: open the menu on the hamburger cell (on release; the clock goes on), duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
+| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
 | SHIFT + B twice | Duplicate the scene |
 | B (held) | On a cell it adjusts (B + arrows): the action button shows four small arrows round a small +, black on the accent colour; while an arrow is down (adjusting), or A is held with B, the pressed look, dark grey with the icon in the accent colour. A does nothing then (B+A on a cell: kept for finer adjusting later). On an empty track (any cell) the button shows resample (the record dot with a plus) and B + A **resamples** (unavailable, the button grey, while no clip plays unmuted: nothing to resample): records the app's output (everything heard) from the next bar line, queued like a recording; when it's saved it moves to a new scene, on the same track (scenes.md). Otherwise B + A does nothing (SHIFT+B+A: the scene clipboard, below) |
 | A or B (menu, on a project slot) | Held (0.6 s) on a project: load it there and then, staying in the menu (nothing on an empty slot). Otherwise, once let go: load its project (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1; stopped: it stays stopped, ready to play) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
-| SHIFT + A or B (menu, on a slot) | Once let go (no confirmation): cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Not while recording |
+| SHIFT + A or B (menu, on a slot) | Once let go (no confirmation): cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. A project with no clips is only emptied, the clipboard keeping what it had (so paste needs a project with clips on it). Not while recording |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT + LEFT/RIGHT | Previous / next sample in the order of their names (wraps; gapless): the same project and track's first, then the project's other tracks', then other projects' (storage.md) |
 | SHIFT + UP/DOWN | Newer / older scene (see scenes.md); B + UP/DOWN does the same on the status row's scene cell (double taps and holding B included) |
@@ -24,7 +24,9 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | PLAY | Start from 1.1.1 / stop |
 | SHIFT + PLAY (or SHIFT + A on status) | Restart from 1.1.1 |
 
-Tap tempo (A on the status row): the tempo follows the taps; the 5th, 9th, …
+Tap tempo (A on the status row): the tempo follows the taps, each tap in a
+series refining it (a least-squares fit of every tap since the series began,
+not only the last few; a pause over 2.1 s or another key starts a new one); the 5th, 9th, …
 tap restarts from 1.1.1 (running: snaps to the nearest bar start).
 
 ### B + arrows on the waveform (loop range)
@@ -116,8 +118,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
-  small square with a hamburger icon, three bars: A opens the menu once let go,
-  the action button showing a small arrow left), then the scene cell
+  small square, not selectable, with a dark grey double chevron pointing down,
+  5×6 blocks: DOWN on the status row opens the menu), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -167,7 +169,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   project's is a thick outline (two blocks) in its colour, the letter in it too.
   While the clock runs, the loaded project's card shows a small play icon right of its letter (both 2 blocks left of centre), black like it, on the first half of each beat (pulsing). An empty slot is a grey outline, its letter grey (light grey when selected; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
-  in the action button's colour (not its pressed look: it stays put while A is held). Under them
+  in the action button's colour (not its pressed look: it stays put while A is held). In the top
+  left corner, the status row's double chevron flipped (pointing up, dark grey, as far from the top
+  as it is from the bottom there), only while a project is loaded: only then do UP on the top row
+  and DOWN on the last item leave the menu. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
@@ -203,7 +208,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   is held (not B; on a card, an action button A or B held turns it to the project's
   colour), corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
-  action button shows load (a small arrow right) or, empty, new (a small asterisk); with SHIFT,
+  action button shows load (>>) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (the button grey when it can't act: recording, another copy
   under way, clipboard empty); on the list, an arrow down into a tray (export) and the USB trident (drive mode),
   doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the
@@ -219,7 +224,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   scale: 138×65 px here, 12 px right of the middle; the menu's corner: 55×26),
   fading in (0–0.5 s) while the L slides in from the left and the 7 from the
   right (from 600 px off: still about at the screen's edges once well lit;
-  cubic ease-out, in place at 1 s), its hue going
+  cubic ease-out, in place at 1 s; played through before the start-up work goes on,
+  `splashSlideIn()`, since that only ticks the splash between its steps), its hue going
   once round, with "© 2026 Daniel Stanciu" centred near the bottom in light grey, fading in (1.5–2 s) as it rises 8 px from level with the status row's text (where the clock's is) into place (cubic ease-out, in place at 2.5 s), in
   the app's 3×5 block font (2×2 px blocks; 7×7 ©); 4 s (fading out from 3.5 s); startup messages
   print under the logo.

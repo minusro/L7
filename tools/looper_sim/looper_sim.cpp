@@ -1470,13 +1470,17 @@ int main(int argc, char **argv) {
     check(projectHasClips(), "project 1 has clips");
     projectSelection(row, cell);
     check(row == 3 && cell == 1, "with its selection");
-    check(projectCut(1) && !projectFilled(1) && projectClipboardFull(), "project 2 cut: its slot empty");
-    check(projectPaste(5) && projectFilled(5) && !projectPaste(5), "pasted into slot 6 (once: it's full then)");
+    check(projectCut(1) && !projectFilled(1) && !projectClipboardFull() && !projectPaste(5) && !projectFilled(5),
+          "project 2 cut (no clips): its slot empty, not to the clipboard (nothing to paste)");
     check(projectCut(0) && projectCurrent() == -1 && !projectFilled(0) && sceneCount() == 0 && !sceneStep(1),
           "the loaded one cut: its slot empty, the empty dummy project loaded (no N+1* with no scenes)");
     check(projectPaste(2) && projectLoad(2) && sceneCount() == scenes && sceneCurrent() == pos && tracks[0].sample == sample0,
           "pasted into slot 3 and loaded: project 1 as it was");
     check(projectPaste(7), "and into slot 8 too (the same clips)");
+    check(projectLoad(9) && projectLoad(2) && projectCut(9) && !projectFilled(9) && projectClipboardFull() &&
+          projectPaste(10) && !projectPaste(10) && projectLoad(10) && tracks[0].sample == sample0 && projectLoad(2),
+          "a project with no clips cut: the clipboard keeps project 1 (pasted into slot 11, once: it's full then)");
+    check(projectDelete(10), "(that paste gone)");
     // A track's position at the clock's 1.1.1 is its start position.
     auto fromStart = [&](const char *what) {
       bool ok = true;

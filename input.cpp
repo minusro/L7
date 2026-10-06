@@ -28,27 +28,39 @@ static void resetCell() {
   }
 }
 
-// Tap tempo (A on the status row): the tempo follows the average of the last
-// TAP_AVERAGE intervals from the second tap on. Taps further apart than
-// TAP_TIMEOUT_MS start a new count, and so does any other key press in between. Every 4th tap after the first (the 5th,
-// 9th, 13th ...) lands on a bar line: a stopped transport starts there from
-// 1.1.1; a running one snaps to the nearest bar start.
+// Tap tempo (A on the status row): from the second tap on, the tempo is the
+// least-squares fit of every tap in the run (tap n at beat n), so each tap
+// refines it: two taps give their interval, a long series evens out the
+// jitter of single taps. Taps further apart than TAP_TIMEOUT_MS start a new
+// run, and so does any other key press in between. Every 4th tap after the
+// first (the 5th, 9th, 13th ...) lands on a bar line: a stopped transport
+// starts there from 1.1.1; a running one snaps to the nearest bar start.
 static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // a little over a beat at the slowest tempo (30 BPM)
-static constexpr int TAP_AVERAGE = 4;
 
 static int tapCount = 0;                            // taps in this run (0: the next is the first)
 
 static void tapTempo() {
-  static uint32_t times[TAP_AVERAGE + 1];           // the latest taps, oldest first
-  int &count = tapCount;
+  static uint32_t first, last;                      // this run's first and latest taps
+  static double sumT, sumIT;                        // over the taps: t (ms after the first), i * t
   uint32_t now = millis();
-  if (count > 0 && now - times[min(count, TAP_AVERAGE + 1) - 1] > TAP_TIMEOUT_MS) count = 0;
-  if (count >= TAP_AVERAGE + 1) memmove(times, times + 1, TAP_AVERAGE * sizeof times[0]);
-  times[min(count, TAP_AVERAGE)] = now;
-  count++;
-  int intervals = min(count, TAP_AVERAGE + 1) - 1;
-  if (intervals > 0 && now > times[0]) setTempo(60000.0f * intervals / (now - times[0]));
-  if (count > 1 && count % 4 == 1) {                // 5th, 9th, ...: a bar line now
+  if (tapCount > 0 && now - last > TAP_TIMEOUT_MS) tapCount = 0;
+  if (tapCount == 0) {
+    first = now;
+    sumT = sumIT = 0;
+  }
+  double i = tapCount, t = now - first;
+  sumT += t;
+  sumIT += i * t;
+  last = now;
+  int n = ++tapCount;
+  if (n >= 2) {
+    // The slope of t over i (ms per beat), with i = 0 .. n-1:
+    // sum(i) = n(n-1)/2, n sum(i^2) - sum(i)^2 = n^2(n^2-1)/12.
+    double sumI = n * (n - 1) / 2.0;
+    double msPerBeat = (n * sumIT - sumI * sumT) / (n * (double)n * ((double)n * n - 1) / 12);
+    if (msPerBeat > 0) setTempo(60000.0f / msPerBeat);
+  }
+  if (n > 1 && n % 4 == 1) {                        // 5th, 9th, ...: a bar line now
     if (transport.running) transportSnapToBar();
     else transportRestart();
   }
@@ -225,7 +237,6 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool onScene = onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL;
   bool onClock = onStatus && selectedCellIn(STATUS_ROW) == CLOCK_CELL;
   bool onTempo = onStatus && selectedCellIn(STATUS_ROW) == TEMPO_CELL;
-  bool onMenuCell = onStatus && selectedCellIn(STATUS_ROW) == MENU_CELL;   // (the hamburger: A opens the menu)
   // Any press but a lone A on the tempo cell (a tap): the next tap starts a new count.
   if (pressed && !(onTempo && pressed == m8::BTN_EDIT && keys == m8::BTN_EDIT)) tapCount = 0;
   bool sceneChanged = false;                         // every row to redraw
@@ -442,7 +453,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     // To or from the status row: the cell below / above, the status row's having the menu cell to the left of the tracks' first.
     if (selected == STATUS_ROW && row != STATUS_ROW) selectedCell = at + 1;
     else if (row == STATUS_ROW && selected != STATUS_ROW) selectedCell = max(at - 1, 0);
-    if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell = selectedCellIn(selected) - 1;
+    if (pressed & m8::BTN_LEFT && selectedCellIn(selected) > firstCellIn(selected)) selectedCell = selectedCellIn(selected) - 1;
     if (pressed & m8::BTN_RIGHT && selectedCell < cellCount(selected) - 1) selectedCell++;
     if (pressed & arrows) moved = selected != row || selectedCellIn(selected) != at;
   }
@@ -468,10 +479,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
-  if ((transportKey || (edit && onStatus && !onMenuCell)) && shift) transportRestart();
+  if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onMenuCell) menuOnRelease = m8::BTN_EDIT;   // the menu, once A is let go (the clock goes on)
-    else if (onScene) sceneChanged = sceneDuplicate();   // a copy of the scene after it, as SHIFT+B twice
+    if (onScene) sceneChanged = sceneDuplicate();   // a copy of the scene after it, as SHIFT+B twice
     else if (onClock) {                            // play / stop, as START
       if (transport.running) transportStop();
       else transportStart();

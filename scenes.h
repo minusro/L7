@@ -81,8 +81,10 @@ bool projectLoad(int p);
 // Cut and paste (projectsMayCopy(): not while recording or while another
 // copy is under way; playing, the copying goes on in the background): cut copies the
 // project to the project clipboard and empties its slot (the loaded one: an
-// empty dummy project, in no slot, is loaded instead; for now); paste copies the clipboard into an empty
-// slot (it stays on the clipboard).
+// empty dummy project, in no slot, is loaded instead; for now); a project with
+// no clips is only emptied (as projectDelete), the clipboard keeping what it
+// had. Paste copies the clipboard into an empty slot (it stays on the
+// clipboard); never an empty clipboard, which only ever holds clips.
 bool projectsMayCopy();
 // The loaded project holds a clip somewhere (on the tracks or in a scene);
 // false for the dummy project.

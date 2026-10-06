@@ -39,7 +39,7 @@ static SceneList list;
 static constexpr int CLIP = PROJECTS, DUMMY = PROJECTS + 1;   // the clipboard's file, the dummy project's
 static int project = 0;                          // the loaded one (0-11, or DUMMY)
 static bool filled[PROJECTS];                    // the slots holding a project
-static bool projectClip = false;                 // the project clipboard holds one
+static bool projectClip = false;                 // the project clipboard holds one (always with clips)
 static float (*getTempo)() = nullptr;
 static bool (*setTempo)(float) = nullptr;        // a project's tempo, as it loads (not a change by hand)
 static float (*newTempo)() = nullptr;            // new projects' tempo (the last one set by hand)
@@ -419,6 +419,20 @@ static bool readList(FsFile &f, SceneList &l) {
   return !memcmp(l.magic, "M8SL", 4) && l.count <= MAX_SCENES;
 }
 
+// A project file holds a clip in one of its scenes (false: none, or an empty slot).
+static bool fileHasClips(FsFile &f) {
+  SceneList l;
+  if (!readList(f, l)) return false;
+  for (int i = 0; i < l.count; i++) {
+    SceneInfo s;
+    if (f.seekSet((uint64_t)(1 + l.slot[i]) * BLOCK) && f.read(&s, sizeof s) == (int)sizeof s &&
+        !memcmp(s.magic, "M8SC", 4))
+      for (const auto &u : s.units)
+        if (u.sample) return true;
+  }
+  return false;
+}
+
 static bool writeBlockTo(FsFile &f, uint32_t block, const void *data, size_t n) {
   uint8_t b[BLOCK] = {};
   memcpy(b, data, n);
@@ -625,6 +639,13 @@ bool projectLoad(int p) {
 
 bool projectCut(int p) {
   if (!projectsMayCopy() || !projectFilled(p)) return false;
+  bool clips = p == project;
+  if (clips) clips = projectHasClips();
+  else {
+    FsFile f = openProject(p);
+    clips = fileHasClips(f);
+  }
+  if (!clips) return projectDelete(p);             // no clips: emptied, not to the clipboard (it keeps what it had)
   filled[p] = false;                               // (shown empty at once; emptied once copied)
   if (!startCopy(p, CLIP, true)) {
     filled[p] = true;
@@ -714,12 +735,13 @@ static void makeProjectFiles() {
     }
     SceneList l;
     bool full = readList(f, l);
+    bool clips = p == CLIP && fileHasClips(f);
     f.close();
     if (p < PROJECTS) {
       filled[p] = full;
       if (!full) removeProject(p);                 // (an empty one of an older card, or a cut short)
     } else if (p == CLIP) {
-      projectClip = full;
+      projectClip = clips;                         // (one with no clips, cut before they were kept out: none)
     }
   }
 }

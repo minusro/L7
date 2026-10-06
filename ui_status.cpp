@@ -5,8 +5,8 @@
 // row is selected:
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
-//   first cell: a small square with a hamburger icon (the menu's; selectable, no
-//     action yet), light grey when selected.
+//   first cell: a small square with a dark grey double chevron pointing down
+//     (DOWN on the status row opens the menu); not selectable, no frame.
 //   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
@@ -26,6 +26,16 @@
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
+
+// The edge chevrons: two stacked chevrons, 5 blocks wide and 3 high, pointing
+// down (rows bottom-up: up); centred in the menu cell.
+void drawEdgeChevrons(int x, int y, bool down, uint16_t color) {
+  static const char *const ROWS_DOWN[6] = {"#...#", ".#.#.", "..#..", "#...#", ".#.#.", "..#.."};
+  auto &t = board.tft();
+  for (int r = 0; r < 6; r++)
+    for (int c = 0; c < 5; c++)
+      if (ROWS_DOWN[down ? r : 5 - r][c] == '#') t.fillRect(x + c * PX, y + r * PX, PX, PX, color);
+}
 
 // The status row's cells: the scene's, the clock's and the tempo's (ui.h).
 static constexpr int STATUS_CELLS = TEMPO_CELL + 1;
@@ -121,9 +131,8 @@ void drawStatus() {
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
-    // The menu cell's icon: a small hamburger (three bars), in the label colour.
-    static const int barsW = 7 * PX, barsX = MENU_BOX.x + (MENU_BOX.w - barsW) / 2 / PX * PX, barsY = top + (STATUS_H - 5 * PX) / 2 / PX * PX;
-    for (int r = 0; r < 3; r++) t.fillRect(barsX, barsY + 2 * r * PX, barsW, PX, labelInk(MENU_CELL));
+    // The menu cell: a double chevron down, dark grey (drawn when cleared: it never changes).
+    if (cleared) drawEdgeChevrons(CHEVRONS_X, top + CHEVRONS_DY, true, DARK);
   }
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the

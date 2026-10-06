@@ -33,7 +33,10 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   last) to or from `CLIP.DAT`; cut then removes the slot's file. Stopped: at
   once. Playing: in the background, a block per `serviceScenes()` pass when
   the buffers allow (as scene saves); meanwhile the slots involved can't be
-  loaded and no other copy starts. Not while recording. Cutting the loaded project empties its slot too and
+  loaded and no other copy starts. Not while recording. A project with no
+  clips isn't copied: cutting it only empties its slot (as a delete), the
+  clipboard keeping what it had, so the clipboard only ever holds clips and
+  paste is off while it's empty. Cutting the loaded project empties its slot too and
   loads an empty dummy project (`DATA/NONE.DAT`, in no slot, emptied each time it's
   loaded; the accent then the splash's turquoise; for now), the tracks
   cleared. A new project (or the dummy) starts on track 1's waveform cell.

@@ -206,6 +206,18 @@ void showSplash() {
   splashTick();
 }
 
+// The slide played through (blocking, ~1 s): the start-up work after it calls
+// splashTick() only between its steps, and the card's start alone outlasts
+// the slide, which then went by unseen. (The splash stays SPLASH_MIN_MS
+// anyway, so this only adds to a start-up that takes longer than the rest.)
+void splashSlideIn() {
+  while (millis() - shownAt < SLIDE_MS) {
+    splashTick();
+    delay(1);
+  }
+  splashTick();
+}
+
 void hideSplash() {
   while (millis() - shownAt < SPLASH_MIN_MS) {
     splashTick();
