@@ -39,16 +39,18 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   paste is off while it's empty. Cutting the loaded project empties its slot too and
   loads an empty dummy project (`DATA/NONE.DAT`, in no slot, emptied each time it's
   loaded; the accent then the splash's turquoise; for now), the tracks
-  cleared. A new project (or the dummy) starts on track 1's waveform cell.
+  cleared.
 * A project with no clips at all is deleted when the menu opens (its slot
   emptied, not to the clipboard; the dummy project loaded).
-* Each scene keeps the looper's selection (`SceneInfo.row`, `cell`, + 1):
-  saved when leaving it (and with every save of the scene), restored when
-  arriving; loading a project takes its current scene's. The list block's
-  selection is the fallback (scenes saved before this).
-* The selection is saved in the list block (`row`, `cell`, each + 1; 0:
-  none) a couple of seconds after it changes, before loading another
-  project, and at power off.
+* The selection (row and cell) is the app's, not a project's or a scene's:
+  loading a project or stepping to another scene leaves it where it is. It's
+  kept in the session (`SESSION.DAT`). (`SceneInfo.row`/`cell` and
+  `SceneList.row`/`cell`, where scenes and projects kept one before, are
+  unused.)
+* `projectEdits()` counts the loaded project's changes (the tracks edited by
+  hand or recorded, scenes cut / pasted / duplicated, the tempo set by hand;
+  not loading it or stepping through its scenes): the menu's "SAVED AS" label
+  stays until it moves.
 
 ## The list
 

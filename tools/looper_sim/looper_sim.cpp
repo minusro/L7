@@ -1457,19 +1457,30 @@ int main(int argc, char **argv) {
     int scenes = sceneCount(), pos = sceneCurrent();
     uint32_t sample0 = tracks[0].sample;
     check(projectCurrent() == 0 && projectFilled(0) && !projectFilled(1), "project 1 loaded (the first version's scenes), slot 2 empty");
-    projectSetSelection(3, 1);
     check(projectLoad(1) && projectCurrent() == 1 && projectFilled(1) && sceneCount() == 0 && sceneCurrent() == 0,
           "an empty slot: a new project, on its empty scene");
     bool empty = true;
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) empty = false;
-    int row, cell;
-    projectSelection(row, cell);
-    check(empty && row == -1 && !projectHasClips(), "its tracks empty, no clips, no selection saved");
+    check(empty && !projectHasClips(), "its tracks empty, no clips");
     check(projectLoad(0) && sceneCount() == scenes && sceneCurrent() == pos && tracks[0].sample == sample0,
           "back to project 1: its scenes and tracks");
     check(projectHasClips(), "project 1 has clips");
-    projectSelection(row, cell);
-    check(row == 3 && cell == 1, "with its selection");
+    {
+      uint32_t e = projectEdits();
+      bool stepped = sceneStep(-1) && sceneStep(1);
+      runUntilIdle();
+      check(stepped && sceneCurrent() == pos && projectEdits() == e, "stepping through its scenes, or loading it: no edit");
+      float was = simTempo();
+      tempoByHand(was + 1);
+      check(projectEdits() != e, "the tempo set by hand: an edit");
+      tempoByHand(was);
+      e = projectEdits();
+      bool muted = trackMuted(0);
+      setTrackMuted(0, !muted);
+      setTrackMuted(0, muted);
+      check(projectEdits() != e, "a track muted by hand: an edit");
+      runUntilIdle();
+    }
     check(projectCut(1) && !projectFilled(1) && !projectClipboardFull() && !projectPaste(5) && !projectFilled(5),
           "project 2 cut (no clips): its slot empty, not to the clipboard (nothing to paste)");
     check(projectCut(0) && projectCurrent() == -1 && !projectFilled(0) && sceneCount() == 0 && !sceneStep(1),

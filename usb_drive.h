@@ -11,7 +11,7 @@
 // shows in Android File Transfer, not as a drive) also works.
 //
 // usbDriveMode() writes everything out and takes the screen and the card until
-// the disk is ejected on the computer, or START is pressed, then
+// the disk is ejected on the computer, or any key is pressed, then
 // gives them back: the app forgets everything it knew of the card and reads it
 // all again (usbDriveReload, as at a start: the computer may have changed any
 // file). Without a reload function (or in the MTP build) it restarts instead.

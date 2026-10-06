@@ -9,7 +9,7 @@ int selected = NUM_TRACKS - 1;              // row: a track, or STATUS_ROW (from
 int selectedCell = 0;                       // cell in the row (0: the waveform, ui.h WAVE_CELL)
 static uint32_t changedMs = 0;                // when the tempo or the selection last changed
 static bool tempoDirty = false;
-static int savedRow = -1, savedCell = -1;      // the selection the project holds
+static int savedRow = -1, savedCell = -1;      // the selection session.txt holds
 static int savedMaster = MASTER_VOLUME_UNITY;   // the master volume session.txt holds
 static int savedProject = 0;                    // and the loaded project
 static int savedMenu = -1, bootMenu = -1;       // and the menu (its selection, + 1000 open)
@@ -52,15 +52,18 @@ void stepMasterVolume(int by) {
 }
 
 
-// ---- Session (tempo, master volume, the loaded project); the selection is the project's
+// ---- Session (tempo, master volume, the loaded project, the selection: the
+// app's, not a project's or a scene's)
 void beginSession() {
   Session s = loadSession();
   bpm = roundf(s.bpm * 10) / 10;
   newBpm = roundf(s.newBpm * 10) / 10;
-  if (s.row >= 0 && s.row < ROWS && s.cell >= 0 && s.cell < CELLS) {   // (saved before projects kept it)
+  if (s.row >= 0 && s.row < ROWS && s.cell >= 0 && s.cell < cellCount(s.row)) {
     selected = s.row;
     selectedCell = s.cell;
   }
+  savedRow = selected;
+  savedCell = selectedCell;
   setMasterVolume(s.master);
   savedMaster = s.master;
   savedProject = bootProject = s.project;
@@ -72,25 +75,11 @@ int sessionProject() { return bootProject; }
 int sessionMenu() { return bootMenu; }
 bool sessionPlaying() { return bootPlaying; }
 
-void takeProjectSelection(bool orTrack1) {
-  int row, cell;
-  projectSelection(row, cell);
-  if (!(row >= 0 && row < ROWS && cell >= 0 && cell < CELLS)) {   // none saved: track 1's waveform, or as it is
-    mainSelection(row, cell);
-    if (orTrack1) {
-      row = NUM_TRACKS - 1;
-      cell = WAVE_CELL;
-    }
-  }
-  setMainSelection(row, cell);
-  savedRow = row;
-  savedCell = cell;
-  projectSetSelection(row, cell);
-}
-
 static bool sessionDirty() {
+  int row, cell;
+  mainSelection(row, cell);                        // (the looper's, not the menu's)
   return tempoDirty || masterVolume() != savedMaster || projectCurrent() != savedProject ||
-         menuState() != savedMenu || transport.running != savedPlaying;
+         menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell;
 }
 
 static void writeSession() {
@@ -101,22 +90,15 @@ static void writeSession() {
   s.project = projectCurrent();
   s.menu = menuState();
   s.playing = transport.running;
+  mainSelection(s.row, s.cell);
   saveSession(s);
+  savedRow = s.row;
+  savedCell = s.cell;
   savedMenu = s.menu;
   savedPlaying = s.playing;
   savedMaster = s.master;
   savedProject = s.project;
   tempoDirty = false;
-}
-
-// The selection (the looper's, not the menu's) into the project.
-static void keepSelection() {
-  int row, cell;
-  mainSelection(row, cell);
-  if (row == savedRow && cell == savedCell) return;
-  projectSetSelection(row, cell);
-  savedRow = row;
-  savedCell = cell;
 }
 
 void saveSessionWhenIdle() {
@@ -129,11 +111,9 @@ void saveSessionWhenIdle() {
     menu = menuState();
     changedMs = millis();
   }
-  if (millis() - changedMs > 2000) keepSelection();   // (written to the project when the buffers allow)
   if (sessionDirty() && !transport.running && millis() - changedMs > 2000) writeSession();
 }
 
 void saveSessionNow() {
-  keepSelection();
   if (sessionDirty()) writeSession();
 }

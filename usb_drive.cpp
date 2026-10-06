@@ -16,11 +16,11 @@ void (*usbDriveReload)() = nullptr;
 
 // The screen: grey (SCREEN), its title and logo light grey (then the hue
 // cycle), the connection's state under it white, the hint (and the messages
-// that replace it) black. Its text is left-aligned with
-// the hint at the bottom, which stays centred.
+// that replace it) black. Its texts are all left-aligned, the hint at the
+// bottom too, at the place they've always started.
 static constexpr uint16_t SCREEN = DIM;
-static const char HINT[] = "PRESS START TO RETURN";
-static int textX() { return (320 - textWidth(HINT)) / 2 / PX * PX; }
+static const char HINT[] = "PRESS ANY KEY TO DISCONNECT";
+static int textX() { return (320 - textWidth("PRESS START TO RETURN")) / 2 / PX * PX; }   // (where the texts have always started)
 
 static void line(int y, const char *text, uint16_t ink) {
   board.tft().fillRect(0, y, 320, FONT_H, SCREEN);
@@ -132,7 +132,7 @@ bool usbDriveMode() {
       line(120, TEXT[state], INK);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
-    if (board.keys() & m8::BTN_PLAY) return leave("WAIT");   // START: back to the app (ejecting on the computer does too)
+    if (board.keys()) return leave("WAIT");          // any key: back to the app (ejecting on the computer does too)
   }
 }
 #elif defined(USB_MTPDISK) || defined(USB_MTPDISK_SERIAL)
@@ -182,7 +182,7 @@ bool usbDriveMode() {
       line(120, TEXT[state], INK);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
-    if (board.keys() & m8::BTN_PLAY) {            // START: back to the app, restarted (the computer may have changed anything)
+    if (board.keys()) {                           // any key: back to the app, restarted (the computer may have changed anything)
       line(176, "RESTARTING", BG);
       delay(100);
       SCB_AIRCR = 0x05FA0004;

@@ -101,13 +101,10 @@ bool projectDelete(int p);
 // Stopped only. Not called automatically while DELETE_UNUSED_SAMPLES (config.h)
 // is off. Returns how many.
 int deleteUnusedSamples();
-// Each scene keeps the looper's selection (row and cell): when leaving it
-// it's saved with the scene, and arriving there it comes back. get/set: the
-// app's selection.
-void scenesSelection(void (*get)(int &row, int &cell), void (*set)(int row, int cell));
-// The loaded project's selected row and cell (its current scene's, else the
-// project's; -1: none saved).
-void projectSelection(int &row, int &cell);
-void projectSetSelection(int row, int cell);
+// The loaded project's edits so far: it moves on whenever the project changes
+// (the looper's tracks edited by hand or recorded, a scene cut, pasted or
+// duplicated, the tempo set by hand), not when it's loaded or its scenes are
+// stepped through. (The selection isn't a project's or a scene's: the app's.)
+uint32_t projectEdits();
 
 }  // namespace looper

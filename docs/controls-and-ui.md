@@ -180,8 +180,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
   3/14" (samples copied, then the set) and then "SAVED AS L7 A005" ("SAVED AS" grey,
-  the name in the project's colour; or "EXPORT FAILED") until the menu is closed or
-  storage mode entered (moving the selection leaves it); while it shows,
+  the name in the project's colour) until the project changes (an edit,
+  a recording, a scene cut / pasted / duplicated, the tempo; `projectEdits()`) or another one
+  is loaded: closing the menu, storage mode and moving the selection leave it ("EXPORT
+  FAILED" goes when the menu closes); while it shows,
   the export item's action button is greyed and A does nothing. Storage mode (A or B, on release):
   writes everything out, then shows the card to a computer over USB as a
   mounted drive (USB mass storage, see usb_drive.h; it mounts like a flash
@@ -189,9 +191,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in the menu's corner place and size, in the same colour at all times):
   light grey until the computer is connected, then going round the hues; the
   connection's state under it in white, the hint in black (the messages that replace it, "EJECTED", "RESTARTING", too),
-  left-aligned with the "PRESS START TO RETURN" hint at the bottom;
+  left-aligned, the "PRESS ANY KEY TO DISCONNECT" hint at the bottom too (where the
+  shorter hint they used to align with, centred, started);
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
-  COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or pressing START,
+  COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or pressing any key,
   leaves it with "WAIT" ("EJECTED" after an eject): the app drops everything it knew of the card
   and reads it all again, as at a start (the computer may have changed any
   file), and the menu is back as it was. Four in

@@ -1275,8 +1275,8 @@ Session loadSession() {
 void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nnewbpm=%.2f\nvolume=%d\nproject=%d\nmenu=%d\nplaying=%d\n", s.bpm, s.newBpm, s.master, s.project + 1, s.menu,
-           s.playing ? 1 : 0);
+  f.printf("bpm=%.2f\nnewbpm=%.2f\nvolume=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\n", s.bpm, s.newBpm, s.master, s.project + 1,
+           s.menu, s.playing ? 1 : 0, s.row, s.cell);
   f.close();
 }
 

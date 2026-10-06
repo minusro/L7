@@ -147,8 +147,6 @@ static void reloadFromCard() {
   beginSession();
   transport.spb = spbForBpm(bpm);
   scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo);
-  scenesSelection(mainSelection, setMainSelection);
-  takeProjectSelection(false);
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();
 }
 
@@ -183,8 +181,6 @@ void setup() {
   splashTick();
   transport.spb = spbForBpm(bpm);
   scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo);
-  scenesSelection(mainSelection, setMainSelection);
-  takeProjectSelection(false);
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();   // recordings no project uses
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
   usbDriveTick = [] { loopCount++; handlePowerButton(); };   // (storage mode's own loop)

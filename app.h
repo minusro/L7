@@ -22,19 +22,15 @@ bool loadTempo(float b);
 float newProjectTempo();                 // the last tempo set by hand (saved with the session; first 120)
 // The master volume a step up (by 1) or down (-1); saved with the session.
 void stepMasterVolume(int by);
-// The session: the tempo, the master volume and the loaded project, kept in
-// SESSION.DAT. beginSession() loads it (none saved: 120 BPM, project 1).
-// It's saved a while after it last changed, and only while stopped (saving
-// rewrites a file, which can stall the card); saveSessionNow() saves it at
-// once if it changed (power off). The selected row and cell are the loaded
-// project's: kept in it a while after they change (and at power off).
+// The session: the tempo, the master volume, the loaded project and the
+// selected row and cell (the app's: loading a project or changing scene
+// leaves it as it is), kept in SESSION.DAT. beginSession() loads it (none
+// saved: 120 BPM, project 1, track 1's waveform). It's saved a while after it
+// last changed, and only while stopped (saving rewrites a file, which can
+// stall the card); saveSessionNow() saves it at once if it changed (power off).
 void beginSession();
 int sessionProject();                              // the project to load at boot
 int sessionMenu();                                 // the menu as it was (ui_menu.cpp menuState(); -1: none saved)
 bool sessionPlaying();                             // the clock was running when the session was last saved
-// The loaded project's selection taken (after loading it). None saved (a new
-// project): track 1's waveform cell if orTrack1, else as it is (at boot: the
-// one the session had before projects kept it).
-void takeProjectSelection(bool orTrack1 = true);
 void saveSessionWhenIdle();
 void saveSessionNow();

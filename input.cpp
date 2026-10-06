@@ -112,15 +112,8 @@ static void menuLongPress() {
   if (!armed || longDone || shifted || armedSlot < 0 || !projectFilled(armedSlot) || !menuOpen() || menuOnStatus()) return;   // (not on an empty slot)
   if (millis() - armedAt < LONG_PRESS_MS) return;
   longDone = true;
-  if (armedSlot != projectCurrent()) {
-    int row, cell;
-    mainSelection(row, cell);
-    projectSetSelection(row, cell);                  // (the project left keeps its selection)
-    if (projectLoad(armedSlot)) {
-      takeProjectSelection();
-      metronomeOn = projectCurrent() >= 0 && !projectHasClips();
-    }
-  }
+  if (armedSlot != projectCurrent() && projectLoad(armedSlot))
+    metronomeOn = projectCurrent() >= 0 && !projectHasClips();   // (the selection stays as it is)
   drawMenu();
 }
 
@@ -146,7 +139,6 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     leaveOnRelease = 0;
     if (menuLeavesOn(key)) {
       closeMenu();
-      takeProjectSelection();
       for (int i = 0; i < ROWS; i++) drawTrack(i);
     }
     return;
@@ -190,7 +182,6 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       if (slot < 0) {                                // the list's items: export, storage mode
         if (armedItem == 0 && !shifted && projectCurrent() >= 0 && projectHasClips() && !menuExportShown()) exportToAbleton();
         if (armedItem == 1 && !shifted) {
-          menuExportStatus(nullptr);                 // (the export's label goes)
           bool wasRunning = transport.running;
           if (usbDriveMode()) {                      // (back from it: everything read from the card again)
             drawMenu();
@@ -198,18 +189,13 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
           }
         }
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
-        bool loaded = slot == projectCurrent();
-        if (projectFilled(slot) ? projectCut(slot) : projectPaste(slot))
-          if (loaded) takeProjectSelection();          // the loaded one cut: the dummy project's (track 1's waveform)
+        if (projectFilled(slot)) projectCut(slot);
+        else projectPaste(slot);
         drawMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
       } else {                                       // load it (an empty slot: a new project), back to the looper
-        int row, cell;
-        mainSelection(row, cell);
-        projectSetSelection(row, cell);              // (the project left keeps its selection)
-        if (projectLoad(slot)) {
+        if (projectLoad(slot)) {                     // (the selection stays as it is)
           closeMenu();
-          takeProjectSelection();
           metronomeOn = projectCurrent() >= 0 && !projectHasClips();          // (now: its first beat clicks too)
           for (int i = 0; i < ROWS; i++) drawTrack(i);
         }
