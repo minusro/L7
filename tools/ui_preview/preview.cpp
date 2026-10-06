@@ -25,7 +25,6 @@ HardwareSerial midi;
 bool optBeforeShift() { return true; }             // (input.cpp isn't built here)
 bool arrowsMoved() { return true; }
 bool screenSwitchPending() { return false; }
-bool tempoShiftHalves() { return true; }
 static uint8_t simSwitchKey = 0;                   // (an arrow held that switches screens: the peeps)
 uint8_t screenSwitchKey() { return simSwitchKey; }
 
@@ -142,8 +141,8 @@ int main(int argc, char **argv) {
   render(out + "/ui_status.png");
   board.heldKeys = m8::BTN_OPT;                    // B held on the tempo: B + arrows change it
   render(out + "/ui_status_tempo_edit.png");
-  board.heldKeys = m8::BTN_SHIFT;                  // SHIFT held on the tempo: halve it (/2)
-  render(out + "/ui_status_halve.png");
+  board.heldKeys = m8::BTN_SHIFT;                  // SHIFT held on the tempo: the metronome
+  render(out + "/ui_status_metro.png");
   selectedCell = SCENE_CELL;                       // and on the scene: duplicate it
   render(out + "/ui_status_dup.png");
   selectedCell = TEMPO_CELL;

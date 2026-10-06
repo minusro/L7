@@ -213,13 +213,13 @@ void loop() {
   pollKeys();
   saveSessionWhenIdle();
   serviceScenes();
-  // An empty project: a click to play along to (while running), on until its
-  // first clip is completely recorded (not just when its recording is told
-  // to stop: the end of the bar is still to come).
+  // The click (the metronome setting, app.h), and on through a recording
+  // started with it until that's completely recorded (not just when it's
+  // told to stop: the end of the bar is still to come).
   static bool clickedRecording = false;            // a recording started with the click on
   if (recording.mode == Recording::Idle) clickedRecording = false;
   else if (metronomeOn) clickedRecording = true;
-  metronomeOn = clickedRecording || (projectCurrent() >= 0 && !projectHasClips());   // (not in the dummy project)
+  metronomeOn = clickedRecording || metronomeWanted();   // (the metronome setting, app.h; not in the dummy project)
 
   // Report dropouts with what the storage code was doing (debugging).
   static uint32_t lastDropCheck = 0, lastDrops[NUM_TRACKS] = {};

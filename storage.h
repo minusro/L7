@@ -148,6 +148,7 @@ struct Session {
   float bpm = 120.0f, newBpm = 120.0f;
   int row = -1, cell = -1, master = MASTER_VOLUME_UNITY, project = 0, menu = -1;
   bool playing = false;
+  int metro = 1;                                   // the metronome: 0 off, 1 auto, 2 on (app.h)
 };
 Session loadSession();
 void saveSession(const Session &s);  // creates/rewrites a file: only while stopped

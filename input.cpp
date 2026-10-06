@@ -44,17 +44,6 @@ static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // a little over a beat at 
 
 static int tapCount = 0;                            // taps in this run (0: the next is the first)
 
-// SHIFT+A on the tempo cell: halve the tempo, or double it, going one way
-// until the next step would leave MIN_BPM-MAX_BPM, then the other way.
-static bool tempoHalving = true;                    // the way it's going
-bool tempoShiftHalves() {
-  bool canHalve = bpm / 2 >= MIN_BPM, canDouble = bpm * 2 <= MAX_BPM;
-  return tempoHalving ? canHalve || !canDouble : !canDouble && canHalve;
-}
-static void halveOrDoubleTempo() {
-  tempoHalving = tempoShiftHalves();
-  setTempo(tempoHalving ? bpm / 2 : bpm * 2);
-}
 
 static void tapTempo() {
   static uint32_t first, last;                      // this run's first and latest taps
@@ -130,7 +119,7 @@ static void menuLongPress() {
   if (millis() - armedAt < LONG_PRESS_MS) return;
   longDone = true;
   if (armedSlot != projectCurrent() && projectLoad(armedSlot))
-    metronomeOn = projectCurrent() >= 0 && !projectHasClips();   // (the selection stays as it is)
+    metronomeOn = metronomeWanted();               // (the selection stays as it is)
   drawMenu();
 }
 
@@ -148,7 +137,7 @@ static bool loadFromMenu(int p) {
   bool fresh = !projectFilled(p);
   if (!projectLoad(p)) return false;
   if (fresh) setMainSelection(NUM_TRACKS - 1, WAVE_CELL);
-  metronomeOn = projectCurrent() >= 0 && !projectHasClips();   // (now: its first beat clicks too)
+  metronomeOn = metronomeWanted();                 // (now: its first beat clicks too)
   return true;
 }
 
@@ -529,7 +518,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
   if ((transportKey || (edit && onStatus && !onScene && !onTempo)) && shift) transportRestart();
-  if (edit && onStatus && shift && onTempo) halveOrDoubleTempo();   // SHIFT+A on the tempo cell
+  if (edit && onStatus && shift && onTempo) {      // SHIFT+A on the tempo cell: the metronome's next setting
+    setMetronomeMode(nextMetronomeMode());
+    metronomeOn = metronomeWanted();               // (at once: the next beat too)
+  }
   if (edit && onStatus && shift && onScene) sceneChanged = sceneDuplicate();   // SHIFT+A on the scene cell: a copy of the scene after it, as SHIFT+B twice
   if (edit && onStatus && !shift) {
     if (onScene) nextSceneArmed = true;            // (acts once A is let go, below)

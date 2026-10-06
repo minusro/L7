@@ -32,7 +32,7 @@
 // start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_HALVE, ICON_DOUBLE };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_METRO };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -65,7 +65,7 @@ static int actionIcon() {
   }
   if (selected == STATUS_ROW) {                    // restart / duplicate / play-stop / tap tempo
     int cell = selectedCellIn(STATUS_ROW);
-    if (shift) return cell == SCENE_CELL ? ICON_SCENE_DUP : cell == TEMPO_CELL ? (tempoShiftHalves() ? ICON_HALVE : ICON_DOUBLE) : ICON_RESTART;   // (SHIFT: the scene cell duplicates it; the tempo cell halves / doubles it)
+    if (shift) return cell == SCENE_CELL ? ICON_SCENE_DUP : cell == TEMPO_CELL ? ICON_METRO : ICON_RESTART;   // (SHIFT: the scene cell duplicates it; the tempo cell: the metronome)
     return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_NEXT;   // the scene cell: the next scene
   }
   const Track &tr = tracks[selected];
@@ -177,8 +177,7 @@ PROGMEM static const Icon ICONS[] = {
   {9, 9, {"#.#.#.#.#", ".........", "#...#...#", "....#....", "#.#####.#",
           "....#....", "#...#...#", ".........", "#.#.#.#.#"}},   // SCENE_DUP (a + in a checkered square, as SCENE_CUT / PASTE)
   {7, 5, {"#...#..", "##..##.", "###.###", "##..##.", "#...#.."}},   // NEXT (two small plays, a block apart: the next scene)
-  {0, 0, {}},                                                                  // HALVE ("/2", text)
-  {0, 0, {}},                                                                  // DOUBLE ("X2", text)
+  {0, 0, {}},                                                                  // METRO (drawn on its own: a metronome and the next setting)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
@@ -314,19 +313,22 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
       for (int r = 0; r < ROWS4; r++)
         for (int c = 0; c < w; c++)
           if (on[r][c]) block(c0 + c, r0 + copy * (ROWS4 + 1) + r);
-  } else if (icon == ICON_HALVE || icon == ICON_DOUBLE) {
-    // "/2" or "X2" in the pixel font (a block between), centred in the backdrop.
-    const char *text = icon == ICON_HALVE ? "/2" : "X2";
-    const int w = textWidth(text) / PX;
-    int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w + 1) / 2 - 1, r0 = (rows - FONT_H / PX) / 2, x = 0;   // (a block left of that)
-    for (const char *p = text; *p; p++) {
-      const Glyph *g = glyphFor(*p);
-      if (!g) continue;
-      for (int r = 0; r < 5 && g->rows[r]; r++)
-        for (int c = 0; c < glyphWidth(*g); c++)
-          if (g->rows[r][c] == '#') block(c0 + x + c, r0 + r);
-      x += glyphWidth(*g) + 1;
-    }
+  } else if (icon == ICON_METRO) {
+    // A metronome (a trapezoid, its pendulum out past the top), 7 x 8, and
+    // the setting SHIFT+A goes to (0, A or 1) a block right of it, level with
+    // its base; centred in the backdrop together.
+    static const char *const METRONOME[8] = {".....#.", "..###..", "..#.#..", ".#.#.#.", ".#.#.#.", ".##..#.", "#.....#", "#######"};
+    const int next = nextMetronomeMode();
+    const Glyph *g = glyphFor(next == METRO_OFF ? '0' : next == METRO_AUTO ? 'A' : '1');
+    const int gw = g ? glyphWidth(*g) : 0, w = 7 + 1 + gw;
+    int c0 = max(PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, PANEL_LEFT + 1), r0 = (rows - 8) / 2;   // (a block clear of the backdrop's edge)
+    for (int r = 0; r < 8; r++)
+      for (int c = 0; c < 7; c++)
+        if (METRONOME[r][c] == '#') block(c0 + c, r0 + r);
+    if (g)
+      for (int r = 0; r < 5; r++)
+        for (int c = 0; c < gw; c++)
+          if (g->rows[r][c] == '#') block(c0 + 8 + c, r0 + 3 + r);
   } else if (icon != ICON_NONE) {
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
@@ -370,7 +372,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
 // drawStatus()). Redrawn only when it changes.
 void drawCells(int i) {
   if (i < 0 || i >= ROWS || (i == STATUS_ROW && menuOpen())) return;   // (the menu: no action button, its edge mark there)
-  struct Key { int icon; uint16_t bg, iconColor, mark, ground, topGround; uint8_t badge; };
+  struct Key { int icon; uint16_t bg, iconColor, mark, ground, topGround; uint8_t badge, metro; };
   static Key shown[ROWS];
   static uint32_t drawn[ROWS];                     // uiGeneration when last drawn whole
   Key k;
@@ -380,6 +382,7 @@ void drawCells(int i) {
   k.iconColor = iconColor(i, k.icon);
   k.mark = i == selected && i != STATUS_ROW ? markColor() : BG;
   k.badge = trackBadge(i);
+  k.metro = k.icon == ICON_METRO ? (uint8_t)nextMetronomeMode() : 0;   // (its look: the setting it goes to)
   k.ground = rowGround(i);                         // (the selected row's ground, under the button too)
   if (i != STATUS_ROW) k.topGround = rowGround(rowAbove(i));
   bool first = drawn[i] != uiGeneration;

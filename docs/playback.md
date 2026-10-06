@@ -92,10 +92,12 @@ before this design a switch left 1–2 beats of silence (~770 ms average).
 
 ## Metronome
 
-While the clock runs in a project without clips (none on its tracks or in
-its scenes; not the dummy project, which never clicks), the engine clicks on every beat: a
+A setting (the session's `metro=`; SHIFT+A on the tempo cell): 0 (off), A
+(auto: only in a silent scene, no unmuted clip playing; the default) or 1
+(on). While the clock runs and it says so (never in the dummy project), the engine clicks on every beat: a
 small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
 and louder on the bar's first beat). It's added after the master volume and
-left out of what a resampling records. It stops once the project has a clip: on the bar line where its first
+left out of what a resampling records. A recording started with it clicking keeps it
+until it's completely recorded: on auto it stops on the bar line where that
 recording ends and the clip starts playing (it goes on while the recording
 finishes its bar; that bar line itself doesn't click).

@@ -52,6 +52,32 @@ void stepMasterVolume(int by) {
 }
 
 
+// ---- Metronome (app.h)
+static int metroMode = METRO_AUTO, savedMetro = METRO_AUTO;
+int metronomeMode() { return metroMode; }
+void setMetronomeMode(int mode) {
+  if (mode < METRO_OFF || mode > METRO_ON) return;
+  metroMode = mode;
+  changedMs = millis();
+}
+bool silentScene() {
+  for (int t = 0; t < NUM_TRACKS; t++)
+    if (tracks[t].state == TrackState::Playing) return false;
+  return true;
+}
+int nextMetronomeMode() {
+  bool silent = silentScene();
+  switch (metroMode) {
+    case METRO_ON: return silent ? METRO_OFF : METRO_AUTO;
+    case METRO_AUTO: return silent ? METRO_OFF : METRO_ON;
+    default: return silent ? METRO_AUTO : METRO_ON;
+  }
+}
+bool metronomeWanted() {
+  if (projectCurrent() < 0) return false;          // (the dummy project: never)
+  return metroMode == METRO_ON || (metroMode == METRO_AUTO && silentScene());
+}
+
 // ---- Session (tempo, master volume, the loaded project, the selection: the
 // app's, not a project's or a scene's)
 void beginSession() {
@@ -69,6 +95,7 @@ void beginSession() {
   savedProject = bootProject = s.project;
   savedPlaying = bootPlaying = s.playing;
   savedMenu = bootMenu = s.menu;
+  if (s.metro >= METRO_OFF && s.metro <= METRO_ON) metroMode = savedMetro = s.metro;
 }
 
 int sessionProject() { return bootProject; }
@@ -79,7 +106,8 @@ static bool sessionDirty() {
   int row, cell;
   mainSelection(row, cell);                        // (the looper's, not the menu's)
   return tempoDirty || masterVolume() != savedMaster || projectCurrent() != savedProject ||
-         menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell;
+         menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell ||
+         metroMode != savedMetro;
 }
 
 static void writeSession() {
@@ -91,7 +119,9 @@ static void writeSession() {
   s.menu = menuState();
   s.playing = transport.running;
   mainSelection(s.row, s.cell);
+  s.metro = metroMode;
   saveSession(s);
+  savedMetro = s.metro;
   savedRow = s.row;
   savedCell = s.cell;
   savedMenu = s.menu;

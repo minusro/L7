@@ -1263,6 +1263,7 @@ Session loadSession() {
     else if (!strncmp(line, "project=", 8)) s.project = (int)strtol(line + 8, nullptr, 10) - 1;
     else if (!strncmp(line, "menu=", 5)) s.menu = (int)strtol(line + 5, nullptr, 10);
     else if (!strncmp(line, "playing=", 8)) s.playing = strtol(line + 8, nullptr, 10) != 0;
+    else if (!strncmp(line, "metro=", 6)) s.metro = (int)strtol(line + 6, nullptr, 10);
   }
   f.close();
   s.bpm = constrain(s.bpm, MIN_BPM, MAX_BPM);
@@ -1275,8 +1276,8 @@ Session loadSession() {
 void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nnewbpm=%.2f\nvolume=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\n", s.bpm, s.newBpm, s.master, s.project + 1,
-           s.menu, s.playing ? 1 : 0, s.row, s.cell);
+  f.printf("bpm=%.2f\nnewbpm=%.2f\nvolume=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\n", s.bpm, s.newBpm, s.master, s.project + 1,
+           s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro);
   f.close();
 }
 
