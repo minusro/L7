@@ -62,7 +62,7 @@ the menu or splash). 8 rows: 7 tracks of 30 px from the top of the screen, a 4 p
 then the status row (y 214–239, to the screen's bottom edge, its cells framed all round); cells waveform | filter | volume | button (square). Columns:
 waveform x 0–187, filter 186–245, volume 244–291, then a block's space
 before the buttons (x 294–319); the status row's four cells share
-x 0–291 (menu x 0–21, scene 22–119, clock 118–211, tempo 210–291). Cells share a one-block border
+x 0–291 (menu x 0–21, scene 20–119, clock 118–211, tempo 210–291). Cells share a one-block border
 with their neighbours (left, right, above and below; a cell only shares a
 side with one right next to it): the selection frame is drawn there (`borderAt()` in ui.cpp), so
 content uses the cell's full size.
@@ -126,14 +126,14 @@ A recording track's waveform area is in the accent colour (a block of black betw
   Status row (labels 50% grey, light grey while the row is selected): the menu cell (a
   small square, not selectable, no frame, with the edge mark: a small filled triangle (3×5
   blocks) pointing left, 3 blocks from the left edge, dark grey (black on the selected status row's dark grey
-  ground), in the space from the screen's left edge to two blocks short of the scene cell's
+  ground), in the space from the screen's left edge to a block short of the scene cell's
   frame: the menu is the looper's other screen, to its left), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
   then the button. In the accent colour: the scene's tag
   and number while SHIFT is held, or B alone on the scene cell; the tempo and
-  its tag while B alone is held on its cell. The clock: stopped, dark grey (selected: 50% grey); running, 50% grey with
+  its tag while B alone is held on its cell. The clock: stopped, dark grey (the row selected: black, on its dark grey ground); running, 50% grey with
   light grey on each beat's first step (selected: light grey, white on the
   first step), the accent colour on 1.1.1; before it a small play icon, in
   the accent colour while it runs. While B alone is held on the clock

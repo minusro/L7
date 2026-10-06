@@ -16,7 +16,7 @@
 //     scene (as SHIFT+B twice).
 //   third cell: the clock (bar.beat.step), after a small play icon (the
 //     accent colour while it runs), centred together: stopped, 1.1.1 in dark
-//     grey (selected: grey); running, grey with light grey on each beat's
+//     grey (the row selected: black, on its dark grey ground); running, grey with light grey on each beat's
 //     first step (selected: light grey, white on the first step), in the
 //     accent colour on 1.1.1. Selected, A starts / stops the
 //     clock (as START; SHIFT+A as SHIFT+START).
@@ -186,11 +186,11 @@ void drawStatus() {
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
-  // Stopped: dark grey (selected: grey). Running: grey, light grey on each
+  // Stopped: dark grey (the row selected: black, on its dark grey ground). Running: grey, light grey on each
   // beat's first step (x.y.1) (selected: light grey, white on x.y.1); the
   // accent colour on 1.1.1.
   bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0, here = rowSelected;
-  uint16_t clockInk = !running ? (here ? DIM : DARK) : first ? ACCENT
+  uint16_t clockInk = !running ? (here ? BG : DARK) : first ? ACCENT
                     : step == 0 ? (here ? INK : LIGHT) : (here ? LIGHT : DIM);
   if (!volume) {
     // A small play icon (in the accent colour while the clock runs), then the
