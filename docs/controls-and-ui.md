@@ -174,8 +174,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
-  3/14" (samples copied, then the set) and then "SAVED AS L7 A005" (or "EXPORT
-  FAILED") until the selection moves. Storage mode (A or B, on release):
+  3/14" (samples copied, then the set) and then "SAVED AS L7 A005" (the name in
+  the project's colour; or "EXPORT FAILED") until another project is loaded
+  (moving the selection, or closing and opening the menu, leaves it). Storage mode (A or B, on release):
   writes everything out, then shows the card to a computer over USB as a
   mounted drive (USB mass storage, see usb_drive.h; it mounts like a flash
   drive on macOS, Windows and Linux) under a screen with the title (the L7 logo,

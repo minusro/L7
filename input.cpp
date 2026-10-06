@@ -67,9 +67,14 @@ static void exportToAbleton() {
     menuExportStatus(b);
   });
   char b[24];
-  if (n) snprintf(b, sizeof b, "SAVED AS %s %c%03d", APP_NAME, 'A' + p, n);
-  else snprintf(b, sizeof b, "EXPORT FAILED");
-  menuExportStatus(b);
+  if (n) {
+    int head = snprintf(b, sizeof b, "SAVED AS ");
+    snprintf(b + head, sizeof b - head, "%s %c%03d", APP_NAME, 'A' + p, n);
+    menuExportStatus(b, head);                       // (the name in the project's colour)
+  } else {
+    snprintf(b, sizeof b, "EXPORT FAILED");
+    menuExportStatus(b);
+  }
 }
 
 static bool optFirst = false;

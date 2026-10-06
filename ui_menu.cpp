@@ -36,8 +36,10 @@ uint32_t uiGeneration = 1;
 static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 3, ITEMS = CARDS + LIST, COLS = 4;
 static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE"};
 // The export item's label while exporting and after it ("EXPORTING 3/14",
-// "SAVED AS L7 A005"; none: its own), until the selection moves or the menu closes.
+// "SAVED AS L7 A005"; none: its own), kept until another project is loaded (the
+// project's name in the project's colour: from exportNameAt on).
 static char exportText[24];
+static int exportNameAt = -1, exportFor = -1;
 static int listTop = 0;                          // the list's first item in view
 
 static bool shown = false;
@@ -206,7 +208,16 @@ static void drawItem(int k) {
     fillRing(s, LIST_SPACE, 0, BG);
     bool off = k - CARDS == 0 && !projectHasClips();   // export: nothing to export (no clips, or the dummy project)
     const char *label = k == CARDS && exportText[0] ? exportText : LABELS[k - CARDS];
-    drawText(s.x * PX, s.y * PX, label, off ? DIM : sel ? INK : LIGHT, BG, s.w * PX);   // (the whole box: a longer label scrolled away is covered)
+    uint16_t ink = off ? DIM : sel ? INK : LIGHT;
+    if (k == CARDS && exportText[0] && exportNameAt > 0 && exportFor >= 0) {   // "SAVED AS " in the usual ink, the name in the project's colour
+      char head[24];
+      snprintf(head, sizeof head, "%.*s", exportNameAt, exportText);
+      int w1 = textWidth(head) + PX;
+      drawText(s.x * PX, s.y * PX, head, ink, BG);
+      drawText(s.x * PX + w1, s.y * PX, exportText + exportNameAt, PROJECT_COLORS[exportFor], BG, s.w * PX - w1);
+    } else {
+      drawText(s.x * PX, s.y * PX, label, ink, BG, s.w * PX);   // (the whole box: a longer label scrolled away is covered)
+    }
   }
 }
 
@@ -232,6 +243,7 @@ void drawMenu() {
   static uint32_t shownKey[ITEMS];
   static uint32_t drawn = 0;                     // uiGeneration when last drawn whole
   if (!shown) return;
+  if (exportText[0] && projectCurrent() != exportFor) exportText[0] = 0;   // (another project loaded: the export's message goes)
   bool all = drawn != uiGeneration;
   if (all) {
     drawn = uiGeneration;
@@ -308,21 +320,21 @@ bool menuKeys(uint8_t pressed) {
     }
   }
   if (pressed & arrows) movedHere = k != menuSel;
-  if (k != menuSel) exportText[0] = 0;          // (the export's message: gone)
   if (k >= CARDS && k != menuSel) scrollList(k - CARDS, k > menuSel ? 1 : -1);
   menuSel = k;
   drawMenu();
   return movedHere;
 }
 
-void menuExportStatus(const char *text) {
+void menuExportStatus(const char *text, int nameAt) {
   snprintf(exportText, sizeof exportText, "%s", text ? text : "");
+  exportNameAt = nameAt;
+  exportFor = projectCurrent();
   if (shown) drawItem(CARDS);                   // (now: the export holds up the loop)
 }
 
 void openMenu() {
   if (shown) return;
-  exportText[0] = 0;
   // A project with no clips at all (none recorded since it was made): gone,
   // the dummy project instead (one has to be chosen before leaving the menu).
   if (projectCurrent() >= 0 && recording.mode == Recording::Idle && recordQueued() < 0 && !projectHasClips() &&

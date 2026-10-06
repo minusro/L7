@@ -215,6 +215,9 @@ int main(int argc, char **argv) {
   render(out + "/ui_menu_button.png");
   menuKeys(m8::BTN_UP);                            // the list's first item: export
   render(out + "/ui_menu_export.png");
+  menuExportStatus("SAVED AS L7 A005", 9);          // the label after an export: the name in the project's colour
+  render(out + "/ui_menu_exported.png");
+  menuExportStatus(nullptr);
   menuKeys(m8::BTN_LEFT);                          // a card with A held: its frame in the project's colour
   board.heldKeys = m8::BTN_EDIT;
   render(out + "/ui_menu_held.png");
