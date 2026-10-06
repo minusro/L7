@@ -317,7 +317,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     // "/2" or "X2" in the pixel font (a block between), centred in the backdrop.
     const char *text = icon == ICON_HALVE ? "/2" : "X2";
     const int w = textWidth(text) / PX;
-    int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w + 1) / 2, r0 = (rows - FONT_H / PX) / 2, x = 0;
+    int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w + 1) / 2 - 1, r0 = (rows - FONT_H / PX) / 2, x = 0;   // (a block left of that)
     for (const char *p = text; *p; p++) {
       const Glyph *g = glyphFor(*p);
       if (!g) continue;
