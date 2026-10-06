@@ -120,12 +120,10 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 static constexpr int CARD_W = 21, CARD_H = 15, CARD_CUT = 3, CARD_GAP = 3, CARD_VGAP = 3;
 static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 13;
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
-// The last place's frame ends level with the screen's last block rows (from y 214, where the status row was
-// when it was at the bottom).
-static constexpr int LIST_Y = 214 / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
+// The last place's frame level with the action button (from the status row's top).
+static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
 
-// The logo in the top left corner, a block in, the status row's height (the action button is at the
-// top right).
+// The logo in the bottom left corner, a block in, the status row's height.
 static constexpr int LOGO_X = PX, LOGO_Y = STATUS_TOP;
 
 static Shape itemShape(int k) {
@@ -238,8 +236,8 @@ void drawMenu() {
   bool all = drawn != uiGeneration;
   if (all) {
     drawn = uiGeneration;
-    board.tft().fillRect(0, TRACKS_TOP, 320, 240 - TRACKS_TOP, BG);   // (where the track rows were)
-    board.tft().fillRect(0, 0, BUTTON_X, TRACKS_TOP, BG);   // and the status row's cells: only its button shows
+    board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);   // (where the track rows were)
+    board.tft().fillRect(0, STATUS_TOP, BUTTON_X, 240 - STATUS_TOP, BG);   // and the status row's cells: only its button shows
   }
   // Scrolled: the items in view redraw over each other's places (their keys
   // hold the place), each label drawn the box's whole width; no clearing
@@ -339,7 +337,7 @@ void closeMenu() {
   selected = mainRow;
   selectedCell = mainCell;
   shown = false;
-  board.tft().fillRect(0, TRACKS_TOP, 320, 240 - TRACKS_TOP, BG);
+  board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);
   uiGeneration++;                                // everything redraws in full
   for (int i = 0; i < ROWS; i++) drawTrack(i);
 }

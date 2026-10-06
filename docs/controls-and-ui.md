@@ -8,7 +8,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: the status row (top), then tracks 1 to 7 (down; no wrapping); starts on track 1 |
+| UP/DOWN | Select row: tracks 8 (top) to 1 (bottom), status row (no wrapping); starts on track 1 |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: menu icon, scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (on release; the clock stops) on the scene cell, start from 1.1.1 on the clock cell (as SHIFT+START; icon |>), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
@@ -56,8 +56,8 @@ double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
 
 320×240, no frame buffer: everything is drawn over its own background and
 only what changed is redrawn (`uiGeneration` forces a full redraw, e.g. after
-the menu or splash). 8 rows: the status row on top (y 0–25, its cells framed all round), a 2 px (one-block) gap,
-then the 7 tracks of 30 px, track 1 first (y 28 to the screen's bottom edge, the last one's frame ending there); cells waveform | filter | volume | button (square). Columns:
+the menu or splash). 8 rows: 7 tracks of 30 px from the top of the screen, a 4 px (two-block) gap,
+then the status row (y 214–239, to the screen's bottom edge, its cells framed all round); cells waveform | filter | volume | button (square). Columns:
 waveform x 0–187, filter 186–245, volume 244–291, then a block's space
 before the buttons (x 294–319); the status row's four cells share
 x 0–291 (menu x 0–25, a square, scene 24–119, clock 118–211, tempo 210–291). Cells share a one-block border
@@ -133,8 +133,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   line white, dark accent before it and dark grey after it; their upper halves meter the left output, the
   lower halves the right (accent, line 17 0 dBFS — the ones above it clipping —, falling back from
   peaks), from silence each time it shows.
-* Track buttons: the track's number (tracks count from the top: 1 is
-  just under the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
+* Track buttons: the track's number (tracks count from the bottom: 1 is
+  just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent
   colour on one playing (number black). The recording (or queued) track shows
   its recording icons instead (small, in the accent colour; the record dot 5×5, while resampling the record dot with a plus). After a recording
@@ -167,7 +167,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   loaded, the splash's turquoise). The loaded project's card is filled with
   it, its letter (the project's name) black; another
   project's is a thick outline (two blocks) in its colour, the letter in it too.
-  An empty slot is a grey outline, its letter grey (light grey when selected; in the slot's colour while an action button is held). In the top
+  An empty slot is a grey outline, its letter grey (light grey when selected; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
   in the action button's colour (not its pressed look: it stays put while A is held). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
@@ -188,8 +188,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   and reads it all again, as at a start (the computer may have changed any
   file), and the menu is back as it was. Four in
   view at a time (an item
-  every 12 rows, the last place near the screen's bottom edge, the action button
-  being at the top right); moving, the list scrolls so the item past the selection that way
+  every 12 rows, the last place in the status row's, level with the action
+  button); moving, the list scrolls so the item past the selection that way
   stays in view where there is one, never past its ends (no empty places);
   with four or fewer, from the top of the room: a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when

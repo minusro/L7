@@ -8,7 +8,7 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
   if ((l || rt) && (t || b)) return BG;            // corners: cut
   uint16_t own = cellFrame(i, cell);
   if (own != BG) return own;
-  int ni = t ? rowAbove(i) : b ? rowBelow(i) : i, nc = l ? cell - 1 : rt ? cell + 1 : cell;
+  int ni = t ? i - 1 : b ? i + 1 : i, nc = l ? cell - 1 : rt ? cell + 1 : cell;
   if (i == STATUS_ROW) {                           // (its cells only share sides with each other)
     if (t || b || nc < 0 || nc >= cellCount(i)) return BG;
     return cellFrame(i, nc);

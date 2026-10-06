@@ -10,13 +10,10 @@
 // PX x PX pixel blocks (a 160 x 120 screen of chunky pixels), a blocky
 // pixel font, and the selection shown by frames and inverted boxes.
 constexpr int PX = 2;
-// Vertical layout: the status row on top (y 0-25), then a block's gap, then the
-// 7 tracks, rows every 30 px (15 blocks), track 1 first (so the last one's
-// frame ends at the screen's bottom edge).
+// Vertical layout: rows every 30 px (15 blocks): the 7 tracks from the top
+// of the screen, then the status row 4 px (two blocks) lower.
 constexpr int ROW_BAND = 30;                             // a row's height (its button's)
-constexpr int STATUS_H = 26;                             // y 0-25: the tags a block from the frame each way
-constexpr int STATUS_TOP = 0;
-constexpr int TRACKS_TOP = STATUS_H + PX;                // 28
+constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2 * PX;   // 214
 // Each track row: three cells, then the button (a square): the waveform, the
 // filter (its response curve), then volume and balance. A cell is its
 // content in a one-block border, shared with the cells above and below (a
@@ -28,12 +25,14 @@ constexpr int TRACKS_TOP = STATUS_H + PX;                // 28
 //   waveform: x 0-187   filter: x 186-245   volume: x 244-291   button: x 294-319
 struct Cell { int x, w; };
 constexpr int CELL_H = ROW_BAND + PX;
-// The status row's cells: framed all round (no row below shares their bottom border).
+// The status row's cells: to the screen's bottom edge, framed all round (no
+// row below shares their bottom border).
+constexpr int STATUS_H = 240 - STATUS_TOP;               // y 214-239: the tags a block from the frame each way
 constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left to right
 constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
-// The status row above the tracks: four cells (to the volume cells' edge), left
+// The status row below the tracks: four cells (to the volume cells' edge), left
 // to right: the menu's (a small square, a hamburger icon), the scene (the
 // widest), the clock (its width is the master volume's 22 lines) and the tempo.
 // Neighbouring cells share the side between them.
@@ -44,19 +43,14 @@ inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The selected cell in row i's terms.
 inline int selectedCellIn(int i) { return min(selectedCell, cellCount(i) - 1); }
 
-// Row i's top: the status row at the top, then the tracks from track 1 (row
-// NUM_TRACKS - 1, the one just under it) down to track 7 (row 0, the bottom one).
-inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : TRACKS_TOP + (NUM_TRACKS - 1 - i) * ROW_BAND; }
-// A row's backgrounds: its band; the status row's with the gap under it, the
-// bottom track row's out to the screen's bottom edge.
+inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : i * ROW_BAND; }
+// A row's backgrounds: its band; the last track row's out to the status row,
+// the status row's out to the screen's bottom edge.
+constexpr int LAST_TRACK_ROW = NUM_TRACKS - 1;
 inline int bgTop(int i) { return rowTop(i); }
 inline int bgHeight(int i) {
-  return (i == STATUS_ROW ? TRACKS_TOP : i == 0 ? 240 : rowTop(i) + ROW_BAND) - bgTop(i);
+  return (i == STATUS_ROW ? 240 : i == LAST_TRACK_ROW ? STATUS_TOP : rowTop(i) + ROW_BAND) - bgTop(i);
 }
-// The row above / below row i on the screen (-1: none; the status row and the first
-// track row have a gap between them: no shared border).
-inline int rowAbove(int i) { return i < NUM_TRACKS - 1 ? i + 1 : -1; }
-inline int rowBelow(int i) { return i > 0 && i != STATUS_ROW ? i - 1 : -1; }
 
 inline bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }
 
