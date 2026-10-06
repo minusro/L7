@@ -39,7 +39,7 @@ constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
-constexpr Cell MENU_BOX = {0, STATUS_H - 2 * PX}, SCENE_BOX = {20, 100}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
+constexpr Cell MENU_BOX = {0, STATUS_H - 3 * PX}, SCENE_BOX = {18, 102}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
 // The cells a row has (the status row's: as many as a track row's).
 inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The selected cell in row i's terms (on the status row, never the menu cell's).
@@ -54,11 +54,11 @@ inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // the menu's right edge),
 // on the status row's line: a small filled triangle (3 x 5 blocks) pointing
 // left in the looper's view (its menu cell: the space left of the
-// scene cell, a block short of its frame), right in the menu (the same space
+// scene cell, up to its frame), right in the menu (the same space
 // at the right edge, mirrored, centred top to bottom), in ink on the
 // ground (the whole space). The looper's: dark grey, black on the selected
 // status row's dark grey ground; the menu's: black on its dark grey.
-constexpr int EDGE_W = MENU_BOX.w - 2 * PX;      // (a block short of the scene cell's frame)
+constexpr int EDGE_W = MENU_BOX.w - PX;          // (up to the scene cell's frame)
 void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground);   // (y: the space's top)
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
@@ -162,14 +162,15 @@ extern uint32_t uiGeneration;
 
 // ---- The menu (ui_menu.cpp): the looper's other screen, to its left, the
 // whole screen (no action button), opened with LEFT off the looper's left
-// edge, left by loading a project (or RIGHT off its own right edge); the arrows move its
+// edge or DOWN off its bottom, left by loading a project (or RIGHT off its
+// own right edge, or UP off its top); the arrows move its
 // selection. While it's open the track rows aren't drawn.
 // Its ground: dark grey (the whole screen).
 constexpr uint16_t MENU_BG = DARK;
 bool menuOpen();
 void openMenu();
 void closeMenu();
-bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: RIGHT off its right edge (a card row's right end, a list item; a project loaded)
+bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: RIGHT off its right edge (a card row's right end, a list item) or UP off its top (the top card row); a project loaded
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)
 bool menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items (true: it moved)
 bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)

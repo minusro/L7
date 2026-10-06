@@ -1,7 +1,7 @@
 // ui_menu.cpp — the menu (see ui.h): the looper's other screen, to its left,
 // the whole screen (no action button). Opened with LEFT off the looper's left
-// edge; left by loading a project (A on the loaded one: just back) or RIGHT
-// off its right edge (menuLeavesOn()). Twelve cards (three rows of
+// edge or DOWN off its bottom; left by loading a project (A on the loaded one:
+// just back), RIGHT off its right edge or UP off its top (menuLeavesOn()). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
 // "ENTER STORAGE MODE"; it scrolls once it has more than four. A runs
 // the item's action when let go. On a slot, A loads its project (an
@@ -368,7 +368,8 @@ void menuExportStatus(const char *text, int nameAt) {
 bool menuLeavesOn(uint8_t key) {
   if (!shown || onStatus || projectCurrent() < 0) return false;   // (no project loaded: one has to be chosen first)
   // RIGHT off the screen's right edge (the looper's that way): off a card
-  // row's right end, or a list item's side.
+  // row's right end, or a list item's side; UP off its top: the top card row (I-L).
+  if (key == m8::BTN_UP) return menuSel < CARDS && screenPos(menuSel) < COLS;
   return key == m8::BTN_RIGHT && (menuSel >= CARDS || menuSel % COLS == COLS - 1);
 }
 

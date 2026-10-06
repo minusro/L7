@@ -8,7 +8,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. No wrapping, and no leaving the screen (see LEFT/RIGHT) |
+| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. A held DOWN (repeating) stops at track 7: only a fresh press goes on to the status row. DOWN on the status row (a fresh press) opens the menu once let go; in the menu, UP on the top card row (I–L) goes back once let go (unless no project is loaded) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform); LEFT on a row's first cell (a fresh press, not a held arrow repeating) opens the menu, to the looper's left, once let go (the clock goes on); in the menu, RIGHT off its right edge (a card row's right end, or on a list item) goes back once let go (unless no project is loaded) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
@@ -62,7 +62,7 @@ the menu or splash). 8 rows: 7 tracks of 30 px from the top of the screen, a 4 p
 then the status row (y 214–239, to the screen's bottom edge, its cells framed all round); cells waveform | filter | volume | button (square). Columns:
 waveform x 0–187, filter 186–245, volume 244–291, then a block's space
 before the buttons (x 294–319); the status row's four cells share
-x 0–291 (menu x 0–21, scene 20–119, clock 118–211, tempo 210–291). Cells share a one-block border
+x 0–291 (menu x 0–19, scene 18–119, clock 118–211, tempo 210–291). Cells share a one-block border
 with their neighbours (left, right, above and below; a cell only shares a
 side with one right next to it): the selection frame is drawn there (`borderAt()` in ui.cpp), so
 content uses the cell's full size.
@@ -126,7 +126,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   Status row (labels 50% grey, light grey while the row is selected): the menu cell (a
   small square, not selectable, no frame, with the edge mark: a small filled triangle (3×5
   blocks) pointing left, 3 blocks from the left edge, dark grey (black on the selected status row's dark grey
-  ground), in the space from the screen's left edge to a block short of the scene cell's
+  ground), in the space from the screen's left edge to the scene cell's
   frame: the menu is the looper's other screen, to its left), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
@@ -155,14 +155,14 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Menu (`ui_menu.cpp`): the app starts where it was left, in the menu or
   the looper's view (the first start, or with no project loaded: the menu, on the
   last project's card, that project already loaded), with the clock running if it was (from
-  1.1.1). Opened with LEFT off the looper's left edge (on a row's first cell), it
-  takes the whole screen; it has no
+  1.1.1). Opened with LEFT off the looper's left edge (on a row's first cell) or DOWN
+  off its bottom (on the status row), it takes the whole screen; it has no
   action button (its edge mark in that place). Opening and leaving the menu never starts or stops the clock;
   exporting to Ableton and storage mode stop it first, and start it again (from 1.1.1) when done if it was running. On its items A and B both act
   (SHIFT with them: cut and paste); START starts / stops the clock there too (SHIFT+START: from 1.1.1). Loading a project, or making a new one, doesn't start the clock either
   (playing: the project comes in on the next bar line). On its items A
   runs the item's action when let go; B does nothing. The way out
-  is loading a project (A on the loaded one: just back), or RIGHT off its right edge: on a card of the right column, or on a list item (once let go; not with no project loaded); with the dummy
+  is loading a project (A on the loaded one: just back), or RIGHT off its right edge (on a card of the right column, or on a list item) or UP off its top (on the top card row) (once let go; not with no project loaded); with the dummy
   project loaded, one has to be loaded or made first. Opening the menu
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.
@@ -180,7 +180,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in from the left edge, 2 up from the status row's top: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). At the right
   edge, centred top to bottom, the looper's edge mark mirrored (a black triangle pointing right, as far from the
-  right edge), only while a project is loaded: only then does RIGHT off the edge leave the menu. Under them
+  right edge), only while a project is loaded: only then do RIGHT off the edge and UP off the top leave the menu. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
