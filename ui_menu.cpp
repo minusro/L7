@@ -201,7 +201,7 @@ static void drawItem(int k) {
     }
     const Glyph *g = glyphFor((char)('A' + k));
     if (g) {
-      int w = glyphWidth(*g), x0 = s.x + (s.w - w) / 2, y0 = s.y + (s.h - 5) / 2;
+      int w = glyphWidth(*g), x0 = s.x + (s.w - w) / 2 - (loaded && transport.running ? 2 : 0), y0 = s.y + (s.h - 5) / 2;   // (with the play icon: both 2 blocks left)
       for (int r = 0; r < 5 && g->rows[r]; r++)
         for (int c = 0; c < w; c++)
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
