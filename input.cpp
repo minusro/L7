@@ -381,7 +381,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
 
   // START: start from 1.1.1 / stop. With SHIFT: start from 1.1.1 on every
-  // press, running or not. A on the status row: start from 1.1.1 (scene
+  // press, running or not. A on the status row: duplicate the scene (scene
   // cell), play / stop (clock cell), tap tempo (tempo cell); with SHIFT, on any of them: the same
   // as SHIFT+START.
   // B+A on an empty track: resample (B otherwise adjusts cells). With SHIFT too, the order they were pressed in:
@@ -403,7 +403,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool toggleTransport = transportKey && !shift;
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onScene) transportRestart();               // from 1.1.1, as SHIFT+START
+    if (onScene) sceneChanged = sceneDuplicate();  // a copy of the scene after it, as SHIFT+B twice
     else if (onClock) {                            // play / stop, as START
       if (transport.running) transportStop();
       else transportStart();

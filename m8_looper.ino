@@ -61,7 +61,7 @@
 //   SHIFT+OPT twice  insert a copy of the current scene after it
 //   PLAY             start from 1.1.1 / stop
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
-//   EDIT (scene cell) start from 1.1.1 (as SHIFT+PLAY)
+//   EDIT (scene cell) duplicate the scene (as SHIFT+OPT twice)
 //   EDIT (clock cell) play / stop (as PLAY)
 //   EDIT (tempo cell) tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
 //                      tap starts from 1.1.1 (running: snaps to the nearest bar start)
