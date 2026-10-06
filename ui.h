@@ -34,7 +34,7 @@ constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: four cells (to the volume cells' edge), left
-// to right: the menu's (a small square with a dark grey chevron down:
+// to right: the menu's (a small square with a small dark grey triangle down:
 // DOWN here opens the menu; not selectable), the scene (the widest), the clock
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
@@ -56,7 +56,7 @@ constexpr int CHEVRON_X = MENU_BOX.x + (STATUS_H - 5 * PX) / 2 / PX * PX - PX, C
 constexpr int CHEVRON_TOP_Y = 240 - (STATUS_TOP + CHEVRON_DY + 3 * PX);
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
-// A small chevron (5 x 3 blocks) at x, y, pointing down or up: the screen's
+// A small triangle (3 x 2 blocks, in a 5 x 3 box) at x, y, pointing down or up: the screen's
 // edge where the other screen is (the status row's menu cell, the menu's top
 // left).
 void drawEdgeChevron(int x, int y, bool down, uint16_t color);
