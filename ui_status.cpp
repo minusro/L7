@@ -28,23 +28,25 @@
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
-// The edge mark (ui.h), built in a buffer and sent at once: the looper's 2
-// blocks from the left edge, the menu's 4 from the right (mirrored).
+// The edge mark (ui.h), built in a buffer and sent at once: the tip the
+// looper's 2 blocks from the left edge, the menu's 4 from the right (mirrored).
 void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground) {
-  static const char *const CHEVRON_LEFT[5] = {"..#", ".##", "###", ".##", "..#"};   // (a filled triangle)
-  constexpr int COLS = EDGE_W / PX, ROWS = STATUS_H / PX, CW = 3, CH = 5;
-  constexpr int R0 = (ROWS - CH) / 2;
-  const int C0 = right ? 4 : 2;                    // blocks from its edge: the looper's 2, the menu's 4
-  static uint16_t px[STATUS_H * EDGE_W];
+  // A filled triangle (3 x 5) with a 2-block stem behind its middle row: an arrow.
+  static const char *const ARROW_LEFT[5] = {"..#..", ".##..", "#####", ".##..", "..#.."};
+  constexpr int ROWS = STATUS_H / PX, CW = 5, CH = 5, R0 = (ROWS - CH) / 2;
+  constexpr int MAX_W = EDGE_W + 2 * PX;          // (the menu's: wider, its arrow further in)
+  const int w = right ? MAX_W : EDGE_W, cols = w / PX;
+  const int C0 = right ? 4 : 2;                    // the tip's blocks from its edge: the looper's 2, the menu's 4
+  static uint16_t px[STATUS_H * MAX_W];
   for (int r = 0; r < ROWS; r++)
-    for (int c = 0; c < COLS; c++) {
-      int cc = right ? COLS - 1 - c : c;           // (mirrored: the same distance from the right edge)
+    for (int c = 0; c < cols; c++) {
+      int cc = right ? cols - 1 - c : c;           // (mirrored: the same distance from the right edge)
       int tr = r - R0, tc = cc - C0;
-      bool on = tr >= 0 && tr < CH && tc >= 0 && tc < CW && CHEVRON_LEFT[tr][tc] == '#';   // (mirrored whole: pointing right)
+      bool on = tr >= 0 && tr < CH && tc >= 0 && tc < CW && ARROW_LEFT[tr][tc] == '#';   // (mirrored whole: pointing right)
       for (int dy = 0; dy < PX; dy++)
-        for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * EDGE_W + c * PX + dx] = on ? ink : ground;
+        for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * w + c * PX + dx] = on ? ink : ground;
     }
-  board.tft().writeRect(right ? 320 - EDGE_W : 0, y, EDGE_W, STATUS_H, px);
+  board.tft().writeRect(right ? 320 - w : 0, y, w, STATUS_H, px);
 }
 
 // The status row's cells: the scene's, the clock's and the tempo's (ui.h).

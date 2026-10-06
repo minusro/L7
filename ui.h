@@ -52,8 +52,8 @@ inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // The edge mark: where the other screen is (the menu to the looper's left,
 // the looper to the menu's right: LEFT off the looper's left edge, RIGHT off
 // the menu's right edge),
-// on the status row's line: a small filled triangle (3 x 5 blocks) pointing
-// left in the looper's view (its menu cell: the space left of the
+// on the status row's line: a small arrow (a filled 3 x 5 triangle, a
+// 2-block stem behind its middle) pointing left in the looper's view (its menu cell: the space left of the
 // scene cell, up to its frame), right in the menu (the same space
 // at the right edge, mirrored, centred top to bottom), in ink on the
 // ground (the whole space). The looper's: dark grey, black on the selected

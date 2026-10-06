@@ -124,8 +124,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
-  small square, not selectable, no frame, with the edge mark: a small filled triangle (3×5
-  blocks) pointing left, 2 blocks from the left edge, dark grey (black on the selected status row's dark grey
+  small square, not selectable, no frame, with the edge mark: a small arrow (a filled 3×5
+  triangle with a 2-block stem behind its middle row) pointing left, 2 blocks from the left edge, dark grey (black on the selected status row's dark grey
   ground), in the space from the screen's left edge to the scene cell's
   frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
   (an inverted SCN tag with the scene position,
