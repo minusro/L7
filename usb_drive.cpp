@@ -21,14 +21,14 @@ void (*usbDriveReload)() = nullptr;
 static constexpr uint16_t SCREEN = DIM;
 static const char HINT[] = "PRESS ANY KEY", HINT2[] = "TO DISCONNECT";   // (two lines)
 // The lines (LINE: the hint's line pitch): the title, the connection's state
-// 32 px under it, the hint 56 px further down less a line (its second line a
+// 32 px under it, the hint 56 px further down less half a line (its second line a
 // line under its first); the title and state placed as when the hint was a
 // line lower and the three were together a line lower than centred top to
 // bottom (on the block grid); left-aligned with the menu's list.
 static constexpr int LINE = FONT_H + 3 * PX;
 static constexpr int STATE_DY = 32, HINT_DY = STATE_DY + 56, HINT2_DY = HINT_DY + LINE;
 static constexpr int TITLE_Y = (240 - (HINT2_DY + FONT_H)) / 2 / PX * PX + LINE;
-static constexpr int STATE_Y = TITLE_Y + STATE_DY, HINT_Y = TITLE_Y + HINT_DY - LINE, HINT2_Y = HINT_Y + LINE;
+static constexpr int STATE_Y = TITLE_Y + STATE_DY, HINT_Y = TITLE_Y + HINT_DY - LINE / 2, HINT2_Y = HINT_Y + LINE;
 static int textX() { return menuListX(); }
 
 static void line(int y, const char *text, uint16_t ink) {
