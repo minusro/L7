@@ -291,11 +291,12 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   };
   if (icon == ICON_TAP) {
     // Condensed: T and A touch (T's stem and A's point keep them apart), 10
-    // blocks, centred in the backdrop; the letters plain, in the icon's
-    // colour (black).
+    // blocks; the letters plain, in the icon's colour (black), their bottom
+    // row left out (4 rows), twice, one under the other a block apart (9
+    // rows), centred in the backdrop.
     const char *text = "TAP";
-    const int w = textWidth(text) / PX - 1;
-    int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, r0 = (rows - FONT_H / PX) / 2;   // (level with the status row's text)
+    const int w = textWidth(text) / PX - 1, ROWS4 = 4, h = 2 * ROWS4 + 1;
+    int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, r0 = (rows - h) / 2;
     bool on[5][16] = {};                           // the word's blocks
     int x = 0;
     for (const char *p = text; *p; p++) {
@@ -305,9 +306,10 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
           if (g->rows[r][c] == '#') on[r][x + c] = true;
       x += glyphWidth(*g) + (*p == 'T' ? 0 : 1);
     }
-    for (int r = 0; r < 5; r++)
-      for (int c = 0; c < w; c++)
-        if (on[r][c]) block(c0 + c, r0 + r);
+    for (int copy = 0; copy < 2; copy++)
+      for (int r = 0; r < ROWS4; r++)
+        for (int c = 0; c < w; c++)
+          if (on[r][c]) block(c0 + c, r0 + copy * (ROWS4 + 1) + r);
   } else if (icon != ICON_NONE) {
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
