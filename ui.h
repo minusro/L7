@@ -11,7 +11,8 @@
 // pixel font, and the selection shown by frames and inverted boxes.
 constexpr int PX = 2;
 // Vertical layout: rows every 30 px (15 blocks): the 7 tracks from the top
-// of the screen, then the status row 4 px (two blocks) lower.
+// of the screen, track 1 first (row NUM_TRACKS - 1) down to track 7 (row 0, just
+// above the status row), then the status row 4 px (two blocks) lower.
 constexpr int ROW_BAND = 30;                             // a row's height (its button's)
 constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2 * PX;   // 214
 // Each track row: three cells, then the button (a square): the waveform, the
@@ -41,10 +42,16 @@ inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The selected cell in row i's terms.
 inline int selectedCellIn(int i) { return min(selectedCell, cellCount(i) - 1); }
 
-inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : i * ROW_BAND; }
-// A row's backgrounds: its band; the last track row's out to the status row,
+inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
+// A row's place on the screen from the top (0: the first track row), and back.
+inline int rowPos(int i) { return i == STATUS_ROW ? NUM_TRACKS : NUM_TRACKS - 1 - i; }
+inline int rowAtPos(int p) { return p == NUM_TRACKS ? STATUS_ROW : NUM_TRACKS - 1 - p; }
+// The row above / below row i on the screen (-1: none; the status row has a gap above it).
+inline int rowAbove(int i) { return i < NUM_TRACKS - 1 ? i + 1 : -1; }
+inline int rowBelow(int i) { return i > 0 && i != STATUS_ROW ? i - 1 : -1; }
+// A row's backgrounds: its band; the track row above the status row's out to it,
 // the status row's out to the screen's bottom edge.
-constexpr int LAST_TRACK_ROW = NUM_TRACKS - 1;
+constexpr int LAST_TRACK_ROW = 0;
 inline int bgTop(int i) { return rowTop(i); }
 inline int bgHeight(int i) {
   return (i == STATUS_ROW ? 240 : i == LAST_TRACK_ROW ? STATUS_TOP : rowTop(i) + ROW_BAND) - bgTop(i);

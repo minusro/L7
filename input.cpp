@@ -379,8 +379,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
   } else {
     int row = selected, at = selectedCellIn(selected);
-    if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
-    if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
+    // (By place on the screen: track 1 at the top, the status row at the bottom.)
+    int pos = rowPos(selected);
+    if (pressed & m8::BTN_UP && pos > 0) selected = rowAtPos(pos - 1);              // no wrapping
+    if (pressed & m8::BTN_DOWN && pos < ROWS - 1) selected = rowAtPos(pos + 1);
     if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell = selectedCellIn(selected) - 1;
     if (pressed & m8::BTN_RIGHT && selectedCell < cellCount(selected) - 1) selectedCell++;
     if (pressed & arrows) moved = selected != row || selectedCellIn(selected) != at;
@@ -450,7 +452,7 @@ static void selectAfterRecording(int t) {
   if (selected != t) return;                       // the user has moved on already
   for (TrackState want : {TrackState::Empty, TrackState::Muted}) {
     for (int k = 1; k < NUM_TRACKS; k++) {
-      int i = (t - k + NUM_TRACKS) % NUM_TRACKS;   // (the track numbered next: the row above)
+      int i = (t - k + NUM_TRACKS) % NUM_TRACKS;   // (the track numbered next: the row below)
       if (tracks[i].state == want) {
         selected = i;
         drawTrack(i);

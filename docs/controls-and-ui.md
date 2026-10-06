@@ -8,7 +8,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 8 (top) to 1 (bottom), status row (no wrapping); starts on track 1 |
+| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1 |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (on release; the clock goes on) on the scene cell, start from 1.1.1 on the clock cell (as SHIFT+START; icon |>), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
@@ -131,8 +131,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   line white, dark accent before it and dark grey after it; their upper halves meter the left output, the
   lower halves the right (accent, line 17 0 dBFS — the ones above it clipping —, falling back from
   peaks), from silence each time it shows.
-* Track buttons: the track's number (tracks count from the bottom: 1 is
-  just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
+* Track buttons: the track's number (tracks count from the top: 1 is
+  the first row, 7 just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent
   colour on one playing (number black). The recording (or queued) track shows
   its recording icons instead (small, in the accent colour; the record dot 5×5, while resampling the record dot with a plus). After a recording
