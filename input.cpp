@@ -96,6 +96,23 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     openMenu();
     return;
   }
+  // UP on a card of the menu's top row (a project loaded): back to the looper
+  // once UP is let go, as A on the loaded project's card.
+  static uint8_t leaveOnRelease = 0;
+  if (leaveOnRelease && !(keys & leaveOnRelease)) {
+    leaveOnRelease = 0;
+    if (menuUpLeaves()) {
+      closeMenu();
+      takeProjectSelection();
+      for (int i = 0; i < ROWS; i++) drawTrack(i);
+    }
+    return;
+  }
+  if (menuUpLeaves() && (pressed & m8::BTN_UP) && !repeat && !(keys & (m8::BTN_SHIFT | m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY))) {
+    leaveOnRelease = m8::BTN_UP;
+    drawMenu();                                      // (the arrow's look: pressed)
+    return;
+  }
   // The menu's items: the arrows move its selection; A or B runs the action
   // button's action once let go (on the item it was pressed on), and so does
   // START on a project card (loading, or making a new one). The menu doesn't

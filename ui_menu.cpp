@@ -166,6 +166,10 @@ static void scrollList(int i, int dir) {
   listTop = constrain(listTop, 0, max(0, LIST - LIST_ROOM));
 }
 
+// A card in the top row, with a project loaded: UP goes back to the looper (an arrow on its frame).
+static bool upArrow(int k) { return k < COLS && projectCurrent() >= 0; }
+bool menuUpLeaves() { return shown && !onStatus && upArrow(menuSel); }
+
 static void drawItem(int k) {
   if (!listInView(k)) return;
   auto &t = board.tft();
@@ -180,6 +184,14 @@ static void drawItem(int k) {
     for (int r = s.y + s.h - s.cut; r < s.y + s.h + 2; r++) {
       int c0, c1;
       if (rowSpan(s, 2, r, c0, c1, true)) t.fillRect((c1 + 1) * PX, r * PX, PX, PX, frame);
+    }
+    if (sel && upArrow(k)) {                      // the way back up to the looper: a small blocky arrow on the frame's top line
+      static const char *const P[2] = {"++0X0++", "00XXX00"};   // (the line: + the frame as it is; the row under it)
+      uint16_t ink = board.keys() & m8::BTN_UP ? DARK : LIGHT;
+      int cx = s.x + s.w / 2;
+      for (int r = 0; r < 2; r++)
+        for (int c = 0; c < 7; c++)
+          if (P[r][c] != '+') t.fillRect((cx + c - 3) * PX, (s.y - 2 + r) * PX, PX, PX, P[r][c] == 'X' ? ink : BG);
     }
     uint16_t color = PROJECT_COLORS[k];
     bool filled = projectFilled(k), loaded = k == projectCurrent();
@@ -237,7 +249,8 @@ static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
-         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(k == CARDS && exportText[0]) << 30;
+         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
+         (uint32_t)(sel && k < CARDS && upArrow(k)) << 24 | (uint32_t)(sel && (board.keys() & m8::BTN_UP) != 0) << 25;
 }
 
 void drawMenu() {

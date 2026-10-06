@@ -134,17 +134,6 @@ void drawStatus() {
     drawText(numRight - w, textY, text, ink, BG);
   }
 
-  // A very small down arrow at the screen's bottom centre (in pixels): DOWN from
-  // the status row opens the menu. Grey; light grey with the status row selected.
-  // (Not over the master volume's meter.)
-  auto drawMenuArrow = [&]() {
-    static const char *const ARROW[3] = {"#####", ".###.", "..#.."};
-    uint16_t ink = selected == STATUS_ROW ? LIGHT : DIM;
-    for (int r = 0; r < 3; r++)
-      for (int c = 0; c < 5; c++)
-        if (ARROW[r][c] == '#') t.drawPixel(158 + c, 240 - PX - 4 + r, ink);   // (y 234-236: a pixel above the frame)
-  };
-
   // The clock, or the master volume while B alone is held on its cell.
   static bool shownVolume = false;
   bool volume = cell == CLOCK_CELL && bAlone();
@@ -188,8 +177,6 @@ void drawStatus() {
     drawText(tx, textY, text, clockInk, BG);
   }
 
-  if (!volume) drawMenuArrow();
-
   // The scene. Its box reaches the cell's inner edge: the position's text
   // (up to "250*/250") always fits, and clears any longer text before it.
   const Cell &box = SCENE_BOX;
@@ -210,4 +197,28 @@ void drawStatus() {
   }
   int x = box.x + INSET + tagWidth("SCN") + PX;
   drawText(x, textY, text, ink, BG, box.x + box.w - INSET - x);
+
+  // The way down to the menu (DOWN on the status row): a small blocky arrow
+  // over the middle of the selected cell's bottom line, part of its frame:
+  //   00XXX00   (the row above the line)
+  //   ++0X0++   (the line: + the frame as it is)
+  // Light grey; dark grey while DOWN is held. Drawn every pass, after what
+  // could cover it (the master volume's meter).
+  static int arrowCell = -1;
+  auto arrowAt = [&](int ac, bool on, uint16_t ink) {
+    static const char *const P[2] = {"00XXX00", "++0X0++"};
+    const Cell &b = statusCell(ac);
+    int cx = b.x + b.w / PX / 2 * PX;              // the middle block
+    for (int r = 0; r < 2; r++)
+      for (int k = 0; k < 7; k++)
+        if (P[r][k] != '+')
+          t.fillRect(cx + (k - 3) * PX, top + STATUS_H - (2 - r) * PX, PX, PX, on && P[r][k] == 'X' ? ink : BG);
+  };
+  if (arrowCell >= 0 && arrowCell != cell) {       // moved away: its blocks cleared, the frame as it is again
+    arrowAt(arrowCell, false, BG);
+    drawFrame(arrowCell);
+  }
+  arrowCell = cell;
+  if (cell >= 0) arrowAt(cell, true, board.keys() & m8::BTN_DOWN ? DARK : LIGHT);
 }
+
