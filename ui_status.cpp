@@ -1,5 +1,6 @@
 // ui_status.cpp — the status row: tempo, clock and scene (see ui.h)
 #include "ui.h"
+#include "input.h"
 
 // Status row, in the pixel font, each cell framed like the tracks' when the
 // row is selected:
@@ -198,5 +199,27 @@ void drawStatus() {
   int x = box.x + INSET + tagWidth("SCN") + PX;
   drawText(x, textY, text, ink, BG, box.x + box.w - INSET - x);
 
+  // The way down to the menu (DOWN on the status row): a small blocky arrow
+  // over the middle of the selected cell's bottom line, part of its frame:
+  //   000XXX000   (the row above the line)
+  //   ++00X00++   (the line: + the frame as it is)
+  // Light grey; dark grey while letting go of DOWN will open the menu. Drawn every pass, after what
+  // could cover it (the master volume's meter).
+  static int arrowCell = -1;
+  auto arrowAt = [&](int ac, bool on, uint16_t ink) {
+    static const char *const P[2] = {"000XXX000", "++00X00++"};
+    const Cell &b = statusCell(ac);
+    int cx = b.x + b.w / PX / 2 * PX;              // the middle block
+    for (int r = 0; r < 2; r++)
+      for (int k = 0; k < 9; k++)
+        if (P[r][k] != '+')
+          t.fillRect(cx + (k - 4) * PX, top + STATUS_H - (2 - r) * PX, PX, PX, on && P[r][k] == 'X' ? ink : BG);
+  };
+  if (arrowCell >= 0 && arrowCell != cell) {       // moved away: its blocks cleared, the frame as it is again
+    arrowAt(arrowCell, false, BG);
+    drawFrame(arrowCell);
+  }
+  arrowCell = cell;
+  if (cell >= 0) arrowAt(cell, true, menuOpensOnRelease() ? DARK : LIGHT);
 }
 

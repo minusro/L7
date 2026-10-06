@@ -28,17 +28,7 @@ class Display {
 public:
   static constexpr int W = 320, H = 240;
   uint16_t px[W * H] = {};
-  // An origin and a clip rectangle (relative to it), as ILI9341_t3n's.
-  int ox = 0, oy = 0, cx0 = 0, cy0 = 0, cx1 = W, cy1 = H;
-  void setOrigin(int x = 0, int y = 0) { ox = x; oy = y; }
-  void setClipRect(int x, int y, int w, int h) { cx0 = x; cy0 = y; cx1 = x + w; cy1 = y + h; }
-  void setClipRect() { cx0 = 0; cy0 = 0; cx1 = W; cy1 = H; }
-  void drawPixel(int x, int y, uint16_t c) {
-    if (x < cx0 || x >= cx1 || y < cy0 || y >= cy1) return;
-    x += ox;
-    y += oy;
-    if (x >= 0 && x < W && y >= 0 && y < H) px[y * W + x] = c;
-  }
+  void drawPixel(int x, int y, uint16_t c) { if (x >= 0 && x < W && y >= 0 && y < H) px[y * W + x] = c; }
   void fillRect(int x, int y, int w, int h, uint16_t c) {
     for (int j = 0; j < h; j++) for (int i = 0; i < w; i++) drawPixel(x + i, y + j, c);
   }

@@ -137,9 +137,8 @@ extern uint32_t uiGeneration;
 // with DOWN on the status row (the bottom one), left by loading a project; the
 // arrows move its selection. While it's open the track rows aren't drawn.
 bool menuOpen();
-void openMenu(bool slide = false);       // slide: the menu comes up from below, pushing the looper's view up (0.5 s)
-void closeMenu(bool slide = false);      // slide: the reverse
-bool menuUpLeaves();                     // UP leaves the menu (a card of the top row selected, a project loaded)
+void openMenu();
+void closeMenu();
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)
 bool menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items (true: it moved)
 bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)
