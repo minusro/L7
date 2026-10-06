@@ -115,8 +115,8 @@ void drawStatus() {
   static uint32_t drawn = 0;                       // uiGeneration when the cells were last cleared
   auto &t = board.tft();
   int top = rowTop(STATUS_ROW);
-  // Selected: on a dark grey ground (rowGround()), all its cells in their
-  // selected look (the frame on the selected one).
+  // Selected: on a dark grey ground (rowGround()); only the selected cell in
+  // its selected look (not the whole row's, as on a track).
   const uint16_t G = rowGround(STATUS_ROW);
   static uint16_t shownGround = BG;
   bool cleared = drawn != uiGeneration || G != shownGround;
@@ -143,7 +143,7 @@ void drawStatus() {
   snprintf(text, sizeof text, "%.1f", shown);
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) ? selectedCellIn(STATUS_ROW) : -1;
   bool rowSelected = cell >= 0;
-  auto labelInk = [&](int) -> uint16_t { return rowSelected ? LIGHT : DIM; };
+  auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
     // The menu cell: the edge mark, pointing left: dark grey, black on the
@@ -190,8 +190,8 @@ void drawStatus() {
   // Stopped: dark grey (the row selected: black, on its dark grey ground). Running: grey, light grey on each
   // beat's first step (x.y.1) (selected: light grey, white on x.y.1); the
   // accent colour on 1.1.1.
-  bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0, here = rowSelected;
-  uint16_t clockInk = !running ? (here ? BG : DARK) : first ? ACCENT
+  bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0, here = cell == CLOCK_CELL;
+  uint16_t clockInk = !running ? (rowSelected ? BG : DARK) : first ? ACCENT
                     : step == 0 ? (here ? INK : LIGHT) : (here ? LIGHT : DIM);
   if (!volume) {
     // A small play icon (in the accent colour while the clock runs), then the
