@@ -143,6 +143,14 @@ int main(int argc, char **argv) {
   render(out + "/ui_status_tempo_edit.png");
   board.heldKeys = m8::BTN_SHIFT;                  // SHIFT held on the tempo: the metronome
   render(out + "/ui_status_metro.png");
+  {
+    bool wasRunning = transport.running;           // clicking: crossed out
+    transport.running = true;
+    metronomeOn = true;
+    render(out + "/ui_status_metro_on.png");
+    metronomeOn = false;
+    transport.running = wasRunning;
+  }
   selectedCell = SCENE_CELL;                       // and on the scene: duplicate it
   render(out + "/ui_status_dup.png");
   selectedCell = TEMPO_CELL;

@@ -314,7 +314,8 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
         for (int c = 0; c < w; c++)
           if (on[r][c]) block(c0 + c, r0 + copy * (ROWS4 + 1) + r);
   } else if (icon == ICON_METRO) {
-    // A metronome (a trapezoid, its pendulum out past the top), 7 x 8, and
+    // A metronome (a trapezoid, its pendulum out past the top; crossed out
+    // while it's clicking: what SHIFT+A will change), 7 x 8, and
     // the setting now (0, A or 1) right next to it, up by its pendulum
     // (rows 1-5); placed in the backdrop together.
     static const char *const METRONOME[8] = {".....#.", "..###..", "..#.#..", ".#.#.#.", ".#.#.#.", ".##..#.", "#.....#", "#######"};
@@ -326,6 +327,12 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     for (int r = 0; r < 8; r++)
       for (int c = 0; c < 7; c++)
         if (METRONOME[r][c] == '#') block(c0 + c, r0 + r);
+    if (metronomeOn && transport.running)          // clicking now: crossed out (a diagonal, the backdrop's colour along its right)
+      for (int r = 0; r < 8; r++) {
+        int c = r * 6 / 7;
+        block(c0 + c, r0 + r);
+        if (c + 1 < 7) blockIn(c0 + c + 1, r0 + r, bg);
+      }
     for (int r = 0; r < 4; r++)
       for (int c = 0; c < gw; c++)
         if (g[r][c] == '#') block(c0 + 7 + c, r0 + 1 + r);
@@ -382,7 +389,7 @@ void drawCells(int i) {
   k.iconColor = iconColor(i, k.icon);
   k.mark = i == selected && i != STATUS_ROW ? markColor() : BG;
   k.badge = trackBadge(i);
-  k.metro = k.icon == ICON_METRO ? (uint8_t)metronomeMode() : 0;   // (its look: the setting now)
+  k.metro = k.icon == ICON_METRO ? (uint8_t)(metronomeMode() + 4 * (metronomeOn && transport.running)) : 0;   // (its look: the setting now, crossed while clicking)
   k.ground = rowGround(i);                         // (the selected row's ground, under the button too)
   if (i != STATUS_ROW) k.topGround = rowGround(rowAbove(i));
   bool first = drawn[i] != uiGeneration;
