@@ -297,7 +297,11 @@ void drawMenu() {
   uint16_t ink = !leaves ? MENU_BG : screenSwitchPending() ? DIM : BG;   // (grey while an arrow is held that leaves once let go)
   if (all || ink != mark) {
     mark = ink;
-    drawEdgeMark(true, (240 - STATUS_H) / 2 / PX * PX, ink, MENU_BG);   // (centred top to bottom)
+    // Centred top to bottom, and across between the cards' right edge and
+    // the screen's (its space from there, clear of a selected card's frame).
+    constexpr int cardsRight = (CARDS_X + COLS * CARD_W + (COLS - 1) * CARD_GAP) * PX, mid = (cardsRight + 320) / 2;
+    constexpr int halfW = (320 - mid) / 2 / PX * PX;
+    drawEdgeMark(true, mid - halfW, 2 * halfW, (240 - STATUS_H) / 2 / PX * PX, ink, MENU_BG);
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)

@@ -67,11 +67,12 @@ inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // on the status row's line: a small arrow (an open 3 x 5 head on a shaft
 // 5 blocks long) pointing left in the looper's view (its menu cell: the space left of the
 // scene cell, 2 blocks short of its frame), right in the menu (the same space
-// at the right edge, mirrored, centred top to bottom), in ink on the
+// in the middle between the cards' right edge and the screen's, centred top
+// to bottom), in ink on the
 // ground (the whole space). The looper's: dark grey on black (the selected
 // status row's ground starts at the scene cell); the menu's: black on its dark grey.
 constexpr int EDGE_W = MENU_BOX.w - PX;          // (2 blocks short of the scene cell's frame)
-void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground);   // (y: the space's top)
+void drawEdgeMark(bool right, int x, int w, int y, uint16_t ink, uint16_t ground);   // (x, y, w: the space, the status row's height)
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
 // A row's place on the screen from the top (0: the first track row), and back.
