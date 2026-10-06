@@ -21,18 +21,18 @@ void (*usbDriveReload)() = nullptr;
 static constexpr uint16_t SCREEN = DIM;
 static const char HINT[] = "PRESS ANY KEY", HINT2[] = "TO DISCONNECT";   // (two lines)
 // The lines (LINE: the hint's line pitch): the title, the connection's state
-// 32 px under it, the hint 56 px further down less half a line (its second line a
-// line under its first); the title and state placed as when the hint was a
-// line lower and the three were together a line lower than centred top to
-// bottom (on the block grid); left-aligned with the menu's list.
+// 32 px under it (placed as when the hint was 56 px under that and the three
+// were together a line lower than centred top to bottom, on the block grid);
+// the hint on the screen's bottom two lines, its second level with the
+// status row's text (the corner logo's row); left-aligned with the menu's list.
 static constexpr int LINE = FONT_H + 3 * PX;
-static constexpr int STATE_DY = 32, HINT_DY = STATE_DY + 56, HINT2_DY = HINT_DY + LINE;
+static constexpr int STATE_DY = 32, HINT2_DY = STATE_DY + 56 + LINE;   // (HINT2_DY: for the title's place)
 static constexpr int TITLE_Y = (240 - (HINT2_DY + FONT_H)) / 2 / PX * PX + LINE;
-static constexpr int STATE_Y = TITLE_Y + STATE_DY, HINT_Y = TITLE_Y + HINT_DY - LINE / 2, HINT2_Y = HINT_Y + LINE;
+static constexpr int STATE_Y = TITLE_Y + STATE_DY, HINT2_Y = STATUS_TOP + (STATUS_H - FONT_H) / 2 / PX * PX, HINT_Y = HINT2_Y - LINE;
 static int textX() { return menuListX(); }
 
 static void line(int y, const char *text, uint16_t ink) {
-  board.tft().fillRect(0, y, 320, FONT_H, SCREEN);
+  board.tft().fillRect(textX(), y, 320 - textX(), FONT_H, SCREEN);   // (from the texts' edge: the corner logo stays)
   drawText(textX(), y, text, ink, SCREEN);
 }
 
