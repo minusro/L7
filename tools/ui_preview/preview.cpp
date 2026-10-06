@@ -232,11 +232,11 @@ int main(int argc, char **argv) {
   board.heldKeys = m8::BTN_EDIT;
   render(out + "/ui_menu_held.png");
   board.heldKeys = 0;
-  menuKeys(m8::BTN_RIGHT);                         // on the right column, RIGHT held: the extended peep
+  menuKeys(m8::BTN_RIGHT);                         // on the right column, RIGHT held: the way out lit
   menuKeys(m8::BTN_RIGHT);
   menuKeys(m8::BTN_RIGHT);
   simSwitchKey = m8::BTN_RIGHT;
-  render(out + "/ui_menu_peep.png");
+  render(out + "/ui_menu_leaving.png");
   simSwitchKey = 0;
   closeMenu();
   return 0;

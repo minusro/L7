@@ -26,9 +26,8 @@
 // cells' (frameColor()), corners cut, a block out from a card (following its
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
-// logo small, in the item's colour (actionRestColor()). Along the right
-// edge, a narrow strip in the loaded project's colour, twice as wide while
-// RIGHT is held to leave the menu (drawMenu()).
+// logo small, in the item's colour (actionRestColor()). Top left, a small
+// triangle pointing left: the way out (drawMenu()).
 #include "ui.h"
 #include "input.h"
 #include "ui_font.h"
@@ -277,49 +276,25 @@ void drawMenu() {
   static uint32_t drawn = 0;                     // uiGeneration when last drawn whole
   if (!shown) return;
   dropStaleExport();                             // (the project changed, or another one loaded: the export's message goes)
-  // While the peep is extended (LEFT or RIGHT held that leaves the menu), everything
-  // else moves left by as much as it grows and a block: drawn with the origin moved, all
-  // of it again when that changes.
-  constexpr int WIDE = BUTTON_W - PX, NARROW = 2 * PX;   // (the peep: held: the action button's width, its panel's from a block in)
-  static int shownShift = 0;
-  bool sideways = screenSwitchKey() == m8::BTN_RIGHT || screenSwitchKey() == m8::BTN_LEFT;   // (leaving off the left or right edge; not UP / DOWN)
-  int shift = sideways ? WIDE - NARROW + PX : 0;   // (as much as the peep grows, and a block)
-  bool all = drawn != uiGeneration || shift != shownShift;
+  bool all = drawn != uiGeneration;
   auto &t = board.tft();
   if (all) {
     drawn = uiGeneration;
-    shownShift = shift;
-    t.setOrigin(0, 0);
     t.fillRect(0, 0, 320, 240, MENU_BG);         // (the track rows' place and the status row's: no action button in the menu)
   }
-  // The right edge (the looper's that way), the "peep": a strip the screen's
-  // height (coloured from the status row's top down, the action button's
-  // place; black above), 2 blocks wide (the action button's width while
-  // RIGHT is held that leaves the menu once let go: then its coloured part's
-  // top left corner cut, and a black line 2 blocks wide the screen's height
-  // left of it), in
-  // the loaded project's colour; with no project, none until RIGHT is held,
-  // then in the colour of the first empty slot (where leaving makes one).
-  static uint16_t shownStrip;
-  static int shownW = 0;
-  constexpr int AREA = WIDE + 2 * PX;            // (the widest, and the black line left of it)
-  bool held = sideways, loaded = projectCurrent() >= 0;
-  int empty = menuFirstEmptySlot();
-  uint16_t strip = loaded ? ACCENT : held && empty >= 0 ? PROJECT_COLORS[empty] : MENU_BG;
-  int w = held ? WIDE : NARROW;
-  if (all || strip != shownStrip || w != shownW) {
-    shownStrip = strip;
-    shownW = w;
-    t.fillRect(320 - AREA, 0, AREA - w, 240, MENU_BG);
-    t.fillRect(320 - w, 0, w, STATUS_TOP, strip == MENU_BG ? MENU_BG : BG);   // (black above the status row's top: the colour only from there down)
-    t.fillRect(320 - w, STATUS_TOP, w, 240 - STATUS_TOP, strip);
-    if (held && strip != MENU_BG) {              // extended: the coloured part's top left corner cut (as the action button's), a black line left of it
-      t.fillRect(320 - w, STATUS_TOP, PX, PX, BG);
-      t.fillRect(320 - w - 2 * PX, 0, 2 * PX, 240, BG);
-      for (int i = 0; i < NUM_TRACKS; i++) drawTrackNumber(i, DARK);   // the track numbers on it, as the looper's empty ones
-    }
+  // The way out: a small triangle pointing left at the top left (as the
+  // looper's at its bottom left, as far from the top edge), on any edge
+  // (menuLeavesOn()): black; grey where an arrow from the selection would
+  // leave the menu; white while one is held that leaves it once let go.
+  // None when there's nowhere to go (no project, every slot full).
+  static uint16_t markInk = 0xFFFF;
+  bool canLeave = projectCurrent() >= 0 || menuFirstEmptySlot() >= 0;
+  bool atEdge = menuLeavesOn(m8::BTN_LEFT) || menuLeavesOn(m8::BTN_RIGHT) || menuLeavesOn(m8::BTN_UP) || menuLeavesOn(m8::BTN_DOWN);
+  uint16_t ink = !canLeave ? MENU_BG : screenSwitchPending() ? INK : atEdge ? DIM : BG;
+  if (all || ink != markInk) {
+    markInk = ink;
+    drawEdgeMark(false, 0, EDGE_W, 240 - STATUS_TOP - STATUS_H, ink, MENU_BG);
   }
-  t.setOrigin(-shift, 0);                        // (the rest: moved left while the peep is extended)
   // Scrolled: the items in view redraw over each other's places (their keys
   // hold the place), each label drawn the box's whole width; no clearing
   // first, which flickered.
@@ -339,7 +314,6 @@ void drawMenu() {
       drawItem(k);
       redrawn = true;
     }
-  t.setOrigin(0, 0);
 }
 
 // Back from the status row (it can't be reached any more: kept for input.cpp).

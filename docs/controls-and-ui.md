@@ -184,15 +184,12 @@ A recording track's waveform area is in the accent colour (a block of black betw
   While the clock runs, the loaded project's card shows a small play icon right of its letter (both 2 blocks left of centre), black like it, on the first half of each beat (pulsing). An empty slot is a grey outline, its letter grey (selected too; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; a block
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
-  in the colour the action button had for the item (`actionRestColor()`). Along the right
-  edge, the "peep": a strip the screen's height (coloured from the status row's top down, where the action
-  button is in the looper's view; black above) and 2 blocks wide (the action button's width while LEFT or RIGHT is held that leaves
-  the menu once let go, not UP / DOWN, its coloured part's top left corner then cut a block, and a black line the screen's height
-  2 blocks wide left of it; the track numbers 1–7 on its black part where the looper's buttons
-  show them, dark grey as an empty track's; everything else in the menu moves left as much as the
-  peep grows and a block, 22 px, meanwhile: drawn with the display's origin moved), in the loaded project's colour; with no project, none until LEFT or RIGHT is held to leave, then in the
-  first empty slot's colour (where leaving makes a new project); no arrow. While an arrow is held that leaves the menu, the selection
-  frame is hidden. Under them
+  in the colour the action button had for the item (`actionRestColor()`). At the top left,
+  the looper's edge mark mirrored top to bottom (a small solid triangle pointing left, as far from
+  the top edge as the looper's is from the bottom): the way out, on any edge (`menuLeavesOn()`).
+  Black; grey where an arrow from the selection would leave the menu; white while one is held
+  that leaves it once let go (the selection frame hidden meanwhile); none when there's nowhere
+  to go (no project loaded and every slot full). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING

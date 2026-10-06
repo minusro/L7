@@ -237,17 +237,6 @@ static uint16_t iconColor(int i, int icon) {
 // accent colour while A is held, with the action button (acting on the track).
 static uint16_t markColor() { return heldAction >= 0 ? ACCENT : DIM; }
 
-// Track i's number alone where its button shows it (as an empty, unselected
-// track's), drawn over what's there: the menu's extended peep (ui_menu.cpp).
-void drawTrackNumber(int i, uint16_t ink) {
-  const Glyph *g = glyphFor((char)('0' + trackNumber(i)));
-  if (!g) return;
-  const int rows = ROW_BAND / PX, gc = TRACK_ICON_CENTRE - glyphWidth(*g) / 2, gr = (rows - 9) / 2 + 2;
-  for (int r = 0; r < 5; r++)
-    for (int c = 0; c < glyphWidth(*g); c++)
-      if (g->rows[r][c] == '#') board.tft().fillRect(BUTTON_X + (gc + c) * PX, rowTop(i) + (gr + r) * PX, PX, PX, ink);
-}
-
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
   // The action button: as tall as the status cells.

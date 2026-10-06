@@ -185,7 +185,6 @@ constexpr uint16_t MENU_BG = DARK;
 bool menuOpen();
 void openMenu();
 void closeMenu();
-void drawTrackNumber(int i, uint16_t ink);   // track i's number where its button shows it (ui_buttons.cpp)
 int menuFirstEmptySlot();                // the first slot with no project (-1: none)
 void menuSelectSlot(int k);              // the menu's selection on card k
 bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: RIGHT off its right edge (a card row's right end, a list item) or UP off its top (the top card row); a project loaded
