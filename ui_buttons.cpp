@@ -19,7 +19,7 @@
 // black on the accent colour; the pressed look (dark grey, the icon in the
 // accent colour) while an arrow is down; A does nothing then; on an empty track: resample
 // (the record dot with a plus: B+A); with SHIFT too, paste a scene (B pressed
-// first) or cut it (SHIFT first): the track cut / paste icons in a square.
+// first) or cut it (SHIFT first): a triangle down / up over a line in a checkered square (7 x 7, as the duplicate one).
 // While the menu is open (on its items A runs the action when let go; B does
 // nothing): on its
 // list's items, export Ableton project (an arrow into a tray) and storage mode (an
@@ -160,10 +160,8 @@ PROGMEM static const Icon ICONS[] = {
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
   {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // HOME (out of the menu: the small arrow right, as LOAD)
-  {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
-          "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)
-  {9, 9, {"#.#.#.#.#", "....#....", "#...#...#", "..#####..", "#..###..#",
-          "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_PASTE
+  {7, 7, {"#.#.#.#", "...#...", "#.###.#", ".#####.", "#.....#", ".#####.", "#.#.#.#"}},   // SCENE_CUT (in a checkered square, as SCENE_DUP: a triangle up over a line)
+  {7, 7, {"#.#.#.#", ".#####.", "#.###.#", "...#...", "#.....#", ".#####.", "#.#.#.#"}},   // SCENE_PASTE (a triangle down over a line)
   {10, 7, {"....#.....", "...##.....", ".####.#.#.", ".####..#..", ".####.#.#.", "...##.....", "....#....."}},   // MUTE (a block right of UNMUTE)
   {9, 7, {"...#...#.", "..##.#..#", "####..#.#", "####..#.#", "####..#.#", "..##.#..#", "...#...#."}},   // UNMUTE
   {9, 7, {".........", ".###.....", "#####..#.", "#####.###", "#####..#.", ".###.....", "........."}},   // RESAMPLE (record +)
