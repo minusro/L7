@@ -509,9 +509,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if ((transportKey || (edit && onStatus && !onScene)) && shift) transportRestart();
   if (edit && onStatus && shift && onScene) sceneChanged = sceneDuplicate();   // SHIFT+A on the scene cell: a copy of the scene after it, as SHIFT+B twice
   if (edit && onStatus && !shift) {
-    if (onScene) {                                 // the next scene: on the next bar line playing (as SHIFT+UP); stopped, at once and the clock started
-      sceneChanged = sceneStep(1);
-      if (!transport.running) transportStart();
+    if (onScene) {                                 // the next scene, on the next bar line (as SHIFT+UP); stopped: just play
+      if (transport.running) sceneChanged = sceneStep(1);
+      else transportStart();
     } else if (onClock) {                            // play / stop, as START
       if (transport.running) transportStop();
       else transportStart();
