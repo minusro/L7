@@ -315,8 +315,8 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
           if (on[r][c]) block(c0 + c, r0 + copy * (ROWS4 + 1) + r);
   } else if (icon == ICON_METRO) {
     // A metronome (a trapezoid, its pendulum out past the top), 7 x 8, and
-    // the setting now (0, A or 1) a block right of it, level with
-    // its base; centred in the backdrop together.
+    // the setting now (0, A or 1) right next to it, up by its pendulum
+    // (rows 1-5); placed in the backdrop together.
     static const char *const METRONOME[8] = {".....#.", "..###..", "..#.#..", ".#.#.#.", ".#.#.#.", ".##..#.", "#.....#", "#######"};
     const int now = metronomeMode();
     const Glyph *g = glyphFor(now == METRO_OFF ? '0' : now == METRO_AUTO ? 'A' : '1');
@@ -328,7 +328,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     if (g)
       for (int r = 0; r < 5; r++)
         for (int c = 0; c < gw; c++)
-          if (g->rows[r][c] == '#') block(c0 + 8 + c, r0 + 3 + r);
+          if (g->rows[r][c] == '#') block(c0 + 7 + c, r0 + 1 + r);
   } else if (icon != ICON_NONE) {
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
