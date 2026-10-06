@@ -236,6 +236,18 @@ static uint16_t iconColor(int i, int icon) {
 // accent colour while A is held, with the action button (acting on the track).
 static uint16_t markColor() { return heldAction >= 0 && heldAction != ICON_MENU ? ACCENT : DIM; }   // (going to the menu: not the track)
 
+// The selected track joined to the action button: a dark grey line a block wide
+// down the screen's right edge, from under the selected track's panel to the
+// block above the action button's top right corner (the action button's colour).
+// Row i's part of it: bit 0 its button's height (a track below the selected
+// one), bit 1 its margin below (the bottom track's, above the status row).
+static int lineIn(int i) {
+  if (i == STATUS_ROW || selected == STATUS_ROW || selected < 0 || selected >= NUM_TRACKS) return 0;
+  return (rowPos(i) > rowPos(selected) ? 1 : 0) | (i == LAST_TRACK_ROW ? 2 : 0);
+}
+static uint16_t actionShown = BG;                // the action button's colour (the block above its corner)
+static constexpr int EDGE_X = BUTTON_X + BUTTON_W - PX;
+
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
   // The action button: as tall as the status cells.
@@ -319,6 +331,9 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
                  : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL || panel != BG ? BG : DARK;   // (empty: black on the panel)
     drawBadge(trackNumber(i), badge == BADGE_PLAYING, badge == BADGE_PLAYING || badge == BADGE_MUTED, frame, ink);
   }
+  if (lineIn(i) & 1)                               // the line, down the right edge
+    for (int y = 0; y < height; y++)
+      for (int x = BUTTON_W - PX; x < BUTTON_W; x++) px[y * BUTTON_W + x] = DARK;
   if (i == STATUS_ROW && bg != BG)                 // the action button: from a block in (as the
     for (int y = 0; y < height; y++)               // tracks' panels), its top left corner cut diagonally (3 blocks: 2, then 1)
       for (int x = 0; x < (PANEL_LEFT + max(0, 2 - y / PX)) * PX; x++) px[y * BUTTON_W + x] = BG;
@@ -328,13 +343,18 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   t.writeRect(BUTTON_X, top, BUTTON_W, height, px);
   int bottom = top + height, end = bgTop(i) + bgHeight(i);
   if (bottom < end) t.fillRect(BUTTON_X, bottom, BUTTON_W, end - bottom, BG);   // the margin below
+  if (i == STATUS_ROW) actionShown = bg;
+  if (i == STATUS_ROW || i == LAST_TRACK_ROW) {    // the block above the action button's top right corner, and the line to it
+    if (i == LAST_TRACK_ROW && (lineIn(i) & 2)) t.fillRect(EDGE_X, bottom, PX, STATUS_TOP - PX - bottom, DARK);
+    t.fillRect(EDGE_X, STATUS_TOP - PX, PX, PX, actionShown);
+  }
 }
 
 // The row's button (the cells: drawWave(), drawFilter(), drawMix(),
 // drawStatus()). Redrawn only when it changes.
 void drawCells(int i) {
   if (i < 0 || i >= ROWS) return;
-  struct Key { int icon; uint16_t bg, iconColor, mark; uint8_t badge; };
+  struct Key { int icon; uint16_t bg, iconColor, mark; uint8_t badge, line; };
   static Key shown[ROWS];
   static uint32_t drawn[ROWS];                     // uiGeneration when last drawn whole
   Key k;
@@ -344,6 +364,7 @@ void drawCells(int i) {
   k.iconColor = iconColor(i, k.icon);
   k.mark = i == selected && i != STATUS_ROW ? markColor() : BG;
   k.badge = trackBadge(i);
+  k.line = (uint8_t)lineIn(i);
   bool first = drawn[i] != uiGeneration;
   if (!first && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;

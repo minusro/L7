@@ -248,7 +248,8 @@ void drawMenu() {
   bool all = drawn != uiGeneration;
   if (all) {
     drawn = uiGeneration;
-    board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);   // (where the track rows were)
+    board.tft().fillRect(0, 0, 320, STATUS_TOP - PX, BG);   // (where the track rows were; not the action button's block above its corner)
+    board.tft().fillRect(0, STATUS_TOP - PX, 320 - PX, PX, BG);
     board.tft().fillRect(0, STATUS_TOP, BUTTON_X, 240 - STATUS_TOP, BG);   // and the status row's cells: only its button shows
   }
   // Scrolled: the items in view redraw over each other's places (their keys
