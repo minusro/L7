@@ -27,12 +27,13 @@
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
-// The edge mark (ui.h), built in a buffer and sent at once: 3 blocks from the
-// screen's edge (the looper's on the left, the menu's mirrored).
+// The edge mark (ui.h), built in a buffer and sent at once: the looper's 2
+// blocks from the left edge, the menu's 4 from the right (mirrored).
 void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground) {
   static const char *const CHEVRON_LEFT[5] = {"..#", ".##", "###", ".##", "..#"};   // (a filled triangle)
   constexpr int COLS = EDGE_W / PX, ROWS = STATUS_H / PX, CW = 3, CH = 5;
-  constexpr int C0 = 3, R0 = (ROWS - CH) / 2;     // (left: columns 3-5, 3 blocks from the edge)
+  constexpr int R0 = (ROWS - CH) / 2;
+  const int C0 = right ? 4 : 2;                    // blocks from its edge: the looper's 2, the menu's 4
   static uint16_t px[STATUS_H * EDGE_W];
   for (int r = 0; r < ROWS; r++)
     for (int c = 0; c < COLS; c++) {
