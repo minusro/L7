@@ -39,7 +39,7 @@ constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
-constexpr Cell MENU_BOX = {0, STATUS_H - 2 * PX}, SCENE_BOX = {20, 100}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
+constexpr Cell MENU_BOX = {0, STATUS_H - 2 * PX}, SCENE_BOX = {22, 98}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
 // The cells a row has (the status row's: as many as a track row's).
 inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The selected cell in row i's terms (on the status row, never the menu cell's).
@@ -51,11 +51,11 @@ inline int selectedCellIn(int i) {
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // The edge mark: where the other screen is, at the screen's left edge, the
 // status row's height (the status row's menu cell; the menu's top left,
-// flipped). A dark grey backdrop (as the action button's, mirrored: a block
-// short of the scene cell's frame, its corner nearest the middle cut) with a
+// flipped). A dark grey backdrop (as the action button's, mirrored: two
+// blocks short of the scene cell's frame, its corner nearest the middle cut) with a
 // black chevron (5 x 3 blocks) in its middle, pointing down or up. shown
 // false: cleared.
-constexpr int EDGE_W = MENU_BOX.w - 2 * PX;
+constexpr int EDGE_W = MENU_BOX.w - 2 * PX;      // (2 blocks short of the scene cell's frame now)
 void drawEdgeMark(int y, bool down, bool shown = true);
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
