@@ -241,11 +241,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         long tenths = lroundf(bpm * 10);
         if (pressed & m8::BTN_UP) setTempo(tenths / 10 + 1);
         if (pressed & m8::BTN_DOWN) setTempo((tenths + 9) / 10 - 1);
-      } else if (onClock) {                          // the master volume: LEFT/RIGHT a step either way, UP 100%, DOWN off
-        if (pressed & m8::BTN_LEFT) stepMasterVolume(-1);
-        if (pressed & m8::BTN_RIGHT) stepMasterVolume(1);
-        if (pressed & m8::BTN_UP) stepMasterVolume(MASTER_VOLUME_UNITY - masterVolume());
-        if (pressed & m8::BTN_DOWN) stepMasterVolume(-masterVolume());
+      } else if (onClock) {                          // the master volume, a step either way
+        if (pressed & (m8::BTN_LEFT | m8::BTN_DOWN)) stepMasterVolume(-1);
+        if (pressed & (m8::BTN_RIGHT | m8::BTN_UP)) stepMasterVolume(1);
       }
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats: any whole number of beats, up to the whole loop.
