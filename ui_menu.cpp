@@ -293,14 +293,15 @@ void drawMenu() {
     logo = actionRestColor();
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
-  // The right edge (the looper's that way): a strip the screen's height
-  // (coloured from the status row's top down, the action button's place;
-  // black above), 2 blocks wide (4 while RIGHT is held that leaves the menu once let go), in
+  // The right edge (the looper's that way), the "peep": a strip the screen's
+  // height (coloured from the status row's top down, the action button's
+  // place; black above; a block left of its top corner black, of its bottom
+  // corner in its colour), 2 blocks wide (4 while RIGHT is held that leaves the menu once let go), in
   // the loaded project's colour; with no project, none until RIGHT is held,
   // then in the colour of the first empty slot (where leaving makes one).
   static uint16_t shownStrip;
   static int shownW = 0;
-  constexpr int AREA = 4 * PX;                   // (the widest)
+  constexpr int AREA = 5 * PX;                   // (the widest, and a block left of it)
   bool held = screenSwitchKey() == m8::BTN_RIGHT, loaded = projectCurrent() >= 0;
   int empty = menuFirstEmptySlot();
   uint16_t strip = loaded ? ACCENT : held && empty >= 0 ? PROJECT_COLORS[empty] : MENU_BG;
@@ -312,6 +313,10 @@ void drawMenu() {
     t.fillRect(320 - AREA, 0, AREA - w, 240, MENU_BG);
     t.fillRect(320 - w, 0, w, STATUS_TOP, strip == MENU_BG ? MENU_BG : BG);   // (black above the status row's top: the colour only from there down)
     t.fillRect(320 - w, STATUS_TOP, w, 240 - STATUS_TOP, strip);
+    if (strip != MENU_BG) {                      // a block beside it at the top (black) and at the bottom (its colour)
+      t.fillRect(320 - w - PX, 0, PX, PX, BG);
+      t.fillRect(320 - w - PX, 240 - PX, PX, PX, strip);
+    }
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)
