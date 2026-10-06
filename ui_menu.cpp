@@ -27,8 +27,8 @@
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
 // logo small, in the item's colour (actionRestColor()). Along the right
-// edge, a narrow strip in the loaded project's colour; a white line beside
-// it while an arrow is held that leaves the menu (drawMenu()).
+// edge, a narrow strip in the loaded project's colour with a black line
+// beside it, twice as wide while RIGHT is held to leave the menu (drawMenu()).
 #include "ui.h"
 #include "input.h"
 #include "ui_font.h"
@@ -293,23 +293,22 @@ void drawMenu() {
     logo = actionRestColor();
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
-  // The right edge (the looper's that way): a strip the screen's height, a
-  // sixth as wide as the space right of the cards, in the loaded project's
-  // colour (black with no project). While an arrow is held
-  // that leaves the menu once let go, a white line the screen's height left
-  // of it, a block of space between.
-  static uint16_t shownStrip, shownLine;
-  constexpr int cardsRight = (CARDS_X + COLS * CARD_W + (COLS - 1) * CARD_GAP) * PX;
-  constexpr int stripW = (320 - cardsRight) / 3 / PX / 2 * PX, stripX = 320 - stripW, lineX = stripX - 2 * PX;
-  uint16_t strip = projectCurrent() >= 0 ? ACCENT : BG;   // (no project: black)
-  uint16_t line = screenSwitchKey() == m8::BTN_RIGHT ? INK : MENU_BG;   // (only RIGHT held, not UP / DOWN)
-  if (all || strip != shownStrip) {
+  // The right edge (the looper's that way): a strip the screen's height, 2
+  // blocks wide (4 while RIGHT is held that leaves the menu once let go), in
+  // the loaded project's colour (dark grey with no project), a black line a
+  // block wide left of it, always.
+  static uint16_t shownStrip;
+  static int shownW = 0;
+  constexpr int AREA = 5 * PX;                   // (the widest: 4 blocks and the line)
+  uint16_t strip = projectCurrent() >= 0 ? ACCENT : DARK;
+  int w = (screenSwitchKey() == m8::BTN_RIGHT ? 4 : 2) * PX;
+  if (all || strip != shownStrip || w != shownW) {
     shownStrip = strip;
-    board.tft().fillRect(stripX, 0, stripW, 240, strip);
-  }
-  if (all || line != shownLine) {
-    shownLine = line;
-    board.tft().fillRect(lineX, 0, PX, 240, line);
+    shownW = w;
+    auto &t = board.tft();
+    t.fillRect(320 - AREA, 0, AREA - w - PX, 240, MENU_BG);
+    t.fillRect(320 - w - PX, 0, PX, 240, BG);
+    t.fillRect(320 - w, 0, w, 240, strip);
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)
