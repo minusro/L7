@@ -8,8 +8,8 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. A held DOWN (repeating) stops at track 7: only a fresh press goes on to the status row. UP on track 1 or DOWN on the status row (a fresh press) opens the menu once let go; in the menu, UP on the top card row (A–D) goes back once let go (unless no project is loaded) |
-| LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform); LEFT on a row's first cell (a fresh press, not a held arrow repeating) opens the menu, to the looper's left, once let go (the clock goes on); in the menu, RIGHT off its right edge (a card row's right end, or on a list item) goes back once let go (unless no project is loaded) |
+| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. A held DOWN (repeating) stops at track 7: only a fresh press goes on to the status row. UP on track 1 or DOWN on the status row (a fresh press) opens the menu once let go; in the menu, UP on the top card row (A–D) or DOWN on the list's last item goes back once let go (with no project loaded: a new one in the first empty slot, its card selected, as A there) |
+| LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform); LEFT on a row's first cell (a fresh press, not a held arrow repeating) opens the menu, to the looper's left, once let go (the clock goes on); in the menu, RIGHT off its right edge (a card row's right end, or on a list item) goes back once let go (with no project loaded: a new one in the first empty slot) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one; the waveform cell is selected). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
 | SHIFT + B twice | Duplicate the scene |
@@ -128,7 +128,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
   small square, not selectable, no frame, with the edge mark: a small arrow (an open 3×5
-  head, a chevron, on a shaft 5 blocks long) pointing left, 2 blocks from the left edge, dark grey on black (the selected status row's dark grey
+  head, a chevron, on a shaft 5 blocks long) pointing left, 2 blocks from the left edge, dark grey on black (grey where LEFT would open the
+  menu, a row's first cell; white while an arrow is held that opens it once let go) (the selected status row's dark grey
   ground starts at the scene cell's left edge), in the space from the screen's left edge to 2 blocks short of the scene cell's
   frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
   (an inverted SCN tag with the scene position,
@@ -165,7 +166,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   (SHIFT with them: cut and paste); START starts / stops the clock there too (SHIFT+START: from 1.1.1). Loading a project, or making a new one, doesn't start the clock either
   (playing: the project comes in on the next bar line). On its items A
   runs the item's action when let go; B does nothing. The way out
-  is loading a project (A on the loaded one: just back), or RIGHT off its right edge (on a card of the right column, or on a list item) or UP off its top (on the top card row) (once let go; not with no project loaded); with the dummy
+  is loading a project (A on the loaded one: just back), or RIGHT off its right edge (on a card of the right column, or on a list item), UP off its top (on the top card row) or DOWN off its bottom (on the list's last item), once let go; with no project loaded those make a new one in the first empty slot (its card selected) and go back (all slots full: nowhere to go); with the dummy
   project loaded, one has to be loaded or made first. Opening the menu
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.
@@ -182,8 +183,11 @@ A recording track's waveform area is in the accent colour (a block of black betw
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; 2 blocks
   in from the left edge, 2 up from the status row's top: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). At the right
-  edge, centred top to bottom, the looper's edge mark mirrored (an arrow pointing right, dark grey as the looper's, grey while held, in the middle of a black
-  strip along the right edge, the screen's height and a third as wide as the space right of the cards), only while a project is loaded: only then do RIGHT off the edge and UP off the top leave the menu. Under them
+  edge, centred top to bottom, the looper's edge mark mirrored (an arrow pointing right in the middle of a strip along the right edge, the screen's height and a
+  third as wide as the space right of the cards, in the loaded project's dark colour (black with
+  none); the arrow dark grey, in the loaded project's colour where RIGHT would leave the menu
+  (light grey with none: RIGHT makes a new project), white while an arrow is held that leaves
+  once let go (with none: the first empty slot's colour)). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING

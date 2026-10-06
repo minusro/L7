@@ -292,19 +292,28 @@ void drawMenu() {
     logo = actionRestColor();
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
-  // The edge mark: in a black strip along the right edge, the screen's
-  // height, a third as wide as the space right of the cards; centred in it,
-  // as the looper's (dark grey, grey while an arrow is held that leaves once
-  // let go; none with no project loaded: the edges don't lead out).
-  static uint16_t mark;                          // the edge mark's colour shown
+  // The edge mark: in a strip along the right edge, the screen's height, a
+  // third as wide as the space right of the cards (the loaded project's dark
+  // colour; black with none), centred in it. Dark grey; where RIGHT would
+  // leave the menu, the loaded project's colour (light grey with none: RIGHT
+  // then makes a new project in the first empty slot); while an arrow is
+  // held that leaves once let go, white (with no project: that slot's colour).
+  static uint16_t mark, shownStrip;              // the edge mark's colour and the strip's shown
   constexpr int cardsRight = (CARDS_X + COLS * CARD_W + (COLS - 1) * CARD_GAP) * PX;
   constexpr int stripW = (320 - cardsRight) / 3 / PX * PX, stripX = 320 - stripW;
-  bool leaves = projectCurrent() >= 0;           // (menuLeavesOn())
-  uint16_t ink = !leaves ? BG : screenSwitchPending() ? DIM : DARK;
-  if (all) board.tft().fillRect(stripX, 0, stripW, 240, BG);
-  if (all || ink != mark) {
+  bool loaded = projectCurrent() >= 0;
+  int empty = menuFirstEmptySlot();
+  uint16_t strip = loaded ? ACCENT_DARK : BG;
+  uint16_t ink = screenSwitchPending() ? (loaded ? INK : PROJECT_COLORS[max(empty, 0)])
+               : menuLeavesOn(m8::BTN_RIGHT) ? (loaded ? ACCENT : LIGHT) : DARK;
+  if (all || strip != shownStrip) {
+    shownStrip = strip;
+    board.tft().fillRect(stripX, 0, stripW, 240, strip);
+    mark = ~ink;                                 // (drawn again on it)
+  }
+  if (ink != mark) {
     mark = ink;
-    drawEdgeMark(true, stripX, stripW, (240 - STATUS_H) / 2 / PX * PX, ink, BG);
+    drawEdgeMark(true, stripX, stripW, (240 - STATUS_H) / 2 / PX * PX, ink, strip);
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)
@@ -369,12 +378,27 @@ void menuExportStatus(const char *text, int nameAt) {
   if (shown) drawItem(CARDS);                   // (now: the export holds up the loop)
 }
 
+int menuFirstEmptySlot() {
+  for (int k = 0; k < CARDS; k++)
+    if (!projectFilled(k)) return k;
+  return -1;
+}
+
 bool menuLeavesOn(uint8_t key) {
-  if (!shown || onStatus || projectCurrent() < 0) return false;   // (no project loaded: one has to be chosen first)
+  // (No project loaded: leaving makes a new one in the first empty slot; with none, nowhere to go.)
+  if (!shown || onStatus || (projectCurrent() < 0 && menuFirstEmptySlot() < 0)) return false;
   // RIGHT off the screen's right edge (the looper's that way): off a card
-  // row's right end, or a list item's side; UP off its top: the top card row (A-D).
+  // row's right end, or a list item's side; UP off its top: the top card row
+  // (A-D); DOWN off its bottom: the list's last item.
   if (key == m8::BTN_UP) return menuSel < COLS;
+  if (key == m8::BTN_DOWN) return menuSel == ITEMS - 1;
   return key == m8::BTN_RIGHT && (menuSel >= CARDS || menuSel % COLS == COLS - 1);
+}
+
+void menuSelectSlot(int k) {
+  if (k < 0 || k >= CARDS) return;
+  menuSel = k;
+  cardCol = k % COLS;
 }
 
 void openMenu() {
