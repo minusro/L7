@@ -295,14 +295,15 @@ void drawMenu() {
   }
   // The right edge (the looper's that way), the "peep": a strip the screen's
   // height (coloured from the status row's top down, the action button's
-  // place; black above; its top left corner cut), 2 blocks wide (the action
-  // button's width while RIGHT is held that leaves the menu once let go), in
+  // place; black above), 2 blocks wide (the action button's width while
+  // RIGHT is held that leaves the menu once let go: then its coloured part's
+  // top left corner cut, and a black line the screen's height left of it), in
   // the loaded project's colour; with no project, none until RIGHT is held,
   // then in the colour of the first empty slot (where leaving makes one).
   static uint16_t shownStrip;
   static int shownW = 0;
   constexpr int WIDE = BUTTON_W - PX;            // (held: the action button's width, its panel's from a block in)
-  constexpr int AREA = WIDE;                     // (the widest)
+  constexpr int AREA = WIDE + PX;                // (the widest, and the black line left of it)
   bool held = screenSwitchKey() == m8::BTN_RIGHT, loaded = projectCurrent() >= 0;
   int empty = menuFirstEmptySlot();
   uint16_t strip = loaded ? ACCENT : held && empty >= 0 ? PROJECT_COLORS[empty] : MENU_BG;
@@ -314,7 +315,10 @@ void drawMenu() {
     t.fillRect(320 - AREA, 0, AREA - w, 240, MENU_BG);
     t.fillRect(320 - w, 0, w, STATUS_TOP, strip == MENU_BG ? MENU_BG : BG);   // (black above the status row's top: the colour only from there down)
     t.fillRect(320 - w, STATUS_TOP, w, 240 - STATUS_TOP, strip);
-    if (strip != MENU_BG) t.fillRect(320 - w, STATUS_TOP, PX, PX, BG);   // (the coloured part's top left corner cut, as the action button's)
+    if (held && strip != MENU_BG) {              // extended: the coloured part's top left corner cut (as the action button's), a black line left of it
+      t.fillRect(320 - w, STATUS_TOP, PX, PX, BG);
+      t.fillRect(320 - w - PX, 0, PX, 240, BG);
+    }
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)
