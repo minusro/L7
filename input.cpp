@@ -188,7 +188,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool onScene = onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL;
   bool onClock = onStatus && selectedCellIn(STATUS_ROW) == CLOCK_CELL;
   bool onTempo = onStatus && selectedCellIn(STATUS_ROW) == TEMPO_CELL;
-  bool onMenuCell = onStatus && selectedCellIn(STATUS_ROW) == MENU_CELL;   // (the hamburger: selectable, nothing to do yet)
+  bool onMenuCell = onStatus && selectedCellIn(STATUS_ROW) == MENU_CELL;   // (the hamburger: A opens the menu)
   // Any press but a lone A on the tempo cell (a tap): the next tap starts a new count.
   if (pressed && !(onTempo && pressed == m8::BTN_EDIT && keys == m8::BTN_EDIT)) tapCount = 0;
   bool sceneChanged = false;                         // every row to redraw
@@ -433,7 +433,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool toggleTransport = transportKey && !shift;
   if ((transportKey || (edit && onStatus && !onMenuCell)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onScene) sceneChanged = sceneDuplicate();  // a copy of the scene after it, as SHIFT+B twice
+    if (onMenuCell) menuOnRelease = m8::BTN_EDIT;   // the menu, once A is let go (the clock goes on)
+    else if (onScene) sceneChanged = sceneDuplicate();   // a copy of the scene after it, as SHIFT+B twice
     else if (onClock) {                            // play / stop, as START
       if (transport.running) transportStop();
       else transportStart();

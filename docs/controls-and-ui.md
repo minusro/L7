@@ -10,7 +10,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 |---|---|
 | UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. DOWN on the status row or UP on track 1 (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); in the menu, UP on a card of the top row or DOWN on the list's last item goes back once let go (unless no project is loaded) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: menu icon, scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform) |
-| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
+| A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: open the menu on the hamburger cell (on release; the clock goes on), duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
 | SHIFT + B twice | Duplicate the scene |
 | B (held) | On a cell it adjusts (B + arrows): the action button shows four small arrows round a small +, black on the accent colour; while an arrow is down (adjusting), or A is held with B, the pressed look, dark grey with the icon in the accent colour. A does nothing then (B+A on a cell: kept for finer adjusting later). On an empty track (any cell) the button shows resample (the record dot with a plus) and B + A **resamples** (unavailable, the button grey, while no clip plays unmuted: nothing to resample): records the app's output (everything heard) from the next bar line, queued like a recording; when it's saved it moves to a new scene, on the same track (scenes.md). Otherwise B + A does nothing (SHIFT+B+A: the scene clipboard, below) |
@@ -116,8 +116,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
-  small square with a hamburger icon, three bars: selectable, with nothing to
-  do yet; the action button is empty on it), then the scene cell
+  small square with a hamburger icon, three bars: A opens the menu once let go,
+  the action button showing a hamburger too), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -165,7 +165,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   loaded, the splash's turquoise). The loaded project's card is filled with
   it, its letter (the project's name) black; another
   project's is a thick outline (two blocks) in its colour, the letter in it too.
-  An empty slot is a grey outline, its letter grey (light grey when selected; in the slot's colour while an action button is held). In the bottom
+  While the clock runs, the loaded project's card shows a small play icon right of its letter, black like it. An empty slot is a grey outline, its letter grey (light grey when selected; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
   in the action button's colour (not its pressed look: it stays put while A is held). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export

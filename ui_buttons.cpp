@@ -65,7 +65,7 @@ static int actionIcon() {
   }
   if (selected == STATUS_ROW) {                    // restart / the menu / tap tempo
     int cell = selectedCellIn(STATUS_ROW);
-    if (cell == MENU_CELL) return ICON_NONE;       // (the hamburger: nothing yet)
+    if (cell == MENU_CELL) return shift ? ICON_NONE : ICON_MENU;   // (the hamburger: the menu)
     if (shift) return ICON_RESTART;
     return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_SCENE_DUP;   // the scene cell: duplicate the scene
   }
@@ -160,7 +160,7 @@ PROGMEM static const Icon ICONS[] = {
   {0, 0, {}},                                                                  // TAP (text)
   {7, 7, {"...#...", "..###..", ".#####.", "...#...", "...#...", ".......", "#######"}},   // CUT (an arrow up from a line)
   {7, 7, {"...#...", "...#...", ".#####.", "..###..", "...#...", ".......", "#######"}},   // PASTE (down to a line)
-  {5, 5, {"#####", "#####", "#####", "#####", "#####"}},   // MENU (a small stop: to the menu, the clock stopped)
+  {7, 5, {"#######", ".......", "#######", ".......", "#######"}},   // MENU (a hamburger: to the menu)
   {5, 5, {"..#..", "..##.", "#####", "..##.", "..#.."}},   // HOME (out of the menu: the small arrow right, as LOAD)
   {9, 9, {"#.#.#.#.#", "....#....", "#..###..#", "..#####..", "#...#...#",
           "....#....", "#.......#", ".#######.", "#.#.#.#.#"}},   // SCENE_CUT (CUT in a checkered square)

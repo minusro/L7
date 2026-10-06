@@ -205,6 +205,12 @@ static void drawItem(int k) {
       for (int r = 0; r < 5 && g->rows[r]; r++)
         for (int c = 0; c < w; c++)
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
+      if (loaded && transport.running) {          // the clock running: a small play icon right of the letter, as black
+        static const char *const PLAY[5] = {"#..", "##.", "###", "##.", "#.."};
+        for (int r = 0; r < 5; r++)
+          for (int c = 0; c < 3; c++)
+            if (PLAY[r][c] == '#') t.fillRect((x0 + w + 1 + c) * PX, (y0 + r) * PX, PX, PX, letter);
+      }
     }
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
@@ -239,7 +245,8 @@ static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
-         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(k == CARDS && exportText[0]) << 30;
+         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
+         (uint32_t)(k == projectCurrent() && transport.running) << 24;
 }
 
 void drawMenu() {
