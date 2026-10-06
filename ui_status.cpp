@@ -157,7 +157,7 @@ void drawStatus() {
     // row's ground starts after it): dark grey; light grey while an arrow is
     // held that goes to the menu once let go.
     static uint16_t markInk = 0;
-    uint16_t ink = screenSwitchPending() ? LIGHT : DARK;   // (light grey: LEFT, UP or DOWN held that opens the menu)
+    uint16_t ink = screenSwitchPending() ? LIGHT : DARK;   // (light grey: an arrow held that opens the menu)
     if (cleared || ink != markInk) drawEdgeMark(false, 0, EDGE_W, top, ink, BG);
     markInk = ink;
   }
