@@ -81,7 +81,7 @@ selection: not at an edge); all the selected track's cells take their selected l
 rows go dark grey when either row is selected), the screen's whole width, under the button
 too (round its panel and badges); the status row the same when it's selected (all its labels
 light grey, the frame on the selected cell, the ground round the action button); anything dark grey on it is drawn black instead (a
-muted clip's filter fill and volume level, its waveform outside the range). The selected track's button gets a 50% grey panel behind its number (from a block in,
+muted clip's filter fill and volume level, its waveform outside the range). The selected track's button gets a 50% grey panel behind its number (from a block in to a block short of the screen's right edge,
 the button's height: two blocks of border above, left and below the 7×9
 badge; its bottom left corner cut a block; the accent colour while A is held, with the
 action button, showing just the number then, in black).
