@@ -122,6 +122,8 @@ static void menuLongPress() {
   drawMenu();
 }
 
+static bool nextSceneArmed = false;               // A pressed on the scene cell: the next scene once it's let go
+
 // An arrow held that switches screens when let go: into the menu, or out of it.
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0;
 bool screenSwitchPending() { return menuOnRelease || leaveOnRelease; }
@@ -249,6 +251,20 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   bool onStatus = selected == STATUS_ROW;
   int prevSel = selected;
+  // A on the scene cell, once let go (nothing else pressed meanwhile): the
+  // next scene, on the next bar line (as SHIFT+UP); stopped: just play.
+  if (nextSceneArmed && (pressed & ~m8::BTN_EDIT)) nextSceneArmed = false;   // (another key: not that)
+  if (nextSceneArmed && !(keys & m8::BTN_EDIT)) {
+    nextSceneArmed = false;
+    if (onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL) {
+      if (transport.running) {
+        if (sceneStep(1))
+          for (int i = 0; i < ROWS; i++) drawTrack(i);
+      } else {
+        transportStart();
+      }
+    }
+  }
   // A on the status row's scene cell: as B+A (the panel); on the clock cell:
   // as START; on the tempo cell: tap tempo.
   bool onScene = onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL;
@@ -509,10 +525,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if ((transportKey || (edit && onStatus && !onScene)) && shift) transportRestart();
   if (edit && onStatus && shift && onScene) sceneChanged = sceneDuplicate();   // SHIFT+A on the scene cell: a copy of the scene after it, as SHIFT+B twice
   if (edit && onStatus && !shift) {
-    if (onScene) {                                 // the next scene, on the next bar line (as SHIFT+UP); stopped: just play
-      if (transport.running) sceneChanged = sceneStep(1);
-      else transportStart();
-    } else if (onClock) {                            // play / stop, as START
+    if (onScene) nextSceneArmed = true;            // (acts once A is let go, below)
+    else if (onClock) {                            // play / stop, as START
       if (transport.running) transportStop();
       else transportStart();
     } else if (onTempo) tapTempo();
