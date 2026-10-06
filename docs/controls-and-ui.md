@@ -14,7 +14,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
 | SHIFT + B twice | Duplicate the scene |
 | B (held) | On a cell it adjusts (B + arrows): the action button shows four small arrows round a small +, black on the accent colour; while an arrow is down (adjusting), or A is held with B, the pressed look, dark grey with the icon in the accent colour. A does nothing then (B+A on a cell: kept for finer adjusting later). On an empty track (any cell) the button shows resample (the record dot with a plus) and B + A **resamples** (unavailable, the button grey, while no clip plays unmuted: nothing to resample): records the app's output (everything heard) from the next bar line, queued like a recording; when it's saved it moves to a new scene, on the same track (scenes.md). Otherwise B + A does nothing (SHIFT+B+A: the scene clipboard, below) |
-| A, B or START (menu, on a project slot) | Once let go: load its project (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1; stopped: it stays stopped, ready to play) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
+| A or B (menu, on a project slot) | Once let go: load its project (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1; stopped: it stays stopped, ready to play) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
 | SHIFT + A or B (menu, on a slot) | Once let go (no confirmation): cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. Not while recording |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
 | SHIFT + LEFT/RIGHT | Previous / next sample in the order of their names (wraps; gapless): the same project and track's first, then the project's other tracks', then other projects' (storage.md) |
@@ -148,8 +148,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   cells, across the whole width; of the status row only the action button
   shows. Opening and leaving the menu never starts or stops the clock;
   exporting to Ableton and storage mode stop it first. On its items A and B both act
-  (SHIFT with them: cut and paste); on a project card START does too (load /
-  new). Loading a project, or making a new one, doesn't start the clock either
+  (SHIFT with them: cut and paste); START starts / stops the clock there too (SHIFT+START: from 1.1.1). Loading a project, or making a new one, doesn't start the clock either
   (playing: the project comes in on the next bar line). On its items A
   runs the action button's action when let go; B does nothing. The way out
   is loading a project (A on the loaded one: just back), or UP on a card of the top row, or DOWN on the list's last item (once let go; not with no project loaded); with the dummy
@@ -199,7 +198,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   project); on system-level ones (storage mode) light grey (its icon light
   grey while pressed too). The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
-  is held (not B; on a card, an action button A, B or START held turns it to the project's
+  is held (not B; on a card, an action button A or B held turns it to the project's
   colour), corners cut; round a card one block out (following its
   diagonal); round the list's box, three blocks out. On a card the
   action button shows load (a small play) or, empty, new (a small asterisk); with SHIFT,

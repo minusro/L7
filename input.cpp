@@ -117,8 +117,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       return;
     }
   // The menu's items: the arrows move its selection; A or B runs the action
-  // button's action once let go (on the item it was pressed on), and so does
-  // START on a project card (loading, or making a new one). The menu doesn't
+  // button's action once let go (on the item it was pressed on); START starts /
+  // stops the clock, as in the looper's view. The menu doesn't
   // start or stop the clock.
   static bool armed = false, shifted = false;        // A/B (START) down: its action waits; SHIFT with it
   // SHIFT+A on a project: cuts it when let go (no confirmation).
@@ -126,7 +126,12 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   static int armedItem = -1;                         // or the list item
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
-    const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT | (menuSlot() >= 0 && !shift ? m8::BTN_PLAY : 0);
+    if (pressed & m8::BTN_PLAY) {                    // START: the clock, as in the looper's view (SHIFT: from 1.1.1)
+      if (shift) transportRestart();
+      else if (transport.running) transportStop();
+      else transportStart();
+    }
+    const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
     if (pressed & act) noteActionPress();            // (the icon: what letting go will do)
     if ((pressed & act) && !armed) {
       armed = true;
@@ -134,7 +139,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       armedItem = menuListItem();
       shifted = shift;
     }
-    if (armed && !(keys & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY))) {   // all let go: act
+    if (armed && !(keys & (m8::BTN_EDIT | m8::BTN_OPT))) {   // all let go: act
       armed = false;
       int slot = armedSlot;
       if (slot < 0) {                                // the list's items: export, storage mode
@@ -162,7 +167,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       }
       return;
     }
-    if (!(pressed & (act | m8::BTN_OPT | m8::BTN_PLAY))) {
+    if (!(pressed & (act | m8::BTN_PLAY))) {
       bool went = menuKeys(pressed);
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) moved = went;
     }

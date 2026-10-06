@@ -134,7 +134,7 @@ static int buttonIcon(int i) {
     wasOpen = menuOpen();
     heldAction = -1;
   }
-  uint8_t act = menuOpen() ? m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY : m8::BTN_EDIT;   // (the menu: B and START act too)
+  uint8_t act = menuOpen() ? m8::BTN_EDIT | m8::BTN_OPT : m8::BTN_EDIT;   // (the menu: B acts too)
   if (heldAction >= 0 && !(board.keys() & act)) heldAction = -1;   // released
   return heldAction >= 0 ? heldAction : actionIcon();
 }

@@ -7,7 +7,7 @@
 // the action button's action when let go. On a slot, A loads its project (an
 // empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project, or pastes
-// one into an empty slot. B acts as A; START too on a card. Opening it stops
+// one into an empty slot. B acts as A; START starts / stops the clock. Opening it stops
 // the clock; loading a project (or making a new one) starts it.
 //
 // Items, in selection order: the cards 0-11 (rows of four, top first), then
@@ -143,10 +143,10 @@ static Shape itemShape(int k) {
 // The selected item's frame, as the looper's cells': light grey; white while
 // only arrows are held and the last press moved the selection; grey while A
 // is held (B: no change, it only leads to leaving); on a card, in the
-// project's colour while an action button (A, B or START) is held.
+// project's colour while an action button (A or B) is held.
 static bool movedHere = false;                   // the last arrow press moved the menu's selection
-// An action button held (A, B or START).
-static bool actionHeld() { return board.keys() & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_PLAY); }
+// An action button held (A or B).
+static bool actionHeld() { return board.keys() & (m8::BTN_EDIT | m8::BTN_OPT); }
 
 static uint16_t frameColor() {
   uint8_t k = board.keys();
