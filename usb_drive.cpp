@@ -44,7 +44,7 @@ static void hint(const char *text = nullptr, uint16_t ink = BG) { line(HINT_Y, t
 // themselves, no clearing first: no flicker.
 static void titleAndLogo(uint16_t c) {
   drawText(textX(), TITLE_Y, "STORAGE MODE", c, SCREEN);
-  drawSmallLogo(PX, STATUS_TOP, c);
+  drawSmallLogo(CORNER_LOGO_X, CORNER_LOGO_Y, c);
 }
 
 #if defined(USB_SERIAL_MSC)
@@ -104,7 +104,7 @@ bool usbDriveMode() {
   auto &t = board.tft();
   t.fillScreen(SCREEN);
   line(TITLE_Y, "STORAGE MODE", LIGHT);
-  drawSmallLogo(PX, STATUS_TOP, LIGHT);
+  drawSmallLogo(CORNER_LOGO_X, CORNER_LOGO_Y, LIGHT);
   hint();
   uiGeneration++;
 
@@ -161,7 +161,7 @@ bool usbDriveMode() {
   auto &t = board.tft();
   t.fillScreen(SCREEN);
   line(TITLE_Y, "STORAGE MODE", LIGHT);
-  drawSmallLogo(PX, STATUS_TOP, LIGHT);
+  drawSmallLogo(CORNER_LOGO_X, CORNER_LOGO_Y, LIGHT);
   hint();
   uiGeneration++;
 
