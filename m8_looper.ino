@@ -23,6 +23,7 @@
 //
 // Keys:
 //   UP/DOWN          select a row: tracks 1 (top) to 7 (just above the status row),
+//                      UP on track 1 (a fresh press): open the menu (on release)
 //                      then the status row; it starts on track 1
 //   LEFT/RIGHT       select a cell: waveform, filter, volume (on the status row: scene, tempo)
 //   OPT twice        reset the current cell (waveform: whole loop; filter: open;
@@ -60,7 +61,7 @@
 //   SHIFT+OPT twice  insert a copy of the current scene after it
 //   PLAY             start from 1.1.1 / stop
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
-//   EDIT (scene cell) start from 1.1.1 (as SHIFT+PLAY); OPT+EDIT there: open the menu (on release)
+//   EDIT (scene cell) start from 1.1.1 (as SHIFT+PLAY)
 //   EDIT (clock cell) play / stop (as PLAY)
 //   EDIT (tempo cell) tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
 //                      tap starts from 1.1.1 (running: snaps to the nearest bar start)

@@ -88,8 +88,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
-  // B+A on the scene cell in the looper's view: the menu opens once A is let
-  // go (the clock goes on).
+  // UP on the top track row in the looper's view (a fresh press, not a held
+  // arrow repeating): the menu opens once UP is let go (the clock goes on).
   static uint8_t menuOnRelease = 0;                  // the key to wait for
   if (menuOnRelease && !(keys & menuOnRelease)) {
     menuOnRelease = 0;
@@ -373,6 +373,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     // (By place on the screen: track 1 at the top, the status row at the bottom.)
     int pos = rowPos(selected);
     if (pressed & m8::BTN_UP && pos > 0) selected = rowAtPos(pos - 1);              // no wrapping
+    else if ((pressed & m8::BTN_UP) && !repeat) menuOnRelease = m8::BTN_UP;      // UP on the top row (a fresh press): the menu, once let go
     if (pressed & m8::BTN_DOWN && pos < ROWS - 1) selected = rowAtPos(pos + 1);
     if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell = selectedCellIn(selected) - 1;
     if (pressed & m8::BTN_RIGHT && selectedCell < cellCount(selected) - 1) selectedCell++;
@@ -381,7 +382,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
 
   // START: start from 1.1.1 / stop. With SHIFT: start from 1.1.1 on every
   // press, running or not. A on the status row: start from 1.1.1 (scene
-  // cell), play / stop (clock cell), tap tempo (tempo cell); B+A on the scene cell: the menu; with SHIFT, on any of them: the same
+  // cell), play / stop (clock cell), tap tempo (tempo cell); with SHIFT, on any of them: the same
   // as SHIFT+START.
   // B+A on an empty track: resample (B otherwise adjusts cells). With SHIFT too, the order they were pressed in:
   // B then SHIFT, +A: paste the scene clipboard after the scene; SHIFT then
@@ -396,8 +397,6 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       // An empty track resamples: records the app's output (queued behind a
       // recording, as A records), if there's anything to: a clip not muted.
       recordPress(selected, true);
-    } else if (onScene) {
-      menuOnRelease = m8::BTN_EDIT;                // B+A on the scene cell: the menu (the clock goes on)
     }
   }
   bool transportKey = pressed & m8::BTN_PLAY;
