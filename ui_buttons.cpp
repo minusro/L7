@@ -242,7 +242,11 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   // The action button: as tall as the status cells.
   const int height = i == STATUS_ROW ? STATUS_H : ROW_BAND;
   static uint16_t px[BUTTON_W * max(STATUS_H, ROW_BAND)];
-  for (int p = 0; p < BUTTON_W * height; p++) px[p] = bg;
+  // A track's: on the selected track's dark grey ground (rowGround(); its
+  // top block row shared with the row above's ground, as the cells' borders).
+  const uint16_t ground = i != STATUS_ROW && bg == BG ? rowGround(i) : bg;
+  const uint16_t topGround = i != STATUS_ROW && bg == BG && rowGround(rowAbove(i)) == DARK ? DARK : ground;
+  for (int p = 0; p < BUTTON_W * height; p++) px[p] = p < BUTTON_W * PX ? topGround : ground;
   auto blockIn = [&](int c, int r, uint16_t ink) {
     for (int dy = 0; dy < PX; dy++)
       for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * BUTTON_W + c * PX + dx] = ink;
@@ -321,23 +325,33 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
                  : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL || panel != BG ? BG : DARK;   // (empty: black on the panel)
     drawBadge(trackNumber(i), badge == BADGE_PLAYING, badge == BADGE_PLAYING || badge == BADGE_MUTED, frame, ink);
   }
-  const uint16_t ground = i == STATUS_ROW && menuOpen() ? MENU_BG : BG;   // (round the button: the menu's ground while it's open)
-  if (i == STATUS_ROW && bg != ground)             // the action button: from a block in (as the
+  const uint16_t round = i == STATUS_ROW && menuOpen() ? MENU_BG : rowGround(i);   // (round the button: the menu's ground while it's open; the selected row's)
+  if (i == STATUS_ROW && bg != round)              // the action button: from a block in (as the
     for (int y = 0; y < height; y++)               // tracks' panels), its top left corner cut
-      for (int x = 0; x < (PANEL_LEFT + (y < PX)) * PX; x++) px[y * BUTTON_W + x] = ground;
+      for (int x = 0; x < (PANEL_LEFT + (y < PX)) * PX; x++) px[y * BUTTON_W + x] = round;
   auto &t = board.tft();
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(BUTTON_X, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin
   t.writeRect(BUTTON_X, top, BUTTON_W, height, px);
   int bottom = top + height, end = bgTop(i) + bgHeight(i);
-  if (bottom < end) t.fillRect(BUTTON_X, bottom, BUTTON_W, end - bottom, ground);   // the margin below
+  if (i != STATUS_ROW) {                           // the block's space before it: the ground too
+    t.fillRect(BUTTON_X - PX, top, PX, PX, topGround);
+    t.fillRect(BUTTON_X - PX, top + PX, PX, height - PX, ground);
+  } else if (!menuOpen()) {
+    t.fillRect(BUTTON_X - PX, top, PX, height, round);
+  }
+  if (bottom < end) {                              // the margin below (the last track's: its ground's last block row, then black)
+    int groundEnd = i != STATUS_ROW && i == LAST_TRACK_ROW ? min(end, bottom + PX) : bottom;
+    if (groundEnd > bottom) t.fillRect(BUTTON_X - PX, bottom, BUTTON_W + PX, groundEnd - bottom, ground);
+    if (end > groundEnd) t.fillRect(BUTTON_X, groundEnd, BUTTON_W, end - groundEnd, round);
+  }
 }
 
 // The row's button (the cells: drawWave(), drawFilter(), drawMix(),
 // drawStatus()). Redrawn only when it changes.
 void drawCells(int i) {
   if (i < 0 || i >= ROWS) return;
-  struct Key { int icon; uint16_t bg, iconColor, mark; uint8_t badge; };
+  struct Key { int icon; uint16_t bg, iconColor, mark, ground, topGround; uint8_t badge; };
   static Key shown[ROWS];
   static uint32_t drawn[ROWS];                     // uiGeneration when last drawn whole
   Key k;
@@ -347,6 +361,8 @@ void drawCells(int i) {
   k.iconColor = iconColor(i, k.icon);
   k.mark = i == selected && i != STATUS_ROW ? markColor() : BG;
   k.badge = trackBadge(i);
+  k.ground = rowGround(i);                         // (the selected row's ground, under the button too)
+  if (i != STATUS_ROW) k.topGround = rowGround(rowAbove(i));
   bool first = drawn[i] != uiGeneration;
   if (!first && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;

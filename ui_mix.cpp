@@ -72,7 +72,7 @@ void drawMix(int i) {
   int levels[2] = {tr.volume - max(0, (int)tr.balance), tr.volume - max(0, -(int)tr.balance)};   // lines lit
   bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
   bool editing = here && selectedCellIn(i) == MIX_CELL && bAlone();
-  uint16_t ground = trackGround(i);
+  uint16_t ground = rowGround(i);
   uint16_t levelInk = onGround(editing ? ACCENT : muted ? DARK : here ? LIGHT : DIM, ground);
   uint16_t outerInk = editing ? DIM : muted ? ground : here ? DIM : DARK;   // (muted: none)
   for (int ch = 0; ch < 2; ch++) {

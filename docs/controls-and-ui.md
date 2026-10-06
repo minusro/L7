@@ -77,9 +77,10 @@ selected cell only (grey while B is held, with or without other keys:
 adjusting; white while only arrows are held and the last press moved the
 selection: not at an edge); all the selected track's cells take their selected look
 (the frame stays on the selected one, and B's editing look too), on a dark grey ground
-(`trackGround()`): a rectangle under its cells as tall as the frame (its band and the block
-below; shared border rows go dark grey when either row is selected), from the left edge to
-the cells' end (not under the button); anything dark grey on it is drawn black instead (a
+(`rowGround()`): a rectangle as tall as the frame (its band and the block below; shared border
+rows go dark grey when either row is selected), the screen's whole width, under the button
+too (round its panel and badges); the status row the same when it's selected (all its labels
+light grey, the frame on the selected cell, the ground round the action button); anything dark grey on it is drawn black instead (a
 muted clip's filter fill and volume level, its waveform outside the range). The selected track's button gets a 50% grey panel behind its number (from a block in,
 the button's height: two blocks of border above, left and below the 7×9
 badge; the accent colour while A is held, with the
@@ -122,9 +123,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the line; the scene versions the same with a checkered square right round them.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
-  small square, not selectable, no frame, with the edge mark: a small dark grey filled
-  triangle (5×3 blocks) pointing down, a block right of the middle of the space from the screen's left
+  Status row (labels 50% grey, light grey while the row is selected): the menu cell (a
+  small square, not selectable, no frame, with the edge mark: a small black filled
+  triangle (5×3 blocks) pointing down (seen only on the selected status row's dark grey ground,
+  where DOWN opens the menu), a block right of the middle of the space from the screen's left
   edge to two blocks short of the scene cell's frame: DOWN on the status row opens the menu), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock

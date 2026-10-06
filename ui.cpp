@@ -7,15 +7,16 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
   if (!(l || rt || t || b)) return -1;
   // No frame there: the ground (a top or bottom border row is shared with
   // the row above / below: dark grey if either is the selected track).
-  uint16_t ground = trackGround(i);
-  if (i != STATUS_ROW && (t || b) && trackGround(t ? rowAbove(i) : rowBelow(i)) == DARK) ground = DARK;
+  uint16_t ground = rowGround(i);
+  if (i != STATUS_ROW && (t || b) && rowGround(t ? rowAbove(i) : rowBelow(i)) == DARK) ground = DARK;
   if ((l || rt) && (t || b)) return ground;        // corners: cut
   uint16_t own = cellFrame(i, cell);
   if (own != BG) return own;
   int ni = t ? rowAbove(i) : b ? rowBelow(i) : i, nc = l ? cell - 1 : rt ? cell + 1 : cell;
   if (i == STATUS_ROW) {                           // (its cells only share sides with each other)
-    if (t || b || nc < 0 || nc >= cellCount(i)) return BG;
-    return cellFrame(i, nc);
+    if (t || b || nc < 0 || nc >= cellCount(i)) return ground;
+    uint16_t theirs = cellFrame(i, nc);
+    return theirs != BG ? theirs : ground;
   }
   if (ni < 0 || ni >= NUM_TRACKS || nc < 0 || nc >= CELLS) return ground;
   if (nc != cell) {                                // only a cell right next to it (no space between)

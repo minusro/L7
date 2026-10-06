@@ -89,19 +89,19 @@ inline bool anyClipHeard() {
 // Background of a cell in row i (cell -1: the button): black, but the accent colour
 // for the status row's button (the action button; ui_buttons.cpp has its
 // colours) and the accent colour for a recording track's waveform cell.
-// The selected track's ground: a dark grey rectangle under its cells, as
-// tall as the selection frame (its band and the block below, the row
-// below's top border; the row above's bottom border is its top), from the
-// screen's left edge to the cells' end (not under the button). Black
-// elsewhere.
+// The selected row's ground: a dark grey rectangle under it, as tall as the
+// selection frame (a track's band and the block below, the row below's top
+// border; the row above's bottom border is its top; the status row's cells'
+// height), the screen's whole width (under the button too, round its panel).
+// Black elsewhere.
 bool menuOpen();
-inline uint16_t trackGround(int i) { return i >= 0 && i < NUM_TRACKS && i == selected && !menuOpen() ? DARK : BG; }
+inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() ? DARK : BG; }
 // Something drawn dark grey that would vanish on it: black there instead.
 inline uint16_t onGround(uint16_t color, uint16_t ground) { return ground == DARK && color == DARK ? BG : color; }
 inline uint16_t cellBackground(int i, int cell) {
   if (cell == WAVE_CELL && recordingOn(i)) return ACCENT;
   if (cell == -1 && i == STATUS_ROW) return ACCENT;
-  return cell >= 0 ? trackGround(i) : BG;
+  return cell >= 0 ? rowGround(i) : BG;
 }
 // Its frame: light grey round the selected cell (grey while B is held, with
 // any other keys or none: adjusting; white while only arrows are held and the

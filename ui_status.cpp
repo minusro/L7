@@ -76,7 +76,7 @@ static void drawMasterVolume(bool full) {
   float fall = (now - lastMs) * (MV_FALL_DB_PER_S / 1000);
   lastMs = now;
   if (full) {
-    t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, BG);   // (inside the border)
+    t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, rowGround(STATUS_ROW));   // (inside the border)
     meterDb[0] = meterDb[1] = -200;
   }
   int level = masterVolume();
@@ -86,7 +86,7 @@ static void drawMasterVolume(bool full) {
     // (Line j: step j's level, (j - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB.)
     int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f) + 1, 0, MV_LINES);
     for (int j = 0; j < MV_LINES; j++) {
-      uint16_t color = j == level ? INK : j < lit ? ACCENT : j < level ? ACCENT_DARK : DARK;
+      uint16_t color = j == level ? INK : j < lit ? ACCENT : j < level ? ACCENT_DARK : onGround(DARK, rowGround(STATUS_ROW));
       if (!full && color == shown[j][ch]) continue;
       shown[j][ch] = color;
       t.fillRect(CLOCK_BOX.x + (2 + 2 * j) * PX, top + (2 + ch * (MV_HALF + 1)) * PX, PX, MV_HALF * PX, color);
@@ -112,10 +112,15 @@ void drawStatus() {
   static uint32_t drawn = 0;                       // uiGeneration when the cells were last cleared
   auto &t = board.tft();
   int top = rowTop(STATUS_ROW);
-  bool cleared = drawn != uiGeneration;
+  // Selected: on a dark grey ground (rowGround()), all its cells in their
+  // selected look (the frame on the selected one).
+  const uint16_t G = rowGround(STATUS_ROW);
+  static uint16_t shownGround = BG;
+  bool cleared = drawn != uiGeneration || G != shownGround;
   if (cleared) {
     drawn = uiGeneration;
-    for (int c = 0; c < STATUS_CELLS; c++) t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, BG);
+    shownGround = G;
+    for (int c = 0; c < STATUS_CELLS; c++) t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, G);
     shownBorders = ~0ull;
   }
   uint64_t borders = 0;
@@ -134,11 +139,13 @@ void drawStatus() {
   float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
   snprintf(text, sizeof text, "%.1f", shown);
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) ? selectedCellIn(STATUS_ROW) : -1;
-  auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };
+  bool rowSelected = cell >= 0;
+  auto labelInk = [&](int) -> uint16_t { return rowSelected ? LIGHT : DIM; };
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
-    // The menu cell: the edge mark, pointing down (drawn when cleared: it never changes).
-    if (cleared) drawEdgeMark(top, true, DARK, BG);
+    // The menu cell: the edge mark, pointing down, black (seen on the selected
+    // row's ground: DOWN there opens the menu; drawn when cleared).
+    if (cleared) drawEdgeMark(top, true, BG, G);
   }
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the
@@ -148,14 +155,14 @@ void drawStatus() {
     int right = box.x + box.w - INSET;
     uint16_t ink = cell == TEMPO_CELL && bAlone() ? ACCENT : labelInk(TEMPO_CELL);
     int tagX = right - tagWidth("BPM");
-    drawTag(tagX, tagY, "BPM", TAG_INVERTED, ink, BG);
+    drawTag(tagX, tagY, "BPM", TAG_INVERTED, ink, G);
     static const int tempoW = textWidth("888.8");  // the widest tempo: its box clears any other
     int numRight = tagX - PX, numLeft = numRight - tempoW, w = textWidth(text);
-    t.fillRect(numLeft, tagY, numRight - numLeft + PX, textY - tagY, BG);   // round the text: what was there
-    t.fillRect(numLeft, textY + FONT_H, numRight - numLeft + PX, tagY + TAG_H - textY - FONT_H, BG);
-    t.fillRect(numLeft, textY, tempoW - w, FONT_H, BG);
-    t.fillRect(numRight, textY, PX, FONT_H, BG);
-    drawText(numRight - w, textY, text, ink, BG);
+    t.fillRect(numLeft, tagY, numRight - numLeft + PX, textY - tagY, G);   // round the text: what was there
+    t.fillRect(numLeft, textY + FONT_H, numRight - numLeft + PX, tagY + TAG_H - textY - FONT_H, G);
+    t.fillRect(numLeft, textY, tempoW - w, FONT_H, G);
+    t.fillRect(numRight, textY, PX, FONT_H, G);
+    drawText(numRight - w, textY, text, ink, G);
   }
 
   // The clock, or the master volume while B alone is held on its cell.
@@ -165,7 +172,7 @@ void drawStatus() {
     drawMasterVolume(!shownVolume || cleared);
     shownVolume = true;
   } else if (shownVolume) {
-    t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, BG);   // (the clock again)
+    t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, G);   // (the clock again)
     shownVolume = false;
   }
   noInterrupts();
@@ -180,7 +187,7 @@ void drawStatus() {
   // Stopped: dark grey (selected: grey). Running: grey, light grey on each
   // beat's first step (x.y.1) (selected: light grey, white on x.y.1); the
   // accent colour on 1.1.1.
-  bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0, here = cell == CLOCK_CELL;
+  bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0, here = rowSelected;
   uint16_t clockInk = !running ? (here ? DIM : DARK) : first ? ACCENT
                     : step == 0 ? (here ? INK : LIGHT) : (here ? LIGHT : DIM);
   if (!volume) {
@@ -192,13 +199,13 @@ void drawStatus() {
     int w = textWidth(text), inL = CLOCK_BOX.x + INSET, inR = CLOCK_BOX.x + CLOCK_BOX.w - INSET;
     int x = CLOCK_BOX.x + (CLOCK_BOX.w - iconW - gap - w) / 2 / PX * PX, tx = x + iconW + gap;
     x -= PX;                                       // (the icon a block further left)
-    t.fillRect(inL, textY, x - inL, FONT_H, BG);
+    t.fillRect(inL, textY, x - inL, FONT_H, G);
     for (int r = 0; r < 5; r++)
       for (int c = 0; c < 3; c++)
-        t.fillRect(x + c * PX, textY + r * PX, PX, PX, PLAY[r][c] == '#' && running ? ACCENT : BG);
-    t.fillRect(x + iconW, textY, tx - x - iconW, FONT_H, BG);
-    t.fillRect(tx + w, textY, inR - tx - w, FONT_H, BG);
-    drawText(tx, textY, text, clockInk, BG);
+        t.fillRect(x + c * PX, textY + r * PX, PX, PX, PLAY[r][c] == '#' && running ? ACCENT : G);
+    t.fillRect(x + iconW, textY, tx - x - iconW, FONT_H, G);
+    t.fillRect(tx + w, textY, inR - tx - w, FONT_H, G);
+    drawText(tx, textY, text, clockInk, G);
   }
 
   // The scene. Its box reaches the cell's inner edge: the position's text
@@ -207,7 +214,7 @@ void drawStatus() {
   // The tag and position in the accent colour: SHIFT held (SHIFT + UP/DOWN
   // step through the scenes), or B alone on the cell (B + UP/DOWN do).
   bool sceneAccent = (board.keys() & m8::BTN_SHIFT) || (cell == SCENE_CELL && bAlone());
-  drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : labelInk(SCENE_CELL), BG);
+  drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : labelInk(SCENE_CELL), G);
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
@@ -220,7 +227,7 @@ void drawStatus() {
     ink = firstHalf ? ACCENT : DIM;
   }
   int x = box.x + INSET + tagWidth("SCN") + PX;
-  drawText(x, textY, text, ink, BG, box.x + box.w - INSET - x);
+  drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
 
 }
 

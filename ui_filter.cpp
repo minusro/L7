@@ -31,7 +31,7 @@ void drawFilter(int i) {
   k.clip = hasClip(i);                             // empty (or still recording): nothing
   bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
   bool editing = here && editingCell(i, FILTER_CELL);
-  k.ground = trackGround(i);
+  k.ground = rowGround(i);
   k.fill = onGround(editing ? ACCENT_DARK : muted ? DARK : here ? LIGHT : DIM, k.ground);
   k.line = editing ? ACCENT : muted ? BG : here ? INK : LIGHT;   // (BG: none)
   if (drawn[i] == uiGeneration && !memcmp(&k, &shown[i], sizeof k)) return;

@@ -49,7 +49,7 @@ struct WaveView {
   bool visible = false;                            // something is shown (not an empty track)
   bool live = false;                               // recording in progress: live view
   uint16_t bg = BG;                                // behind the waveform (a recording's: the accent colour)
-  uint16_t ground = BG;                            // round it (trackGround())
+  uint16_t ground = BG;                            // round it (rowGround())
   uint64_t borders = 0;                            // the border's sides (bordersOf())
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
   int rangeFirstPx = 0, rangePx = 0;               // and its pixel columns
@@ -173,7 +173,7 @@ void drawWave(int i, bool recordingHere) {
   bool editing = here && selectedCellIn(i) == WAVE_CELL && bAlone();
   uint16_t rangeInk = editing ? ACCENT : muted ? DIM : here ? INK : LIGHT;
   if (recordingHere) rangeInk = INK;                 // the recording's waveform: white
-  uint16_t ground = trackGround(i);
+  uint16_t ground = rowGround(i);
   uint16_t outInk = onGround(muted ? DARK : DIM, ground);   // outside it: grey (muted: dark grey; black on the selected track's ground)
   if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.ground == ground && v.borders == borders &&
