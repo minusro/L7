@@ -318,17 +318,17 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     // the setting now (0, A or 1) right next to it, up by its pendulum
     // (rows 1-5); placed in the backdrop together.
     static const char *const METRONOME[8] = {".....#.", "..###..", "..#.#..", ".#.#.#.", ".#.#.#.", ".##..#.", "#.....#", "#######"};
-    const int now = metronomeMode();
-    const Glyph *g = glyphFor(now == METRO_OFF ? '0' : now == METRO_AUTO ? 'A' : '1');
-    const int gw = g ? glyphWidth(*g) : 0, w = 7 + 1 + gw;
+    // (The setting's character 4 rows tall: the font's less a middle row.)
+    static const char *const SETTING[3][4] = {{"###", "#.#", "#.#", "###"}, {".#.", "#.#", "###", "#.#"}, {".#.", "##.", ".#.", "###"}};   // 0, A, 1
+    const char *const *g = SETTING[metronomeMode()];
+    const int gw = 3, w = 7 + 1 + gw;
     int c0 = max(PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, PANEL_LEFT + 1), r0 = (rows - 8) / 2;   // (a block clear of the backdrop's edge)
     for (int r = 0; r < 8; r++)
       for (int c = 0; c < 7; c++)
         if (METRONOME[r][c] == '#') block(c0 + c, r0 + r);
-    if (g)
-      for (int r = 0; r < 5; r++)
-        for (int c = 0; c < gw; c++)
-          if (g->rows[r][c] == '#') block(c0 + 7 + c, r0 + 1 + r);
+    for (int r = 0; r < 4; r++)
+      for (int c = 0; c < gw; c++)
+        if (g[r][c] == '#') block(c0 + 7 + c, r0 + 1 + r);
   } else if (icon != ICON_NONE) {
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
