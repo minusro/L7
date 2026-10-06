@@ -430,8 +430,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     sceneKeys();
     // SHIFT+LEFT/RIGHT on a track: its sample, the previous / next on the card.
     if (!onStatus && !recordingOn(selected)) {
-      if (pressed & m8::BTN_LEFT) stepSample(selected, -1);
-      if (pressed & m8::BTN_RIGHT) stepSample(selected, 1);
+      // (another sample: the waveform cell selected, to see it)
+      if ((pressed & m8::BTN_LEFT) && stepSample(selected, -1)) selectedCell = WAVE_CELL;
+      if ((pressed & m8::BTN_RIGHT) && stepSample(selected, 1)) selectedCell = WAVE_CELL;
     }
   } else {
     int row = selected, at = selectedCellIn(selected);
@@ -469,7 +470,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
                recordQueued() != selected && anyClipHeard()) {
       // An empty track resamples: records the app's output (queued behind a
       // recording, as A records), if there's anything to: a clip not muted.
-      recordPress(selected, true);
+      if (recordPress(selected, true)) selectedCell = WAVE_CELL;   // (a new recording: its waveform cell selected)
     }
   }
   bool transportKey = pressed & m8::BTN_PLAY;
@@ -491,7 +492,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       else if (recordingOn(selected) || recordQueued() == selected) cancelRecording(selected);
       else pasteTrack(selected);
     } else if (tr.state == TrackState::Empty || recordingOn(selected)) {
-      recordPress(selected);
+      if (recordPress(selected)) selectedCell = WAVE_CELL;   // (a new recording: its waveform cell selected)
     } else {
       setTrackMuted(selected, !trackMuted(selected));
     }
