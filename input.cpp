@@ -188,6 +188,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool onScene = onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL;
   bool onClock = onStatus && selectedCellIn(STATUS_ROW) == CLOCK_CELL;
   bool onTempo = onStatus && selectedCellIn(STATUS_ROW) == TEMPO_CELL;
+  bool onMenuCell = onStatus && selectedCellIn(STATUS_ROW) == MENU_CELL;   // (the hamburger: selectable, nothing to do yet)
   // Any press but a lone A on the tempo cell (a tap): the next tap starts a new count.
   if (pressed && !(onTempo && pressed == m8::BTN_EDIT && keys == m8::BTN_EDIT)) tapCount = 0;
   bool sceneChanged = false;                         // every row to redraw
@@ -401,6 +402,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     else if ((pressed & m8::BTN_UP) && !repeat) menuOnRelease = m8::BTN_UP;      // UP on the top row (a fresh press): the menu, once let go
     if (pressed & m8::BTN_DOWN && pos < ROWS - 1) selected = rowAtPos(pos + 1);
     else if ((pressed & m8::BTN_DOWN) && !repeat) menuOnRelease = m8::BTN_DOWN;  // DOWN on the status row (a fresh press): the menu, once let go
+    // To or from the status row: the cell below / above, the status row's having the menu cell to the left of the tracks' first.
+    if (selected == STATUS_ROW && row != STATUS_ROW) selectedCell = at + 1;
+    else if (row == STATUS_ROW && selected != STATUS_ROW) selectedCell = max(at - 1, 0);
     if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell = selectedCellIn(selected) - 1;
     if (pressed & m8::BTN_RIGHT && selectedCell < cellCount(selected) - 1) selectedCell++;
     if (pressed & arrows) moved = selected != row || selectedCellIn(selected) != at;
@@ -427,7 +431,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
-  if ((transportKey || (edit && onStatus)) && shift) transportRestart();
+  if ((transportKey || (edit && onStatus && !onMenuCell)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
     if (onScene) sceneChanged = sceneDuplicate();  // a copy of the scene after it, as SHIFT+B twice
     else if (onClock) {                            // play / stop, as START

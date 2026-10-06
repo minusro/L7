@@ -60,11 +60,13 @@ static int actionIcon() {
         recordQueued() != selected)
       return ICON_RESAMPLE;                          // an empty track: B+A resamples (unavailable with no clip playing unmuted)
     if (board.keys() & m8::BTN_PLAY) return ICON_NONE;
-    return selected == STATUS_ROW || hasClip(selected) ? ICON_ADJUST : ICON_NONE;
+    if (selected == STATUS_ROW) return selectedCellIn(STATUS_ROW) == MENU_CELL ? ICON_NONE : ICON_ADJUST;   // (the menu cell: nothing to adjust)
+    return hasClip(selected) ? ICON_ADJUST : ICON_NONE;
   }
   if (selected == STATUS_ROW) {                    // restart / the menu / tap tempo
-    if (shift) return ICON_RESTART;
     int cell = selectedCellIn(STATUS_ROW);
+    if (cell == MENU_CELL) return ICON_NONE;       // (the hamburger: nothing yet)
+    if (shift) return ICON_RESTART;
     return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_SCENE_DUP;   // the scene cell: duplicate the scene
   }
   const Track &tr = tracks[selected];
