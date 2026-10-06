@@ -33,7 +33,7 @@ uint32_t uiGeneration = 1;
 
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
-static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
+static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 3, ITEMS = CARDS + LIST, COLS = 4;
 static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE"};
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), until the selection moves or the menu closes.
@@ -114,17 +114,16 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 // ---- Layout, in blocks (the screen: 160 x 107 above the status row).
 // Cards: 21 x 15, the cut 3, 3 apart across and 3 down (neighbouring
 // rows' frames share a row: only the selected one's shows), the last row ending at row 64 (the first from 13).
-// The list: centred under them, an item every 12 rows from row 75, on down into the status row's place (its
-// cells are hidden in the menu; the action button is clear to the right), its frame
-// round its label with 3 blocks of space.
+// The list: centred under them, an item every 12 rows from row 74 (3 places, the last one's frame ending
+// above the status row, which shows as in the looper's view), its frame round its label with 3 blocks of space.
 static constexpr int CARD_W = 21, CARD_H = 15, CARD_CUT = 3, CARD_GAP = 3, CARD_VGAP = 3;
 static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 13;
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
-// The last place's frame level with the action button (from the status row's top).
-static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
+static constexpr int LIST_Y = 74;
+static_assert(LIST_Y + (LIST_ROOM - 1) * LIST_PITCH + 5 + LIST_SPACE <= STATUS_TOP / PX - 1, "the list's last place ends above the status row");
 
-// The logo in the bottom left corner, a block in, the status row's height.
-static constexpr int LOGO_X = PX, LOGO_Y = STATUS_TOP;
+// The logo in the top left corner, a block in, the status row's height (left of the cards).
+static constexpr int LOGO_X = PX, LOGO_Y = 0;
 
 static Shape itemShape(int k) {
   if (k < CARDS)
@@ -236,8 +235,7 @@ void drawMenu() {
   bool all = drawn != uiGeneration;
   if (all) {
     drawn = uiGeneration;
-    board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);   // (where the track rows were)
-    board.tft().fillRect(0, STATUS_TOP, BUTTON_X, 240 - STATUS_TOP, BG);   // and the status row's cells: only its button shows
+    board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);   // (where the track rows were; the status row stays)
   }
   // Scrolled: the items in view redraw over each other's places (their keys
   // hold the place), each label drawn the box's whole width; no clearing
@@ -260,7 +258,18 @@ void drawMenu() {
     }
 }
 
-// Back from the status row (it can't be reached any more: kept for input.cpp).
+// Down from the list's last item: onto the status row, at the cell it was last on
+// (its cells work as in the looper's view); UP, or LEFT from its first cell, comes back.
+static void enterStatus() {
+  onStatus = true;
+  selected = STATUS_ROW;
+  selectedCell = statusCell;
+  movedHere = true;
+  drawMenu();
+  drawTrack(STATUS_ROW);
+}
+
+// Back from the status row (input.cpp).
 void menuLeaveStatus() {
   if (!onStatus) return;
   onStatus = false;
@@ -289,7 +298,14 @@ bool menuKeys(uint8_t pressed) {
     if (k < CARDS) cardCol = k % COLS;
   } else if (!(pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
     if (pressed & m8::BTN_UP) k = k > CARDS ? k - 1 : CARDS - COLS + cardCol;
-    if (pressed & m8::BTN_DOWN && k < ITEMS - 1) k++;
+    if (pressed & m8::BTN_DOWN) {
+      if (k < ITEMS - 1) {
+        k++;
+      } else {                                   // past the last item: the status row
+        enterStatus();
+        return true;
+      }
+    }
   }
   if (pressed & arrows) movedHere = k != menuSel;
   if (k != menuSel) exportText[0] = 0;          // (the export's message: gone)
@@ -312,7 +328,6 @@ void openMenu() {
   if (projectCurrent() >= 0 && recording.mode == Recording::Idle && recordQueued() < 0 && !projectHasClips() &&
       projectDelete(projectCurrent()))
     takeProjectSelection();
-  if (transport.running) transportStop();         // the menu: the clock stopped
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();   // recordings no project uses: gone
   shown = true;
   if (projectCurrent() >= 0) {                   // on the loaded project's card (the dummy project: where it was)

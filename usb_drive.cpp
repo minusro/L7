@@ -61,14 +61,14 @@ void usbDriveBegin() {
 // Back from the computer: the card is the app's again, and everything the app
 // knew of it is read again (the computer may have changed any file). Without a
 // reload function: a restart.
-static bool leave(const char *why) {
+static bool leave(const char *why, uint16_t ink = LIGHT) {
   Serial.printf("storage mode: %s\n", why);
   cardSync();
   if (!usbDriveReload) restart(why);
   usb_msc_set_media(nullptr);                       // (an empty card reader again, answered from the timer)
   usb_msc_clear_host_state();
   pollTimer.begin([] { usb_msc_poll(); }, 2000);
-  line(176, why, LIGHT);
+  line(176, why, ink);
   uint32_t shownAt = millis();
   usbDriveReload();
   while (millis() - shownAt < 400) {}               // (the message stays readable)
@@ -128,7 +128,7 @@ bool usbDriveMode() {
       line(120, TEXT[state], state == 2 ? INK : LIGHT);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
-    if (board.keys() & m8::BTN_PLAY) return leave("LOADING");   // START: back to the app (ejecting on the computer does too)
+    if (board.keys() & m8::BTN_PLAY) return leave("WAIT", DIM);   // START: back to the app (ejecting on the computer does too)
   }
 }
 #elif defined(USB_MTPDISK) || defined(USB_MTPDISK_SERIAL)

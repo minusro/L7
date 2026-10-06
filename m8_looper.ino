@@ -60,7 +60,7 @@
 //   SHIFT+OPT twice  insert a copy of the current scene after it
 //   PLAY             start from 1.1.1 / stop (then the menu, once PLAY is let go)
 //   SHIFT+PLAY       start from 1.1.1, also while running (also SHIFT+EDIT on the status row)
-//   EDIT (scene cell) open the menu (on release; stopping the clock opens it too)
+//   EDIT (scene cell) open the menu (on release; the clock goes on)
 //   EDIT (clock cell) start from 1.1.1 (as SHIFT+PLAY)
 //   EDIT (tempo cell) tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
 //                      tap starts from 1.1.1 (running: snaps to the nearest bar start)
@@ -191,7 +191,7 @@ void setup() {
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();
   restoreMenu(sessionMenu());                      // its selection
-  openMenu();                                      // always starting in the menu (the clock stopped), on the last project
+  openMenu();                                      // always starting in the menu, on the last project
                                                    // (already loaded: its tracks ready to play)
 }
 

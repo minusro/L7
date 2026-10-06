@@ -59,6 +59,7 @@ static void tapTempo() {
 // The loaded project exported as a Live Set (the menu's first list item),
 // its progress and then where it went shown in the item's place.
 static void exportToAbleton() {
+  if (transport.running) transportStop();            // (the export wants the clock stopped, and the card to itself)
   int p = projectCurrent();
   int n = exportProject(p, [](int done, int total) {
     char b[24];
@@ -85,7 +86,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
   // A on the scene cell in the looper's view: the menu opens once A is let
-  // go; stopping the clock (START): once START is.
+  // go (the clock goes on).
   static uint8_t menuOnRelease = 0;                  // the key to wait for
   if (menuOnRelease && !(keys & menuOnRelease)) {
     menuOnRelease = 0;
@@ -94,8 +95,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   // The menu's items: the arrows move its selection; A or B runs the action
   // button's action once let go (on the item it was pressed on), and so does
-  // START on a project card (loading, or making a new one). The clock stops as
-  // the menu opens; loading a project (or making one) starts it again.
+  // START on a project card (loading, or making a new one). The menu doesn't
+  // start or stop the clock.
   static bool armed = false, shifted = false;        // A/B (START) down: its action waits; SHIFT with it
   // SHIFT+A on a project: the first tap only asks (a question mark); a second A,
   // SHIFT still held and the selection still there, cuts it when let go.
@@ -137,7 +138,6 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
           closeMenu();
           takeProjectSelection();
           metronomeOn = !projectHasClips();          // (now: its first beat clicks too)
-          if (!transport.running) transportStart();  // it plays, from 1.1.1 (a new one: the metronome)
           for (int i = 0; i < ROWS; i++) drawTrack(i);
         }
       }
@@ -150,10 +150,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     return;
   }
   // The menu's selection on the status row: as in the looper's view, but UP
-  // (or LEFT from the scene cell) goes back to the menu's items.
+  // (or LEFT from the first cell, the menu icon) goes back to the menu's items.
   if (menuOpen() && !shift && !opt &&
-      ((pressed & m8::BTN_UP) || ((pressed & m8::BTN_LEFT) && selectedCellIn(STATUS_ROW) == SCENE_CELL))) {
-    menuLeaveStatus();                               // (LEFT from its first cell too: the list's last item)
+      ((pressed & m8::BTN_UP) || ((pressed & m8::BTN_LEFT) && selectedCellIn(STATUS_ROW) == MENU_CELL))) {
+    menuLeaveStatus();                               // (the list's last item)
     moved = true;
     return;
   }
@@ -405,7 +405,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool toggleTransport = transportKey && !shift;
   if ((transportKey || (edit && onStatus && !onMenuCell)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onScene) menuOnRelease = m8::BTN_EDIT;      // the menu (the clock stops)
+    if (onScene) menuOnRelease = m8::BTN_EDIT;      // the menu (the clock goes on)
     else if (onClock) transportRestart();          // from 1.1.1, as SHIFT+START
     else if (onTempo) tapTempo();
   }
@@ -424,9 +424,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
   }
   if (toggleTransport) {
-    if (transport.running) {                         // stopped: back to the menu once that key is let go
+    if (transport.running) {
       transportStop();
-      menuOnRelease = m8::BTN_PLAY;
     } else {
       transportStart();
     }
