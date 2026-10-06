@@ -407,7 +407,7 @@ void closeMenu() {
   selected = mainRow;
   selectedCell = mainCell;
   shown = false;
-  board.tft().fillRect(0, 0, 320, STATUS_TOP, BG);
+  board.tft().fillScreen(BG);                    // (the menu's ground everywhere: the gap before the action button too)
   uiGeneration++;                                // everything redraws in full
   for (int i = 0; i < ROWS; i++) drawTrack(i);
 }
