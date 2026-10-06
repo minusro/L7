@@ -319,6 +319,7 @@ void drawMenu() {
     if (held && strip != MENU_BG) {              // extended: the coloured part's top left corner cut (as the action button's), a black line left of it
       t.fillRect(320 - w, STATUS_TOP, PX, PX, BG);
       t.fillRect(320 - w - 2 * PX, 0, 2 * PX, 240, BG);
+      for (int i = 0; i < NUM_TRACKS; i++) drawTrackNumber(i, DARK);   // the track numbers on it, as the looper's empty ones
     }
   }
   bool redrawn = false;

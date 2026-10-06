@@ -25,7 +25,8 @@ HardwareSerial midi;
 bool optBeforeShift() { return true; }             // (input.cpp isn't built here)
 bool arrowsMoved() { return true; }
 bool screenSwitchPending() { return false; }
-uint8_t screenSwitchKey() { return 0; }
+static uint8_t simSwitchKey = 0;                   // (an arrow held that switches screens: the peeps)
+uint8_t screenSwitchKey() { return simSwitchKey; }
 
 // A made-up waveform: a hit on every beat (louder on bar starts), decaying,
 // over some noise.
@@ -231,6 +232,12 @@ int main(int argc, char **argv) {
   board.heldKeys = m8::BTN_EDIT;
   render(out + "/ui_menu_held.png");
   board.heldKeys = 0;
+  menuKeys(m8::BTN_RIGHT);                         // on the right column, RIGHT held: the extended peep
+  menuKeys(m8::BTN_RIGHT);
+  menuKeys(m8::BTN_RIGHT);
+  simSwitchKey = m8::BTN_RIGHT;
+  render(out + "/ui_menu_peep.png");
+  simSwitchKey = 0;
   closeMenu();
   return 0;
 }
