@@ -151,13 +151,8 @@ void uiRefresh() {
     drawTrack(nextRow);
     if (++nextRow >= ROWS) nextRow = 0;
     // LEFT held that opens the menu once let go: a dark grey strip along the
-    // left edge, the screen's height, 2 blocks wide, its right corners cut
-    // (the menu peeping in; drawn over the rows each pass meanwhile).
-    if (screenSwitchKey() == m8::BTN_LEFT) {
-      auto &t = board.tft();
-      t.fillRect(0, 0, 2 * PX, 240, DARK);
-      t.fillRect(PX, 0, PX, PX, BG);
-      t.fillRect(PX, 240 - PX, PX, PX, BG);
-    }
+    // left edge, the screen's height, 2 blocks wide (the menu peeping in;
+    // drawn over the rows each pass meanwhile).
+    if (screenSwitchKey() == m8::BTN_LEFT) board.tft().fillRect(0, 0, 2 * PX, 240, DARK);
   }
 }

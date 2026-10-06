@@ -130,7 +130,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   small square, not selectable, no frame, with the edge mark: a small solid triangle (3×5
   blocks) pointing left, its tip 3 blocks from the left edge, dark grey on black (grey where LEFT would open the
   menu, a row's first cell; white while LEFT is held that opens it once let go, a dark grey strip along the left edge then too, the
-  screen's height and 2 blocks wide, its right corners cut; the selection frame hidden meanwhile, and while UP / DOWN are held to open it, the arrow unchanged then) (the selected status row's dark grey
+  screen's height and 2 blocks wide; the selection frame hidden meanwhile, and while UP / DOWN are held to open it, the arrow unchanged then) (the selected status row's dark grey
   ground starts at the scene cell's left edge), in the space from the screen's left edge to 2 blocks short of the scene cell's
   frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
   (an inverted SCN tag with the scene position,
@@ -184,8 +184,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; a block
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). Along the right
-  edge, the "peep": a strip the screen's height (a block beside its top left corner black, one beside
-  its bottom left corner in its colour) (coloured from the status row's top down, where the action
+  edge, the "peep": a strip the screen's height (coloured from the status row's top down, where the action
   button is in the looper's view; black above) and 2 blocks wide (4 while RIGHT is held that leaves the menu
   once let go), in the loaded project's colour; with no project, none until RIGHT is held, then in the
   first empty slot's colour (where leaving makes a new project); no arrow. While an arrow is held that leaves the menu, the selection
