@@ -296,8 +296,9 @@ void drawMenu() {
   // The right edge (the looper's that way), the "peep": a strip the screen's
   // height (coloured from the status row's top down, the action button's
   // place; black above), 2 blocks wide (the action button's width while
-  // RIGHT is held that leaves the menu once let go: then its coloured part's
-  // top left corner cut, and a black line the screen's height left of it), in
+  // RIGHT is held that leaves the menu once let go: then nothing above its
+  // coloured part, whose top left corner is cut, and a black line a block
+  // wide the screen's height left of it), in
   // the loaded project's colour; with no project, none until RIGHT is held,
   // then in the colour of the first empty slot (where leaving makes one).
   static uint16_t shownStrip;
@@ -313,7 +314,7 @@ void drawMenu() {
     shownW = w;
     auto &t = board.tft();
     t.fillRect(320 - AREA, 0, AREA - w, 240, MENU_BG);
-    t.fillRect(320 - w, 0, w, STATUS_TOP, strip == MENU_BG ? MENU_BG : BG);   // (black above the status row's top: the colour only from there down)
+    t.fillRect(320 - w, 0, w, STATUS_TOP, strip == MENU_BG || held ? MENU_BG : BG);   // (black above the status row's top, the colour only from there down; extended: the ground there, the black line beside it)
     t.fillRect(320 - w, STATUS_TOP, w, 240 - STATUS_TOP, strip);
     if (held && strip != MENU_BG) {              // extended: the coloured part's top left corner cut (as the action button's), a black line left of it
       t.fillRect(320 - w, STATUS_TOP, PX, PX, BG);
