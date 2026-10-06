@@ -238,14 +238,13 @@ static uint16_t markColor() { return heldAction >= 0 && heldAction != ICON_MENU 
 
 // The selected track joined to the action button: a dark grey line a block wide
 // down the screen's right edge, from under the selected track's panel to the
-// block above the action button's top right corner (the action button's colour).
+// action button.
 // Row i's part of it: bit 0 its button's height (a track below the selected
 // one), bit 1 its margin below (the bottom track's, above the status row).
 static int lineIn(int i) {
   if (i == STATUS_ROW || selected == STATUS_ROW || selected < 0 || selected >= NUM_TRACKS) return 0;
   return (rowPos(i) > rowPos(selected) ? 1 : 0) | (i == LAST_TRACK_ROW ? 2 : 0);
 }
-static uint16_t actionShown = BG;                // the action button's colour (the block above its corner)
 static constexpr int EDGE_X = BUTTON_X + BUTTON_W - PX;
 
 // The button, built whole in a buffer and sent at once.
@@ -343,11 +342,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   t.writeRect(BUTTON_X, top, BUTTON_W, height, px);
   int bottom = top + height, end = bgTop(i) + bgHeight(i);
   if (bottom < end) t.fillRect(BUTTON_X, bottom, BUTTON_W, end - bottom, BG);   // the margin below
-  if (i == STATUS_ROW) actionShown = bg;
-  if (i == STATUS_ROW || i == LAST_TRACK_ROW) {    // the block above the action button's top right corner, and the line to it
-    if (i == LAST_TRACK_ROW && (lineIn(i) & 2)) t.fillRect(EDGE_X, bottom, PX, STATUS_TOP - PX - bottom, DARK);
-    t.fillRect(EDGE_X, STATUS_TOP - PX, PX, PX, actionShown);
-  }
+  if (i == LAST_TRACK_ROW && (lineIn(i) & 2)) t.fillRect(EDGE_X, bottom, PX, STATUS_TOP - bottom, DARK);   // the line on to the action button
 }
 
 // The row's button (the cells: drawWave(), drawFilter(), drawMix(),
