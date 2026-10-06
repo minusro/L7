@@ -64,8 +64,8 @@ inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // The edge mark: where the other screen is (the menu to the looper's left,
 // the looper to the menu's right: LEFT off the looper's left edge, RIGHT off
 // the menu's right edge),
-// on the status row's line: a small arrow (an open 3 x 5 head on a shaft
-// 5 blocks long) pointing left in the looper's view (its menu cell: the space
+// on the status row's line: a small solid triangle (3 x 5 blocks, its tip 3
+// blocks in) pointing left in the looper's view (its menu cell: the space
 // left of the scene cell, 2 blocks short of its frame), in ink on the ground
 // (the whole space), dark grey on black. (The menu has no arrow: a strip in
 // the project's colour along its right edge, ui_menu.cpp.)
