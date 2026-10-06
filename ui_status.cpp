@@ -5,7 +5,7 @@
 // row is selected:
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
-//   first cell: a small square with a grey chevron pointing down
+//   first cell: a small square with a dark grey chevron pointing down
 //     (DOWN on the status row opens the menu); not selectable, no frame.
 //   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
@@ -130,8 +130,8 @@ void drawStatus() {
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
-    // The menu cell: a chevron down, grey (drawn when cleared: it never changes).
-    if (cleared) drawEdgeChevron(CHEVRON_X, top + CHEVRON_DY, true, DIM);
+    // The menu cell: a chevron down, dark grey (drawn when cleared: it never changes).
+    if (cleared) drawEdgeChevron(CHEVRON_X, top + CHEVRON_DY, true, DARK);
   }
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the
