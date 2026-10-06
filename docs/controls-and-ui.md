@@ -75,7 +75,10 @@ and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
 (`PX`), a 160×120 screen of chunky pixels. Selection: a light grey frame on the
 selected cell only (grey while B is held, with or without other keys:
 adjusting; white while only arrows are held and the last press moved the
-selection: not at an edge); all the selected track's cells take their selected look
+selection: not at an edge). An empty track (no clip, not recording) has one cell spanning
+the whole row (`SPAN`, x 0–291: nothing in it), its outline round all of it; LEFT/RIGHT have
+nowhere to go in it (LEFT still opens the menu), and the column selected is kept for the rows
+with three (borders shared with the rows above and below are drawn by place on the screen); all the selected track's cells take their selected look
 (the frame stays on the selected one, and B's editing look too), on a dark grey ground
 (`rowGround()`): a rectangle as tall as the frame (its band and the block below; shared border
 rows go dark grey when either row is selected), the screen's whole width, under the button

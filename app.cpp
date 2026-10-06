@@ -58,7 +58,7 @@ void beginSession() {
   Session s = loadSession();
   bpm = roundf(s.bpm * 10) / 10;
   newBpm = roundf(s.newBpm * 10) / 10;
-  if (s.row >= 0 && s.row < ROWS && s.cell >= 0 && s.cell < cellCount(s.row)) {
+  if (s.row >= 0 && s.row < ROWS && s.cell >= 0 && s.cell < maxCells(s.row)) {
     selected = s.row;
     selectedCell = s.cell;
   }

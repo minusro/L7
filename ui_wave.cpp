@@ -286,6 +286,7 @@ void updatePlayheads() {
     // not on its next turn.
     if (v.live != recordingOn(i)) drawTrack(i);
     if (v.live) { updateLive(i); continue; }
+    if (spanRow(i)) continue;                      // (an empty track: one cell, no waveform)
     // The accent colour (white on a range in the accent colour); muted: black.
     bool muted = tr.state == TrackState::Muted;
     int col = -1;

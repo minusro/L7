@@ -40,8 +40,20 @@ constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
 constexpr Cell MENU_BOX = {0, STATUS_H - 4 * PX}, SCENE_BOX = {18, 102}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
-// The cells a row has (the status row's: as many as a track row's).
-inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
+// An empty track (no clip, not recording) has one cell spanning the whole
+// row (SPAN: the cells' width; drawn by drawSpan()): its outline round all of
+// it. The column selected is kept for the rows with three.
+constexpr Cell SPAN = {0, CELL[CELLS - 1].x + CELL[CELLS - 1].w};
+inline bool spanRow(int i) {
+  return i >= 0 && i < NUM_TRACKS && tracks[i].state == TrackState::Empty &&
+         !(recording.track == i && recording.mode != Recording::Idle);
+}
+// The cells a row has (the status row's: as many as a track row's; an empty track's: one).
+inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : spanRow(i) ? 1 : CELLS; }
+// The most a row ever has (for a saved selection).
+inline int maxCells(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
+// A track row's cell's place (its x and width).
+inline const Cell &cellRect(int i, int cell) { return spanRow(i) ? SPAN : CELL[cell]; }
 // The selected cell in row i's terms (on the status row, never the menu cell's).
 inline int selectedCellIn(int i) {
   int c = min(selectedCell, cellCount(i) - 1);

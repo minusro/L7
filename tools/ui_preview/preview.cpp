@@ -159,6 +159,11 @@ int main(int argc, char **argv) {
   selected = 5;                                    // an empty track: A records
   selectedCell = WAVE_CELL;
   render(out + "/ui_empty.png");
+  selected = 4;                                    // track 3 (under the empty track 2), its filter: the shared border by place
+  selectedCell = FILTER_CELL;
+  render(out + "/ui_under_empty.png");
+  selected = 5;
+  selectedCell = WAVE_CELL;
   selected = 2;                                    // a muted track
   render(out + "/ui_muted.png");
   board.heldKeys = m8::BTN_SHIFT;                  // SHIFT + A: cut a clip, paste onto an empty track

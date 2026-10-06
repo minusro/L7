@@ -48,6 +48,7 @@ static void drawBlock(int i, int r, int c, uint16_t color) {
 }
 
 void drawMix(int i) {
+  if (spanRow(i)) return;                          // (an empty track: one cell, drawSpan())
   static bool built = false;
   if (!built) { buildArcs(); built = true; }
   static uint64_t shownFrame[NUM_TRACKS];

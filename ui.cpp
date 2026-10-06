@@ -9,21 +9,38 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
   // the row above / below: dark grey if either is the selected track).
   uint16_t ground = rowGround(i);
   if (i != STATUS_ROW && (t || b) && rowGround(t ? rowAbove(i) : rowBelow(i)) == DARK) ground = DARK;
-  if ((l || rt) && (t || b)) return ground;        // corners: cut
+  bool corner = (l || rt) && (t || b);             // (corners: cut)
   uint16_t own = cellFrame(i, cell);
-  if (own != BG) return own;
-  int ni = t ? rowAbove(i) : b ? rowBelow(i) : i, nc = l ? cell - 1 : rt ? cell + 1 : cell;
   if (i == STATUS_ROW) {                           // (its cells only share sides with each other)
+    if (corner) return ground;
+    if (own != BG) return own;
+    int nc = l ? cell - 1 : rt ? cell + 1 : cell;
     if (t || b || nc < 0 || nc >= cellCount(i)) return ground;
     uint16_t theirs = cellFrame(i, nc);
     return theirs != BG ? theirs : ground;
   }
-  if (ni < 0 || ni >= NUM_TRACKS || nc < 0 || nc >= CELLS) return ground;
-  if (nc != cell) {                                // only a cell right next to it (no space between)
-    const Cell &a = CELL[min(cell, nc)], &n = CELL[max(cell, nc)];
-    if (a.x + a.w - PX != n.x) return ground;
+  if (own != BG && !corner) return own;
+  if (t || b) {
+    // Shared with the row above / below: its selected cell's frame where it
+    // runs over this column (not at that cell's own corners: cut there too),
+    // by place on the screen (an empty track's one cell spans the row).
+    int ni = t ? rowAbove(i) : rowBelow(i);
+    if (ni >= 0 && ni == selected) {
+      int x = cellRect(i, cell).x / PX + c, nc = selectedCellIn(ni);
+      const Cell &n = cellRect(ni, nc);
+      int first = n.x / PX, last = (n.x + n.w) / PX - 1;
+      if (x > first && x < last) {
+        uint16_t theirs = cellFrame(ni, nc);
+        if (theirs != BG) return theirs;
+      }
+    }
+    return ground;
   }
-  uint16_t theirs = cellFrame(ni, nc);
+  int nc = l ? cell - 1 : cell + 1;                // a side: the cell right next to it, if any
+  if (nc < 0 || nc >= cellCount(i)) return ground;
+  const Cell &a = cellRect(i, min(cell, nc)), &n = cellRect(i, max(cell, nc));
+  if (a.x + a.w - PX != n.x) return ground;        // (only a cell right next to it: no space between)
+  uint16_t theirs = cellFrame(i, nc);
   return theirs != BG ? theirs : ground;
 }
 
@@ -33,7 +50,39 @@ uint64_t bordersOf(int i, int cell) {
   uint64_t k = 0;
   for (auto rc : {std::pair<int, int>{1, 0}, {1, 2}, {0, 1}, {2, 1}})
     k = k << 16 | (uint16_t)borderAt(i, cell, rc.first, rc.second, rows, cols);
+  // A track's: the selection next to it too (its frame along a shared border
+  // row is drawn by place, not by those middle blocks), and its own shape.
+  if (i != STATUS_ROW) {
+    bool near = selected == rowAbove(i) || selected == rowBelow(i);
+    k = k * 31 + (near ? (uint64_t)(selectedCellIn(selected) + 1) << 20 | cellFrame(selected, selectedCellIn(selected)) |
+                             (uint64_t)spanRow(selected) << 24 | (uint64_t)(selected == rowAbove(i)) << 25 : 0);
+    k = k * 31 + spanRow(i);
+  }
   return k;
+}
+
+// An empty track's one cell (spanRow()): its border round the whole row and
+// the ground inside, a block row at a time.
+static void drawSpan(int i) {
+  static uint64_t shown[NUM_TRACKS];
+  static uint32_t drawn[NUM_TRACKS];
+  uint64_t key = bordersOf(i, 0) * 31 + rowGround(i);
+  if (drawn[i] == uiGeneration && shown[i] == key) return;
+  drawn[i] = uiGeneration;
+  shown[i] = key;
+  constexpr int COLS = SPAN.w / PX, ROWS_B = CELL_H / PX;
+  static uint16_t line[SPAN.w * PX];
+  uint16_t ground = rowGround(i);
+  auto &t = board.tft();
+  for (int r = 0; r < ROWS_B; r++) {
+    for (int c = 0; c < COLS; c++) {
+      int b = borderAt(i, 0, r, c, ROWS_B, COLS);
+      uint16_t color = b >= 0 ? (uint16_t)b : ground;
+      for (int dy = 0; dy < PX; dy++)
+        for (int dx = 0; dx < PX; dx++) line[dy * SPAN.w + c * PX + dx] = color;
+    }
+    t.writeRect(SPAN.x, rowTop(i) + r * PX, SPAN.w, PX, line);
+  }
 }
 
 void drawTrack(int i) {
@@ -41,6 +90,16 @@ void drawTrack(int i) {
   drawCells(i);
   if (i == STATUS_ROW) {
     drawStatus();
+    return;
+  }
+  // One cell or three: a change redraws everything (the rows next to it share borders).
+  static bool wasSpan[NUM_TRACKS];
+  if (spanRow(i) != wasSpan[i]) {
+    wasSpan[i] = spanRow(i);
+    uiGeneration++;
+  }
+  if (spanRow(i)) {
+    drawSpan(i);
     return;
   }
   drawFilter(i);
