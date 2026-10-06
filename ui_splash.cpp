@@ -55,8 +55,8 @@ static constexpr int LOGO_RIGHT = 12;                // the logo this far right 
 static constexpr int LOGO_X = (320 - LOGO_W) / 2 + LOGO_RIGHT, LOGO_Y = (240 - GROUP_H) / 2 + GROUP_DOWN;
 // The splash's animation, in ms from showSplash(): the logo fades in from
 // black (0-500), then its colour goes once round the hues (500-2500); the
-// copyright line fades in (1500-2000); both fade out (3500-4000). Shown at
-// least this long.
+// copyright line fades in (1500-2000); both fade out once the start-up is
+// done (see INTRO_MS).
 static constexpr uint32_t LOGO_FADE_MS = 500, HUE_MS = 2000, TEXT_FROM_MS = 1500, TEXT_FADE_MS = 500;
 // Meanwhile the L slides in from the left and the 7 from the right, from far
 // off the screen (still about at its edges once they're well lit, ~0.35 s),
@@ -68,9 +68,12 @@ static constexpr int SLIDE_PX = 600;
 // 1 s after its fade starts.
 static constexpr uint32_t RISE_MS = 1000;
 static constexpr int RISE_PX = 8;
+// The start-up work runs once the intro is over (INTRO_MS: the hue cycle done
+// and the copyright line in place), everything still meanwhile; the fade out
+// (OUT_MS) starts once it's done, and not before OUT_FROM_MS.
+static constexpr uint32_t INTRO_MS = max(LOGO_FADE_MS + HUE_MS, TEXT_FROM_MS + RISE_MS);   // 2.5 s
 static constexpr uint32_t OUT_FROM_MS = 3500, OUT_MS = 500;
-static constexpr uint32_t SPLASH_MIN_MS = OUT_FROM_MS + OUT_MS;
-static uint32_t shownAt = 0;
+static uint32_t shownAt = 0, outAt = 0;            // (outAt: the fade out's start; 0: not yet)
 
 static const char COPYRIGHT[] = "\xA9 2026 Daniel Stanciu";
 
@@ -176,7 +179,7 @@ void splashTick() {
     float t = min(1.0f, (ms - LOGO_FADE_MS) / (float)HUE_MS), e = t * t * (3 - 2 * t);
     logo = t >= 1 ? LOGO_COLOR : oklch565(0.8238f, 0.1641f, 164.76f + 360 * e);
   }
-  uint8_t out = ms < OUT_FROM_MS ? 255 : 255 - (uint8_t)(255 * min(ms - OUT_FROM_MS, OUT_MS) / OUT_MS);   // (the fade out)
+  uint8_t out = !outAt ? 255 : 255 - (uint8_t)(255 * min(millis() - outAt, OUT_MS) / OUT_MS);   // (the fade out)
   logo = blend565(logo, BG, out);
   float left = 1 - min(1.0f, ms / (float)SLIDE_MS);              // of the slide
   int shift = (int)lroundf(SLIDE_PX * left * left * left);
@@ -198,61 +201,36 @@ void splashTick() {
   }
 }
 
-// While the splash shows, it's also ticked from yield(), which the SD card's
-// driver calls while it waits on the card: the start-up's card work (most of
-// it) blocks between its own splashTick() calls for longer than the copyright
-// line's fade and rise take, which then went by unseen. At most every
-// TICK_MS (a tick redraws the logo, ~10 ms, holding the card up meanwhile).
-#ifdef TEENSYDUINO
-static constexpr uint32_t TICK_MS = 15;
-static EventResponder fromYield;
-static bool ticking = false;
-static void tickFromYield(EventResponderRef) {
-  static uint32_t last = 0;
-  if (!ticking) return;
-  if (millis() - last >= TICK_MS) {
-    last = millis();
-    splashTick();
-  }
-  fromYield.triggerEvent();                        // (again on the next yield())
-}
-static void tickOnYield(bool on) {
-  ticking = on;
-  if (on) {
-    fromYield.attach(tickFromYield);
-    fromYield.triggerEvent();
-  } else {
-    fromYield.detach();
-  }
-}
-#else
-static void tickOnYield(bool) {}
-#endif
-
 void showSplash() {
   auto &t = board.tft();
   t.fillScreen(BG);                                // (logo and line fade in: splashTick())
   copyrightX = (320 - textWidthPx(COPYRIGHT)) / 2;
   shownAt = millis();
+  outAt = 0;
   splashTick();
-  tickOnYield(true);
 }
 
-// The slide played through (blocking, ~1 s): the start-up work after it calls
-// splashTick() only between its steps (and from the card's waits), and the
-// card's start alone outlasts the slide, which then went by unseen or jerky. (The splash stays SPLASH_MIN_MS
-// anyway, so this only adds to a start-up that takes longer than the rest.)
-void splashSlideIn() {
-  while (millis() - shownAt < SLIDE_MS) {
+// The intro played through (blocking, INTRO_MS): the start-up work after it
+// calls splashTick() only between its steps, and the card's start alone
+// outlasts the slide and the copyright line's rise, which then went by unseen.
+// Everything's still from here until the fade out.
+void splashIntro() {
+  while (millis() - shownAt < INTRO_MS) {
     splashTick();
     delay(1);
   }
   splashTick();
 }
 
+// The fade out, from now (the start-up done; not before OUT_FROM_MS), then
+// the screen cleared.
 void hideSplash() {
-  tickOnYield(false);
-  while (millis() - shownAt < SPLASH_MIN_MS) {
+  while (millis() - shownAt < OUT_FROM_MS) {
+    splashTick();
+    delay(10);
+  }
+  outAt = millis();
+  while (millis() - outAt < OUT_MS) {
     splashTick();
     delay(10);
   }

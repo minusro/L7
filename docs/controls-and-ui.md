@@ -224,11 +224,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   scale: 138×65 px here, 12 px right of the middle; the menu's corner: 55×26),
   fading in (0–0.5 s) while the L slides in from the left and the 7 from the
   right (from 600 px off: still about at the screen's edges once well lit;
-  cubic ease-out, in place at 1 s; played through before the start-up work goes on,
-  `splashSlideIn()`, since that only ticks the splash between its steps; meanwhile
-  the splash is also ticked from `yield()`, which the SD driver calls while it waits
-  on the card, at most every 15 ms, so the copyright line's fade and rise show too), its hue going
+  cubic ease-out, in place at 1 s), its hue going
   once round, with "© 2026 Daniel Stanciu" centred near the bottom in light grey, fading in (1.5–2 s) as it rises 8 px from level with the status row's text (where the clock's is) into place (cubic ease-out, in place at 2.5 s), in
-  the app's 3×5 block font (2×2 px blocks; 7×7 ©); 4 s (fading out from 3.5 s); startup messages
-  print under the logo.
+  the app's 3×5 block font (2×2 px blocks; 7×7 ©). This intro (2.5 s) plays through
+  first (`splashIntro()`); the startup work comes after it, everything still meanwhile
+  (startup messages print under the logo), and the fade out (0.5 s) starts once that's
+  done, not before 3.5 s.
 * Headphones plugged in → speaker off (sense pin 22 < 300).

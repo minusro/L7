@@ -181,7 +181,7 @@ void setMainSelection(int row, int cell);   // and set (the menu open: for when 
 // waits until it has been up a moment, then clears the screen (the menu follows).
 void showSplash();
 void hideSplash();
-void splashSlideIn();                    // the L and the 7 sliding in, played through (after showSplash())
+void splashIntro();                      // the intro (the slide, the hue cycle, the copyright line's rise) played through, after showSplash()
 void splashTick();                       // the logo's colour cycle: call while starting up (hideSplash() finishes it)
 uint16_t hueCycle(float phase);          // the logo's hue at a phase (0-1) of one turn round the hues
 int splashBottom();                    // y just below the logo (for startup messages)
