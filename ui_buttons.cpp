@@ -314,28 +314,22 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
         for (int c = 0; c < w; c++)
           if (on[r][c]) block(c0 + c, r0 + copy * (ROWS4 + 1) + r);
   } else if (icon == ICON_METRO) {
-    // A metronome (a trapezoid, its pendulum out past the top; crossed out
-    // while it's clicking: what SHIFT+A will change), 7 x 8, and
-    // the setting now (0, A or 1) right next to it, up by its pendulum
-    // (rows 1-5); placed in the backdrop together.
-    static const char *const METRONOME[8] = {".....#.", "..###..", "..#.#..", ".#.#.#.", ".#.#.#.", ".##..#.", "#.....#", "#######"};
-    // (The setting's character 4 rows tall: the font's less a middle row.)
-    static const char *const SETTING[3][4] = {{"###", "#.#", "#.#", "###"}, {".#.", "#.#", "###", "#.#"}, {".#.", "##.", ".#.", "###"}};   // 0, A, 1
-    const char *const *g = SETTING[metronomeMode()];
-    const int gw = 3, w = 7 + 1 + gw;
-    int c0 = max(PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, PANEL_LEFT + 1), r0 = (rows - 8) / 2;   // (a block clear of the backdrop's edge)
-    for (int r = 0; r < 8; r++)
-      for (int c = 0; c < 7; c++)
-        if (METRONOME[r][c] == '#') block(c0 + c, r0 + r);
-    if (metronomeOn && transport.running)          // clicking now: crossed out (a diagonal, the backdrop's colour along its right)
-      for (int r = 0; r < 8; r++) {
-        int c = r * 6 / 7;
-        block(c0 + c, r0 + r);
-        if (c + 1 < 7) blockIn(c0 + c + 1, r0 + r, bg);
+    // A metronome, filled (a trapezoid; its pendulum a slit up through it and
+    // out past the top), as big as the backdrop holds with a block of margin
+    // (10 x 11); crossed out while it's clicking (what SHIFT+A will change):
+    // a diagonal cut through it, carried on outside it.
+    static const char *const METRONOME[11] = {
+        ".......#..", "......#...", "...###....", "...###....", "..###.##..", "..###.##..",
+        "..###.##..", ".###.####.", ".###.####.", "####.#####", "##########"};
+    constexpr int W = 10, H = 11;
+    int c0 = PANEL_LEFT + 1, r0 = 1;
+    bool crossed = metronomeOn && transport.running;
+    for (int r = 0; r < H; r++)
+      for (int c = 0; c < W; c++) {
+        bool on = METRONOME[r][c] == '#';
+        if (crossed && c == r * (W - 1) / (H - 1)) on = !on;   // (the cross: a gap through the body, ink outside it)
+        if (on) block(c0 + c, r0 + r);
       }
-    for (int r = 0; r < 4; r++)
-      for (int c = 0; c < gw; c++)
-        if (g[r][c] == '#') block(c0 + 7 + c, r0 + 1 + r);
   } else if (icon != ICON_NONE) {
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
