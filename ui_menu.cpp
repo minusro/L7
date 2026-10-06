@@ -294,19 +294,19 @@ void drawMenu() {
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
   // The edge mark: in a strip along the right edge, the screen's height, a
-  // third as wide as the space right of the cards (the loaded project's dark
-  // colour; black with none), centred in it. Dark grey; where RIGHT would
-  // leave the menu, the loaded project's colour (light grey with none: RIGHT
-  // then makes a new project in the first empty slot); while an arrow is
-  // held that leaves once let go, white (with no project: that slot's colour).
+  // third as wide as the space right of the cards (the loaded project's
+  // colour; black with none), centred in it. Dark grey; light grey where
+  // RIGHT would leave the menu (with no project: making a new one in the
+  // first empty slot); while an arrow is held that leaves once let go, white
+  // (with no project: that slot's colour).
   static uint16_t mark, shownStrip;              // the edge mark's colour and the strip's shown
   constexpr int cardsRight = (CARDS_X + COLS * CARD_W + (COLS - 1) * CARD_GAP) * PX;
   constexpr int stripW = (320 - cardsRight) / 3 / PX * PX, stripX = 320 - stripW;
   bool loaded = projectCurrent() >= 0;
   int empty = menuFirstEmptySlot();
-  uint16_t strip = loaded ? ACCENT_DARK : BG;
+  uint16_t strip = loaded ? ACCENT : BG;
   uint16_t ink = screenSwitchPending() ? (loaded ? INK : PROJECT_COLORS[max(empty, 0)])
-               : menuLeavesOn(m8::BTN_RIGHT) ? (loaded ? ACCENT : LIGHT) : DARK;
+               : menuLeavesOn(m8::BTN_RIGHT) ? LIGHT : DARK;
   if (all || strip != shownStrip) {
     shownStrip = strip;
     board.tft().fillRect(stripX, 0, stripW, 240, strip);
