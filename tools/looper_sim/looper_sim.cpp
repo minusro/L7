@@ -1353,6 +1353,7 @@ int main(int argc, char **argv) {
       for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
         if (s0 + i - logFrom < outLog.size()) outLog[s0 + i - logFrom] = outL.data[i];
     };
+    feedRamp = true;                                 // (the input too: not scaled by the master volume either)
     check(recordPress(6, true) && recording.mode == Recording::WaitBar && recording.resample,
           "resample on track 7: waits for the next bar line");
     for (int i = 0; i < 4000 && recording.mode == Recording::WaitBar; i++) block();
@@ -1365,12 +1366,13 @@ int main(int argc, char **argv) {
           "stopped: track 1 goes quiet where the loop ends");
     runUntilIdle();
     afterAudio = nullptr;
+    feedRamp = false;
     setMasterVolume(MASTER_VOLUME_UNITY);
     bool same = true;
     for (uint32_t f : {0u, 1000u, 30000u, 100000u, tracks[6].recordedFrames - 1})
       if (fabsf(wavLeft(6, f) - outLog[start + f - logFrom] / masterNow) > 3) same = false;
     check(tracks[6].state == TrackState::Playing && tracks[6].loopBars == 2 && same && outLog[start + 1000 - logFrom] != 0,
-          "track 7 holds 2 bars of what was played, without the master volume (turned down 3 steps)");
+          "track 7 holds 2 bars of what was played, tracks and input, without the master volume (turned down 3 steps)");
     check(takeResampled() == 6 && takeResampled() == -1, "reported once as resampled");
     uint32_t sample = tracks[6].sample;
     int count = sceneCount(), pos = sceneCurrent();

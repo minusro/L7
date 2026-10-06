@@ -85,9 +85,8 @@ ms to seconds and starves the streams. So:
   while a clip is playing unmuted): records the
   app's output instead of the input — the engine writes each output frame
   into `inputRing` while it's on (`recording.resample`), no latency shift. The
-  master volume isn't in it (the tracks as they are, with their own volume,
-  balance and filters); only the monitored audio input is scaled by it, as
-  it is on its way to the output.
+  master volume isn't in it: neither the playing tracks (with their own
+  volume, balance and filters) nor the audio input are scaled by it.
   Always starts on a bar line (the history before the press holds input). A
   recording queued behind one of the other kind starts on the next bar line
   instead of where it ends. Stopped: the other playing tracks go quiet where

@@ -355,9 +355,9 @@ void LooperEngine::update() {
     }
     transport.now = transport.now + 1;
 
-    if (captureOutput) {                             // (without the metronome) the tracks as they are, the master volume
-      int16_t cl = (int16_t)constrain(mixL + monL * outGain, -32767.0f, 32767.0f);   // only on the monitored input
-      int16_t cr = (int16_t)constrain(mixR + monR * outGain, -32767.0f, 32767.0f);
+    if (captureOutput) {                             // (without the metronome) the tracks and the input as they are:
+      int16_t cl = (int16_t)constrain(mixL + monL, -32767.0f, 32767.0f);   // the master volume is not in it
+      int16_t cr = (int16_t)constrain(mixR + monR, -32767.0f, 32767.0f);
       inputRing[at % INPUT_FRAMES] = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
     }
     float click = clickSample() * outGain;
