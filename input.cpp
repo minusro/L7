@@ -146,8 +146,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     openMenu();
     return;
   }
-  // RIGHT off the menu's right edge, UP off its top or DOWN off its bottom
-  // (menuLeavesOn()): back to the looper once that key is let go, as A on the
+  // RIGHT off the menu's right edge, LEFT off its left, UP off its top or
+  // DOWN off its bottom (menuLeavesOn()): back to the looper once that key is let go, as A on the
   // loaded project's card; with no project loaded, a new one is made in the
   // first empty slot (its card selected), as A there.
   // (leaveOnRelease: likewise)
@@ -168,7 +168,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
     return;
   }
-  for (uint8_t key : {m8::BTN_RIGHT, m8::BTN_UP, m8::BTN_DOWN})
+  for (uint8_t key : {m8::BTN_RIGHT, m8::BTN_UP, m8::BTN_DOWN, m8::BTN_LEFT})
     if (menuLeavesOn(key) && (pressed & key) && !repeat && !(keys & (m8::BTN_SHIFT | m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY))) {
       leaveOnRelease = key;
       return;
