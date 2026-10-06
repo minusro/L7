@@ -62,7 +62,7 @@ the menu or splash). 8 rows: 7 tracks of 30 px from the top of the screen, a 4 p
 then the status row (y 214–239, to the screen's bottom edge, its cells framed all round); cells waveform | filter | volume | button (square). Columns:
 waveform x 0–187, filter 186–245, volume 244–291, then a block's space
 before the buttons (x 294–319); the status row's four cells share
-x 0–291 (menu x 0–23, scene 22–119, clock 118–211, tempo 210–291). Cells share a one-block border
+x 0–291 (menu x 0–21, scene 20–117, clock 116–209, tempo 208–291). Cells share a one-block border
 with their neighbours (left, right, above and below; a cell only shares a
 side with one right next to it): the selection frame is drawn there (`borderAt()` in ui.cpp), so
 content uses the cell's full size.
