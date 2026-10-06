@@ -506,10 +506,13 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
-  if ((transportKey || (edit && onStatus)) && shift) transportRestart();
+  if ((transportKey || (edit && onStatus && !onScene)) && shift) transportRestart();
+  if (edit && onStatus && shift && onScene) sceneChanged = sceneDuplicate();   // SHIFT+A on the scene cell: a copy of the scene after it, as SHIFT+B twice
   if (edit && onStatus && !shift) {
-    if (onScene) sceneChanged = sceneDuplicate();   // a copy of the scene after it, as SHIFT+B twice
-    else if (onClock) {                            // play / stop, as START
+    if (onScene) {                                 // the next scene: on the next bar line playing (as SHIFT+UP); stopped, at once and the clock started
+      sceneChanged = sceneStep(1);
+      if (!transport.running) transportStart();
+    } else if (onClock) {                            // play / stop, as START
       if (transport.running) transportStop();
       else transportStart();
     } else if (onTempo) tapTempo();
