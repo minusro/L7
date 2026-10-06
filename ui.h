@@ -34,7 +34,7 @@ constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: four cells (to the volume cells' edge), left
-// to right: the menu's (a small square with the edge mark, a chevron left:
+// to right: the menu's (a small square with the edge mark, a triangle left:
 // the menu's that way; not selectable), the scene (the widest), the clock
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
@@ -50,9 +50,10 @@ inline int selectedCellIn(int i) {
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // The edge mark: where the other screen is (the menu to the looper's left,
-// the looper to the menu's right; any arrow off a screen's edge goes there),
-// on the status row's line: a small chevron (3 x 5 blocks, a block wide)
-// pointing left in the looper's view (its menu cell: the space left of the
+// the looper to the menu's right: LEFT off the looper's left edge, RIGHT off
+// the menu's right edge),
+// on the status row's line: a small filled triangle (3 x 5 blocks) pointing
+// left in the looper's view (its menu cell: the space left of the
 // scene cell, 2 blocks short of its frame), right in the menu (the same space
 // at the right edge, mirrored, centred top to bottom), in ink on the
 // ground (the whole space). The looper's: dark grey, black on the selected
@@ -159,16 +160,16 @@ int tagWidth(const char *text);
 // every part redraws in full when its last draw was of another generation.
 extern uint32_t uiGeneration;
 
-// ---- The menu (ui_menu.cpp): the looper's other screen, the whole screen
-// (no action button), opened with any arrow off the looper's edge, left by
-// loading a project (or any arrow off its own edge); the arrows move its
+// ---- The menu (ui_menu.cpp): the looper's other screen, to its left, the
+// whole screen (no action button), opened with LEFT off the looper's left
+// edge, left by loading a project (or RIGHT off its own right edge); the arrows move its
 // selection. While it's open the track rows aren't drawn.
 // Its ground: dark grey (the whole screen).
 constexpr uint16_t MENU_BG = DARK;
 bool menuOpen();
 void openMenu();
 void closeMenu();
-bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: off its edge (UP on the top row, DOWN on the last item, LEFT / RIGHT off a card row's ends or a list item; a project loaded)
+bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: RIGHT off its right edge (a card row's right end, a list item; a project loaded)
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)
 bool menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items (true: it moved)
 bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)

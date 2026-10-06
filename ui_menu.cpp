@@ -1,7 +1,7 @@
-// ui_menu.cpp — the menu (see ui.h): the looper's other screen, the whole
-// screen (no action button). Opened with any arrow off the looper's edge;
-// left by loading a project (A on the loaded one: just back) or any arrow off
-// its own edge (menuLeavesOn()). Twelve cards (three rows of
+// ui_menu.cpp — the menu (see ui.h): the looper's other screen, to its left,
+// the whole screen (no action button). Opened with LEFT off the looper's left
+// edge; left by loading a project (A on the loaded one: just back) or RIGHT
+// off its right edge (menuLeavesOn()). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
 // "ENTER STORAGE MODE"; it scrolls once it has more than four. A runs
 // the item's action when let go. On a slot, A loads its project (an
@@ -29,7 +29,7 @@
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
 // logo small, in the item's colour (actionRestColor()). At the right edge,
-// centred top to bottom, the edge mark, a black chevron pointing right (the looper's, mirrored) while a
+// centred top to bottom, the edge mark, a black triangle pointing right (the looper's, mirrored) while a
 // project is loaded: only then do the edges lead out (menuLeavesOn()).
 #include "ui.h"
 #include "ui_font.h"
@@ -332,8 +332,8 @@ void menuLeaveStatus() {
 bool menuKeys(uint8_t pressed) {
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   int k = menuSel;
-  // LEFT/RIGHT: along a card row (not on to another: off its ends, or
-  // sideways off a list item, they leave the menu: menuLeavesOn()).
+  // LEFT/RIGHT: along a card row (not on to another; RIGHT off its right
+  // end, or on a list item, leaves the menu: menuLeavesOn()).
   if (k < CARDS) {
     if (pressed & m8::BTN_LEFT && k % COLS > 0) k--;
     if (pressed & m8::BTN_RIGHT && k % COLS < COLS - 1) k++;                                // (A-D the bottom row: UP goes on through the letters)
@@ -367,16 +367,9 @@ void menuExportStatus(const char *text, int nameAt) {
 
 bool menuLeavesOn(uint8_t key) {
   if (!shown || onStatus || projectCurrent() < 0) return false;   // (no project loaded: one has to be chosen first)
-  // Any arrow off the screen's edge: UP on the top row (I-L), DOWN on the
-  // list's last item, LEFT / RIGHT off a card row's ends or a list item's sides.
-  bool card = menuSel < CARDS;
-  switch (key) {
-    case m8::BTN_UP: return card && screenPos(menuSel) < COLS;
-    case m8::BTN_DOWN: return menuSel == ITEMS - 1;
-    case m8::BTN_LEFT: return !card || menuSel % COLS == 0;
-    case m8::BTN_RIGHT: return !card || menuSel % COLS == COLS - 1;
-  }
-  return false;
+  // RIGHT off the screen's right edge (the looper's that way): off a card
+  // row's right end, or a list item's side.
+  return key == m8::BTN_RIGHT && (menuSel >= CARDS || menuSel % COLS == COLS - 1);
 }
 
 void openMenu() {

@@ -31,7 +31,7 @@ static constexpr int INSET = 2 * PX;               // text from the cell's edges
 // view its chevron's middle column where the triangle's was (a block right
 // of the space's middle); the menu's mirrored.
 void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground) {
-  static const char *const CHEVRON_LEFT[5] = {"..#", ".#.", "#..", ".#.", "..#"};
+  static const char *const CHEVRON_LEFT[5] = {"..#", ".##", "###", ".##", "..#"};   // (a filled triangle)
   constexpr int COLS = EDGE_W / PX, ROWS = STATUS_H / PX, CW = 3, CH = 5;
   constexpr int C0 = COLS / 2, R0 = (ROWS - CH) / 2;   // (left: columns 4-6 of 9)
   static uint16_t px[STATUS_H * EDGE_W];
