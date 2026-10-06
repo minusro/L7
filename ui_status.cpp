@@ -5,7 +5,7 @@
 // row is selected:
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
-//   first cell: a small square with two small dark grey triangles pointing down
+//   first cell: a small square with a thick dark grey chevron pointing down
 //     (DOWN on the status row opens the menu); not selectable, no frame.
 //   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
@@ -27,13 +27,13 @@
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
-// The edge chevron: two small filled triangles, 3 blocks wide and 2 high,
-// one behind the other with a block between, pointing down (rows bottom-up: up).
+// The edge chevron: 7 blocks wide and 5 high, its arms two blocks thick,
+// pointing down (rows bottom-up: up).
 void drawEdgeChevron(int x, int y, bool down, uint16_t color) {
-  static const char *const ROWS_DOWN[5] = {"###", ".#.", "...", "###", ".#."};
+  static const char *const ROWS_DOWN[5] = {"#.....#", "##...##", ".##.##.", "..###..", "...#..."};
   auto &t = board.tft();
   for (int r = 0; r < 5; r++)
-    for (int c = 0; c < 3; c++)
+    for (int c = 0; c < 7; c++)
       if (ROWS_DOWN[down ? r : 4 - r][c] == '#') t.fillRect(x + c * PX, y + r * PX, PX, PX, color);
 }
 
@@ -131,7 +131,7 @@ void drawStatus() {
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
-    // The menu cell: two small triangles down, dark grey (drawn when cleared: it never changes).
+    // The menu cell: a thick chevron down, dark grey (drawn when cleared: it never changes).
     if (cleared) drawEdgeChevron(CHEVRON_X, top + CHEVRON_DY, true, DARK);
   }
   {

@@ -118,8 +118,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
-  small square, not selectable, with two small dark grey filled triangles pointing down,
-  one behind the other with a block between (3×2 blocks each): DOWN on the status row opens the menu), then the scene cell
+  small square, not selectable, with a thick dark grey chevron pointing down
+  (7×5 blocks, its arms two blocks thick): DOWN on the status row opens the menu), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -170,7 +170,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   While the clock runs, the loaded project's card shows a small play icon right of its letter (both 2 blocks left of centre), black like it, on the first half of each beat (pulsing). An empty slot is a grey outline, its letter grey (light grey when selected; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
   in the action button's colour (not its pressed look: it stays put while A is held). In the top
-  left corner, the status row's triangles flipped (pointing up, dark grey, as far from the top
+  left corner, the status row's chevron flipped (pointing up, dark grey, as far from the top
   as it is from the bottom there), only while a project is loaded: only then do UP on the top row
   and DOWN on the last item leave the menu. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
