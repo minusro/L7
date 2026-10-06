@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>L7 Quick Guide</title>
+<style>
+  @page { size: A4; margin: 16mm 16mm 18mm 16mm; }
+  :root {
+    --ink: #1d1d1f;
+    --muted: #5d5d63;
+    --rule: #d9d9de;
+    --accent: #1fa98a;
+    --tint: #eef7f4;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 10pt; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    line-height: 1.42;
+  }
+  h1 { font-size: 26pt; margin: 0 0 2pt; letter-spacing: -0.5pt; }
+  .sub { color: var(--muted); font-size: 11.5pt; margin: 0 0 14pt; }
+  h2 {
+    font-size: 13pt; margin: 16pt 0 5pt; padding-bottom: 3pt;
+    border-bottom: 1.5pt solid var(--accent); break-after: avoid;
+  }
+  h3 { font-size: 10.5pt; margin: 10pt 0 3pt; break-after: avoid; }
+  p { margin: 0 0 6pt; }
+  ul, ol { margin: 0 0 6pt; padding-left: 15pt; }
+  li { margin-bottom: 2.5pt; }
+  .key {
+    display: inline-block; padding: 0 4pt; border: 0.8pt solid #b8b8c0; border-radius: 3pt;
+    background: #f6f6f8; font-size: 8.6pt; font-weight: 600; line-height: 1.35; white-space: nowrap;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 8pt; break-inside: auto; }
+  th, td { text-align: left; vertical-align: top; padding: 3.5pt 6pt; border-bottom: 0.6pt solid var(--rule); }
+  th { font-size: 8.6pt; text-transform: uppercase; letter-spacing: 0.4pt; color: var(--muted); border-bottom: 1pt solid var(--ink); }
+  tr { break-inside: avoid; }
+  td:first-child { width: 33%; }
+  .fig { display: flex; gap: 12pt; align-items: flex-start; margin: 6pt 0 8pt; break-inside: avoid; }
+  .fig img { width: 62%; border-radius: 4pt; image-rendering: pixelated; border: 0.6pt solid #000; }
+  .fig .legend { flex: 1; font-size: 9pt; }
+  .fig .legend p { margin: 0 0 4pt; }
+  .note {
+    background: var(--tint); border-left: 3pt solid var(--accent); padding: 5pt 8pt; margin: 6pt 0 8pt;
+    font-size: 9.2pt; break-inside: avoid;
+  }
+  .two { columns: 2; column-gap: 16pt; }
+  .two > * { break-inside: avoid; }
+  .page-break { break-before: page; }
+  code { font-family: "SF Mono", Menlo, monospace; font-size: 8.6pt; background: #f2f2f4; padding: 0 2pt; border-radius: 2pt; }
+  .footer-note { color: var(--muted); font-size: 8.5pt; margin-top: 14pt; }
+</style>
+</head>
+<body>
+
+<h1>L7</h1>
+<p class="sub">A 7-track looper for the Dirtywave M8. Quick user's guide.</p>
+
+<p>L7 replaces the M8's own firmware with a live looper. You record loops from the M8's line input onto 7 tracks, shape each one (range, filter, volume, balance), and store combinations as <b>scenes</b>. You keep up to 12 <b>projects</b> on the SD card, and you can export any of them as an Ableton Live set.</p>
+
+<p>The M8's keys are named on the device: the arrows, <span class="key">SHIFT</span>, <span class="key">START</span>, <span class="key">B</span> (OPT), <span class="key">A</span> (EDIT) and the power key. This guide uses those names.</p>
+
+<h2>The screen</h2>
+<div class="fig">
+  <img src="img/screen.png" alt="The looper's main screen">
+  <div class="legend">
+    <p><b>Track rows</b>: tracks 1 (top) to 7. Each row has three cells and a button.</p>
+    <p><b>Waveform</b>: the recorded loop; the bright part is the range that plays, the line is the playhead.</p>
+    <p><b>Filter</b>: the response of the track's highpass and lowpass filter.</p>
+    <p><b>Volume</b>: the track's level and balance, with a level meter.</p>
+    <p><b>Button</b> (right): the track number, filled while the track plays, outlined while it's muted, dim while it's empty.</p>
+    <p><b>Status row</b> (bottom): the scene (<code>SCN 3/7</code>), the clock (bar.beat.step), the tempo, and the <b>action button</b>, which always shows what <span class="key">A</span> will do.</p>
+  </div>
+</div>
+<p>The selected cell has a light frame. Move it with the arrows. The colour accents follow the loaded project's colour.</p>
+
+<h2>Keys at a glance</h2>
+<table>
+  <tr><th>Keys</th><th>What they do</th></tr>
+  <tr><td>Arrows</td><td>Move the selection: <span class="key">UP</span>/<span class="key">DOWN</span> between rows, <span class="key">LEFT</span>/<span class="key">RIGHT</span> between cells.</td></tr>
+  <tr><td><span class="key">A</span> on a track</td><td>Empty track: record, press again to stop. Track with a clip: mute / unmute.</td></tr>
+  <tr><td><span class="key">B</span> held + arrows</td><td>Adjust the selected cell (see below).</td></tr>
+  <tr><td><span class="key">B</span> twice</td><td>Reset the cell: whole loop, filter open, volume at unity and balance centred.</td></tr>
+  <tr><td><span class="key">SHIFT</span> + <span class="key">A</span></td><td>Cut the track's clip to the clipboard, or paste it onto an empty track. On a recording track: cancel the recording.</td></tr>
+  <tr><td><span class="key">SHIFT</span> + <span class="key">LEFT</span>/<span class="key">RIGHT</span></td><td>Put the previous / next recording on the card on the track (in name order).</td></tr>
+  <tr><td><span class="key">SHIFT</span> + <span class="key">UP</span>/<span class="key">DOWN</span></td><td>Next / previous scene.</td></tr>
+  <tr><td><span class="key">START</span></td><td>Play from 1.1.1 / stop.</td></tr>
+  <tr><td><span class="key">SHIFT</span> + <span class="key">START</span></td><td>Restart from 1.1.1, also while playing.</td></tr>
+  <tr><td><span class="key">B</span> + <span class="key">A</span> on an empty track</td><td>Resample: record what you hear onto this track.</td></tr>
+  <tr><td><span class="key">B</span> + <span class="key">A</span> on the scene cell</td><td>Open the menu (projects, export, storage mode).</td></tr>
+  <tr><td>Power key (hold)</td><td>Switch off. Everything is saved first.</td></tr>
+</table>
+
+<h2>Recording</h2>
+<ol>
+  <li>Plug your source into the M8's line input. The input is always heard.</li>
+  <li>Select an empty track and press <span class="key">A</span>. If the clock is stopped, it starts and recording begins on bar 1. If it's running, recording starts on the next bar line. If you press within about a quarter of a second after a bar line, it starts on that bar line instead.</li>
+  <li>Press <span class="key">A</span> again to stop. Loops are always whole bars. If you stop within a beat after a bar line, the loop ends there; otherwise recording carries on to the end of that bar. The longest loop is 32 bars.</li>
+  <li>The loop starts playing as soon as it's done, with no gap.</li>
+</ol>
+<p>Pressing <span class="key">A</span> on another empty track while one records stops the first and queues the next one to start exactly where the first ends. In a new, empty project a metronome click plays until the first loop is complete.</p>
+
+<h2>Shaping a track (B held + arrows)</h2>
+<table>
+  <tr><th>Cell</th><th>LEFT / RIGHT</th><th>UP / DOWN</th></tr>
+  <tr><td>Waveform</td><td>Move the range's start. Tap twice to move it by its own length.</td><td>Make the range longer / shorter (¼ bar up to the whole loop). Tap twice for halves and doubles.</td></tr>
+  <tr><td>Filter</td><td>Move the band</td><td>Widen / narrow the band</td></tr>
+  <tr><td>Volume</td><td>Balance</td><td>Volume (off, then steps of 7.5 dB)</td></tr>
+  <tr><td>Scene cell</td><td></td><td>Next / previous scene</td></tr>
+  <tr><td>Clock cell</td><td colspan="2">Master volume, one step per press (each project keeps its own)</td></tr>
+  <tr><td>Tempo cell</td><td>±0.1 BPM</td><td>±1 BPM (30–240 BPM)</td></tr>
+</table>
+<p>Changing the tempo re-pitches the loops, like a turntable. The tempo belongs to the project.</p>
+
+<h3>The status row with A</h3>
+<ul>
+  <li><b>Scene cell</b>: start again from 1.1.1.</li>
+  <li><b>Clock cell</b>: play / stop.</li>
+  <li><b>Tempo cell</b>: tap tempo. The tempo follows your taps, and every 4th tap after the first restarts from 1.1.1 (on the nearest bar while playing).</li>
+</ul>
+
+<h2>Scenes</h2>
+<p>A scene is a snapshot of all 7 tracks: which clip each plays, its range, mute, filter, volume and balance. Whatever you change updates the current scene as you go; there is no save step.</p>
+<ul>
+  <li><span class="key">SHIFT</span> + <span class="key">UP</span>/<span class="key">DOWN</span> steps through the scenes. While playing, the change happens on the next bar line after you let go of <span class="key">SHIFT</span>; the scene number flashes until then.</li>
+  <li>Below the first scene is <b>0*</b>, an empty scene. Above the last is <b>N+1*</b>, a copy of the last one. Changing either turns it into a real scene. Tap <span class="key">UP</span> or <span class="key">DOWN</span> twice with <span class="key">SHIFT</span>, holding the second tap, to jump to N+1* or 0*.</li>
+  <li><span class="key">SHIFT</span> + <span class="key">B</span> twice duplicates the scene.</li>
+  <li>Cut a scene with <span class="key">SHIFT</span>, then <span class="key">B</span>, then <span class="key">A</span> (in that order). Paste it after the current one with <span class="key">B</span>, then <span class="key">SHIFT</span>, then <span class="key">A</span>. Cutting a scene with no clips removes it but leaves the clipboard as it was.</li>
+</ul>
+
+<h2>Resampling</h2>
+<p>With a clip playing unmuted, select an empty track and press <span class="key">B</span> + <span class="key">A</span>. L7 records everything you hear (tracks and input, but not the master volume) from the next bar line, like a normal recording. When it's saved, it moves to a new scene right after the current one, on the same track, and the clips that were muted come along, still muted. The action button shows a record dot with a plus while resampling is available.</p>
+
+<h2>Projects and the menu</h2>
+<div class="fig">
+  <img src="img/menu.png" alt="The menu">
+  <div class="legend">
+    <p>Open the menu with <span class="key">B</span> + <span class="key">A</span> on the scene cell. The clock keeps running.</p>
+    <p><b>Cards A–L</b>: the 12 project slots. A filled card is the loaded project, an outlined one has a project, a grey one is empty.</p>
+    <p><b>The list</b>: export to Ableton, and storage mode.</p>
+  </div>
+</div>
+<table>
+  <tr><th>On a card</th><th>What it does</th></tr>
+  <tr><td><span class="key">A</span>, <span class="key">B</span> or <span class="key">START</span></td><td>Load that project (on an empty slot: start a new one) and go back to the looper. While playing, it comes in on the next bar line.</td></tr>
+  <tr><td><span class="key">SHIFT</span> + <span class="key">A</span></td><td>Cut the project to the project clipboard, or paste it into an empty slot.</td></tr>
+</table>
+<p>Each project keeps its own scenes, tempo and master volume. New projects start with the tempo and master volume you last set by hand. Opening the menu with a project that has no clips at all deletes that project.</p>
+
+<h2>Exporting to Ableton Live</h2>
+<p>Load the project, open the menu and choose <b>EXPORT ABLETON PROJECT</b>. The clock stops and L7 writes a Live 11 project to the card, in <code>/L7/EXPORTS/L7 A001 Project/</code> (the project's letter, then the next free number). The label then reads <b>SAVED AS L7 A001</b>, and the button stays off until you close the menu.</p>
+<ul>
+  <li>7 audio tracks, coloured like the project, each with a highpass and a lowpass Auto Filter and a Utility.</li>
+  <li>One scene per L7 scene that has clips, plus an empty one at the end. The current scene's clips are armed to play when the set opens.</li>
+  <li>Each clip keeps its loop range, start, mute, volume (as clip gain), balance and filter settings (as clip envelopes).</li>
+  <li>The samples are copied into the project, so you can move it anywhere.</li>
+</ul>
+
+<h2>Storage mode: the card on your computer</h2>
+<p>In the menu, choose <b>ENTER STORAGE MODE</b>, then connect the M8 to your computer with a USB cable. The SD card mounts as a normal drive. The clock stops, and the screen shows the connection state.</p>
+<p>When you're done, eject the drive on the computer, or press <span class="key">START</span> on the M8. L7 reads the card again and you're back in the menu.</p>
+<div class="note">Always eject or press <span class="key">START</span> before unplugging. Files you add, rename or delete on the computer are picked up when you leave storage mode.</div>
+
+<h2>What's on the card</h2>
+<table>
+  <tr><th>Folder</th><th>Contents</th></tr>
+  <tr><td><code>/L7/SAMPLES</code></td><td>Every recording, as a WAV file named <code>A30012.wav</code>: the project letter, the track number (1–7) and a number.</td></tr>
+  <tr><td><code>/L7/PROJECTS</code></td><td>The projects, <code>A.L7P</code> to <code>L.L7P</code>. An empty slot has no file.</td></tr>
+  <tr><td><code>/L7/EXPORTS</code></td><td>The Ableton projects you exported.</td></tr>
+  <tr><td><code>/L7/DATA</code></td><td>Everything else L7 needs, including about 180 MB of space kept ready for new recordings.</td></tr>
+</table>
+<p>Recordings stay on the card even when no project uses them any more.</p>
+
+<h2>Good to know</h2>
+<ul>
+  <li>L7 saves as you go: tracks, scenes, tempo and the loaded project survive switching off.</li>
+  <li>When an action can't run right now (for example paste with an empty clipboard), the action button turns grey and <span class="key">A</span> does nothing.</li>
+  <li>The headphone output mutes the speaker automatically.</li>
+  <li>MIDI clock and start/stop go out on the M8's MIDI out.</li>
+</ul>
+
+<p class="footer-note">L7 © 2026 Daniel Stanciu.</p>
+</body>
+</html>
