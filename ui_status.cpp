@@ -27,20 +27,23 @@
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
-// The edge mark (ui.h), built in a buffer and sent at once.
-void drawEdgeMark(int y, bool down, uint16_t ink, uint16_t ground) {
-  static const char *const TRIANGLE_DOWN[3] = {"#####", ".###.", "..#.."};
-  constexpr int COLS = EDGE_W / PX, ROWS = STATUS_H / PX, TW = 5, TH = 3;
-  constexpr int C0 = (COLS - TW) / 2 + 1, R0 = (ROWS - TH) / 2;   // (a block right of the middle)
+// The edge mark (ui.h), built in a buffer and sent at once. In the looper's
+// view its chevron's middle column where the triangle's was (a block right
+// of the space's middle); the menu's mirrored.
+void drawEdgeMark(bool right, uint16_t ink, uint16_t ground) {
+  static const char *const CHEVRON_LEFT[5] = {"..#", ".#.", "#..", ".#.", "..#"};
+  constexpr int COLS = EDGE_W / PX, ROWS = STATUS_H / PX, CW = 3, CH = 5;
+  constexpr int C0 = COLS / 2, R0 = (ROWS - CH) / 2;   // (left: columns 4-6 of 9)
   static uint16_t px[STATUS_H * EDGE_W];
   for (int r = 0; r < ROWS; r++)
     for (int c = 0; c < COLS; c++) {
-      int tr = r - R0, tc = c - C0;
-      bool on = tr >= 0 && tr < TH && tc >= 0 && tc < TW && TRIANGLE_DOWN[down ? tr : TH - 1 - tr][tc] == '#';
+      int cc = right ? COLS - 1 - c : c;           // (mirrored: the same distance from the right edge)
+      int tr = r - R0, tc = cc - C0;
+      bool on = tr >= 0 && tr < CH && tc >= 0 && tc < CW && CHEVRON_LEFT[tr][tc] == '#';   // (mirrored whole: pointing right)
       for (int dy = 0; dy < PX; dy++)
         for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * EDGE_W + c * PX + dx] = on ? ink : ground;
     }
-  board.tft().writeRect(0, y, EDGE_W, STATUS_H, px);
+  board.tft().writeRect(right ? 320 - EDGE_W : 0, STATUS_TOP, EDGE_W, STATUS_H, px);
 }
 
 // The status row's cells: the scene's, the clock's and the tempo's (ui.h).
@@ -143,9 +146,9 @@ void drawStatus() {
   auto labelInk = [&](int) -> uint16_t { return rowSelected ? LIGHT : DIM; };
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
-    // The menu cell: the edge mark, pointing down, black (seen on the selected
-    // row's ground: DOWN there opens the menu; drawn when cleared).
-    if (cleared) drawEdgeMark(top, true, BG, G);
+    // The menu cell: the edge mark, pointing left: dark grey, black on the
+    // selected row's ground (drawn when cleared: the ground changing clears).
+    if (cleared) drawEdgeMark(false, G == DARK ? BG : DARK, G);
   }
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the

@@ -350,7 +350,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
 // The row's button (the cells: drawWave(), drawFilter(), drawMix(),
 // drawStatus()). Redrawn only when it changes.
 void drawCells(int i) {
-  if (i < 0 || i >= ROWS) return;
+  if (i < 0 || i >= ROWS || (i == STATUS_ROW && menuOpen())) return;   // (the menu: no action button, its edge mark there)
   struct Key { int icon; uint16_t bg, iconColor, mark, ground, topGround; uint8_t badge; };
   static Key shown[ROWS];
   static uint32_t drawn[ROWS];                     // uiGeneration when last drawn whole

@@ -8,8 +8,8 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. DOWN on the status row or UP on track 1 (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); in the menu, UP on a card of the top row (I–L) or DOWN on the list's last item goes back once let go (unless no project is loaded) |
-| LEFT/RIGHT | Select cell: waveform, filter, volume (status row: menu icon, scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform) |
+| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. Any arrow off the screen's edge (UP on track 1, DOWN on the status row, LEFT on a row's first cell, RIGHT on its last; a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); in the menu, any arrow off its edge (UP on the top card row, DOWN on the list's last item, LEFT / RIGHT off a card row's ends or a list item's sides) goes back once let go (unless no project is loaded) |
+| LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform); off a row's ends: the menu (see UP/DOWN) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
 | SHIFT + B twice | Duplicate the scene |
@@ -124,10 +124,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey while the row is selected): the menu cell (a
-  small square, not selectable, no frame, with the edge mark: a small black filled
-  triangle (5×3 blocks) pointing down (seen only on the selected status row's dark grey ground,
-  where DOWN opens the menu), a block right of the middle of the space from the screen's left
-  edge to two blocks short of the scene cell's frame: DOWN on the status row opens the menu), then the scene cell
+  small square, not selectable, no frame, with the edge mark: a small chevron (3×5
+  blocks, a block wide) pointing left, dark grey (black on the selected status row's dark grey
+  ground), in the space from the screen's left edge to two blocks short of the scene cell's
+  frame: the menu is the looper's other screen, to its left), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -155,20 +155,18 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Menu (`ui_menu.cpp`): the app starts where it was left, in the menu or
   the looper's view (the first start, or with no project loaded: the menu, on the
   last project's card, that project already loaded), with the clock running if it was (from
-  1.1.1). Opened with DOWN on the
-  status row (the bottom one) or UP on track 1 (the top one), it takes the place of the track rows and the status row's
-  cells, across the whole width; of the status row only the action button
-  shows. Opening and leaving the menu never starts or stops the clock;
+  1.1.1). Opened with any arrow off the looper's edge (UP on track 1, DOWN on
+  the status row, LEFT / RIGHT off a row's ends), it takes the whole screen; it has no
+  action button (its edge mark in that place). Opening and leaving the menu never starts or stops the clock;
   exporting to Ableton and storage mode stop it first, and start it again (from 1.1.1) when done if it was running. On its items A and B both act
   (SHIFT with them: cut and paste); START starts / stops the clock there too (SHIFT+START: from 1.1.1). Loading a project, or making a new one, doesn't start the clock either
   (playing: the project comes in on the next bar line). On its items A
-  runs the action button's action when let go; B does nothing. The way out
-  is loading a project (A on the loaded one: just back), or UP on a card of the top row, or DOWN on the list's last item (once let go; not with no project loaded); with the dummy
+  runs the item's action when let go; B does nothing. The way out
+  is loading a project (A on the loaded one: just back), or any arrow off its edge: UP on a card of the top row, DOWN on the list's last item, LEFT / RIGHT off a card row's ends or a list item's sides (once let go; not with no project loaded); with the dummy
   project loaded, one has to be loaded or made first. Opening the menu
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.
-  The menu's ground is dark grey (`MENU_BG`), the whole screen's, round the action button
-  too (pressed, the button is black there instead of dark grey).
+  The menu's ground is dark grey (`MENU_BG`), the whole screen's.
   Twelve project cards (three rows of four, 21×15 blocks, 3 apart across and 3 down, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
   A-L from the bottom row up (A–D above the list, I–L on top). Each slot has its colour (`PROJECT_COLORS`: twelve
@@ -179,10 +177,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   project's is a thick outline (two blocks) in its colour, the letter in it too.
   While the clock runs, the loaded project's card shows a small play icon right of its letter (both 2 blocks left of centre), black like it, on the first half of each beat (pulsing). An empty slot is a grey outline, its letter grey (selected too; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
-  in the action button's colour (not its pressed look: it stays put while A is held). In the top
-  left corner, the status row's edge mark flipped (black, pointing up, as far from the
-  top edge), only while a project is loaded: only then do UP on the top row
-  and DOWN on the last item leave the menu. Under them
+  in the colour the action button had for the item (`actionRestColor()`). In the bottom
+  right corner, the looper's edge mark mirrored (black, pointing right, as far from the
+  right edge), only while a project is loaded: only then do the arrows off the edges leave the menu. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
@@ -207,28 +204,21 @@ A recording track's waveform area is in the accent colour (a block of black betw
   and reads it all again, as at a start (the computer may have changed any
   file), and the menu is back as it was. Four in
   view at a time (an item
-  every 12 rows, the last place in the status row's, level with the action
-  button); moving, the list scrolls so the item past the selection that way
+  every 12 rows, the last place in the status row's); moving, the list scrolls so the item past the selection that way
   stays in view where there is one, never past its ends (no empty places);
   with four or fewer, from the top of the room: a box as wide as
   the longest label, centred, labels left-aligned, light grey (white when
-  selected). Going to the menu, the action button is in the accent colour (and its
-  icon while held; the selected track's panel stays grey then). The action button takes the item's colour: on a card, its
+  selected). The item's colour (the corner logo's): on a card, its
   slot's; on project-level items (export) the accent (grey, the label too, with
   nothing to export: no clips in the project's tracks or scenes, or the dummy
-  project); on system-level ones (storage mode) light grey (its icon light
-  grey while pressed too). The selected item's frame looks and behaves as the
+  project); on system-level ones (storage mode) light grey. The selected item's frame looks and behaves as the
   looper's cells': light grey, white while the arrows move it, grey while A
   is held (not B; on a card, an action button A or B held turns it to the project's
   colour), corners cut; round a card one block out (following its
-  diagonal); round the list's box, three blocks out. On a card the
-  action button shows load (a small arrow right) or, empty, new (a small asterisk); with SHIFT,
-  cut or paste (the button grey when it can't act: recording, another copy
-  under way, clipboard empty); on the list, an arrow down into a tray (export) and an arrow up out of a tray (storage mode: export's reversed),
-  doing nothing yet. LEFT/RIGHT go through everything from the bottom up: the list (storage mode,
-  export), then the cards A–L (RIGHT off a row's right end goes up to the next
-  row's left end, LEFT off a row's left end down to the row below's right end;
-  LEFT from A into the list); UP/DOWN go card row
+  diagonal); round the list's box, three blocks out. On a card A loads (an empty
+  slot: new); with SHIFT, cuts or pastes (nothing when it can't: recording, another copy
+  under way, clipboard empty). LEFT/RIGHT go along a card row (not on to
+  another: off its ends they leave the menu, as they do sideways off a list item); UP/DOWN go card row
   to card row and on into the list (back up: to the column it came from, on
   the A–D row). The looper's own selection is kept
   meanwhile and comes back when the menu closes. The menu opens on the

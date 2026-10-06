@@ -34,8 +34,8 @@ constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: four cells (to the volume cells' edge), left
-// to right: the menu's (a small square with the edge mark, a triangle down:
-// DOWN here opens the menu; not selectable), the scene (the widest), the clock
+// to right: the menu's (a small square with the edge mark, a chevron left:
+// the menu's that way; not selectable), the scene (the widest), the clock
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
@@ -49,14 +49,16 @@ inline int selectedCellIn(int i) {
 }
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
-// The edge mark: where the other screen is, at the screen's left edge, the
-// status row's height (the status row's menu cell; the menu's top left,
-// flipped): a small filled triangle (5 x 3 blocks) pointing down or up, a
-// block right of the middle of the space left of the scene cell (2 blocks
-// short of its frame), in ink on the ground (the whole space). Dark grey on black in the
-// looper's view; black on the menu's dark grey.
+// The edge mark: where the other screen is (the menu to the looper's left,
+// the looper to the menu's right; any arrow off a screen's edge goes there),
+// on the status row's line: a small chevron (3 x 5 blocks, a block wide)
+// pointing left in the looper's view (its menu cell: the space left of the
+// scene cell, 2 blocks short of its frame), right in the menu (the same space
+// at the right edge, mirrored: in the action button's place), in ink on the
+// ground (the whole space). The looper's: dark grey, black on the selected
+// status row's dark grey ground; the menu's: black on its dark grey.
 constexpr int EDGE_W = MENU_BOX.w - 2 * PX;
-void drawEdgeMark(int y, bool down, uint16_t ink, uint16_t ground);
+void drawEdgeMark(bool right, uint16_t ink, uint16_t ground);
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
 // A row's place on the screen from the top (0: the first track row), and back.
@@ -157,16 +159,16 @@ int tagWidth(const char *text);
 // every part redraws in full when its last draw was of another generation.
 extern uint32_t uiGeneration;
 
-// ---- The menu (ui_menu.cpp): a second view in place of the track rows
-// and the status row's cells (only the action button stays), opened with A
-// with DOWN on the status row or UP on track 1, left by loading a project (or UP/DOWN off its edges); the
-// arrows move its selection. While it's open the track rows aren't drawn.
-// Its ground: dark grey (the whole screen, round the action button too).
+// ---- The menu (ui_menu.cpp): the looper's other screen, the whole screen
+// (no action button), opened with any arrow off the looper's edge, left by
+// loading a project (or any arrow off its own edge); the arrows move its
+// selection. While it's open the track rows aren't drawn.
+// Its ground: dark grey (the whole screen).
 constexpr uint16_t MENU_BG = DARK;
 bool menuOpen();
 void openMenu();
 void closeMenu();
-bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: UP on the top row, DOWN on the last item (a project loaded)
+bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: off its edge (UP on the top row, DOWN on the last item, LEFT / RIGHT off a card row's ends or a list item; a project loaded)
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)
 bool menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items (true: it moved)
 bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)

@@ -121,18 +121,17 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
-  // DOWN on the status row (the bottom one) or UP on track 1 (the top one) in the
-  // looper's view (a fresh press, not a held arrow repeating): the menu opens once
-  // that key is let go (the clock goes on).
+  // Any arrow off the looper's edge (UP on track 1, DOWN on the status row,
+  // LEFT / RIGHT off a row's ends; a fresh press, not a held arrow
+  // repeating): the menu opens once that key is let go (the clock goes on).
   static uint8_t menuOnRelease = 0;                  // the key to wait for
   if (menuOnRelease && !(keys & menuOnRelease)) {
     menuOnRelease = 0;
     openMenu();
     return;
   }
-  // UP on a card of the menu's top row, or DOWN on its last item (a project
-  // loaded): back to the looper once that key is let go, as A on the loaded
-  // project's card.
+  // An arrow off the menu's edge (menuLeavesOn(); a project loaded): back to
+  // the looper once that key is let go, as A on the loaded project's card.
   static uint8_t leaveOnRelease = 0;
   if (leaveOnRelease && !(keys & leaveOnRelease)) {
     uint8_t key = leaveOnRelease;
@@ -143,7 +142,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
     return;
   }
-  for (uint8_t key : {m8::BTN_UP, m8::BTN_DOWN})
+  for (uint8_t key : {m8::BTN_UP, m8::BTN_DOWN, m8::BTN_LEFT, m8::BTN_RIGHT})
     if (menuLeavesOn(key) && (pressed & key) && !repeat && !(keys & (m8::BTN_SHIFT | m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY))) {
       leaveOnRelease = key;
       return;
@@ -439,8 +438,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     // To or from the status row: the cell below / above, the status row's having the menu cell to the left of the tracks' first.
     if (selected == STATUS_ROW && row != STATUS_ROW) selectedCell = at + 1;
     else if (row == STATUS_ROW && selected != STATUS_ROW) selectedCell = max(at - 1, 0);
+    // LEFT / RIGHT off the row's ends (a fresh press): the menu too, once let go.
     if (pressed & m8::BTN_LEFT && selectedCellIn(selected) > firstCellIn(selected)) selectedCell = selectedCellIn(selected) - 1;
-    if (pressed & m8::BTN_RIGHT && selectedCell < cellCount(selected) - 1) selectedCell++;
+    else if ((pressed & m8::BTN_LEFT) && !repeat) menuOnRelease = m8::BTN_LEFT;
+    if (pressed & m8::BTN_RIGHT && selectedCellIn(selected) < cellCount(selected) - 1) selectedCell = selectedCellIn(selected) + 1;
+    else if ((pressed & m8::BTN_RIGHT) && !repeat) menuOnRelease = m8::BTN_RIGHT;
     if (pressed & arrows) moved = selected != row || selectedCellIn(selected) != at;
   }
 

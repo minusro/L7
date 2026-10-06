@@ -1,10 +1,10 @@
-// ui_menu.cpp — the menu (see ui.h): in place of the track rows and the
-// status row's cells (only the action button shows), the screen's whole
-// width. Opened with DOWN on the status row or UP on track 1; left by loading a project
-// (A on the loaded one: just back). Twelve cards (three rows of
+// ui_menu.cpp — the menu (see ui.h): the looper's other screen, the whole
+// screen (no action button). Opened with any arrow off the looper's edge;
+// left by loading a project (A on the loaded one: just back) or any arrow off
+// its own edge (menuLeavesOn()). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
 // "ENTER STORAGE MODE"; it scrolls once it has more than four. A runs
-// the action button's action when let go. On a slot, A loads its project (an
+// the item's action when let go. On a slot, A loads its project (an
 // empty one: a new project there) and closes
 // the menu; with SHIFT, cuts the project, or pastes
 // one into an empty slot. B acts as A; START starts / stops the clock. Opening it stops
@@ -28,9 +28,9 @@
 // cells' (frameColor()), corners cut, a block out from a card (following its
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
-// logo small, always the action button's colour (not its pressed look). Top
-// left, the edge mark, a black triangle pointing up (the status row's menu cell's, flipped)
-// while a project is loaded: only then do the edges lead out (menuLeavesOn()).
+// logo small, in the item's colour (actionRestColor()). Bottom right, the
+// edge mark, a black chevron pointing right (the looper's, mirrored) while a
+// project is loaded: only then do the edges lead out (menuLeavesOn()).
 #include "ui.h"
 #include "ui_font.h"
 
@@ -42,12 +42,6 @@ static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + 
 // A card's place in reading order on the screen (its rows top to bottom:
 // I-L, E-H, A-D); the list's items as they are.
 static int screenPos(int k) { return k < CARDS ? (CARD_ROWS - 1 - k / COLS) * COLS + k % COLS : k; }
-// LEFT/RIGHT's order, from the bottom of the screen up: the list's items
-// (its last first), then the cards A-L (right to left along a row: RIGHT off
-// a row's right end goes on to the row above, LEFT off its left end to the
-// row below; LEFT off A into the list).
-static int stepPos(int k) { return k < CARDS ? LIST + k : ITEMS - 1 - k; }
-static int stepItem(int p) { return p < LIST ? ITEMS - 1 - p : p - LIST; }
 static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE"};
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), kept (the menu closed and opened again,
@@ -290,7 +284,7 @@ void drawMenu() {
   if (all) {
     drawn = uiGeneration;
     board.tft().fillRect(0, 0, 320, STATUS_TOP, MENU_BG);   // (where the track rows were)
-    board.tft().fillRect(0, STATUS_TOP, BUTTON_X, 240 - STATUS_TOP, MENU_BG);   // and the status row's cells: only its button shows
+    board.tft().fillRect(0, STATUS_TOP, 320, 240 - STATUS_TOP, MENU_BG);   // and the status row (no action button in the menu)
   }
   // Scrolled: the items in view redraw over each other's places (their keys
   // hold the place), each label drawn the box's whole width; no clearing
@@ -303,10 +297,10 @@ void drawMenu() {
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
   static bool mark;                              // the edge mark shown
-  bool leaves = projectCurrent() >= 0;           // top left: UP / DOWN at the edges leave the menu (a project loaded: menuLeavesOn())
+  bool leaves = projectCurrent() >= 0;           // bottom right: the arrows off the edges leave the menu (a project loaded: menuLeavesOn())
   if (all || leaves != mark) {
     mark = leaves;
-    drawEdgeMark(0, false, leaves ? BG : MENU_BG, MENU_BG);
+    drawEdgeMark(true, leaves ? BG : MENU_BG, MENU_BG);
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)
@@ -338,11 +332,11 @@ void menuLeaveStatus() {
 bool menuKeys(uint8_t pressed) {
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   int k = menuSel;
-  // LEFT/RIGHT: through every item, from the bottom up (stepPos()).
-  int p = stepPos(k);
-  if (pressed & m8::BTN_LEFT && p > 0) k = stepItem(p - 1);
-  if (pressed & m8::BTN_RIGHT && p < ITEMS - 1) k = stepItem(p + 1);
-  if (k < CARDS) {                                // (A-D the bottom row: UP goes on through the letters)
+  // LEFT/RIGHT: along a card row (not on to another: off its ends, or
+  // sideways off a list item, they leave the menu: menuLeavesOn()).
+  if (k < CARDS) {
+    if (pressed & m8::BTN_LEFT && k % COLS > 0) k--;
+    if (pressed & m8::BTN_RIGHT && k % COLS < COLS - 1) k++;                                // (A-D the bottom row: UP goes on through the letters)
     int row = screenPos(k) / COLS;
     if (pressed & m8::BTN_UP && row > 0) k += COLS;
     if (pressed & m8::BTN_DOWN) k = row < CARD_ROWS - 1 ? k - COLS : CARDS;
@@ -373,7 +367,16 @@ void menuExportStatus(const char *text, int nameAt) {
 
 bool menuLeavesOn(uint8_t key) {
   if (!shown || onStatus || projectCurrent() < 0) return false;   // (no project loaded: one has to be chosen first)
-  return key == m8::BTN_UP ? menuSel < CARDS && screenPos(menuSel) < COLS : key == m8::BTN_DOWN ? menuSel == ITEMS - 1 : false;   // (UP: the top row, I-L)
+  // Any arrow off the screen's edge: UP on the top row (I-L), DOWN on the
+  // list's last item, LEFT / RIGHT off a card row's ends or a list item's sides.
+  bool card = menuSel < CARDS;
+  switch (key) {
+    case m8::BTN_UP: return card && screenPos(menuSel) < COLS;
+    case m8::BTN_DOWN: return menuSel == ITEMS - 1;
+    case m8::BTN_LEFT: return !card || menuSel % COLS == 0;
+    case m8::BTN_RIGHT: return !card || menuSel % COLS == COLS - 1;
+  }
+  return false;
 }
 
 void openMenu() {
