@@ -15,7 +15,7 @@
 //           square root of the peak level (as the overview stores it).
 // The waveform is light grey inside the loop range (white on the selected
 // track) and 50% grey outside; on a muted clip the range is 50% grey and the
-// rest dark grey. While B alone is held on the selected waveform cell (B +
+// rest dark grey. While B is held on the selected waveform cell (other keys too; B +
 // arrows change the range), the range is in the accent colour, muted or not.
 // The start position: a checkerboard line of 1-pixel squares, a block wide and the
 // waveform's height, in the column a bar line there would take, white and
@@ -162,7 +162,7 @@ void drawWave(int i, bool recordingHere) {
   // selected; the frame is on the selected one), the accent colour while B
   // alone is held on the selected cell (editing, muted or not); muted: grey.
   bool muted = tr.state == TrackState::Muted, here = i == selected;
-  bool editing = here && selectedCellIn(i) == WAVE_CELL && bAlone();
+  bool editing = editingCell(i, WAVE_CELL);        // (B held, with other keys or not: as the filter cell)
   uint16_t rangeInk = editing ? ACCENT : muted ? DIM : here ? INK : LIGHT;
   if (recordingHere) rangeInk = INK;                 // the recording's waveform: white
   uint16_t ground = rowGround(i);

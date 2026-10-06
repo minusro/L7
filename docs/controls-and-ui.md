@@ -100,7 +100,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   50% grey range, dark grey outside). On every track (recording too), a black line the
   waveform's height, a block wide, just before the start of each bar but the first (on the
   same column edges as the range, so the range's colour stops at them). The
-  start position, on every track: a dotted line the waveform's height (a block wide, a checkerboard of 1-pixel squares in white and black, over the waveform, while editing the range too; in the column a bar line there would take, so on a bar start it sits on the bar line). While B alone
+  start position, on every track: a dotted line the waveform's height (a block wide, a checkerboard of 1-pixel squares in white and black, over the waveform, while editing the range too; in the column a bar line there would take, so on a bar start it sits on the bar line). While B
   is held on the selected waveform cell, the range is in the accent colour,
   muted or not. Playheads are accent-coloured lines, a block taller than the waveform
   each way (white while the
@@ -116,10 +116,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   column (a column short of the cell's edges), longer further out. A channel's level in lines is
   the volume step minus its balance cut (one line per step of either). Up to
   the level / the outer lines: grey / dark grey; the selected track: light grey / grey;
-  muted: dark grey / black. The meter: white. B alone held on it (muted or not):
+  muted: dark grey / black. The meter: white. B held on it (muted or not, other keys too):
   no meter, the level in the accent colour.
-* Editing (B held on the selected cell, so B + arrows change it; volume and
-  waveform: B alone): white turns to the accent colour and light grey to the
+* Editing (B held on the selected cell, with other keys or not, so B + arrows change it): white turns to the accent colour and light grey to the
   dark accent (`ACCENT_DARK`, the same for the filter fill and the volume
   level): the loop range, the filter line and fill, the volume meter and
   level (`editingCell()` in ui.h).

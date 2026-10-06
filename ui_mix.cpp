@@ -11,7 +11,7 @@
 // volume step j + 1's level. Up to the level / above it (the outer lines):
 //   unselected: grey / dark grey;  the selected track: light grey / grey;
 //   muted (no meter): dark grey / black.
-// While B alone is held on the cell, muted or not (B + arrows change volume
+// While B is held on the cell (with other keys or not), muted or not (B + arrows change volume
 // and balance), no meter: the level's lines in the accent colour, the outer
 // ones grey. A line is only redrawn when its colour changes.
 static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = CELL_H / PX;   // 24 x 16, the border's included
@@ -72,7 +72,7 @@ void drawMix(int i) {
   uint16_t looks[2 * MIX_ARCS];                    // each line's colour
   int levels[2] = {tr.volume - max(0, (int)tr.balance), tr.volume - max(0, -(int)tr.balance)};   // lines lit
   bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
-  bool editing = here && selectedCellIn(i) == MIX_CELL && bAlone();
+  bool editing = editingCell(i, MIX_CELL);         // (B held, with other keys or not: as the filter cell)
   uint16_t ground = rowGround(i);
   uint16_t levelInk = onGround(editing ? ACCENT : muted ? DARK : here ? LIGHT : DIM, ground);
   uint16_t outerInk = editing ? DIM : muted ? ground : here ? DIM : DARK;   // (muted: none)

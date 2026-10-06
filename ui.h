@@ -141,7 +141,7 @@ inline bool bAlone() {
 // The cell is being edited: it's the selected one and B is held (B + arrows
 // change it). Its markings then show in the accent colour.
 inline bool editingCell(int i, int cell) {
-  return i == selected && cell == selectedCell && (board.keys() & m8::BTN_OPT);
+  return i == selected && cell == selectedCellIn(i) && (board.keys() & m8::BTN_OPT);
 }
 // The colour of block (r, c) of row i's cell (rows x cols blocks, its border
 // included) if it's on the border (corners: always BG), from its own frame or
