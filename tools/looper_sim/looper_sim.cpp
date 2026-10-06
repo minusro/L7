@@ -391,23 +391,23 @@ int main(int argc, char **argv) {
   {
     const Track &tr = tracks[4];
     char m[160];
-    snprintf(m, sizeof m, "track 5 now plays sample %04u (after track 4's empty file): %u frames, %u bar, range %u+%u, muted %d",
+    snprintf(m, sizeof m, "track 5 now plays sample %04u (track 4's empty file went to recording space): %u frames, %u bar, range %u+%u, muted %d",
              tr.sample, tr.recordedFrames, tr.loopBars, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted);
-    check(tr.sample == 2 && tr.recordedFrames == legacyFrames && tr.loopBars == 1 && tr.rangeBeats == 2 &&
+    check(tr.sample == 1 && tr.recordedFrames == legacyFrames && tr.loopBars == 1 && tr.rangeBeats == 2 &&
           tr.state == TrackState::Muted && tr.overview[10] == 100, m);
     check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 3 && tr.balance == -1,
           "its filter kept, volume and balance in today's steps (25 -> 3, -4 -> -1)");
     check(wavLeft(4, 0) == -500 && wavLeft(4, 1234) == 1234 % 1000 - 500 && wavLeft(4, legacyFrames - 1) == (int16_t)((legacyFrames - 1) % 1000 - 500),
-          "its audio is intact in samples/0002.wav");
+          "its audio is intact in SAMPLES/0001.wav");
     struct stat st;
     check(::stat((simRoot + "/looper").c_str(), &st) != 0 && ::stat((simRoot + "/L7/SAMPLES").c_str(), &st) == 0,
           "the app's folder moved from /looper to /L7");
     FILE *old = fopen((simRoot + "/L7/track5.wav").c_str(), "rb");
     check(!old && sampleCount() == 1, "the old track file is gone; one sample on the card");
     if (old) fclose(old);
-    FILE *low = fopen((simRoot + "/L7/SAMPLES/0001.wav").c_str(), "rb");
-    check(!low, "track 4's empty file renumbered after it (0001 gone)");
-    if (low) fclose(low);
+    FILE *space = fopen((simRoot + "/L7/DATA/0001.DAT").c_str(), "rb");
+    check(space != nullptr, "track 4's empty file is recording space, named from the pool's numbers (DATA/0001.DAT)");
+    if (space) fclose(space);
     clearTrack(4);
     flushHeaders();
   }
@@ -1819,6 +1819,46 @@ for f in os.listdir("."):
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state == TrackState::Playing) checkSync(t, "after the reload");
     transportStop();
     runUntilIdle();
+  }
+
+  printf("recording space: 8 files, the lowest numbers; a card with more or higher ones is brought down to them\n");
+  {
+    transportStop();
+    runUntilIdle();
+    flushHeaders();
+    flushScenes();
+    std::string cmd = "cd " + simRoot + "/L7/DATA && for i in 1 2 3 4 5 6 7 8; do mv 000$i.DAT 007$i.DAT; ln 007$i.DAT 009$i.DAT; done";
+    check(system(cmd.c_str()) == 0, "(the pool numbered 71-78, and 8 more files, 91-98)");
+    storageForget();
+    scenesForget();
+    storageBegin([](const char *) {});
+    scenesBegin(simTempo, simSetTempo, projectCurrent() < 0 ? 0 : 2, simNewTempo, simNewVolume);
+    FILE *ls = popen(("ls " + simRoot + "/L7/DATA | grep '^[0-9]' | tr '\\n' ' '").c_str(), "r");
+    char line[200] = {};
+    if (ls) { if (!fgets(line, sizeof line, ls)) line[0] = 0; pclose(ls); }
+    check(std::string(line) == "0001.DAT 0002.DAT 0003.DAT 0004.DAT 0005.DAT 0006.DAT 0007.DAT 0008.DAT ", "after the boot: exactly 0001-0008.DAT");
+  }
+
+  printf("a recording in the dummy project (no project letter): a plain-numbered sample, still in step with the files\n");
+  {
+    if (projectCurrent() >= 0) projectDelete(projectCurrent());
+    check(projectCurrent() < 0, "(the dummy project loaded)");
+    if (!transport.running) transportStart();
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);
+    recordTrack(2, 3, 1, "  (track 3, in the dummy project)");
+    uint32_t id = tracks[2].sample;
+    transportStop();
+    runUntilIdle();
+    for (int i = 0; i < 40; i++) serviceStorage();
+    char path[64];
+    sampleFile(id, path, sizeof path);
+    struct stat st;
+    FILE *ls = popen(("ls " + simRoot + "/L7/DATA | grep -c '^[0-9]'").c_str(), "r");
+    int spaceFiles = -1;
+    if (ls) { if (fscanf(ls, "%d", &spaceFiles) != 1) spaceFiles = -1; pclose(ls); }
+    char m[160];
+    snprintf(m, sizeof m, "sample %u is a plain number in SAMPLES (%s), its recording-space number free again (%d files in recording space)", id, path, spaceFiles);
+    check(id > 0 && id < 10000 && ::stat((simRoot + path).c_str(), &st) == 0 && st.st_size < 10 * 1000 * 1000 && spaceFiles == 8, m);
   }
 
   printf("random sessions\n");

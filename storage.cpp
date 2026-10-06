@@ -51,8 +51,10 @@ static uint8_t headerDirty = 0;                  // bit t: track t's unit file n
 // A write is waiting for the playback buffers to be topped up (see serviceStreams).
 static bool writePending = false;
 static constexpr uint64_t SAMPLE_FILE_BYTES = WAV_DATA_OFFSET + (uint64_t)MAX_REC_FRAMES * 4;
-static constexpr int POOL_SIZE = 16;             // empty sample files kept ready for recordings (~360 MB):
-                                                 // making one takes ~0.7 s, so never while playing if it can be helped
+static constexpr int POOL_SIZE = 8;              // empty sample files kept ready for recordings (~180 MB):
+                                                 // making one takes ~0.7 s, so never while playing if it can be helped.
+                                                 // Their names are the lowest free numbers (DATA/0001.DAT ...), not ever
+                                                 // higher ones: a recording's file is renamed (to SAMPLES) anyway
 static constexpr uint32_t MAX_NUMBER = 9999;     // sample numbers: 0001-9999
 static constexpr int MAX_SAMPLES = 5000;          // recordings kept track of (sampleIds: 20 KB of RAM1)
 // A sample's id: its name tag (the project's letter and the track's number:
@@ -357,10 +359,26 @@ static bool playable(const SampleInfo &info) {
 // stopped until trimming a recording frees some space (a try takes ~1 s).
 static bool poolBlocked = false;
 
+// The lowest number free for a file of recording space: not in the pool, not a
+// recording's file not named yet, and no file of that name (0: none).
+static uint32_t freePoolNumber() {
+  for (uint32_t n = 1; n <= MAX_NUMBER; n++) {
+    bool used = false;
+    for (int i = 0; i < poolCount && !used; i++) used = pool[i] == n;
+    for (int i = 0; i < unnamedCount && !used; i++) used = unnamed[i].file == n;
+    char path[40];
+    poolPath(n, path, sizeof path);
+    if (!used && !SD.sdfs.exists(path)) return n;
+  }
+  return 0;
+}
+
 static bool createPoolFile() {
-  if (poolCount >= POOL_SIZE || nextSample > MAX_NUMBER) return false;
+  if (poolCount >= POOL_SIZE) return false;
+  uint32_t number = freePoolNumber();
+  if (!number) return false;
   char path[40];
-  poolPath(nextSample, path, sizeof path);
+  poolPath(number, path, sizeof path);
   if (transport.running) Serial.printf("no recording space left: creating %s while playing\n", path);
   debugStage = "SD create (sample file)";
   FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
@@ -378,7 +396,9 @@ static bool createPoolFile() {
                   (unsigned long)(SAMPLE_FILE_BYTES >> 20));
     return false;
   }
-  pool[poolCount++] = nextSample++;
+  int i = poolCount++;                           // (kept sorted)
+  while (i > 0 && pool[i - 1] > number) { pool[i] = pool[i - 1]; i--; }
+  pool[i] = (uint16_t)number;
   return true;
 }
 
@@ -1086,12 +1106,17 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
   bool used = ok && info.used && info.spb && info.loopBars && info.loopBars <= MAX_BARS && info.rangeLen &&
               info.rangeStart + info.rangeLen <= loopBeats && info.recordedFrames && info.recordedFrames <= MAX_REC_FRAMES;
   if (!used) {                                   // empty: keep it as recording space if it's full size
-    bool space = f.fileSize() == SAMPLE_FILE_BYTES && poolCount < POOL_SIZE && nextSample <= MAX_NUMBER;
-    if (space) writeSampleHeader(f, 0, 0, 0, nullptr);
+    uint32_t number = f.fileSize() == SAMPLE_FILE_BYTES && poolCount < POOL_SIZE ? freePoolNumber() : 0;
+    if (number) writeSampleHeader(f, 0, 0, 0, nullptr);
     f.close();
-    poolPath(nextSample, to, sizeof to);
-    if (space && SD.sdfs.rename(from, to)) pool[poolCount++] = nextSample++;
-    else SD.sdfs.remove(from);
+    poolPath(number, to, sizeof to);
+    if (number && SD.sdfs.rename(from, to)) {
+      int i = poolCount++;
+      while (i > 0 && pool[i - 1] > number) { pool[i] = pool[i - 1]; i--; }
+      pool[i] = (uint16_t)number;
+    } else {
+      SD.sdfs.remove(from);
+    }
     return;
   }
   char msg[48];
@@ -1263,6 +1288,8 @@ void saveSession(const Session &s) {
 static constexpr int MAX_MOVES = 128;
 static uint16_t moves[MAX_MOVES];
 static int moveCount = 0;
+static uint16_t surplus[MAX_MOVES], orphans[MAX_MOVES];   // DATA's recording space to bring into the pool's numbers; samples with no name
+static int surplusCount = 0, orphanCount = 0;
 
 static void scanFolder(const char *folder, bool data) {
   FsFile dir = SD.sdfs.open(folder, O_RDONLY);
@@ -1289,7 +1316,7 @@ static void scanFolder(const char *folder, bool data) {
     f.close();
     if (!numbered) continue;
     if (tag) nextNumber[tag] = umax(nextNumber[tag], n + 1);
-    else nextSample = umax(nextSample, n + 1);
+    else if (!data) nextSample = umax(nextSample, n + 1);   // (recording space's numbers are not samples')
     bool recording = ok && playable(info) && !tag && headerTag && headerNumber;   // recorded, not named yet
     bool space = ok && !playable(info) && info.frames == 0 && size == SAMPLE_FILE_BYTES;
     if (!data && !tag && (recording || space)) {   // (an older card: recording space belongs in DATA)
@@ -1306,17 +1333,22 @@ static void scanFolder(const char *folder, bool data) {
         id = idOf(headerTag, headerNumber);
         unnamed[unnamedCount++] = {id, (uint16_t)n};
         nextNumber[headerTag] = umax(nextNumber[headerTag], headerNumber + 1);
-      } else if (data) {
-        continue;                                // (an untagged sample in DATA: not one of ours)
+      } else if (data) {                         // a recording of an unnamed project, cut short: kept, named after the next number
+        if (orphanCount < MAX_MOVES) orphans[orphanCount++] = (uint16_t)n;
+        continue;
       }
       noteSample(id);
       lastOrder = max(lastOrder, info.version >= 2 && info.order ? info.order : n);
       if ((size > WAV_DATA_OFFSET + (uint64_t)info.frames * 4 || unnamedIndex(id) >= 0) && untrimmedCount < 64)
         untrimmed[untrimmedCount++] = id;
-    } else if (data && space && poolCount < POOL_SIZE) {
-      int i = poolCount++;                       // keep the pool sorted
-      while (i > 0 && pool[i - 1] > n) { pool[i] = pool[i - 1]; i--; }
-      pool[i] = n;
+    } else if (data && space) {
+      if (n <= POOL_SIZE && poolCount < POOL_SIZE) {
+        int i = poolCount++;                     // keep the pool sorted
+        while (i > 0 && pool[i - 1] > n) { pool[i] = pool[i - 1]; i--; }
+        pool[i] = n;
+      } else if (surplusCount < MAX_MOVES) {     // (numbered past the pool's, or too many: renamed low or removed)
+        surplus[surplusCount++] = (uint16_t)n;
+      }
     }
   }
 }
@@ -1368,26 +1400,33 @@ static void scanSamples() {
     SD.sdfs.rename(from, to);
   }
   renameDataWavs();
+  surplusCount = orphanCount = 0;
   scanFolder("/L7/DATA", true);
+  for (int i = 0; i < surplusCount; i++) {       // recording space beyond the pool's numbers or size
+    char from[40], to[40];
+    poolPath(surplus[i], from, sizeof from);
+    uint32_t number = poolCount < POOL_SIZE ? freePoolNumber() : 0;
+    poolPath(number, to, sizeof to);
+    if (number && SD.sdfs.rename(from, to)) {
+      int k = poolCount++;
+      while (k > 0 && pool[k - 1] > number) { pool[k] = pool[k - 1]; k--; }
+      pool[k] = (uint16_t)number;
+    } else {
+      SD.sdfs.remove(from);                      // (more than the pool holds)
+    }
+  }
+  for (int i = 0; i < orphanCount; i++) {        // samples with no name (an unnamed project's recording cut short): into SAMPLES
+    char from[40], to[40];
+    poolPath(orphans[i], from, sizeof from);
+    uint32_t id = nextSample;
+    snprintf(to, sizeof to, "/L7/SAMPLES/%04u.wav", (unsigned)id);
+    if (nextSample > MAX_NUMBER || !SD.sdfs.rename(from, to)) continue;
+    nextSample++;
+    noteSample(id);
+    if (untrimmedCount < 64) untrimmed[untrimmedCount++] = id;
+  }
   for (int i = 0; i < olderCount; i++)          // (new files without a tag numbered past those)
     nextSample = umax(nextSample, older[i].number + 1u);
-}
-
-// Recording space numbered below a recording (left from converting an older
-// version's track files) is renamed to the next free numbers, so new
-// recordings are numbered in the order they're made.
-static void renumberPool() {
-  uint32_t highest = 0;
-  for (int i = 0; i < sampleTotal; i++) if (!idTag(sampleIds[i])) highest = max(highest, sampleIds[i]);
-  for (int i = 0; i < poolCount; i++) {
-    if (pool[i] > highest || nextSample > MAX_NUMBER) continue;
-    char from[40], to[40];
-    poolPath(pool[i], from, sizeof from);
-    poolPath(nextSample, to, sizeof to);
-    if (SD.sdfs.rename(from, to)) pool[i] = nextSample++;
-  }
-  for (int i = 1; i < poolCount; i++)            // keep it sorted
-    for (int j = i; j > 0 && pool[j - 1] > pool[j]; j--) { uint16_t x = pool[j]; pool[j] = pool[j - 1]; pool[j - 1] = x; }
 }
 
 bool moveFile(const char *from, const char *to) {
@@ -1451,7 +1490,6 @@ bool storageBegin(void (*progress)(const char *)) {
     readUnit(t);
     migrateLegacy(t, progress);                  // older version: its track file becomes a sample
   }
-  renumberPool();
   while (poolCount < POOL_SIZE) {                // (serial only: on screen it showed on every start with the card full)
     Serial.printf("preparing recording space (%d of %d)...\n", poolCount + 1, POOL_SIZE);
     if (!createPoolFile()) break;
@@ -1991,10 +2029,15 @@ static bool takeRecordingSample(int t) {
   uint32_t file = pool[0];
   uint8_t tag = tagOf(recordLetter, screenTrack(t));
   tr.sample = file;
-  if (tag && nextNumber[tag] <= MAX_NUMBER && unnamedCount < (int)(sizeof unnamed / sizeof unnamed[0])) {
-    tr.sample = idOf(tag, umax(nextNumber[tag], 1));
-    nextNumber[tag] = idNumber(tr.sample) + 1;
-    unnamed[unnamedCount++] = {tr.sample, (uint16_t)file};
+  if (unnamedCount < (int)(sizeof unnamed / sizeof unnamed[0])) {
+    if (tag && nextNumber[tag] <= MAX_NUMBER) {
+      tr.sample = idOf(tag, umax(nextNumber[tag], 1));
+      nextNumber[tag] = idNumber(tr.sample) + 1;
+      unnamed[unnamedCount++] = {tr.sample, (uint16_t)file};
+    } else if (!tag && nextSample <= MAX_NUMBER) {   // (no project letter: the next plain number)
+      tr.sample = nextSample++;
+      unnamed[unnamedCount++] = {tr.sample, (uint16_t)file};
+    }
   }
   memmove(pool, pool + 1, --poolCount * sizeof pool[0]);
   return true;
@@ -2008,7 +2051,8 @@ static void returnRecordingSample(int t) {
   if (int u = unnamedIndex(tr.sample); u >= 0) {   // (its number free again if it was the latest)
     file = unnamed[u].file;
     uint8_t tag = idTag(tr.sample);
-    if (idNumber(tr.sample) + 1 == nextNumber[tag]) nextNumber[tag]--;
+    if (tag && idNumber(tr.sample) + 1 == nextNumber[tag]) nextNumber[tag]--;
+    if (!tag && tr.sample + 1 == nextSample) nextSample--;
     unnamed[u] = unnamed[--unnamedCount];
   }
   if (file && poolCount < POOL_SIZE) {
