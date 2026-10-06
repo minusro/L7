@@ -184,7 +184,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in from the left edge, 2 up from the status row's top: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). Along the right
   edge, a strip the screen's height and a sixth as wide as the space right of the cards (10 px),
-  in the loaded project's colour (none with no project: the menu's ground); no arrow. While RIGHT
+  in the loaded project's colour (black with no project); no arrow. While RIGHT
   is held that leaves the menu once let go, a white line the screen's height a block left
   of it (UP / DOWN held to leave: no line; the selection frame hidden meanwhile either way). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
