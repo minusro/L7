@@ -219,9 +219,9 @@ void splashTick();                       // the logo's colour cycle: call while 
 uint16_t hueCycle(float phase);          // the logo's hue at a phase (0-1) of one turn round the hues
 int splashBottom();                    // y just below the logo (for startup messages)
 void drawSmallLogo(int x, int y, uint16_t color);   // the logo small, 55 x 26 px (the menu's corner), top left at (x, y)
-// The corner logo's place (the menu's, storage mode's): bottom left, 2 blocks
-// in from the left edge, 2 blocks up from the status row's top.
-constexpr int CORNER_LOGO_X = 2 * PX, CORNER_LOGO_Y = STATUS_TOP - 2 * PX;
+// The corner logo's place (the menu's, storage mode's): bottom left, a block
+// in from the left edge, on the status row's line (its height).
+constexpr int CORNER_LOGO_X = PX, CORNER_LOGO_Y = STATUS_TOP;
 
 // ---- Drawing (ui*.cpp)
 void drawTrack(int i);                   // ui.cpp: row i (a track or the status row), whatever changed

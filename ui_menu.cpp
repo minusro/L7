@@ -136,7 +136,7 @@ static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames 
 // The last place's frame level with the action button (from the status row's top).
 static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
 
-// The logo in the bottom left corner (CORNER_LOGO_X / Y: 2 blocks in, 2 up from the status row's top).
+// The logo in the bottom left corner (CORNER_LOGO_X / Y: a block in, on the status row's line).
 static constexpr int LOGO_X = CORNER_LOGO_X, LOGO_Y = CORNER_LOGO_Y;
 
 static Shape itemShape(int k) {

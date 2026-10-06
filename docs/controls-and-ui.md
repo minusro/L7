@@ -180,8 +180,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   it, its letter (the project's name) black; another
   project's is a thick outline (two blocks) in its colour, the letter in it too.
   While the clock runs, the loaded project's card shows a small play icon right of its letter (both 2 blocks left of centre), black like it, on the first half of each beat (pulsing). An empty slot is a grey outline, its letter grey (selected too; in the slot's colour while an action button is held). In the bottom
-  left corner, the logo small (full resolution, 55 × 26 px: the status row's height; 2 blocks
-  in from the left edge, 2 up from the status row's top: `CORNER_LOGO_X/Y`), always
+  left corner, the logo small (full resolution, 55 × 26 px: the status row's height; a block
+  in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). Along the right
   edge, a strip the screen's height (coloured from the status row's top down, where the action
   button is in the looper's view; black above) and 2 blocks wide (4 while RIGHT is held that leaves the menu
