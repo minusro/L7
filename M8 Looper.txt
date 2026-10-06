@@ -115,7 +115,9 @@ no dropouts or overruns
 
 
 6oct26
-
+- menu redesign
+- mute up down V
+- startpoint checkerboard
 
 
 
