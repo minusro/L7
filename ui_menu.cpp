@@ -292,16 +292,19 @@ void drawMenu() {
     logo = actionRestColor();
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
+  // The edge mark: in a black strip along the right edge, the screen's
+  // height, a third as wide as the space right of the cards; centred in it,
+  // as the looper's (dark grey, grey while an arrow is held that leaves once
+  // let go; none with no project loaded: the edges don't lead out).
   static uint16_t mark;                          // the edge mark's colour shown
-  bool leaves = projectCurrent() >= 0;           // the arrows off the edges leave the menu (a project loaded: menuLeavesOn())
-  uint16_t ink = !leaves ? MENU_BG : screenSwitchPending() ? DIM : BG;   // (grey while an arrow is held that leaves once let go)
+  constexpr int cardsRight = (CARDS_X + COLS * CARD_W + (COLS - 1) * CARD_GAP) * PX;
+  constexpr int stripW = (320 - cardsRight) / 3 / PX * PX, stripX = 320 - stripW;
+  bool leaves = projectCurrent() >= 0;           // (menuLeavesOn())
+  uint16_t ink = !leaves ? BG : screenSwitchPending() ? DIM : DARK;
+  if (all) board.tft().fillRect(stripX, 0, stripW, 240, BG);
   if (all || ink != mark) {
     mark = ink;
-    // Centred top to bottom, and across between the cards' right edge and
-    // the screen's (its space from there, clear of a selected card's frame).
-    constexpr int cardsRight = (CARDS_X + COLS * CARD_W + (COLS - 1) * CARD_GAP) * PX, mid = (cardsRight + 320) / 2;
-    constexpr int halfW = (320 - mid) / 2 / PX * PX;
-    drawEdgeMark(true, mid - halfW, 2 * halfW, (240 - STATUS_H) / 2 / PX * PX, ink, MENU_BG);
+    drawEdgeMark(true, stripX, stripW, (240 - STATUS_H) / 2 / PX * PX, ink, BG);
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)

@@ -67,10 +67,9 @@ inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // on the status row's line: a small arrow (an open 3 x 5 head on a shaft
 // 5 blocks long) pointing left in the looper's view (its menu cell: the space left of the
 // scene cell, 2 blocks short of its frame), right in the menu (the same space
-// in the middle between the cards' right edge and the screen's, centred top
-// to bottom), in ink on the
-// ground (the whole space). The looper's: dark grey on black (the selected
-// status row's ground starts at the scene cell); the menu's: black on its dark grey.
+// centred in a black strip along the right edge, the screen's height), in ink on the
+// ground (the whole space). Dark grey on black (the looper's: the selected
+// status row's ground starts at the scene cell; the menu's: on its black strip).
 constexpr int EDGE_W = MENU_BOX.w - PX;          // (2 blocks short of the scene cell's frame)
 void drawEdgeMark(bool right, int x, int w, int y, uint16_t ink, uint16_t ground);   // (x, y, w: the space, the status row's height)
 
