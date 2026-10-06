@@ -138,14 +138,14 @@ A recording track's waveform area is in the accent colour (a block of black betw
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
   then the button. In the accent colour: the scene's tag
   and number while SHIFT is held, or B alone on the scene cell; the tempo and
-  its tag while B alone is held on its cell. The clock: stopped, dark grey (the row selected: black, on its dark grey ground); running, 50% grey with
+  its tag while B alone is held on its cell. The clock: stopped, as the scene's and tempo's labels (grey; light grey on the selected cell); running, 50% grey with
   light grey on each beat's first step (selected: light grey, white on the
   first step), the accent colour on 1.1.1; before it a small play icon, in
   the accent colour while it runs. While B alone is held on the clock
   cell it shows the master volume instead: 22 vertical lines across the cell
-  (one per step 0–21, 1.5 dB apart: 0 off, 17 100% — the default —, 21 200%): the volume's
-  line white, dark accent before it and dark grey after it; their upper halves meter the left output, the
-  lower halves the right (accent, line 17 0 dBFS — the ones above it clipping —, falling back from
+  (one per step 0–21, 1.5 dB apart: 0 off, 17 100% — the default —, 21 200%): the lines up
+  to the volume's in the accent colour (none at 0), black after it; their upper halves meter the left
+  output, the lower halves the right (white, line 17 0 dBFS — the ones above it clipping —, falling back from
   peaks), from silence each time it shows.
 * Track buttons: the track's number (tracks count from the top: 1 is
   the first row, 7 just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined

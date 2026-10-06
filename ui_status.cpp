@@ -16,8 +16,8 @@
 //     it, or the change waiting for its switch point. Selected, A goes to the
 //     next scene (stopped: and starts the clock); SHIFT+A duplicates it (as SHIFT+B twice).
 //   third cell: the clock (bar.beat.step), after a small play icon (the
-//     accent colour while it runs), centred together: stopped, 1.1.1 in dark
-//     grey (the row selected: black, on its dark grey ground); running, grey with light grey on each beat's
+//     accent colour while it runs), centred together: stopped, 1.1.1 as the
+//     other labels (grey, light grey when selected); running, grey with light grey on each beat's
 //     first step (selected: light grey, white on the first step), in the
 //     accent colour on 1.1.1. Selected, A starts / stops the
 //     clock (as START; SHIFT+A as SHIFT+START).
@@ -57,11 +57,10 @@ static const Cell &statusCell(int cell) {
 
 // ---- The master volume: in the clock cell while B alone is held on it (B +
 // arrows change it). A vertical line per step in every other column, filling
-// the cell inside the border's block of space: the volume's line white (the
-// first one at 0), the ones before it the dark accent, those after it dark
-// grey. Each line's
-// upper half is the left channel's meter, its lower half the right's: the
-// accent colour up to the output's level, on the same scale (the top line:
+// the cell inside the border's block of space: the lines up to the volume's
+// (from the first; none at 0) in the accent colour, those after it black.
+// Each line's upper half is the left channel's meter, its lower half the
+// right's: white up to the output's level, on the same scale (the top line:
 // 0 dBFS), falling at MV_FALL_DB_PER_S. Shown again, it starts from silence.
 static constexpr int MV_COLS = CLOCK_BOX.w / PX, MV_ROWS = STATUS_H / PX;   // 47 x 13, the border's included
 static constexpr int MV_LINES = (MV_COLS - 4 + 1) / 2;                     // columns 2, 4 ... 44
@@ -92,7 +91,8 @@ static void drawMasterVolume(bool full) {
     // (Line j: step j's level, (j - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB.)
     int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f) + 1, 0, MV_LINES);
     for (int j = 0; j < MV_LINES; j++) {
-      uint16_t color = j == level ? INK : j < lit ? ACCENT : j < level ? ACCENT_DARK : onGround(DARK, rowGround(STATUS_ROW));
+      bool inVolume = level > 0 && j <= level;      // (0: none)
+      uint16_t color = j < lit && inVolume ? INK : inVolume ? ACCENT : BG;
       if (!full && color == shown[j][ch]) continue;
       shown[j][ch] = color;
       t.fillRect(CLOCK_BOX.x + (2 + 2 * j) * PX, top + (2 + ch * (MV_HALF + 1)) * PX, PX, MV_HALF * PX, color);
@@ -149,7 +149,6 @@ void drawStatus() {
   float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
   snprintf(text, sizeof text, "%.1f", shown);
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) ? selectedCellIn(STATUS_ROW) : -1;
-  bool rowSelected = cell >= 0;
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
@@ -198,11 +197,11 @@ void drawStatus() {
     snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
-  // Stopped: dark grey (the row selected: black, on its dark grey ground). Running: grey, light grey on each
+  // Stopped: as the scene's and tempo's labels (grey; light grey selected). Running: grey, light grey on each
   // beat's first step (x.y.1) (selected: light grey, white on x.y.1); the
   // accent colour on 1.1.1.
   bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0, here = cell == CLOCK_CELL;
-  uint16_t clockInk = !running ? (rowSelected ? BG : DARK) : first ? ACCENT
+  uint16_t clockInk = !running ? labelInk(CLOCK_CELL) : first ? ACCENT
                     : step == 0 ? (here ? INK : LIGHT) : (here ? LIGHT : DIM);
   if (!volume) {
     // A small play icon (in the accent colour while the clock runs), then the
