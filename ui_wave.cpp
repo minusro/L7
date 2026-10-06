@@ -18,7 +18,7 @@
 // rest dark grey. While B alone is held on the selected waveform cell (B +
 // arrows change the range), the range is in the accent colour, muted or not.
 // The start position: a dotted line the waveform's height (blocks of the
-// waveform's colour on rows 3, 6, 9 and 12, the rest left as it is), on every track. The playhead is an accent-coloured line (white
+// waveform's colour on rows 2, 4, 6, 9, 11 and 13, the rest left as it is), on every track. The playhead is an accent-coloured line (white
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
 // A recording track's waveform area is in the accent colour (a block of black
@@ -87,8 +87,8 @@ static int edgeCol(uint32_t beat, uint32_t loopBeats) {
 }
 
 // The start position's line in waveform column c of view v: the waveform's
-// height (rows 2-13), blocks of the waveform's colour on rows 3, 6, 9, 12
-// ("0x00x00x00x0"), the waveform showing between; BG: no line there.
+// height (rows 2-13), blocks of the waveform's colour on rows 2, 4, 6, 9, 11, 13
+// ("x0x0x00x0x0x"), the waveform showing between; BG: no line there.
 static constexpr int START_TOP = MID_ROW - WAVE_REACH, START_BOTTOM = MID_ROW + 1 + WAVE_REACH;   // rows 2-13
 static uint16_t startInk(const WaveView &v, int c) {
   if (!v.visible || v.live || c != v.markCol) return BG;
@@ -132,7 +132,7 @@ static void drawColumn(int i, int bc) {
         break;
       }
     if (uint16_t ink = startInk(v, c); ink != BG) {              // the start position: a dotted line (0: left as it is)
-      static const char LINE[] = "0x00x00x00x0";                // rows 2-13
+      static const char LINE[] = "x0x0x00x0x0x";                // rows 2-13
       static_assert(sizeof LINE - 1 == START_BOTTOM - START_TOP + 1, "a mark per row");
       for (int r = START_TOP; r <= START_BOTTOM; r++)
         if (LINE[r - START_TOP] == 'x') block(r, ink);
