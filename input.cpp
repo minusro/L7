@@ -59,7 +59,8 @@ static void tapTempo() {
 // The loaded project exported as a Live Set (the menu's first list item),
 // its progress and then where it went shown in the item's place.
 static void exportToAbleton() {
-  if (transport.running) transportStop();            // (the export wants the clock stopped, and the card to itself)
+  bool wasRunning = transport.running;
+  if (wasRunning) transportStop();                   // (the export wants the clock stopped, and the card to itself)
   int p = projectCurrent();
   int n = exportProject(p, [](int done, int total) {
     char b[24];
@@ -75,6 +76,7 @@ static void exportToAbleton() {
     snprintf(b, sizeof b, "EXPORT FAILED");
     menuExportStatus(b);
   }
+  if (wasRunning) transportStart();                  // (running before: again, from 1.1.1)
 }
 
 static bool optFirst = false;
@@ -146,7 +148,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         if (armedItem == 0 && !shifted && projectCurrent() >= 0 && projectHasClips() && !menuExportShown()) exportToAbleton();
         if (armedItem == 1 && !shifted) {
           menuExportStatus(nullptr);                 // (the export's label goes)
-          if (usbDriveMode()) drawMenu();            // (back from it: everything read from the card again)
+          bool wasRunning = transport.running;
+          if (usbDriveMode()) {                      // (back from it: everything read from the card again)
+            drawMenu();
+            if (wasRunning) transportStart();        // (running before: again, from 1.1.1)
+          }
         }
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
         bool loaded = slot == projectCurrent();

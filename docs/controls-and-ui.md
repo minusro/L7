@@ -149,7 +149,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   status row (the bottom one) or UP on track 1 (the top one), it takes the place of the track rows and the status row's
   cells, across the whole width; of the status row only the action button
   shows. Opening and leaving the menu never starts or stops the clock;
-  exporting to Ableton and storage mode stop it first. On its items A and B both act
+  exporting to Ableton and storage mode stop it first, and start it again (from 1.1.1) when done if it was running. On its items A and B both act
   (SHIFT with them: cut and paste); START starts / stops the clock there too (SHIFT+START: from 1.1.1). Loading a project, or making a new one, doesn't start the clock either
   (playing: the project comes in on the next bar line). On its items A
   runs the action button's action when let go; B does nothing. The way out
