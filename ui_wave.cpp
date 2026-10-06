@@ -50,6 +50,7 @@ struct WaveView {
   uint16_t bg = BG;
   uint64_t borders = 0;                            // the border's sides (bordersOf())
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
+  int rangeFirstPx = 0, rangePx = 0;               // and its pixel columns: right after the bar line's pixel at each edge
   int markCol = -1;                                // the start position's column; -1: none
   int playCol = -1;                                // playhead / record head; -1: none
   uint16_t headColor = 0;                          // a line this colour; INVERT_HEAD: the column inverted
@@ -118,10 +119,11 @@ static void drawColumn(int i, int bc) {
     block(r, b >= 0 ? (uint16_t)b : behind ? v.bg : BG);
   }
   if (c >= 0 && c < WAVE_COLS && v.visible) {
-    bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
     if (!v.live || c < v.liveFilled) {
-      uint16_t ink = !in ? v.outInk : v.rangeInk;                // (live: all of it, on the coloured cell)
-      for (int sub = 0; sub < PX; sub++) {
+      for (int sub = 0; sub < PX; sub++) {                        // the range's colour by the pixel (live: all of it, on the coloured cell)
+        const int pxCols = WAVE_COLS * PX;
+        bool in = v.live || (c * PX + sub - v.rangeFirstPx + pxCols) % pxCols < v.rangePx;
+        uint16_t ink = !in ? v.outInk : v.rangeInk;
         int reach = pixelReach(pixelLevel(v.live ? v.liveData : tr.overview, c * PX + sub));
         for (int y = WAVE_MID_Y - reach; y <= WAVE_MID_Y + 1 + reach; y++) px[y * PX + sub] = ink;
       }
@@ -203,6 +205,10 @@ void drawWave(int i, bool recordingHere) {
     int first = edgeCol(rs, loopBeats), end = edgeCol(rs + rb, loopBeats);   // (end unwrapped)
     v.rangeFirst = first % WAVE_COLS;
     v.rangeCols = constrain(end - first, 1, WAVE_COLS);
+    // In pixels: from the pixel after the one a bar line takes at that edge
+    // (the left one of the column before it), so the colour meets the bar lines.
+    v.rangeFirstPx = (first * PX - 1 + WAVE_COLS * PX) % (WAVE_COLS * PX);
+    v.rangePx = constrain((end - first) * PX, 1, WAVE_COLS * PX);
     v.markCol = edgeCol(startPosition(loopBeats, rs, rb), loopBeats) % WAVE_COLS;
   }
   for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
