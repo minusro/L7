@@ -15,7 +15,8 @@ void (*usbDriveTick)() = nullptr;
 void (*usbDriveReload)() = nullptr;
 
 // The screen: grey (SCREEN), its title and logo light grey (then the hue
-// cycle), the status labels and the hint black. Its text is left-aligned with
+// cycle), the connection's state under it white, the hint (and the messages
+// that replace it) black. Its text is left-aligned with
 // the hint at the bottom, which stays centred.
 static constexpr uint16_t SCREEN = DIM;
 static const char HINT[] = "PRESS START TO RETURN";
@@ -128,7 +129,7 @@ bool usbDriveMode() {
     if (state != shown) {
       shown = state;
       static const char *const TEXT[3] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED"};
-      line(120, TEXT[state], BG);
+      line(120, TEXT[state], INK);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
     if (board.keys() & m8::BTN_PLAY) return leave("WAIT");   // START: back to the app (ejecting on the computer does too)
@@ -178,7 +179,7 @@ bool usbDriveMode() {
     if (state != shown) {
       shown = state;
       static const char *const TEXT[3] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED"};
-      line(120, TEXT[state], BG);
+      line(120, TEXT[state], INK);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
     if (board.keys() & m8::BTN_PLAY) {            // START: back to the app, restarted (the computer may have changed anything)

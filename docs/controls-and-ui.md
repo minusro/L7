@@ -8,7 +8,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. DOWN on the status row or UP on track 1 (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); in the menu, UP on a card of the top row or DOWN on the list's last item goes back once let go (unless no project is loaded) |
+| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. DOWN on the status row or UP on track 1 (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); in the menu, UP on a card of the top row (I–L) or DOWN on the list's last item goes back once let go (unless no project is loaded) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: menu icon, scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
@@ -164,7 +164,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   too (pressed, the button is black there instead of dark grey).
   Twelve project cards (three rows of four, 21×15 blocks, 3 apart across and 3 down, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
-  A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
+  A-L from the bottom row up (A–D above the list, I–L on top). Each slot has its colour (`PROJECT_COLORS`: twelve
   pastels, mint round to seafoam, picked by the author; the loaded project's is the
   app's accent colour, `ACCENT_DARK` at half its brightness; before one is
   loaded, the splash's turquoise). The loaded project's card is filled with
@@ -188,7 +188,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   drive on macOS, Windows and Linux) under a grey screen with the title (the L7 logo,
   in the menu's corner place and size, in the same colour at all times):
   light grey until the computer is connected, then going round the hues; the
-  status texts and the hint in black (the messages that replace the hint, "EJECTED", "RESTARTING", too),
+  connection's state under it in white, the hint in black (the messages that replace it, "EJECTED", "RESTARTING", too),
   left-aligned with the "PRESS START TO RETURN" hint at the bottom;
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
   COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or pressing START,
@@ -214,9 +214,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   action button shows load (a small arrow right) or, empty, new (a small asterisk); with SHIFT,
   cut or paste (the button grey when it can't act: recording, another copy
   under way, clipboard empty); on the list, an arrow down into a tray (export) and an arrow up out of a tray (storage mode: export's reversed),
-  doing nothing yet. LEFT/RIGHT go through everything in order: the cards row by row, then the
-  list; UP/DOWN go card row to card row and on into the list (back up: to
-  the column it came from). The looper's own selection is kept
+  doing nothing yet. LEFT/RIGHT go through everything in reading order on the screen: the cards
+  row by row from the top (I–L, E–H, A–D), then the list; UP/DOWN go card row
+  to card row and on into the list (back up: to the column it came from, on
+  the A–D row). The looper's own selection is kept
   meanwhile and comes back when the menu closes. The menu opens on the
   loaded project's card (with the dummy project: where its selection was,
   kept across power cycles too); if it was open at power off it opens again

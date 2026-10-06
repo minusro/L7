@@ -10,11 +10,12 @@
 // one into an empty slot. B acts as A; START starts / stops the clock. Opening it stops
 // the clock; loading a project (or making a new one) starts it.
 //
-// Items, in selection order: the cards 0-11 (rows of four, top first), then
-// the list's 12 and 13 (the looper's own selection is kept meanwhile and
-// comes back when the menu closes). UP/DOWN go card row to card row and on
-// into the list (back up: to the column it came from); LEFT/RIGHT through
-// everything in order. It opens on the loaded project's card (the dummy
+// Items: the cards 0-11 (A-L, rows of four, the first row at the bottom:
+// I-L on top, A-D above the list), then the list's 12 and 13 (the looper's
+// own selection is kept meanwhile and comes back when the menu closes).
+// UP/DOWN go card row to card row on the screen and on into the list (back
+// up: to the column it came from, on the A-D row); LEFT/RIGHT through
+// everything in reading order on the screen (I-L, E-H, A-D, the list). It opens on the loaded project's card (the dummy
 // project loaded: where its selection was).
 //
 // The ground: dark grey (MENU_BG), the whole screen's.
@@ -36,7 +37,11 @@ uint32_t uiGeneration = 1;
 
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
-static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4;
+static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
+// An item's place in reading order on the screen (the cards' rows top to
+// bottom: I-L, E-H, A-D; then the list), and back (the same swap).
+static int screenPos(int k) { return k < CARDS ? (CARD_ROWS - 1 - k / COLS) * COLS + k % COLS : k; }
+static int itemAt(int p) { return screenPos(p); }
 static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE"};
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), kept until the menu closes, storage mode is entered or
@@ -135,7 +140,7 @@ static constexpr int LOGO_X = PX, LOGO_Y = STATUS_TOP;
 
 static Shape itemShape(int k) {
   if (k < CARDS)
-    return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (k / COLS) * (CARD_H + CARD_VGAP), CARD_W, CARD_H, CARD_CUT};
+    return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (screenPos(k) / COLS) * (CARD_H + CARD_VGAP), CARD_W, CARD_H, CARD_CUT};
   // A list item: the box fitting the longest label, centred (its label
   // left-aligned in it).
   int w = 0;
@@ -319,16 +324,18 @@ void menuLeaveStatus() {
 bool menuKeys(uint8_t pressed) {
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   int k = menuSel;
-  // LEFT/RIGHT: through every item in order (the cards row by row, the list).
-  if (pressed & m8::BTN_LEFT && k > 0) k--;
-  if (pressed & m8::BTN_RIGHT && k < ITEMS - 1) k++;
-  if (k < CARDS) {
-    int row = k / COLS;
-    if (pressed & m8::BTN_UP && row > 0) k -= COLS;
-    if (pressed & m8::BTN_DOWN) k = row < CARDS / COLS - 1 ? k + COLS : CARDS;
+  // LEFT/RIGHT: through every item in reading order on the screen (the
+  // cards row by row from the top, the list).
+  int p = screenPos(k);
+  if (pressed & m8::BTN_LEFT && p > 0) k = itemAt(p - 1);
+  if (pressed & m8::BTN_RIGHT && p < ITEMS - 1) k = itemAt(p + 1);
+  if (k < CARDS) {                                // (A-D the bottom row: UP goes on through the letters)
+    int row = screenPos(k) / COLS;
+    if (pressed & m8::BTN_UP && row > 0) k += COLS;
+    if (pressed & m8::BTN_DOWN) k = row < CARD_ROWS - 1 ? k - COLS : CARDS;
     if (k < CARDS) cardCol = k % COLS;
   } else if (!(pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
-    if (pressed & m8::BTN_UP) k = k > CARDS ? k - 1 : CARDS - COLS + cardCol;
+    if (pressed & m8::BTN_UP) k = k > CARDS ? k - 1 : cardCol;   // (to the bottom row: A-D)
     if (pressed & m8::BTN_DOWN && k < ITEMS - 1) k++;
   }
   if (pressed & arrows) movedHere = k != menuSel;
@@ -349,7 +356,7 @@ void menuExportStatus(const char *text, int nameAt) {
 
 bool menuLeavesOn(uint8_t key) {
   if (!shown || onStatus || projectCurrent() < 0) return false;   // (no project loaded: one has to be chosen first)
-  return key == m8::BTN_UP ? menuSel < COLS : key == m8::BTN_DOWN ? menuSel == ITEMS - 1 : false;
+  return key == m8::BTN_UP ? menuSel < CARDS && screenPos(menuSel) < COLS : key == m8::BTN_DOWN ? menuSel == ITEMS - 1 : false;   // (UP: the top row, I-L)
 }
 
 void openMenu() {
