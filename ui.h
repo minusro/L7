@@ -32,10 +32,12 @@ constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left
 constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
-// The status row below the tracks: three cells (to the volume cells' edge),
-// the scene (the widest), the clock (centred) and the tempo.
-constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, SCENE_CELL = 0, CLOCK_CELL = 1, TEMPO_CELL = 2;
-constexpr Cell SCENE_BOX = {0, 110}, CLOCK_BOX = {108, 94}, TEMPO_BOX = {200, 92};
+// The status row below the tracks: four cells (to the volume cells' edge), left
+// to right: the menu's (a small square, a hamburger icon), the scene (the
+// widest), the clock (its width is the master volume's 22 lines) and the tempo.
+// Neighbouring cells share the side between them.
+constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
+constexpr Cell MENU_BOX = {0, STATUS_H}, SCENE_BOX = {24, 100}, CLOCK_BOX = {122, 94}, TEMPO_BOX = {214, 78};
 // The cells a row has (the status row's: as many as a track row's).
 inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The selected cell in row i's terms.
