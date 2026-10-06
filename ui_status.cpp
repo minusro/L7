@@ -1,5 +1,6 @@
 // ui_status.cpp — the status row: tempo, clock and scene (see ui.h)
 #include "ui.h"
+#include "input.h"
 
 // Status row, in the pixel font, each cell framed like the tracks' when the
 // row is selected:
@@ -202,7 +203,7 @@ void drawStatus() {
   // over the middle of the selected cell's bottom line, part of its frame:
   //   000XXX000   (the row above the line)
   //   ++00X00++   (the line: + the frame as it is)
-  // Light grey; dark grey while DOWN is held. Drawn every pass, after what
+  // Light grey; dark grey while letting go of DOWN will open the menu. Drawn every pass, after what
   // could cover it (the master volume's meter).
   static int arrowCell = -1;
   auto arrowAt = [&](int ac, bool on, uint16_t ink) {
@@ -219,6 +220,6 @@ void drawStatus() {
     drawFrame(arrowCell);
   }
   arrowCell = cell;
-  if (cell >= 0) arrowAt(cell, true, board.keys() & m8::BTN_DOWN ? DARK : LIGHT);
+  if (cell >= 0) arrowAt(cell, true, menuOpensOnRelease() ? DARK : LIGHT);
 }
 

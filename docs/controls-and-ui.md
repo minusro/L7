@@ -8,7 +8,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. DOWN on the status row (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); the selected status cell's frame shows a small down arrow on its bottom line. In the menu, UP on a card of the top row goes back (once let go), unless no project is loaded; those cards' frames show a small up arrow on their top line |
+| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. DOWN on the status row (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); the selected status cell's frame shows a small down arrow on its bottom line. |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
@@ -115,7 +115,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the line; the scene versions the same with a checkered square right round them.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  Status row (labels 50% grey, light grey on the selected cell): the selected cell's frame carries a small blocky down arrow over the middle of its bottom line (`000XXX000` above the line, `++00X00++` on it; light grey, dark grey while DOWN is held): DOWN opens the menu. The scene cell
+  Status row (labels 50% grey, light grey on the selected cell): the selected cell's frame carries a small blocky down arrow over the middle of its bottom line (`000XXX000` above the line, `++00X00++` on it; light grey, dark grey while letting go of DOWN will open the menu): DOWN opens the menu. The scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -152,7 +152,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   new). Loading a project, or making a new one, doesn't start the clock either
   (playing: the project comes in on the next bar line). On its items A
   runs the action button's action when let go; B does nothing. The way out
-  is loading a project (A on the loaded one: just back), or UP on a card of the top row (once let go; its frame shows a small up arrow on its top line, `0000X0000` above it, `++0XXX0++` on it, light grey, dark grey while UP is held); with the dummy
+  is loading a project (A on the loaded one: just back); with the dummy
   project loaded, one has to be loaded or made first. Opening the menu
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.
