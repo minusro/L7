@@ -315,14 +315,13 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
           if (on[r][c]) block(c0 + c, r0 + copy * (ROWS4 + 1) + r);
   } else if (icon == ICON_METRO) {
     // A metronome, filled (a trapezoid; its pendulum a slit up through it and
-    // out past the top), as big as the backdrop holds with a block of margin
-    // (10 x 11); crossed out while it would click with the clock running (what SHIFT+A will change):
+    // out past the top), 10 x 10, a block of margin round it at least; crossed out while it would click with the clock running (what SHIFT+A will change):
     // a diagonal cut through it, carried on outside it.
-    static const char *const METRONOME[11] = {
+    static const char *const METRONOME[10] = {
         ".......#..", "......#...", "...###....", "...###....", "..###.##..", "..###.##..",
-        "..###.##..", ".###.####.", ".###.####.", "####.#####", "##########"};
-    constexpr int W = 10, H = 11;
-    int c0 = PANEL_LEFT + 1, r0 = 1;
+        ".###.####.", ".###.####.", "####.#####", "##########"};
+    constexpr int W = 10, H = 10;
+    int c0 = PANEL_LEFT + 1, r0 = (rows - H) / 2;
     bool crossed = metronomeOn;                    // (it would click were the clock running: metronomeOn, kept up to date running or not)
     for (int r = 0; r < H; r++)
       for (int c = 0; c < W; c++) {
