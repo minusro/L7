@@ -97,7 +97,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   recording's record head inverts its column.
 * Filter (`ui_filter.cpp`): inside a block of space within the frame, the
   response filled from the curve down, under a
-  line one block thick. Fill / line: grey / light grey;
+  line 2 pixels thick, the curve drawn in pixels (not blocks). Fill / line: grey / light grey;
   selected: light grey / white; muted: dark grey, no line; B held on it
   (muted or not): the dark accent / the accent colour.
 * Volume (`ui_mix.cpp`): 5 straight vertical lines a side, every other
