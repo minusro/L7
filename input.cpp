@@ -122,6 +122,17 @@ static uint8_t menuOnRelease = 0, leaveOnRelease = 0;
 bool screenSwitchPending() { return menuOnRelease || leaveOnRelease; }
 uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease; }
 
+// Loads project slot p from the menu; a new project (an empty slot) opens
+// with the selection on track 1 (the looper's, for when the menu closes);
+// another keeps the selection as it is.
+static bool loadFromMenu(int p) {
+  bool fresh = !projectFilled(p);
+  if (!projectLoad(p)) return false;
+  if (fresh) setMainSelection(NUM_TRACKS - 1, WAVE_CELL);
+  metronomeOn = projectCurrent() >= 0 && !projectHasClips();   // (now: its first beat clicks too)
+  return true;
+}
+
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
@@ -148,10 +159,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       if (!back) {
         int slot = menuFirstEmptySlot();
         menuSelectSlot(slot);
-        if (projectLoad(slot)) {
-          metronomeOn = projectCurrent() >= 0 && !projectHasClips();   // (a new project: its first beat clicks)
-          back = true;
-        }
+        if (loadFromMenu(slot)) back = true;
       }
       if (back) {
         closeMenu();
@@ -212,9 +220,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         drawMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
       } else {                                       // load it (an empty slot: a new project), back to the looper
-        if (projectLoad(slot)) {                     // (the selection stays as it is)
+        if (loadFromMenu(slot)) {                    // (the selection stays as it is; a new project: on track 1)
           closeMenu();
-          metronomeOn = projectCurrent() >= 0 && !projectHasClips();          // (now: its first beat clicks too)
           for (int i = 0; i < ROWS; i++) drawTrack(i);
         }
       }

@@ -163,7 +163,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   its top (on track 1) or DOWN off its bottom (on the status row), it takes the whole screen; it has no
   action button (its edge mark in that place). Opening and leaving the menu never starts or stops the clock;
   exporting to Ableton and storage mode stop it first, and start it again (from 1.1.1) when done if it was running. On its items A and B both act
-  (SHIFT with them: cut and paste); START starts / stops the clock there too (SHIFT+START: from 1.1.1). Loading a project, or making a new one, doesn't start the clock either
+  (SHIFT with them: cut and paste); START starts / stops the clock there too (SHIFT+START: from 1.1.1). A new project opens with the selection on track 1 (another project: the selection as it was). Loading a project, or making a new one, doesn't start the clock either
   (playing: the project comes in on the next bar line). On its items A
   runs the item's action when let go; B does nothing. The way out
   is loading a project (A on the loaded one: just back), or RIGHT off its right edge (on a card of the right column, or on a list item), UP off its top (on the top card row) or DOWN off its bottom (on the list's last item), once let go; with no project loaded those make a new one in the first empty slot (its card selected) and go back (all slots full: nowhere to go); with the dummy
