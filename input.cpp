@@ -90,7 +90,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
-  // A on the scene cell in the looper's view: the menu opens once A is let
+  // B+A on the scene cell in the looper's view: the menu opens once A is let
   // go (the clock goes on).
   static uint8_t menuOnRelease = 0;                  // the key to wait for
   if (menuOnRelease && !(keys & menuOnRelease)) {
@@ -389,8 +389,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
 
   // START: start from 1.1.1 / stop. With SHIFT: start from 1.1.1 on every
-  // press, running or not. A on the status row: the menu (scene cell), START
-  // (clock cell), tap tempo (tempo cell); with SHIFT, on any of them: the same
+  // press, running or not. A on the status row: start from 1.1.1 (scene
+  // cell), play / stop (clock cell), tap tempo (tempo cell); B+A on the scene cell: the menu; with SHIFT, on any of them: the same
   // as SHIFT+START.
   // B+A on an empty track: resample (B otherwise adjusts cells). With SHIFT too, the order they were pressed in:
   // B then SHIFT, +A: paste the scene clipboard after the scene; SHIFT then
@@ -405,15 +405,19 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       // An empty track resamples: records the app's output (queued behind a
       // recording, as A records), if there's anything to: a clip not muted.
       recordPress(selected, true);
+    } else if (onScene) {
+      menuOnRelease = m8::BTN_EDIT;                // B+A on the scene cell: the menu (the clock goes on)
     }
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
   if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
-    if (onScene) menuOnRelease = m8::BTN_EDIT;      // the menu (the clock goes on)
-    else if (onClock) transportRestart();          // from 1.1.1, as SHIFT+START
-    else if (onTempo) tapTempo();
+    if (onScene) transportRestart();               // from 1.1.1, as SHIFT+START
+    else if (onClock) {                            // play / stop, as START
+      if (transport.running) transportStop();
+      else transportStart();
+    } else if (onTempo) tapTempo();
   }
   if (edit && !onStatus) {
     Track &tr = tracks[selected];

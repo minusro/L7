@@ -134,7 +134,7 @@ extern uint32_t uiGeneration;
 
 // ---- The menu (ui_menu.cpp): a second view in place of the track rows
 // and the status row's cells (only the action button stays), opened with A
-// on the scene cell, left by loading a project; the
+// with B+A on the scene cell, left by loading a project; the
 // arrows move its selection. While it's open the track rows aren't drawn.
 bool menuOpen();
 void openMenu();

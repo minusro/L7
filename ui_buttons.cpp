@@ -28,8 +28,8 @@
 // (a question mark after the first A: a second A confirms) or
 // paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
-// the menu (a small stop) on the scene cell, start from 1.1.1 (|>, as
-// SHIFT+START) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
+// start from 1.1.1 (|>, as SHIFT+START) on the scene cell, play / stop (a play
+// or a stop icon) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
 // start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
@@ -66,7 +66,7 @@ static int actionIcon() {
   if (selected == STATUS_ROW) {                    // restart / the menu / tap tempo
     if (shift) return ICON_RESTART;
     int cell = selectedCellIn(STATUS_ROW);
-    return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? ICON_RESTART : ICON_MENU;   // the clock cell: from 1.1.1
+    return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_RESTART;   // the scene cell: from 1.1.1
   }
   const Track &tr = tracks[selected];
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) || recordQueued() == selected ? ICON_DELETE : ICON_PASTE;

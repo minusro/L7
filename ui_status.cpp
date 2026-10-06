@@ -10,7 +10,8 @@
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
 //     UP/DOWN step through the scenes. The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
-//     it, or the change waiting for its switch point.
+//     it, or the change waiting for its switch point. Selected, A starts from
+//     1.1.1 (as SHIFT+START); B+A opens the menu.
 //   second cell: the clock (bar.beat.step), after a small play icon (the
 //     accent colour while it runs), centred together: stopped, 1.1.1 in dark
 //     grey (selected: grey); running, grey with light grey on each beat's
