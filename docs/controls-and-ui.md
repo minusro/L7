@@ -8,7 +8,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. UP on track 1 (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on) |
+| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. DOWN on the status row (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); a very small down arrow at the screen's bottom centre shows it |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
@@ -116,7 +116,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the line; the scene versions the same with a checkered square right round them.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  Status row (labels 50% grey, light grey on the selected cell): the scene cell
+  Status row (labels 50% grey, light grey on the selected cell): under the clock, at the screen's bottom centre, a very small down arrow in pixels (5 × 3, grey; light grey with the status row selected; not over the master volume): DOWN from the status row opens the menu. The scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -144,8 +144,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Menu (`ui_menu.cpp`): the app starts where it was left, in the menu or
   the looper's view (the first start, or with no project loaded: the menu, on the
   last project's card, that project already loaded), with the clock running if it was (from
-  1.1.1). Opened with UP on the
-  top track row, it takes the place of the track rows and the status row's
+  1.1.1). Opened with DOWN on the
+  status row (the bottom one), it takes the place of the track rows and the status row's
   cells, across the whole width; of the status row only the action button
   shows. Opening and leaving the menu never starts or stops the clock;
   exporting to Ableton and storage mode stop it first. On its items A and B both act

@@ -1,6 +1,6 @@
 // ui_menu.cpp — the menu (see ui.h): in place of the track rows and the
 // status row's cells (only the action button shows), the screen's whole
-// width. Opened with UP on the top track row; left by loading a project
+// width. Opened with DOWN on the status row (the bottom one); left by loading a project
 // (A on the loaded one: just back). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
 // "ENTER STORAGE MODE"; it scrolls once it has more than four. A runs

@@ -23,7 +23,7 @@
 //
 // Keys:
 //   UP/DOWN          select a row: tracks 1 (top) to 7 (just above the status row),
-//                      UP on track 1 (a fresh press): open the menu (on release)
+//                      DOWN on the status row (a fresh press): open the menu (on release)
 //                      then the status row; it starts on track 1
 //   LEFT/RIGHT       select a cell: waveform, filter, volume (on the status row: scene, tempo)
 //   OPT twice        reset the current cell (waveform: whole loop; filter: open;

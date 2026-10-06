@@ -134,6 +134,17 @@ void drawStatus() {
     drawText(numRight - w, textY, text, ink, BG);
   }
 
+  // A very small down arrow at the screen's bottom centre (in pixels): DOWN from
+  // the status row opens the menu. Grey; light grey with the status row selected.
+  // (Not over the master volume's meter.)
+  auto drawMenuArrow = [&]() {
+    static const char *const ARROW[3] = {"#####", ".###.", "..#.."};
+    uint16_t ink = selected == STATUS_ROW ? LIGHT : DIM;
+    for (int r = 0; r < 3; r++)
+      for (int c = 0; c < 5; c++)
+        if (ARROW[r][c] == '#') t.drawPixel(158 + c, 240 - PX - 4 + r, ink);   // (y 234-236: a pixel above the frame)
+  };
+
   // The clock, or the master volume while B alone is held on its cell.
   static bool shownVolume = false;
   bool volume = cell == CLOCK_CELL && bAlone();
@@ -176,6 +187,8 @@ void drawStatus() {
     t.fillRect(tx + w, textY, inR - tx - w, FONT_H, BG);
     drawText(tx, textY, text, clockInk, BG);
   }
+
+  if (!volume) drawMenuArrow();
 
   // The scene. Its box reaches the cell's inner edge: the position's text
   // (up to "250*/250") always fits, and clears any longer text before it.
