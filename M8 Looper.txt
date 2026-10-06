@@ -126,6 +126,8 @@ x0x0x00x0x0x
 - overdubbing - not for now or ever maybe X
 
 
+F1 G2 H3 I4 J5 K6 L7 M8
+
 L8
 Loop8
 8L

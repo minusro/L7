@@ -295,7 +295,7 @@ void drawMenu() {
   }
   // The edge mark: in a strip along the right edge, the screen's height, a
   // third as wide as the space right of the cards (the loaded project's
-  // colour; black with none), centred in it. Dark grey; white where
+  // colour; black with none), centred in it. Dark grey; black where
   // RIGHT would leave the menu (with no project: making a new one in the
   // first empty slot); while an arrow is held that leaves once let go, white
   // (with no project: that slot's colour).
@@ -306,7 +306,7 @@ void drawMenu() {
   int empty = menuFirstEmptySlot();
   uint16_t strip = loaded ? ACCENT : BG;
   uint16_t ink = screenSwitchPending() ? (loaded ? INK : PROJECT_COLORS[max(empty, 0)])
-               : menuLeavesOn(m8::BTN_RIGHT) ? INK : DARK;
+               : menuLeavesOn(m8::BTN_RIGHT) ? BG : DARK;
   if (all || strip != shownStrip) {
     shownStrip = strip;
     board.tft().fillRect(stripX, 0, stripW, 240, strip);
