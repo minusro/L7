@@ -53,22 +53,25 @@ void drawFilter(int i) {
     // The graph in pixels: columns from GRAPH_LEFT's, rows 2-13's pixels; the
     // curve's top pixel row (fractional) at each column's centre.
     constexpr int X0 = GRAPH_LEFT * PX, COLS = GRAPH_COLS * PX, Y0 = TOP_ROW * PX, Y1 = (BOTTOM_ROW + 1) * PX - 1, LINE = 2;
-    constexpr int LINE_Y1 = (BOTTOM_ROW + 2) * PX - 1;   // the line runs on through the space under the graph, cut by the frame
-    float y[COLS];
-    for (int c = 0; c < COLS; c++) {
+    // The curve is worked out a column past each side too (and below the graph
+    // as far as it goes), so where it leaves the graph the line runs on to the
+    // graph's edge at its full thickness; everything is then masked to the
+    // graph (a block of space left before the frame on every side).
+    float ys[COLS + 2];
+    for (int c = -1; c <= COLS; c++) {
       float hz = FILTER_MIN_HZ * powf(2.0f, FILTER_OCTAVES * (c + 0.5f) / COLS);
-      y[c] = Y0 + -filterResponseDb(k.lo, k.hi, hz) / CURVE_DB * (Y1 - (LINE - 1) - Y0);
+      ys[c + 1] = Y0 + -filterResponseDb(k.lo, k.hi, hz) / CURVE_DB * (Y1 - (LINE - 1) - Y0);
     }
+    auto y = [&](int c) { return ys[c + 1]; };
     for (int c = 0; c < COLS; c++) {
       // The line: this column's row, stretched halfway to its neighbours'
       // so it stays joined where it's steep.
-      float lo = y[c], hi = y[c];
-      if (c > 0) { lo = min(lo, (y[c] + y[c - 1]) / 2); hi = max(hi, (y[c] + y[c - 1]) / 2); }
-      if (c < COLS - 1) { lo = min(lo, (y[c] + y[c + 1]) / 2); hi = max(hi, (y[c] + y[c + 1]) / 2); }
+      float lo = min(y(c), min((y(c) + y(c - 1)) / 2, (y(c) + y(c + 1)) / 2));
+      float hi = max(y(c), max((y(c) + y(c - 1)) / 2, (y(c) + y(c + 1)) / 2));
       int r0 = (int)lroundf(lo), r1 = (int)lroundf(hi) + LINE - 1;
       if (k.line != BG)
-        for (int r = max(r0, Y0); r <= min(r1, LINE_Y1); r++) px[r * w + X0 + c] = k.line;
-      int under = k.line != BG ? r1 + 1 : (int)lroundf(y[c]);   // (no line: the fill from the curve down)
+        for (int r = max(r0, Y0); r <= min(r1, Y1); r++) px[r * w + X0 + c] = k.line;
+      int under = k.line != BG ? r1 + 1 : (int)lroundf(y(c));   // (no line: the fill from the curve down)
       for (int r = max(under, Y0); r <= Y1; r++) px[r * w + X0 + c] = k.fill;
     }
   }
