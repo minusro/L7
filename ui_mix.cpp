@@ -72,12 +72,13 @@ void drawMix(int i) {
   int levels[2] = {tr.volume - max(0, (int)tr.balance), tr.volume - max(0, -(int)tr.balance)};   // lines lit
   bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
   bool editing = here && selectedCellIn(i) == MIX_CELL && bAlone();
-  uint16_t levelInk = editing ? ACCENT : muted ? DARK : here ? LIGHT : DIM;
-  uint16_t outerInk = editing ? DIM : muted ? BG : here ? DIM : DARK;
+  uint16_t ground = trackGround(i);
+  uint16_t levelInk = onGround(editing ? ACCENT : muted ? DARK : here ? LIGHT : DIM, ground);
+  uint16_t outerInk = editing ? DIM : muted ? ground : here ? DIM : DARK;   // (muted: none)
   for (int ch = 0; ch < 2; ch++) {
     int level = levels[ch], meter = editing ? 0 : arcsForDb(meterDb[i][ch]);
     for (int j = 0; j < MIX_ARCS; j++)
-      looks[ch * MIX_ARCS + j] = !hasClip(i) ? BG : j < meter ? INK : j < level ? levelInk : outerInk;
+      looks[ch * MIX_ARCS + j] = !hasClip(i) ? ground : j < meter ? INK : j < level ? levelInk : outerInk;
   }
 
   auto &t = board.tft();
@@ -89,7 +90,7 @@ void drawMix(int i) {
     for (int r = 0; r < BAND_ROWS; r++)
       for (int c = 0; c < CELL_COLS; c++) {
         int b = borderAt(i, MIX_CELL, r, c, BAND_ROWS, CELL_COLS);   // the border (the frame)
-        uint16_t color = b >= 0 ? (uint16_t)b : BG;
+        uint16_t color = b >= 0 ? (uint16_t)b : ground;
         if (arcAt[r][c] >= 0) color = looks[arcAt[r][c]];
         for (int dy = 0; dy < PX; dy++)
           for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * cell.w + c * PX + dx] = color;

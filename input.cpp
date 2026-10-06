@@ -500,7 +500,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (sceneChanged)
     for (int i = 0; i < ROWS; i++) drawTrack(i);
   drawTrack(selected);
-  if (prevSel != selected) drawTrack(prevSel);
+  if (prevSel != selected) {
+    drawTrack(prevSel);
+    for (int r : {rowAbove(selected), rowBelow(selected), rowAbove(prevSel), rowBelow(prevSel)})   // (sharing a border row with them: the ground there)
+      if (r >= 0 && r < NUM_TRACKS) drawTrack(r);
+  }
 }
 
 // After a recording finishes on the selected track, move on: to the next

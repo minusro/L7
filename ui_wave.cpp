@@ -48,7 +48,8 @@ static int pixelReach(uint8_t level) { return (level * WAVE_REACH_PX + 127) / 25
 struct WaveView {
   bool visible = false;                            // something is shown (not an empty track)
   bool live = false;                               // recording in progress: live view
-  uint16_t bg = BG;
+  uint16_t bg = BG;                                // behind the waveform (a recording's: the accent colour)
+  uint16_t ground = BG;                            // round it (trackGround())
   uint64_t borders = 0;                            // the border's sides (bordersOf())
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
   int rangeFirstPx = 0, rangePx = 0;               // and its pixel columns
@@ -118,7 +119,7 @@ static void drawColumn(int i, int bc) {
     // The background (a recording's accent colour) only behind the waveform:
     // a block of black between it and the border.
     bool behind = c >= 0 && c < WAVE_COLS && r >= MID_ROW - WAVE_REACH && r <= MID_ROW + 1 + WAVE_REACH;
-    block(r, b >= 0 ? (uint16_t)b : behind ? v.bg : BG);
+    block(r, b >= 0 ? (uint16_t)b : behind ? v.bg : v.ground);
   }
   if (c >= 0 && c < WAVE_COLS && v.visible) {
     if (!v.live || c < v.liveFilled) {
@@ -133,7 +134,7 @@ static void drawColumn(int i, int bc) {
     int bars = v.live ? (int)v.liveBars : (int)tr.loopBars;      // (recording: as it's shown so far)
     for (int b = 1; b < bars; b++)                                // bars 2 on: a black line just before each start
       if (edgeCol(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) == c + 1) {
-        for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) block(r, v.live ? ACCENT_DARK : BG);   // (recording: the dark accent)
+        for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) block(r, v.live ? ACCENT_DARK : v.bg);   // (recording: the dark accent)
         break;
       }
     if (uint16_t ink = startInk(v, c); ink != BG)                // the start position: a checkerboard line, 1-pixel squares, the
@@ -172,9 +173,10 @@ void drawWave(int i, bool recordingHere) {
   bool editing = here && selectedCellIn(i) == WAVE_CELL && bAlone();
   uint16_t rangeInk = editing ? ACCENT : muted ? DIM : here ? INK : LIGHT;
   if (recordingHere) rangeInk = INK;                 // the recording's waveform: white
-  uint16_t outInk = muted ? DARK : DIM;            // outside it: grey (muted: dark grey)
+  uint16_t ground = trackGround(i);
+  uint16_t outInk = onGround(muted ? DARK : DIM, ground);   // outside it: grey (muted: dark grey; black on the selected track's ground)
   if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
-      v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.borders == borders &&
+      v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.ground == ground && v.borders == borders &&
       v.rangeInk == rangeInk && v.outInk == outInk)
     return;
   v.drawn = uiGeneration;
@@ -184,6 +186,7 @@ void drawWave(int i, bool recordingHere) {
   v.rs = rs;
   v.rb = rb;
   v.bg = bg;
+  v.ground = ground;
   v.borders = borders;
   v.rangeInk = rangeInk;
   v.outInk = outInk;

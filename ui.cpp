@@ -5,7 +5,11 @@
 int borderAt(int i, int cell, int r, int c, int rows, int cols) {
   bool l = c == 0, rt = c == cols - 1, t = r == 0, b = r == rows - 1;
   if (!(l || rt || t || b)) return -1;
-  if ((l || rt) && (t || b)) return BG;            // corners: cut
+  // No frame there: the ground (a top or bottom border row is shared with
+  // the row above / below: dark grey if either is the selected track).
+  uint16_t ground = trackGround(i);
+  if (i != STATUS_ROW && (t || b) && trackGround(t ? rowAbove(i) : rowBelow(i)) == DARK) ground = DARK;
+  if ((l || rt) && (t || b)) return ground;        // corners: cut
   uint16_t own = cellFrame(i, cell);
   if (own != BG) return own;
   int ni = t ? rowAbove(i) : b ? rowBelow(i) : i, nc = l ? cell - 1 : rt ? cell + 1 : cell;
@@ -13,12 +17,13 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
     if (t || b || nc < 0 || nc >= cellCount(i)) return BG;
     return cellFrame(i, nc);
   }
-  if (ni < 0 || ni >= NUM_TRACKS || nc < 0 || nc >= CELLS) return BG;
+  if (ni < 0 || ni >= NUM_TRACKS || nc < 0 || nc >= CELLS) return ground;
   if (nc != cell) {                                // only a cell right next to it (no space between)
     const Cell &a = CELL[min(cell, nc)], &n = CELL[max(cell, nc)];
-    if (a.x + a.w - PX != n.x) return BG;
+    if (a.x + a.w - PX != n.x) return ground;
   }
-  return cellFrame(ni, nc);
+  uint16_t theirs = cellFrame(ni, nc);
+  return theirs != BG ? theirs : ground;
 }
 
 uint64_t bordersOf(int i, int cell) {

@@ -76,7 +76,11 @@ and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
 selected cell only (grey while B is held, with or without other keys:
 adjusting; white while only arrows are held and the last press moved the
 selection: not at an edge); all the selected track's cells take their selected look
-(the frame stays on the selected one, and B's editing look too). The selected track's button gets a 50% grey panel behind its number (from a block in,
+(the frame stays on the selected one, and B's editing look too), on a dark grey ground
+(`trackGround()`): a rectangle under its cells as tall as the frame (its band and the block
+below; shared border rows go dark grey when either row is selected), from the left edge to
+the cells' end (not under the button); anything dark grey on it is drawn black instead (a
+muted clip's filter fill and volume level, its waveform outside the range). The selected track's button gets a 50% grey panel behind its number (from a block in,
 the button's height: two blocks of border above, left and below the 7×9
 badge; the accent colour while A is held, with the
 action button, showing just the number then, in black).

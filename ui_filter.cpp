@@ -19,7 +19,7 @@ static constexpr int TOP_ROW = 2, BOTTOM_ROW = BAND_ROWS - 3;   // 0 dB, -CURVE_
 static constexpr float CURVE_DB = 30;
 
 void drawFilter(int i) {
-  struct Key { int8_t lo, hi; bool clip; uint16_t fill, line; uint64_t borders; };
+  struct Key { int8_t lo, hi; bool clip; uint16_t fill, line, ground; uint64_t borders; };
   static Key shown[NUM_TRACKS];
   static uint32_t drawn[NUM_TRACKS];               // uiGeneration when last drawn
   const Track &tr = tracks[i];
@@ -31,7 +31,8 @@ void drawFilter(int i) {
   k.clip = hasClip(i);                             // empty (or still recording): nothing
   bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
   bool editing = here && editingCell(i, FILTER_CELL);
-  k.fill = editing ? ACCENT_DARK : muted ? DARK : here ? LIGHT : DIM;
+  k.ground = trackGround(i);
+  k.fill = onGround(editing ? ACCENT_DARK : muted ? DARK : here ? LIGHT : DIM, k.ground);
   k.line = editing ? ACCENT : muted ? BG : here ? INK : LIGHT;   // (BG: none)
   if (drawn[i] == uiGeneration && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;
@@ -41,7 +42,7 @@ void drawFilter(int i) {
   for (int r = 0; r < BAND_ROWS; r++)             // the border (the frame), round the background
     for (int c = 0; c < CELL_COLS; c++) {
       int b = borderAt(i, FILTER_CELL, r, c, BAND_ROWS, CELL_COLS);
-      blocks[r][c] = b >= 0 ? (uint16_t)b : BG;
+      blocks[r][c] = b >= 0 ? (uint16_t)b : k.ground;
     }
   static uint16_t px[CELL_H * CELL[FILTER_CELL].w];
   const int w = CELL[FILTER_CELL].w;
