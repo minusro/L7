@@ -129,8 +129,8 @@ static void drawColumn(int i, int bc) {
     int bars = v.live ? (int)v.liveBars : (int)tr.loopBars;      // (recording: as it's shown so far)
     for (int b = 1; b < bars; b++)                                // bars 2 on: a black line just before each start
       if (edgeCol(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) == c + 1) {
-        for (int y = (MID_ROW - WAVE_REACH) * PX; y < (MID_ROW + 2 + WAVE_REACH) * PX; y++)   // a pixel wide: the column's right one, at the bar's edge
-          px[y * PX + PX - 1] = v.live ? ACCENT_DARK : BG;                                        // (recording: the dark accent)
+        for (int y = (MID_ROW - WAVE_REACH) * PX; y < (MID_ROW + 2 + WAVE_REACH) * PX; y++)   // a pixel wide: the column's left one
+          px[y * PX] = v.live ? ACCENT_DARK : BG;                                                 // (recording: the dark accent)
         break;
       }
     if (uint16_t ink = startInk(v, c); ink != BG) {              // the start position: a dotted line (0: left as it is)
