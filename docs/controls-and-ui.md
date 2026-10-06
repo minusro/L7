@@ -129,7 +129,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
   small square, not selectable, no frame, with the edge mark: a small arrow (an open 3×5
   head, a chevron, on a shaft 5 blocks long) pointing left, 2 blocks from the left edge, dark grey on black (grey where LEFT would open the
-  menu, a row's first cell; white while an arrow is held that opens it once let go, the selection frame hidden meanwhile) (the selected status row's dark grey
+  menu, a row's first cell; white while LEFT is held that opens it once let go; the selection frame hidden meanwhile, and while UP / DOWN are held to open it, the arrow unchanged then) (the selected status row's dark grey
   ground starts at the scene cell's left edge), in the space from the screen's left edge to 2 blocks short of the scene cell's
   frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
   (an inverted SCN tag with the scene position,
@@ -184,9 +184,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in from the left edge, 2 up from the status row's top: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). Along the right
   edge, a strip the screen's height and a sixth as wide as the space right of the cards (10 px),
-  in the loaded project's colour (none with no project: the menu's ground); no arrow. While an
-  arrow is held that leaves the menu once let go, a white line the screen's height a block left
-  of it (the selection frame hidden meanwhile). Under them
+  in the loaded project's colour (none with no project: the menu's ground); no arrow. While RIGHT
+  is held that leaves the menu once let go, a white line the screen's height a block left
+  of it (UP / DOWN held to leave: no line; the selection frame hidden meanwhile either way). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING

@@ -120,6 +120,7 @@ static void menuLongPress() {
 // An arrow held that switches screens when let go: into the menu, or out of it.
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0;
 bool screenSwitchPending() { return menuOnRelease || leaveOnRelease; }
+uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease; }
 
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;

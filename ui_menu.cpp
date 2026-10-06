@@ -302,7 +302,7 @@ void drawMenu() {
   constexpr int cardsRight = (CARDS_X + COLS * CARD_W + (COLS - 1) * CARD_GAP) * PX;
   constexpr int stripW = (320 - cardsRight) / 3 / PX / 2 * PX, stripX = 320 - stripW, lineX = stripX - 2 * PX;
   uint16_t strip = projectCurrent() >= 0 ? ACCENT : MENU_BG;
-  uint16_t line = screenSwitchPending() ? INK : MENU_BG;
+  uint16_t line = screenSwitchKey() == m8::BTN_RIGHT ? INK : MENU_BG;   // (only RIGHT held, not UP / DOWN)
   if (all || strip != shownStrip) {
     shownStrip = strip;
     board.tft().fillRect(stripX, 0, stripW, 240, strip);
