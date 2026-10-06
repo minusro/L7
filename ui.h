@@ -34,7 +34,7 @@ constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: four cells (to the volume cells' edge), left
-// to right: the menu's (a small square with a dark grey chevron down:
+// to right: the menu's (a small square with a grey chevron down:
 // DOWN here opens the menu; not selectable), the scene (the widest), the clock
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
@@ -47,10 +47,10 @@ inline int selectedCellIn(int i) {
   int c = min(selectedCell, cellCount(i) - 1);
   return i == STATUS_ROW ? max(c, SCENE_CELL) : c;
 }
-// The edge chevron's place: in the menu cell (x; y from the status row's top:
-// where the lower of a centred pair would be, nearer the edge), and in the
-// menu mirrored top to bottom (as far from the top).
-constexpr int CHEVRON_X = MENU_BOX.x + (MENU_BOX.w - 5 * PX) / 2 / PX * PX, CHEVRON_DY = (STATUS_H - 6 * PX) / 2 / PX * PX + 3 * PX;
+// The edge chevron's place: centred in the menu cell (x; y from the status
+// row's top; the row's 13 blocks: half a block nearer the edge than true
+// centre), and in the menu mirrored top to bottom (as far from the top).
+constexpr int CHEVRON_X = MENU_BOX.x + (MENU_BOX.w - 5 * PX) / 2 / PX * PX, CHEVRON_DY = (STATUS_H - 3 * PX) / 2 / PX * PX;
 constexpr int CHEVRON_TOP_Y = 240 - (STATUS_TOP + CHEVRON_DY + 3 * PX);
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }

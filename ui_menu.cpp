@@ -26,7 +26,7 @@
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
 // logo small, always the action button's colour (not its pressed look). Top
-// left, a dark grey chevron up (the status row's menu cell's, flipped)
+// left, a grey chevron up (the status row's menu cell's, flipped)
 // while a project is loaded: only then do the edges lead out (menuLeavesOn()).
 #include "ui.h"
 #include "ui_font.h"
@@ -286,7 +286,7 @@ void drawMenu() {
   bool leaves = projectCurrent() >= 0;           // top left: UP / DOWN at the edges leave the menu (a project loaded: menuLeavesOn())
   if (all || leaves != chevron) {
     chevron = leaves;
-    drawEdgeChevron(CHEVRON_X, CHEVRON_TOP_Y, false, leaves ? DARK : BG);
+    drawEdgeChevron(CHEVRON_X, CHEVRON_TOP_Y, false, leaves ? DIM : BG);
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)
