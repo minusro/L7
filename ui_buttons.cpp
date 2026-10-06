@@ -27,7 +27,7 @@
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
 // or paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
-// the next scene (play then a bar) on the scene cell (SHIFT: duplicate it, a + in a checkered square), play / stop (a play
+// the next scene (two small plays) on the scene cell (SHIFT: duplicate it, a + in a checkered square), play / stop (a play
 // or a stop icon) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
 // start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, on the accent colour.
@@ -173,7 +173,7 @@ PROGMEM static const Icon ICONS[] = {
   {5, 7, {".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."}},   // CHECK (a question mark: cut the project with a second A?)
   {9, 7, {"..#.#....", "..#.##...", "..#.###..", "..#.####.", "..#.###..", "..#.##...", "..#.#...."}},   // RESTART (|>: start from 1.1.1; a block right of centre)
   {7, 7, {"#.#.#.#", ".......", "#..#..#", "..###..", "#..#..#", ".......", "#.#.#.#"}},   // SCENE_DUP (a small + in a checkered square)
-  {6, 7, {"#....#", "##...#", "###..#", "####.#", "###..#", "##...#", "#....#"}},   // NEXT (play, then a bar: the next scene)
+  {7, 5, {"#...#..", "##..##.", "###.###", "##..##.", "#...#.."}},   // NEXT (two small plays, a block apart: the next scene)
   {0, 0, {}},                                                                  // HALVE ("/2", text)
   {0, 0, {}},                                                                  // DOUBLE ("X2", text)
 };
@@ -328,7 +328,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
-    int c0 = track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE || icon == ICON_NEXT), r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
+    int c0 = track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE), r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);

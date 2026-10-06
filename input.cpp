@@ -264,18 +264,12 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool onStatus = selected == STATUS_ROW;
   int prevSel = selected;
   // A on the scene cell, once let go (nothing else pressed meanwhile): the
-  // next scene, on the next bar line (as SHIFT+UP); stopped: just play.
+  // next scene (as SHIFT+UP: playing, on the next bar line; the clock as it is).
   if (nextSceneArmed && (pressed & ~m8::BTN_EDIT)) nextSceneArmed = false;   // (another key: not that)
   if (nextSceneArmed && !(keys & m8::BTN_EDIT)) {
     nextSceneArmed = false;
-    if (onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL) {
-      if (transport.running) {
-        if (sceneStep(1))
-          for (int i = 0; i < ROWS; i++) drawTrack(i);
-      } else {
-        transportStart();
-      }
-    }
+    if (onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL && sceneStep(1))
+      for (int i = 0; i < ROWS; i++) drawTrack(i);
   }
   // A on the status row's scene cell: as B+A (the panel); on the clock cell:
   // as START; on the tempo cell: tap tempo.
