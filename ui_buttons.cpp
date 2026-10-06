@@ -316,14 +316,14 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   } else if (icon == ICON_METRO) {
     // A metronome, filled (a trapezoid; its pendulum a slit up through it and
     // out past the top), as big as the backdrop holds with a block of margin
-    // (10 x 11); crossed out while it's clicking (what SHIFT+A will change):
+    // (10 x 11); crossed out while it would click with the clock running (what SHIFT+A will change):
     // a diagonal cut through it, carried on outside it.
     static const char *const METRONOME[11] = {
         ".......#..", "......#...", "...###....", "...###....", "..###.##..", "..###.##..",
         "..###.##..", ".###.####.", ".###.####.", "####.#####", "##########"};
     constexpr int W = 10, H = 11;
     int c0 = PANEL_LEFT + 1, r0 = 1;
-    bool crossed = metronomeOn && transport.running;
+    bool crossed = metronomeOn;                    // (it would click were the clock running: metronomeOn, kept up to date running or not)
     for (int r = 0; r < H; r++)
       for (int c = 0; c < W; c++) {
         bool on = METRONOME[r][c] == '#';
@@ -383,7 +383,7 @@ void drawCells(int i) {
   k.iconColor = iconColor(i, k.icon);
   k.mark = i == selected && i != STATUS_ROW ? markColor() : BG;
   k.badge = trackBadge(i);
-  k.metro = k.icon == ICON_METRO ? (uint8_t)(metronomeMode() + 4 * (metronomeOn && transport.running)) : 0;   // (its look: the setting now, crossed while clicking)
+  k.metro = k.icon == ICON_METRO ? (uint8_t)(metronomeMode() + 4 * metronomeOn) : 0;   // (its look: the setting now, crossed while clicking)
   k.ground = rowGround(i);                         // (the selected row's ground, under the button too)
   if (i != STATUS_ROW) k.topGround = rowGround(rowAbove(i));
   bool first = drawn[i] != uiGeneration;
