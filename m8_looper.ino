@@ -222,7 +222,7 @@ void loop() {
   static bool clickedRecording = false;            // a recording started with the click on
   if (recording.mode == Recording::Idle) clickedRecording = false;
   else if (metronomeOn) clickedRecording = true;
-  metronomeOn = clickedRecording || !projectHasClips();
+  metronomeOn = clickedRecording || (projectCurrent() >= 0 && !projectHasClips());   // (not in the dummy project)
 
   // Report dropouts with what the storage code was doing (debugging).
   static uint32_t lastDropCheck = 0, lastDrops[NUM_TRACKS] = {};

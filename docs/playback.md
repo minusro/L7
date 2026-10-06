@@ -93,7 +93,7 @@ before this design a switch left 1–2 beats of silence (~770 ms average).
 ## Metronome
 
 While the clock runs in a project without clips (none on its tracks or in
-its scenes, the dummy project included), the engine clicks on every beat: a
+its scenes; not the dummy project, which never clicks), the engine clicks on every beat: a
 small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
 and louder on the bar's first beat). It's added after the master volume and
 left out of what a resampling records. It stops once the project has a clip: on the bar line where its first

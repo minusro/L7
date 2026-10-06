@@ -95,9 +95,9 @@ static bool longDone = false;                        // held long on a card: loa
 static constexpr uint32_t LONG_PRESS_MS = 600;
 
 // A or B held on a project card: its project loaded without leaving the menu
-// (an empty slot: a new project there). Called every pass (pollKeys()).
+// (not on an empty slot). Called every pass (pollKeys()).
 static void menuLongPress() {
-  if (!armed || longDone || shifted || armedSlot < 0 || !menuOpen() || menuOnStatus()) return;
+  if (!armed || longDone || shifted || armedSlot < 0 || !projectFilled(armedSlot) || !menuOpen() || menuOnStatus()) return;   // (not on an empty slot)
   if (millis() - armedAt < LONG_PRESS_MS) return;
   longDone = true;
   if (armedSlot != projectCurrent()) {
@@ -106,7 +106,7 @@ static void menuLongPress() {
     projectSetSelection(row, cell);                  // (the project left keeps its selection)
     if (projectLoad(armedSlot)) {
       takeProjectSelection();
-      metronomeOn = !projectHasClips();
+      metronomeOn = projectCurrent() >= 0 && !projectHasClips();
     }
   }
   drawMenu();
@@ -198,7 +198,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         if (projectLoad(slot)) {
           closeMenu();
           takeProjectSelection();
-          metronomeOn = !projectHasClips();          // (now: its first beat clicks too)
+          metronomeOn = projectCurrent() >= 0 && !projectHasClips();          // (now: its first beat clicks too)
           for (int i = 0; i < ROWS; i++) drawTrack(i);
         }
       }
