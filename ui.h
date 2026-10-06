@@ -108,7 +108,8 @@ inline bool anyClipHeard() {
 // selection frame (a track's band and the block below, the row below's top
 // border; the row above's bottom border is its top; the status row's cells'
 // height), the screen's whole width (under the button too, round its panel;
-// the status row's from the scene cell's left edge: not under the menu cell).
+// the status row's from the scene cell's left edge to the tempo cell's right
+// one, its top corners cut a block: not under the menu cell or the button).
 // Black elsewhere.
 bool menuOpen();
 inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() ? DARK : BG; }

@@ -110,6 +110,9 @@ static void drawFrame(int cell) {
   t.fillRect(c.x + PX, top + STATUS_H - PX, c.w - 2 * PX, PX, borderAt(STATUS_ROW, cell, rows - 1, 1, rows, cols));
   t.fillRect(c.x, top + PX, PX, STATUS_H - 2 * PX, borderAt(STATUS_ROW, cell, 1, 0, rows, cols));
   t.fillRect(c.x + c.w - PX, top + PX, PX, STATUS_H - 2 * PX, borderAt(STATUS_ROW, cell, 1, cols - 1, rows, cols));
+  for (int r : {0, rows - 1})                      // and its corners (top: cut; bottom: the frame's, not cut)
+    for (int k : {0, cols - 1})
+      t.fillRect(c.x + k * PX, top + r * PX, PX, PX, borderAt(STATUS_ROW, cell, r, k, rows, cols));
 }
 
 void drawStatus() {
