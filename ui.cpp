@@ -150,14 +150,5 @@ void uiRefresh() {
     for (int i = 0; i < NUM_TRACKS; i++) drawMix(i);   // the meters
     drawTrack(nextRow);
     if (++nextRow >= ROWS) nextRow = 0;
-    // LEFT held that opens the menu once let go: a dark grey strip along the
-    // left edge, the screen's height, 7 blocks wide (a block past the edge
-    // arrow's right end; the arrow hidden under it), a black line a block wide
-    // right of it (the menu peeping in; drawn over the rows each pass meanwhile).
-    if (screenSwitchKey() == m8::BTN_LEFT) {
-      constexpr int W = 7 * PX;
-      board.tft().fillRect(0, 0, W, 240, DARK);
-      board.tft().fillRect(W, 0, PX, 240, BG);
-    }
   }
 }
