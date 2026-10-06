@@ -85,9 +85,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the frame (drawn in pixels, not blocks: 180 pixel columns, a 2-pixel
   centre line, the peaks up to 11 pixels each way, symmetric; square-root scale); light grey inside the loop range (white on the selected cell), 50% grey outside (muted:
   50% grey range, dark grey outside). On every track (recording too), a black line the
-  waveform's height just before the start of each bar but the first (on the
+  waveform's height, a pixel wide, just before the start of each bar but the first (on the
   same column edges as the range, so the range's colour stops at them). The
-  start position, on every track: a dotted line the waveform's height (12 blocks, "x0x0x00x0x0x": a block of the waveform's colour on rows 2, 4, 6, 9, 11 and 13, the waveform showing between). While B alone
+  start position, on every track: a dotted line the waveform's height (12 blocks, "x0x0x00x0x0x": a block on rows 2, 4, 6, 9, 11 and 13 inverting what's under it, pixel by pixel: the background in the waveform's colour, the waveform's pixels black; the waveform showing between). While B alone
   is held on the selected waveform cell, the range is in the accent colour,
   muted or not. Playheads are accent-coloured lines, a block taller than the waveform
   each way (white while the

@@ -7,8 +7,8 @@
 // space. Rows of blocks (16 in the cell):
 //   0, 15   the border
 //   1, 14   space (the playheads reach into it)
-// A black line the waveform's height just before each bar's start (but the
-// first's), on every track, while recording too.
+// A black line the waveform's height, a pixel wide, just before each bar's
+// start (but the first's), on every track, while recording too.
 //   2 - 13  the waveform, in pixels (the only part not in blocks): a 2-pixel
 //           line along the middle, the peaks reaching up to 11 pixels above
 //           and below it, symmetric; 180 pixel columns. Heights go with the
@@ -18,7 +18,8 @@
 // rest dark grey. While B alone is held on the selected waveform cell (B +
 // arrows change the range), the range is in the accent colour, muted or not.
 // The start position: a dotted line the waveform's height (blocks of the
-// waveform's colour on rows 2, 4, 6, 9, 11 and 13, the rest left as it is), on every track. The playhead is an accent-coloured line (white
+// waveform's colour on rows 2, 4, 6, 9, 11 and 13, each inverting what's under it: the waveform's
+// pixels go black, the background's take the waveform's colour; the rest left as it is), on every track. The playhead is an accent-coloured line (white
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
 // A recording track's waveform area is in the accent colour (a block of black
@@ -87,8 +88,8 @@ static int edgeCol(uint32_t beat, uint32_t loopBeats) {
 }
 
 // The start position's line in waveform column c of view v: the waveform's
-// height (rows 2-13), blocks of the waveform's colour on rows 2, 4, 6, 9, 11, 13
-// ("x0x0x00x0x0x"), the waveform showing between; BG: no line there.
+// height (rows 2-13), marks on rows 2, 4, 6, 9, 11, 13
+// ("x0x0x00x0x0x") inverting the waveform under them, the waveform showing between; BG: no line there.
 static constexpr int START_TOP = MID_ROW - WAVE_REACH, START_BOTTOM = MID_ROW + 1 + WAVE_REACH;   // rows 2-13
 static uint16_t startInk(const WaveView &v, int c) {
   if (!v.visible || v.live || c != v.markCol) return BG;
@@ -128,14 +129,20 @@ static void drawColumn(int i, int bc) {
     int bars = v.live ? (int)v.liveBars : (int)tr.loopBars;      // (recording: as it's shown so far)
     for (int b = 1; b < bars; b++)                                // bars 2 on: a black line just before each start
       if (edgeCol(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) == c + 1) {
-        for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) block(r, v.live ? ACCENT_DARK : BG);   // (recording: the dark accent)
+        for (int y = (MID_ROW - WAVE_REACH) * PX; y < (MID_ROW + 2 + WAVE_REACH) * PX; y++)   // a pixel wide: the column's right one, at the bar's edge
+          px[y * PX + PX - 1] = v.live ? ACCENT_DARK : BG;                                        // (recording: the dark accent)
         break;
       }
     if (uint16_t ink = startInk(v, c); ink != BG) {              // the start position: a dotted line (0: left as it is)
       static const char LINE[] = "x0x0x00x0x0x";                // rows 2-13
       static_assert(sizeof LINE - 1 == START_BOTTOM - START_TOP + 1, "a mark per row");
       for (int r = START_TOP; r <= START_BOTTOM; r++)
-        if (LINE[r - START_TOP] == 'x') block(r, ink);
+        if (LINE[r - START_TOP] == 'x')                           // a mark inverts what's under it, pixel by pixel:
+          for (int y = r * PX; y < (r + 1) * PX; y++)             // the background in the waveform's colour, the waveform in the background's
+            for (int x = 0; x < PX; x++) {
+              uint16_t &p = px[y * PX + x];
+              p = p == v.bg ? ink : v.bg;
+            }
     }
     if (c == v.playCol) {                                         // on top: the playhead
       int reach = v.live ? 0 : 1;                                 // (a block past the waveform each way; recording: within its backdrop)
