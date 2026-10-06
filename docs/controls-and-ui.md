@@ -189,7 +189,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   button is in the looper's view; black above) and 2 blocks wide (the action button's width while RIGHT is held that leaves
   the menu once let go, its coloured part's top left corner then cut a block, and a black line the screen's height
   2 blocks wide left of it; the track numbers 1–7 on its black part where the looper's buttons
-  show them, dark grey as an empty track's), in the loaded project's colour; with no project, none until RIGHT is held, then in the
+  show them, dark grey as an empty track's; everything else in the menu moves left as much as the
+  peep grows, 20 px, meanwhile: drawn with the display's origin moved), in the loaded project's colour; with no project, none until RIGHT is held, then in the
   first empty slot's colour (where leaving makes a new project); no arrow. While an arrow is held that leaves the menu, the selection
   frame is hidden. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export

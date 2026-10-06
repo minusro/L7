@@ -28,7 +28,11 @@ class Display {
 public:
   static constexpr int W = 320, H = 240;
   uint16_t px[W * H] = {};
-  void drawPixel(int x, int y, uint16_t c) { if (x >= 0 && x < W && y >= 0 && y < H) px[y * W + x] = c; }
+  void drawPixel(int x, int y, uint16_t c) {
+    x += ox_; y += oy_;
+    if (x >= 0 && x < W && y >= 0 && y < H) px[y * W + x] = c;
+  }
+  void setOrigin(int x = 0, int y = 0) { ox_ = x; oy_ = y; }
   void fillRect(int x, int y, int w, int h, uint16_t c) {
     for (int j = 0; j < h; j++) for (int i = 0; i < w; i++) drawPixel(x + i, y + j, c);
   }
@@ -53,6 +57,7 @@ public:
   }
 private:
   uint16_t fg_ = 0xFFFF, bg_ = 0;
+  int ox_ = 0, oy_ = 0;                            // (setOrigin())
   int cx_ = 0, cy_ = 0;
   void putc(char ch) {
     for (int c = 0; c < 6; c++) {

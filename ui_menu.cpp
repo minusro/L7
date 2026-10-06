@@ -277,21 +277,19 @@ void drawMenu() {
   static uint32_t drawn = 0;                     // uiGeneration when last drawn whole
   if (!shown) return;
   dropStaleExport();                             // (the project changed, or another one loaded: the export's message goes)
-  bool all = drawn != uiGeneration;
+  // While the peep is extended (RIGHT held that leaves the menu), everything
+  // else moves left by as much as it grows: drawn with the origin moved, all
+  // of it again when that changes.
+  constexpr int WIDE = BUTTON_W - PX, NARROW = 2 * PX;   // (the peep: held: the action button's width, its panel's from a block in)
+  static int shownShift = 0;
+  int shift = screenSwitchKey() == m8::BTN_RIGHT ? WIDE - NARROW : 0;
+  bool all = drawn != uiGeneration || shift != shownShift;
+  auto &t = board.tft();
   if (all) {
     drawn = uiGeneration;
-    board.tft().fillRect(0, 0, 320, STATUS_TOP, MENU_BG);   // (where the track rows were)
-    board.tft().fillRect(0, STATUS_TOP, 320, 240 - STATUS_TOP, MENU_BG);   // and the status row (no action button in the menu)
-  }
-  // Scrolled: the items in view redraw over each other's places (their keys
-  // hold the place), each label drawn the box's whole width; no clearing
-  // first, which flickered.
-  // Unselected first: frames that touch a neighbour's space don't get wiped.
-  // (Anything redrawn: the selected one again after it, its frame on top.)
-  static uint16_t logo;                          // the corner logo's colour shown
-  if (all || logo != actionRestColor()) {        // the logo, bottom left: the action button's colour (not its pressed look)
-    logo = actionRestColor();
-    drawSmallLogo(LOGO_X, LOGO_Y, logo);
+    shownShift = shift;
+    t.setOrigin(0, 0);
+    t.fillRect(0, 0, 320, 240, MENU_BG);         // (the track rows' place and the status row's: no action button in the menu)
   }
   // The right edge (the looper's that way), the "peep": a strip the screen's
   // height (coloured from the status row's top down, the action button's
@@ -303,16 +301,14 @@ void drawMenu() {
   // then in the colour of the first empty slot (where leaving makes one).
   static uint16_t shownStrip;
   static int shownW = 0;
-  constexpr int WIDE = BUTTON_W - PX;            // (held: the action button's width, its panel's from a block in)
   constexpr int AREA = WIDE + 2 * PX;            // (the widest, and the black line left of it)
   bool held = screenSwitchKey() == m8::BTN_RIGHT, loaded = projectCurrent() >= 0;
   int empty = menuFirstEmptySlot();
   uint16_t strip = loaded ? ACCENT : held && empty >= 0 ? PROJECT_COLORS[empty] : MENU_BG;
-  int w = held ? WIDE : 2 * PX;
+  int w = held ? WIDE : NARROW;
   if (all || strip != shownStrip || w != shownW) {
     shownStrip = strip;
     shownW = w;
-    auto &t = board.tft();
     t.fillRect(320 - AREA, 0, AREA - w, 240, MENU_BG);
     t.fillRect(320 - w, 0, w, STATUS_TOP, strip == MENU_BG ? MENU_BG : BG);   // (black above the status row's top: the colour only from there down)
     t.fillRect(320 - w, STATUS_TOP, w, 240 - STATUS_TOP, strip);
@@ -321,6 +317,17 @@ void drawMenu() {
       t.fillRect(320 - w - 2 * PX, 0, 2 * PX, 240, BG);
       for (int i = 0; i < NUM_TRACKS; i++) drawTrackNumber(i, DARK);   // the track numbers on it, as the looper's empty ones
     }
+  }
+  t.setOrigin(-shift, 0);                        // (the rest: moved left while the peep is extended)
+  // Scrolled: the items in view redraw over each other's places (their keys
+  // hold the place), each label drawn the box's whole width; no clearing
+  // first, which flickered.
+  // Unselected first: frames that touch a neighbour's space don't get wiped.
+  // (Anything redrawn: the selected one again after it, its frame on top.)
+  static uint16_t logo;                          // the corner logo's colour shown
+  if (all || logo != actionRestColor()) {        // the logo, bottom left: the action button's colour (not its pressed look)
+    logo = actionRestColor();
+    drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)
@@ -331,6 +338,7 @@ void drawMenu() {
       drawItem(k);
       redrawn = true;
     }
+  t.setOrigin(0, 0);
 }
 
 // Back from the status row (it can't be reached any more: kept for input.cpp).
