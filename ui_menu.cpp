@@ -277,12 +277,13 @@ void drawMenu() {
   static uint32_t drawn = 0;                     // uiGeneration when last drawn whole
   if (!shown) return;
   dropStaleExport();                             // (the project changed, or another one loaded: the export's message goes)
-  // While the peep is extended (RIGHT held that leaves the menu), everything
+  // While the peep is extended (RIGHT or LEFT held that leaves the menu), everything
   // else moves left by as much as it grows: drawn with the origin moved, all
   // of it again when that changes.
   constexpr int WIDE = BUTTON_W - PX, NARROW = 2 * PX;   // (the peep: held: the action button's width, its panel's from a block in)
   static int shownShift = 0;
-  int shift = screenSwitchKey() == m8::BTN_RIGHT ? WIDE - NARROW : 0;
+  bool sideways = screenSwitchKey() == m8::BTN_RIGHT || screenSwitchKey() == m8::BTN_LEFT;   // (leaving off the left or right edge)
+  int shift = sideways ? WIDE - NARROW : 0;
   bool all = drawn != uiGeneration || shift != shownShift;
   auto &t = board.tft();
   if (all) {
@@ -302,7 +303,7 @@ void drawMenu() {
   static uint16_t shownStrip;
   static int shownW = 0;
   constexpr int AREA = WIDE + 2 * PX;            // (the widest, and the black line left of it)
-  bool held = screenSwitchKey() == m8::BTN_RIGHT, loaded = projectCurrent() >= 0;
+  bool held = sideways, loaded = projectCurrent() >= 0;
   int empty = menuFirstEmptySlot();
   uint16_t strip = loaded ? ACCENT : held && empty >= 0 ? PROJECT_COLORS[empty] : MENU_BG;
   int w = held ? WIDE : NARROW;
