@@ -98,7 +98,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   50% grey range, dark grey outside). On every track (recording too), a black line the
   waveform's height, a block wide, just before the start of each bar but the first (on the
   same column edges as the range, so the range's colour stops at them). The
-  start position, on every track: a dotted line the waveform's height (a block wide, a checkerboard of 1-pixel squares inverting what's under them: the background in the waveform's colour, the waveform's pixels black; in the column a bar line there would take, so on a bar start it sits on the bar line). While B alone
+  start position, only on the selected track and not on a muted clip: a dotted line the waveform's height (a block wide, a checkerboard of 1-pixel squares in the accent colour and black, over the waveform; in the column a bar line there would take, so on a bar start it sits on the bar line). While B alone
   is held on the selected waveform cell, the range is in the accent colour,
   muted or not. Playheads are accent-coloured lines, a block taller than the waveform
   each way (white while the

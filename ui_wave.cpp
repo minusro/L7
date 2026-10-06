@@ -18,9 +18,8 @@
 // rest dark grey. While B alone is held on the selected waveform cell (B +
 // arrows change the range), the range is in the accent colour, muted or not.
 // The start position: a checkerboard line of 1-pixel squares, a block wide and the
-// waveform's height, in the column a bar line there would take; its squares invert
-// what's under them (the waveform's pixels go black, the background's take the
-// waveform's colour), on every track. The playhead is an accent-coloured line (white
+// waveform's height, in the column a bar line there would take, the accent
+// colour and black; only on the selected track, and not on a muted clip. The playhead is an accent-coloured line (white
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
 // A recording track's waveform area is in the accent colour (a block of black
@@ -54,6 +53,7 @@ struct WaveView {
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
   int rangeFirstPx = 0, rangePx = 0;               // and its pixel columns
   int markCol = -1;                                // the start position's column; -1: none
+  bool markOn = false;                             // it's shown (the selected track's clip, not muted)
   int markEdge = 0;                                // and its edge's column (the range's colour there)
   int playCol = -1;                                // playhead / record head; -1: none
   uint16_t headColor = 0;                          // a line this colour; INVERT_HEAD: the column inverted
@@ -92,14 +92,11 @@ static int edgeCol(uint32_t beat, uint32_t loopBeats) {
 }
 
 // The start position's line in waveform column c of view v: the waveform's
-// height (rows 2-13), a checkerboard of 1-pixel squares
-// inverting the waveform under them; BG: no line there.
+// height (rows 2-13), a checkerboard of 1-pixel squares, the accent colour
+// and black (over the waveform); only on the selected track, its clip not
+// muted.
 static constexpr int START_TOP = MID_ROW - WAVE_REACH, START_BOTTOM = MID_ROW + 1 + WAVE_REACH;   // rows 2-13
-static uint16_t startInk(const WaveView &v, int c) {
-  if (!v.visible || v.live || c != v.markCol) return BG;
-  bool in = (v.markEdge - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;   // (the colour of the range it's in)
-  return in ? v.rangeInk : v.outInk;
-}
+static bool startHere(const WaveView &v, int c) { return v.markOn && v.visible && !v.live && c == v.markCol; }
 
 // Block column bc (0 and BLOCK_COLS - 1: the frame's), drawn whole: two
 // pixel columns. The waveform is drawn in pixels (each pixel column its own
@@ -137,13 +134,9 @@ static void drawColumn(int i, int bc) {
         for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) block(r, v.live ? ACCENT_DARK : v.bg);   // (recording: the dark accent)
         break;
       }
-    if (uint16_t ink = startInk(v, c); ink != BG)                // the start position: a checkerboard line, 1-pixel squares, the
-      for (int y = START_TOP * PX; y < (START_BOTTOM + 1) * PX; y++)   // waveform's height; its squares invert what's under them
-        for (int x = 0; x < PX; x++)                              // (the background in the waveform's colour, the waveform in the background's)
-          if ((x + y) % 2 == 0) {
-            uint16_t &p = px[y * PX + x];
-            p = p == v.bg ? ink : v.bg;
-          }
+    if (startHere(v, c))                                          // the start position: a checkerboard line, 1-pixel squares,
+      for (int y = START_TOP * PX; y < (START_BOTTOM + 1) * PX; y++)   // the waveform's height, the accent colour and black
+        for (int x = 0; x < PX; x++) px[y * PX + x] = (x + y) % 2 == 0 ? ACCENT : BG;
     if (c == v.playCol) {                                         // on top: the playhead
       int reach = v.live ? 0 : 1;                                 // (a block past the waveform each way; recording: within its backdrop)
       for (int y = (MID_ROW - WAVE_REACH - reach) * PX; y < (MID_ROW + 2 + WAVE_REACH + reach) * PX; y++)
@@ -196,6 +189,7 @@ void drawWave(int i, bool recordingHere) {
   v.rangeFirst = 0;
   v.rangeCols = 0;
   v.markCol = -1;
+  v.markOn = here && !muted;
   if (v.live) {
     v.liveBars = 0;                                // updatePlayheads() fills it in
     v.liveFilled = 0;
