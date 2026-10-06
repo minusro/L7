@@ -119,8 +119,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
   small square with a hamburger icon, three bars: selectable, with nothing to
   do yet; the action button is empty on it), then the scene cell
-  (an inverted SCN tag with the scene position "3/7", only the number over 99
-  scenes, the copy after the last always "*/N",
+  (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
   then the button. In the accent colour: the scene's tag

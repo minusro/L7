@@ -8,8 +8,7 @@
 //   first cell: a small square with a hamburger icon (the menu's; selectable, no
 //     action yet), light grey when selected.
 //   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
-//     empty scene "0/7" and the copy after the last "*/7" in grey; with over 99
-//     scenes only the number, "123", the copy still "*/123"). Both in the
+//     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
 //     UP/DOWN step through the scenes. The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
@@ -187,8 +186,7 @@ void drawStatus() {
   }
 
   // The scene. Its box reaches the cell's inner edge: the position's text
-  // (up to "99/99", "*/248", or just the number over 99 scenes) always fits, and
-  // clears any longer text before it.
+  // (up to "250*/250") always fits, and clears any longer text before it.
   const Cell &box = SCENE_BOX;
   // The tag and position in the accent colour: SHIFT held (SHIFT + UP/DOWN
   // step through the scenes), or B alone on the cell (B + UP/DOWN do).
@@ -197,7 +195,6 @@ void drawStatus() {
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
-  else if (count > 99) snprintf(text, sizeof text, "%d", scene);   // (over 99 scenes: just the number, to fit the cell)
   else snprintf(text, sizeof text, "%d/%d", scene, count);       // (0: the empty scene)
   uint16_t ink = sceneAccent ? ACCENT : temporary ? DIM : labelInk(SCENE_CELL);
   if (sceneHeld() || sceneChangeWaiting()) {
