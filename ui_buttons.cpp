@@ -174,7 +174,7 @@ PROGMEM static const Icon ICONS[] = {
   {7, 9, {"...#...", "..###..", "...#.##", "#..#.##", "#..#..#", ".#.#.#.", "..###..", "...#...", "..###.."}},   // USB (the trident)
   {5, 7, {".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."}},   // CHECK (a question mark: cut the project with a second A?)
   {9, 7, {"..#.#....", "..#.##...", "..#.###..", "..#.####.", "..#.###..", "..#.##...", "..#.#...."}},   // RESTART (|>: start from 1.1.1; a block right of centre)
-  {9, 9, {"#.#.#.#.#", ".........", "#...#...#", "....#....", "#.#####.#", "....#....", "#...#...#", ".........", "#.#.#.#.#"}},   // SCENE_DUP (a + in the checkered square)
+  {7, 7, {"#.#.#.#", ".......", "#..#..#", "..###..", "#..#..#", ".......", "#.#.#.#"}},   // SCENE_DUP (a small + in a checkered square)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
