@@ -18,8 +18,8 @@
 // rest dark grey. While B alone is held on the selected waveform cell (B +
 // arrows change the range), the range is in the accent colour, muted or not.
 // The start position: a checkerboard line of 1-pixel squares, a block wide and the
-// waveform's height, in the column a bar line there would take, the accent
-// colour and black; only on the selected track, and not on a muted clip. The playhead is an accent-coloured line (white
+// waveform's height, in the column a bar line there would take, white and
+// black (B held to edit the range too); only on the selected track, and not on a muted clip. The playhead is an accent-coloured line (white
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
 // A recording track's waveform area is in the accent colour (a block of black
@@ -92,8 +92,8 @@ static int edgeCol(uint32_t beat, uint32_t loopBeats) {
 }
 
 // The start position's line in waveform column c of view v: the waveform's
-// height (rows 2-13), a checkerboard of 1-pixel squares, the accent colour
-// and black (over the waveform); only on the selected track, its clip not
+// height (rows 2-13), a checkerboard of 1-pixel squares, white and black
+// (over the waveform; editing the range too); only on the selected track, its clip not
 // muted.
 static constexpr int START_TOP = MID_ROW - WAVE_REACH, START_BOTTOM = MID_ROW + 1 + WAVE_REACH;   // rows 2-13
 static bool startHere(const WaveView &v, int c) { return v.markOn && v.visible && !v.live && c == v.markCol; }
@@ -135,8 +135,8 @@ static void drawColumn(int i, int bc) {
         break;
       }
     if (startHere(v, c))                                          // the start position: a checkerboard line, 1-pixel squares,
-      for (int y = START_TOP * PX; y < (START_BOTTOM + 1) * PX; y++)   // the waveform's height, the accent colour and black
-        for (int x = 0; x < PX; x++) px[y * PX + x] = (x + y) % 2 == 0 ? ACCENT : BG;
+      for (int y = START_TOP * PX; y < (START_BOTTOM + 1) * PX; y++)   // the waveform's height, white and black (B held too)
+        for (int x = 0; x < PX; x++) px[y * PX + x] = (x + y) % 2 == 0 ? INK : BG;
     if (c == v.playCol) {                                         // on top: the playhead
       int reach = v.live ? 0 : 1;                                 // (a block past the waveform each way; recording: within its backdrop)
       for (int y = (MID_ROW - WAVE_REACH - reach) * PX; y < (MID_ROW + 2 + WAVE_REACH + reach) * PX; y++)
