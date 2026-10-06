@@ -19,7 +19,7 @@
 // arrows change the range), the range is in the accent colour, muted or not.
 // The start position: a checkerboard line of 1-pixel squares, a block wide and the
 // waveform's height, in the column a bar line there would take, white and
-// black (B held to edit the range too); only on the selected track, and not on a muted clip. The playhead is an accent-coloured line (white
+// black (B held to edit the range too); only on the selected track (muted or not). The playhead is an accent-coloured line (white
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
 // A recording track's waveform area is in the accent colour (a block of black
@@ -53,7 +53,7 @@ struct WaveView {
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
   int rangeFirstPx = 0, rangePx = 0;               // and its pixel columns
   int markCol = -1;                                // the start position's column; -1: none
-  bool markOn = false;                             // it's shown (the selected track's clip, not muted)
+  bool markOn = false;                             // it's shown (the selected track's clip, muted or not)
   int markEdge = 0;                                // and its edge's column (the range's colour there)
   int playCol = -1;                                // playhead / record head; -1: none
   uint16_t headColor = 0;                          // a line this colour; INVERT_HEAD: the column inverted
@@ -93,8 +93,8 @@ static int edgeCol(uint32_t beat, uint32_t loopBeats) {
 
 // The start position's line in waveform column c of view v: the waveform's
 // height (rows 2-13), a checkerboard of 1-pixel squares, white and black
-// (over the waveform; editing the range too); only on the selected track, its clip not
-// muted.
+// (over the waveform; editing the range too); only on the selected track
+// (muted or not).
 static constexpr int START_TOP = MID_ROW - WAVE_REACH, START_BOTTOM = MID_ROW + 1 + WAVE_REACH;   // rows 2-13
 static bool startHere(const WaveView &v, int c) { return v.markOn && v.visible && !v.live && c == v.markCol; }
 
@@ -189,7 +189,7 @@ void drawWave(int i, bool recordingHere) {
   v.rangeFirst = 0;
   v.rangeCols = 0;
   v.markCol = -1;
-  v.markOn = here && !muted;
+  v.markOn = here;                                 // (muted too)
   if (v.live) {
     v.liveBars = 0;                                // updatePlayheads() fills it in
     v.liveFilled = 0;
