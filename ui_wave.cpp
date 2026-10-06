@@ -206,9 +206,15 @@ void drawWave(int i, bool recordingHere) {
     v.rangeFirst = first % WAVE_COLS;
     v.rangeCols = constrain(end - first, 1, WAVE_COLS);
     // In pixels: from the pixel after the one a bar line takes at that edge
-    // (the left one of the column before it), so the colour meets the bar lines.
-    v.rangeFirstPx = (first * PX - 1 + WAVE_COLS * PX) % (WAVE_COLS * PX);
-    v.rangePx = constrain((end - first) * PX, 1, WAVE_COLS * PX);
+    // (the left one of the column before it), so the colour meets the bar lines;
+    // at the loop's start and end (no bar line there) the waveform's own edge.
+    auto edgePx = [](int e) {                      // column edge e (unwrapped: past the loop's end too)
+      int k = e % WAVE_COLS;
+      return e / WAVE_COLS * WAVE_COLS * PX + (k == 0 ? 0 : k * PX - 1);
+    };
+    int firstPx = edgePx(first), endPx = edgePx(end);
+    v.rangeFirstPx = firstPx % (WAVE_COLS * PX);
+    v.rangePx = constrain(endPx - firstPx, 1, WAVE_COLS * PX);
     v.markCol = edgeCol(startPosition(loopBeats, rs, rb), loopBeats) % WAVE_COLS;
   }
   for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
