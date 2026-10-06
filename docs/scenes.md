@@ -47,6 +47,10 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   kept in the session (`SESSION.DAT`). (`SceneInfo.row`/`cell` and
   `SceneList.row`/`cell`, where scenes and projects kept one before, are
   unused.)
+* The list block keeps the tempo the project's last recording was made at
+  (`recTempo10`, tenths; the 2 bytes that held a project's master volume and
+  a spare before, so out of range there means none): B twice on the tempo cell
+  goes back to it (`projectRecordingTempo()`).
 * `projectEdits()` counts the loaded project's changes (the tracks edited by
   hand or recorded, scenes cut / pasted / duplicated, the tempo set by hand;
   not loading it or stepping through its scenes): the menu's "SAVED AS" label

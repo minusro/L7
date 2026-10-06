@@ -15,6 +15,11 @@ static void resetCell() {
     stepMasterVolume(MASTER_VOLUME_UNITY - masterVolume());
     return;
   }
+  if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == TEMPO_CELL) {   // the tempo: the project's last recording's
+    float b = projectRecordingTempo();
+    if (b > 0) setTempo(b);
+    return;
+  }
   if (selected == STATUS_ROW || !hasClip(selected)) return;
   const Track &tr = tracks[selected];
   if (selectedCell == WAVE_CELL) {

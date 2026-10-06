@@ -1111,6 +1111,8 @@ int main(int argc, char **argv) {
     uint32_t spbB = transport.spb;
     check(b2.sample != a[2].sample && trackMuted(4) && tracks[5].state == TrackState::Empty && spbB != spbA,
           "scene B set up");
+    check(projectRecordingTempo() > 0 && fabsf(projectRecordingTempo() - 125) > 0.05f,
+          "the project keeps its last recording's tempo (not one set by hand later)");
     runBeats(1.3);
     while (transport.beat % BEATS_PER_BAR != 1) block();   // early in a bar: the streams don't take A's clips yet
     // To A, and when each part of the change is heard.

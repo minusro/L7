@@ -27,7 +27,8 @@ struct SceneList {
   uint16_t version, count, current;
   uint8_t row, cell;                             // (unused: the selection a project kept, before it stopped keeping one)
   uint16_t slot[MAX_SCENES];                     // record slot of each scene, in list order
-  uint8_t volume1, spare;                        // (unused: the master volume was a project's before it was the app's)
+  uint16_t recTempo10;                           // the tempo its last recording was made at, tenths of a BPM (out of MIN_BPM-MAX_BPM: none;
+                                                 // these 2 bytes were a project's master volume and a spare before)
   uint16_t tempo10;                              // the project's tempo, tenths of a BPM (0: not kept yet, older files)
 };
 static constexpr uint32_t BLOCK = 512;
@@ -570,6 +571,18 @@ bool projectScene(int p, int pos, TrackUnit *units) {
     upgradeUnit(units[t]);
   }
   return true;
+}
+
+void projectRecorded(float bpm) {
+  uint16_t t = tenths(bpm);
+  if (t == list.recTempo10) return;
+  list.recTempo10 = t;
+  listDirty = true;
+}
+
+float projectRecordingTempo() {
+  float b = list.recTempo10 / 10.0f;
+  return b >= MIN_BPM && b <= MAX_BPM ? b : 0;   // (none kept, or an older file's other use of the field)
 }
 
 void projectTempoChanged() {

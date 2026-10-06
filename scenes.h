@@ -35,6 +35,8 @@ void scenesForget();
 // a project's.)
 void scenesBegin(float (*getTempo)(), bool (*setTempo)(float), int project = 0, float (*newTempo)() = nullptr);
 void projectTempoChanged();    // the tempo was set by hand: the loaded project keeps it (all its scenes)
+void projectRecorded(float bpm);   // a recording was made at this tempo: the loaded project keeps it
+float projectRecordingTempo();     // the tempo the loaded project's last recording was made at (0: none kept)
 void sceneStateChanged();      // something in the looper changed: the current scene follows
 void serviceScenes();          // call from loop(): saves, one write at a time, when the buffers allow
 void flushScenes();            // everything waiting saved now (power off)
