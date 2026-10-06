@@ -191,8 +191,9 @@ void setup() {
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();
-  restoreMenu(sessionMenu());                      // its selection
-  openMenu();                                      // always starting in the menu, on the last project
+  restoreMenu(sessionMenu());                      // its selection, and open if it was
+  if (sessionMenu() < 0 || projectCurrent() < 0) openMenu();   // (the first start, or no project loaded: the menu)
+  if (sessionPlaying()) transportStart();          // the clock as it was (from 1.1.1)
                                                    // (already loaded: its tracks ready to play)
 }
 

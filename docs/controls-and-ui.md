@@ -141,8 +141,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Colours: all in `colors.h`.
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
-* Menu (`ui_menu.cpp`): the app starts in it (on the
-  last project's card, that project already loaded). Opened with UP on the
+* Menu (`ui_menu.cpp`): the app starts where it was left, in the menu or
+  the looper's view (the first start, or with no project loaded: the menu, on the
+  last project's card, that project already loaded), with the clock running if it was (from
+  1.1.1). Opened with UP on the
   top track row, it takes the place of the track rows and the status row's
   cells, across the whole width; of the status row only the action button
   shows. Opening and leaving the menu never starts or stops the clock;

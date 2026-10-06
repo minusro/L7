@@ -32,6 +32,7 @@ void stepMasterVolume(int by);
 void beginSession();
 int sessionProject();                              // the project to load at boot
 int sessionMenu();                                 // the menu as it was (ui_menu.cpp menuState(); -1: none saved)
+bool sessionPlaying();                             // the clock was running when the session was last saved
 // The loaded project's selection taken (after loading it). None saved (a new
 // project): track 1's waveform cell if orTrack1, else as it is (at boot: the
 // one the session had before projects kept it).

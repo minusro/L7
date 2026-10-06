@@ -14,6 +14,7 @@ static int savedMaster = MASTER_VOLUME_UNITY;   // the master volume session.txt
 static int savedProject = 0;                    // and the loaded project
 static int savedMenu = -1, bootMenu = -1;       // and the menu (its selection, + 1000 open)
 static int bootProject = 0;
+static bool savedPlaying = false, bootPlaying = false;   // the clock running, as saved / at boot
 
 // ---- Tempo: MIN_BPM-MAX_BPM, whatever the loops were recorded at. It's the
 // project's (all its scenes); new projects take the last one set by hand.
@@ -70,11 +71,13 @@ void beginSession() {
   savedMaster = s.master;
   newMaster = savedNewMaster = s.newMaster;
   savedProject = bootProject = s.project;
+  savedPlaying = bootPlaying = s.playing;
   savedMenu = bootMenu = s.menu;
 }
 
 int sessionProject() { return bootProject; }
 int sessionMenu() { return bootMenu; }
+bool sessionPlaying() { return bootPlaying; }
 
 void takeProjectSelection(bool orTrack1) {
   int row, cell;
@@ -94,7 +97,7 @@ void takeProjectSelection(bool orTrack1) {
 
 static bool sessionDirty() {
   return tempoDirty || masterVolume() != savedMaster || newMaster != savedNewMaster || projectCurrent() != savedProject ||
-         menuState() != savedMenu;
+         menuState() != savedMenu || transport.running != savedPlaying;
 }
 
 static void writeSession() {
@@ -105,8 +108,10 @@ static void writeSession() {
   s.newMaster = newMaster;
   s.project = projectCurrent();
   s.menu = menuState();
+  s.playing = transport.running;
   saveSession(s);
   savedMenu = s.menu;
+  savedPlaying = s.playing;
   savedMaster = s.master;
   savedNewMaster = s.newMaster;
   savedProject = s.project;
