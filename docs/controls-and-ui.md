@@ -8,7 +8,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. A held DOWN (repeating) stops at track 7: only a fresh press goes on to the status row. DOWN on the status row (a fresh press) opens the menu once let go; in the menu, UP on the top card row (A–D) goes back once let go (unless no project is loaded) |
+| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. A held DOWN (repeating) stops at track 7: only a fresh press goes on to the status row. UP on track 1 or DOWN on the status row (a fresh press) opens the menu once let go; in the menu, UP on the top card row (A–D) goes back once let go (unless no project is loaded) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform); LEFT on a row's first cell (a fresh press, not a held arrow repeating) opens the menu, to the looper's left, once let go (the clock goes on); in the menu, RIGHT off its right edge (a card row's right end, or on a list item) goes back once let go (unless no project is loaded) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
@@ -155,8 +155,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Menu (`ui_menu.cpp`): the app starts where it was left, in the menu or
   the looper's view (the first start, or with no project loaded: the menu, on the
   last project's card, that project already loaded), with the clock running if it was (from
-  1.1.1). Opened with LEFT off the looper's left edge (on a row's first cell) or DOWN
-  off its bottom (on the status row), it takes the whole screen; it has no
+  1.1.1). Opened with LEFT off the looper's left edge (on a row's first cell), UP off
+  its top (on track 1) or DOWN off its bottom (on the status row), it takes the whole screen; it has no
   action button (its edge mark in that place). Opening and leaving the menu never starts or stops the clock;
   exporting to Ableton and storage mode stop it first, and start it again (from 1.1.1) when done if it was running. On its items A and B both act
   (SHIFT with them: cut and paste); START starts / stops the clock there too (SHIFT+START: from 1.1.1). Loading a project, or making a new one, doesn't start the clock either

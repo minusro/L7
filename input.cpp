@@ -122,9 +122,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
-  // LEFT off a row's first cell, or DOWN on the status row, in the looper's
-  // view (a fresh press, not a held arrow repeating): the menu opens once
-  // that key is let go (the clock goes on).
+  // LEFT off a row's first cell, UP on track 1 or DOWN on the status row, in
+  // the looper's view (a fresh press, not a held arrow repeating): the menu
+  // opens once that key is let go (the clock goes on).
   static uint8_t menuOnRelease = 0;                  // the key to wait for
   if (menuOnRelease && !(keys & menuOnRelease)) {
     menuOnRelease = 0;
@@ -436,6 +436,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     // (By place on the screen: track 1 at the top, the status row at the bottom.)
     int pos = rowPos(selected);
     if (pressed & m8::BTN_UP && pos > 0) selected = rowAtPos(pos - 1);              // no wrapping
+    else if ((pressed & m8::BTN_UP) && !repeat) menuOnRelease = m8::BTN_UP;      // UP on track 1 (a fresh press): the menu, once let go
     // DOWN: onto the status row only with a fresh press (a held DOWN stops at
     // the last track); on the status row (a fresh press): the menu, once let go.
     if (pressed & m8::BTN_DOWN && pos < ROWS - 1 && !(repeat && rowAtPos(pos + 1) == STATUS_ROW)) selected = rowAtPos(pos + 1);

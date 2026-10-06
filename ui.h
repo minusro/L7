@@ -162,7 +162,7 @@ extern uint32_t uiGeneration;
 
 // ---- The menu (ui_menu.cpp): the looper's other screen, to its left, the
 // whole screen (no action button), opened with LEFT off the looper's left
-// edge or DOWN off its bottom, left by loading a project (or RIGHT off its
+// edge, UP off its top or DOWN off its bottom, left by loading a project (or RIGHT off its
 // own right edge, or UP off its top); the arrows move its
 // selection. While it's open the track rows aren't drawn.
 // Its ground: dark grey (the whole screen).

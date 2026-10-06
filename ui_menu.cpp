@@ -1,6 +1,6 @@
 // ui_menu.cpp — the menu (see ui.h): the looper's other screen, to its left,
 // the whole screen (no action button). Opened with LEFT off the looper's left
-// edge or DOWN off its bottom; left by loading a project (A on the loaded one:
+// edge, UP off its top or DOWN off its bottom; left by loading a project (A on the loaded one:
 // just back), RIGHT off its right edge or UP off its top (menuLeavesOn()). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
 // "ENTER STORAGE MODE"; it scrolls once it has more than four. A runs
