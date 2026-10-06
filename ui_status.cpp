@@ -31,9 +31,9 @@ static constexpr int INSET = 2 * PX;               // text from the cell's edges
 // The edge mark (ui.h), built in a buffer and sent at once: the tip the
 // looper's 2 blocks from the left edge, the menu's 3 from the right (mirrored).
 void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground) {
-  // An arrow: an open head (a chevron, 3 x 5) on a shaft along its middle row.
-  static const char *const ARROW_LEFT[5] = {"..#..", ".#...", "#####", ".#...", "..#.."};
-  constexpr int ROWS = STATUS_H / PX, CW = 5, CH = 5, R0 = (ROWS - CH) / 2;
+  // A double chevron ("<<", 6 x 5; the menu's mirrored: ">>").
+  static const char *const ARROW_LEFT[5] = {"..#..#", ".#..#.", "#..#..", ".#..#.", "..#..#"};
+  constexpr int ROWS = STATUS_H / PX, CW = 6, CH = 5, R0 = (ROWS - CH) / 2;
   constexpr int MAX_W = EDGE_W + 2 * PX;          // (the menu's: wider, its arrow further in)
   const int w = right ? MAX_W : EDGE_W, cols = w / PX;
   const int C0 = right ? 3 : 2;                    // the tip's blocks from its edge: the looper's 2, the menu's 3
