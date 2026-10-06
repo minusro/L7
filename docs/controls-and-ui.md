@@ -75,7 +75,8 @@ and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
 (`PX`), a 160×120 screen of chunky pixels. Selection: a light grey frame on the
 selected cell only (grey while B is held, with or without other keys:
 adjusting; white while only arrows are held and the last press moved the
-selection: not at an edge). The selected track's button gets a 50% grey panel behind its number (from a block in,
+selection: not at an edge); all the selected track's cells take their selected look
+(the frame stays on the selected one, and B's editing look too). The selected track's button gets a 50% grey panel behind its number (from a block in,
 the button's height: two blocks of border above, left and below the 7×9
 badge; the accent colour while A is held, with the
 action button, showing just the number then, in black).
@@ -85,7 +86,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
 
 * Waveform (`ui_wave.cpp`): 90 columns, inside a block of space within
   the frame (drawn in pixels, not blocks: 180 pixel columns, a 2-pixel
-  centre line, the peaks up to 11 pixels each way, symmetric; square-root scale); light grey inside the loop range (white on the selected cell), 50% grey outside (muted:
+  centre line, the peaks up to 11 pixels each way, symmetric; square-root scale); light grey inside the loop range (white on the selected track), 50% grey outside (muted:
   50% grey range, dark grey outside). On every track (recording too), a black line the
   waveform's height, a block wide, just before the start of each bar but the first (on the
   same column edges as the range, so the range's colour stops at them). The
@@ -99,12 +100,12 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Filter (`ui_filter.cpp`): inside a block of space within the frame, the
   response filled from the curve down, under a
   line 2 pixels thick, the curve drawn in pixels (not blocks). Fill / line: grey / light grey;
-  selected: light grey / white; muted: dark grey, no line; B held on it
+  the selected track: light grey / white; muted: dark grey, no line; B held on it
   (muted or not): the dark accent / the accent colour.
 * Volume (`ui_mix.cpp`): 5 straight vertical lines a side, every other
   column (a column short of the cell's edges), longer further out. A channel's level in lines is
   the volume step minus its balance cut (one line per step of either). Up to
-  the level / the outer lines: grey / dark grey; selected: light grey / grey;
+  the level / the outer lines: grey / dark grey; the selected track: light grey / grey;
   muted: dark grey / black. The meter: white. B alone held on it (muted or not):
   no meter, the level in the accent colour.
 * Editing (B held on the selected cell, so B + arrows change it; volume and

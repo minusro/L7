@@ -14,7 +14,7 @@
 //           and below it, symmetric; 180 pixel columns. Heights go with the
 //           square root of the peak level (as the overview stores it).
 // The waveform is light grey inside the loop range (white on the selected
-// cell) and 50% grey outside; on a muted clip the range is 50% grey and the
+// track) and 50% grey outside; on a muted clip the range is 50% grey and the
 // rest dark grey. While B alone is held on the selected waveform cell (B +
 // arrows change the range), the range is in the accent colour, muted or not.
 // The start position: a checkerboard line of 1-pixel squares, a block wide and the
@@ -165,10 +165,11 @@ void drawWave(int i, bool recordingHere) {
   if (tr.state != TrackState::Empty) trackRange(i, rs, rb);
   uint16_t bg = cellBackground(i, WAVE_CELL);
   uint64_t borders = bordersOf(i, WAVE_CELL);
-  // The range: light grey, white on the selected cell, the accent colour while
-  // B alone is held on it (editing, muted or not); muted: grey.
-  bool muted = tr.state == TrackState::Muted, here = i == selected && selectedCell == WAVE_CELL;
-  bool editing = here && bAlone();
+  // The range: light grey, white on the selected track (all its cells look
+  // selected; the frame is on the selected one), the accent colour while B
+  // alone is held on the selected cell (editing, muted or not); muted: grey.
+  bool muted = tr.state == TrackState::Muted, here = i == selected;
+  bool editing = here && selectedCellIn(i) == WAVE_CELL && bAlone();
   uint16_t rangeInk = editing ? ACCENT : muted ? DIM : here ? INK : LIGHT;
   if (recordingHere) rangeInk = INK;                 // the recording's waveform: white
   uint16_t outInk = muted ? DARK : DIM;            // outside it: grey (muted: dark grey)

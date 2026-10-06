@@ -9,7 +9,7 @@
 // arrow shows). The meter (the channel's actual output, with peak hold falling
 // at METER_FALL_DB_PER_S) lights them white on the same scale: line j at
 // volume step j + 1's level. Up to the level / above it (the outer lines):
-//   unselected: grey / dark grey;  selected: light grey / grey;
+//   unselected: grey / dark grey;  the selected track: light grey / grey;
 //   muted (no meter): dark grey / black.
 // While B alone is held on the cell, muted or not (B + arrows change volume
 // and balance), no meter: the level's lines in the accent colour, the outer
@@ -70,8 +70,8 @@ void drawMix(int i) {
   uint64_t frame = bordersOf(i, MIX_CELL);
   uint16_t looks[2 * MIX_ARCS];                    // each line's colour
   int levels[2] = {tr.volume - max(0, (int)tr.balance), tr.volume - max(0, -(int)tr.balance)};   // lines lit
-  bool muted = tr.state == TrackState::Muted, here = i == selected && selectedCell == MIX_CELL;
-  bool editing = here && bAlone();
+  bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
+  bool editing = here && selectedCellIn(i) == MIX_CELL && bAlone();
   uint16_t levelInk = editing ? ACCENT : muted ? DARK : here ? LIGHT : DIM;
   uint16_t outerInk = editing ? DIM : muted ? BG : here ? DIM : DARK;
   for (int ch = 0; ch < 2; ch++) {

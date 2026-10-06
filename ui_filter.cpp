@@ -5,7 +5,7 @@
 // 20 Hz - 20 kHz (log), 0 dB at the top to -CURVE_DB at the bottom, drawn in
 // pixels (the frame in blocks): the line, 2 pixels thick, and filled under it.
 // Fill / line:
-//   unselected: grey / light grey;  selected: light grey / white;
+//   unselected: grey / light grey;  the selected track: light grey / white;
 //   muted: dark grey, no line;
 //   B held on the cell, muted or not (B + arrows change the filter): the
 //   dark accent / the accent colour.
@@ -29,7 +29,7 @@ void drawFilter(int i) {
   k.hi = tr.filterHi;
   k.borders = bordersOf(i, FILTER_CELL);
   k.clip = hasClip(i);                             // empty (or still recording): nothing
-  bool muted = tr.state == TrackState::Muted, here = i == selected && selectedCell == FILTER_CELL;
+  bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
   bool editing = here && editingCell(i, FILTER_CELL);
   k.fill = editing ? ACCENT_DARK : muted ? DARK : here ? LIGHT : DIM;
   k.line = editing ? ACCENT : muted ? BG : here ? INK : LIGHT;   // (BG: none)
