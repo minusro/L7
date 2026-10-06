@@ -79,7 +79,7 @@ selection: not at an edge); all the selected track's cells take their selected l
 (the frame stays on the selected one, and B's editing look too), on a dark grey ground
 (`rowGround()`): a rectangle as tall as the frame (its band and the block below; shared border
 rows go dark grey when either row is selected), the screen's whole width, under the button
-too (round its panel and badges); the status row's ground the same when it's selected (round the action button too; but only its
+too (round its panel and badges); the status row's ground the same when it's selected (from the scene cell's left edge, round the action button too; but only its
 selected cell takes the selected look); anything dark grey on it is drawn black instead (a
 muted clip's filter fill and volume level, its waveform outside the range). The selected track's button gets a 50% grey panel behind its number (from a block in to a block short of the screen's right edge,
 the button's height: two blocks of border above, left and below the 7×9
@@ -125,8 +125,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
   small square, not selectable, no frame, with the edge mark: a small arrow (an open 3×5
-  head, a chevron, on a shaft 5 blocks long) pointing left, 2 blocks from the left edge, dark grey (black on the selected status row's dark grey
-  ground), in the space from the screen's left edge to 2 blocks short of the scene cell's
+  head, a chevron, on a shaft 5 blocks long) pointing left, 2 blocks from the left edge, dark grey on black (the selected status row's dark grey
+  ground starts at the scene cell's left edge), in the space from the screen's left edge to 2 blocks short of the scene cell's
   frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock

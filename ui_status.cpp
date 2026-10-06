@@ -126,7 +126,8 @@ void drawStatus() {
   if (cleared) {
     drawn = uiGeneration;
     shownGround = G;
-    for (int c = 0; c < STATUS_CELLS; c++) t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, G);
+    for (int c = 0; c < STATUS_CELLS; c++)        // (the ground from the scene cell's left edge: not under the menu cell)
+      t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, c == MENU_CELL ? BG : G);
     shownBorders = ~0ull;
   }
   uint64_t borders = 0;
@@ -149,12 +150,12 @@ void drawStatus() {
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
-    // The menu cell: the edge mark, pointing left: dark grey, black on the
-    // selected row's ground; grey while an arrow is held that goes to the
-    // menu once let go.
+    // The menu cell: the edge mark, pointing left, dark grey on black (the
+    // selected row's ground starts after it); grey while an arrow is held
+    // that goes to the menu once let go.
     static uint16_t markInk = 0;
-    uint16_t ink = screenSwitchPending() ? DIM : G == DARK ? BG : DARK;
-    if (cleared || ink != markInk) drawEdgeMark(false, top, ink, G);
+    uint16_t ink = screenSwitchPending() ? DIM : DARK;
+    if (cleared || ink != markInk) drawEdgeMark(false, top, ink, BG);
     markInk = ink;
   }
   {

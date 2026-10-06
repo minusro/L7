@@ -56,8 +56,8 @@ inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // 5 blocks long) pointing left in the looper's view (its menu cell: the space left of the
 // scene cell, 2 blocks short of its frame), right in the menu (the same space
 // at the right edge, mirrored, centred top to bottom), in ink on the
-// ground (the whole space). The looper's: dark grey, black on the selected
-// status row's dark grey ground; the menu's: black on its dark grey.
+// ground (the whole space). The looper's: dark grey on black (the selected
+// status row's ground starts at the scene cell); the menu's: black on its dark grey.
 constexpr int EDGE_W = MENU_BOX.w - PX;          // (2 blocks short of the scene cell's frame)
 void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground);   // (y: the space's top)
 
@@ -95,7 +95,8 @@ inline bool anyClipHeard() {
 // The selected row's ground: a dark grey rectangle under it, as tall as the
 // selection frame (a track's band and the block below, the row below's top
 // border; the row above's bottom border is its top; the status row's cells'
-// height), the screen's whole width (under the button too, round its panel).
+// height), the screen's whole width (under the button too, round its panel;
+// the status row's from the scene cell's left edge: not under the menu cell).
 // Black elsewhere.
 bool menuOpen();
 inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() ? DARK : BG; }
