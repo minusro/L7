@@ -36,8 +36,8 @@ uint32_t uiGeneration = 1;
 static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 3, ITEMS = CARDS + LIST, COLS = 4;
 static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE"};
 // The export item's label while exporting and after it ("EXPORTING 3/14",
-// "SAVED AS L7 A005"; none: its own), kept until another project is loaded (the
-// project's name in the project's colour: from exportNameAt on).
+// "SAVED AS L7 A005"; none: its own), kept until the menu closes, storage mode is entered or
+// another project is loaded (the project's name in the project's colour: from exportNameAt on).
 static char exportText[24];
 static int exportNameAt = -1, exportFor = -1;
 static int listTop = 0;                          // the list's first item in view
@@ -213,7 +213,7 @@ static void drawItem(int k) {
       char head[24];
       snprintf(head, sizeof head, "%.*s", exportNameAt, exportText);
       int w1 = textWidth(head) + PX;
-      drawText(s.x * PX, s.y * PX, head, ink, BG);
+      drawText(s.x * PX, s.y * PX, head, ink, BG, w1);   // (the gap before the name cleared too)
       drawText(s.x * PX + w1, s.y * PX, exportText + exportNameAt, PROJECT_COLORS[exportFor], BG, s.w * PX - w1);
     } else {
       drawText(s.x * PX, s.y * PX, label, ink, BG, s.w * PX);   // (the whole box: a longer label scrolled away is covered)
@@ -228,7 +228,7 @@ uint16_t menuActionColor() {
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
   if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode: system-level)
-  return projectHasClips() ? ACCENT : DIM;         // export: grey with nothing to export
+  return projectHasClips() && !exportText[0] ? ACCENT : DIM;   // export: grey with nothing to export, or while its label shows
 }
 
 // What an item shows: redrawn when it changes.
@@ -326,6 +326,8 @@ bool menuKeys(uint8_t pressed) {
   return movedHere;
 }
 
+bool menuExportShown() { return shown && exportText[0]; }
+
 void menuExportStatus(const char *text, int nameAt) {
   snprintf(exportText, sizeof exportText, "%s", text ? text : "");
   exportNameAt = nameAt;
@@ -360,6 +362,7 @@ void openMenu() {
 
 void closeMenu() {
   if (!shown) return;
+  exportText[0] = 0;                             // (the export's label goes with the menu)
   if (onStatus) statusCell = selectedCellIn(STATUS_ROW);
   selected = mainRow;
   selectedCell = mainCell;

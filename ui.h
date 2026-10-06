@@ -143,6 +143,7 @@ bool menuOnList();                       // the selection on the menu's list (EX
 uint16_t menuActionColor();
 uint16_t actionRestColor();              // the action button's colour when not pressed (ui_buttons.cpp; grey: it can't act)              // the action button's colour (the accent, a card's, light grey)
 int menuListItem();                      // which of its items (0: export, 1: storage mode), or -1
+bool menuExportShown();                  // the export item shows its label (exporting is off until it goes)
 void menuExportStatus(const char *text, int nameAt = -1);   // the export item's label ("EXPORTING 3/14"; nullptr: its own), kept until another
                                                             // project is loaded; from character nameAt on, in the project's colour (-1: none)
 // The menu's state for the session: its selection (an item, or 100 + the
