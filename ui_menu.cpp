@@ -228,11 +228,11 @@ static void drawItem(int k) {
     bool off = k - CARDS == 0 && !projectHasClips();   // export: nothing to export (no clips, or the dummy project)
     const char *label = k == CARDS && exportText[0] ? exportText : LABELS[k - CARDS];
     uint16_t ink = off ? DIM : sel ? INK : LIGHT;
-    if (k == CARDS && exportText[0] && exportNameAt > 0 && exportFor >= 0) {   // "SAVED AS " in the usual ink, the name in the project's colour
+    if (k == CARDS && exportText[0] && exportNameAt > 0 && exportFor >= 0) {   // "SAVED AS " grey, the name in the project's colour
       char head[24];
       snprintf(head, sizeof head, "%.*s", exportNameAt, exportText);
       int w1 = textWidth(head) + PX;
-      drawText(s.x * PX, s.y * PX, head, ink, MENU_BG, w1);   // (the gap before the name cleared too)
+      drawText(s.x * PX, s.y * PX, head, DIM, MENU_BG, w1);   // (the gap before the name cleared too)
       drawText(s.x * PX + w1, s.y * PX, exportText + exportNameAt, PROJECT_COLORS[exportFor], MENU_BG, s.w * PX - w1);
     } else {
       drawText(s.x * PX, s.y * PX, label, ink, MENU_BG, s.w * PX);   // (the whole box: a longer label scrolled away is covered)
