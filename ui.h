@@ -39,7 +39,7 @@ constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
-constexpr Cell MENU_BOX = {0, STATUS_H}, SCENE_BOX = {24, 96}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
+constexpr Cell MENU_BOX = {0, STATUS_H - PX}, SCENE_BOX = {22, 98}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
 // The cells a row has (the status row's: as many as a track row's).
 inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The selected cell in row i's terms (on the status row, never the menu cell's).
@@ -47,11 +47,12 @@ inline int selectedCellIn(int i) {
   int c = min(selectedCell, cellCount(i) - 1);
   return i == STATUS_ROW ? max(c, SCENE_CELL) : c;
 }
-// The edge chevron's place: in the menu cell, a block left of centre and a
+// The edge chevron's place: in the menu cell, a block left of the centre of
+// a square the status row's height (the cell a block narrower now), and a
 // block nearer the edge (x; y from the status row's top; the row's 13 blocks:
 // centred, it'd be half a block nearer the edge already), and in the menu
 // mirrored top to bottom (as far from the top).
-constexpr int CHEVRON_X = MENU_BOX.x + (MENU_BOX.w - 5 * PX) / 2 / PX * PX - PX, CHEVRON_DY = (STATUS_H - 3 * PX) / 2 / PX * PX + PX;
+constexpr int CHEVRON_X = MENU_BOX.x + (STATUS_H - 5 * PX) / 2 / PX * PX - PX, CHEVRON_DY = (STATUS_H - 3 * PX) / 2 / PX * PX + PX;
 constexpr int CHEVRON_TOP_Y = 240 - (STATUS_TOP + CHEVRON_DY + 3 * PX);
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
