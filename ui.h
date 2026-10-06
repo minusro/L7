@@ -34,7 +34,7 @@ constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: four cells (to the volume cells' edge), left
-// to right: the menu's (a small square with a thick dark grey chevron down:
+// to right: the menu's (a small square with the edge mark, a chevron down:
 // DOWN here opens the menu; not selectable), the scene (the widest), the clock
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
@@ -47,19 +47,16 @@ inline int selectedCellIn(int i) {
   int c = min(selectedCell, cellCount(i) - 1);
   return i == STATUS_ROW ? max(c, SCENE_CELL) : c;
 }
-// The edge chevron's place: in the menu cell, a block from the scene cell's
-// frame (x; y from the status row's top: its tip 2 blocks above the bottom
-// edge's block of space), and in the menu mirrored top to bottom (as far
-// from the top).
-constexpr int CHEVRON_X = MENU_BOX.x + 2 * PX, CHEVRON_DY = (STATUS_H - 3 * PX) / 2 / PX * PX - PX;
-constexpr int CHEVRON_TOP_Y = 240 - (STATUS_TOP + CHEVRON_DY + 5 * PX);
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
-// A thick chevron (7 x 5 blocks) at x,
-// y (the box's top left), pointing down or up: the screen's
-// edge where the other screen is (the status row's menu cell, the menu's top
-// left).
-void drawEdgeChevron(int x, int y, bool down, uint16_t color);
+// The edge mark: where the other screen is, at the screen's left edge, the
+// status row's height (the status row's menu cell; the menu's top left,
+// flipped). A dark grey backdrop (as the action button's, mirrored: a block
+// short of the scene cell's frame, its corner nearest the middle cut) with a
+// black chevron (5 x 3 blocks) in its middle, pointing down or up. shown
+// false: cleared.
+constexpr int EDGE_W = MENU_BOX.w - 2 * PX;
+void drawEdgeMark(int y, bool down, bool shown = true);
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
 // A row's place on the screen from the top (0: the first track row), and back.

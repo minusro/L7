@@ -5,7 +5,7 @@
 // row is selected:
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
-//   first cell: a small square with a thick dark grey chevron pointing down
+//   first cell: the edge mark (ui.h), a black chevron pointing down on a dark grey backdrop
 //     (DOWN on the status row opens the menu); not selectable, no frame.
 //   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
@@ -27,14 +27,22 @@
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
-// The edge chevron: 7 blocks wide and 5 high, its arms two blocks thick,
-// pointing down (rows bottom-up: up).
-void drawEdgeChevron(int x, int y, bool down, uint16_t color) {
-  static const char *const ROWS_DOWN[5] = {"#.....#", "##...##", ".##.##.", "..###..", "...#..."};
-  auto &t = board.tft();
-  for (int r = 0; r < 5; r++)
-    for (int c = 0; c < 7; c++)
-      if (ROWS_DOWN[down ? r : 4 - r][c] == '#') t.fillRect(x + c * PX, y + r * PX, PX, PX, color);
+// The edge mark (ui.h), built in a buffer and sent at once.
+void drawEdgeMark(int y, bool down, bool shown) {
+  static const char *const CHEVRON_DOWN[3] = {"#...#", ".#.#.", "..#.."};
+  constexpr int COLS = EDGE_W / PX, ROWS = STATUS_H / PX, CW = 5, CH = 3;
+  constexpr int C0 = (COLS - CW) / 2, R0 = (ROWS - CH) / 2;
+  static uint16_t px[STATUS_H * EDGE_W];
+  for (int r = 0; r < ROWS; r++)
+    for (int c = 0; c < COLS; c++) {
+      bool cut = c == COLS - 1 && r == (down ? 0 : ROWS - 1);   // (the corner nearest the middle)
+      int cr = r - R0, cc = c - C0;
+      bool ink = cr >= 0 && cr < CH && cc >= 0 && cc < CW && CHEVRON_DOWN[down ? cr : CH - 1 - cr][cc] == '#';
+      uint16_t color = !shown || cut || ink ? BG : DARK;
+      for (int dy = 0; dy < PX; dy++)
+        for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * EDGE_W + c * PX + dx] = color;
+    }
+  board.tft().writeRect(0, y, EDGE_W, STATUS_H, px);
 }
 
 // The status row's cells: the scene's, the clock's and the tempo's (ui.h).
@@ -116,7 +124,7 @@ void drawStatus() {
   for (int c = 0; c < STATUS_CELLS; c++) borders = borders * 31 + bordersOf(STATUS_ROW, c);
   if (borders != shownBorders) {
     shownBorders = borders;
-    for (int c = 0; c < STATUS_CELLS; c++) drawFrame(c);
+    for (int c = SCENE_CELL; c < STATUS_CELLS; c++) drawFrame(c);   // (the menu cell: never selected, its edge mark to the edges)
   }
 
   char text[24];
@@ -131,8 +139,8 @@ void drawStatus() {
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
-    // The menu cell: a thick chevron down, dark grey (drawn when cleared: it never changes).
-    if (cleared) drawEdgeChevron(CHEVRON_X, top + CHEVRON_DY, true, DARK);
+    // The menu cell: the edge mark, pointing down (drawn when cleared: it never changes).
+    if (cleared) drawEdgeMark(top, true);
   }
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the
