@@ -198,17 +198,49 @@ void splashTick() {
   }
 }
 
+// While the splash shows, it's also ticked from yield(), which the SD card's
+// driver calls while it waits on the card: the start-up's card work (most of
+// it) blocks between its own splashTick() calls for longer than the copyright
+// line's fade and rise take, which then went by unseen. At most every
+// TICK_MS (a tick redraws the logo, ~10 ms, holding the card up meanwhile).
+#ifdef TEENSYDUINO
+static constexpr uint32_t TICK_MS = 15;
+static EventResponder fromYield;
+static bool ticking = false;
+static void tickFromYield(EventResponderRef) {
+  static uint32_t last = 0;
+  if (!ticking) return;
+  if (millis() - last >= TICK_MS) {
+    last = millis();
+    splashTick();
+  }
+  fromYield.triggerEvent();                        // (again on the next yield())
+}
+static void tickOnYield(bool on) {
+  ticking = on;
+  if (on) {
+    fromYield.attach(tickFromYield);
+    fromYield.triggerEvent();
+  } else {
+    fromYield.detach();
+  }
+}
+#else
+static void tickOnYield(bool) {}
+#endif
+
 void showSplash() {
   auto &t = board.tft();
   t.fillScreen(BG);                                // (logo and line fade in: splashTick())
   copyrightX = (320 - textWidthPx(COPYRIGHT)) / 2;
   shownAt = millis();
   splashTick();
+  tickOnYield(true);
 }
 
 // The slide played through (blocking, ~1 s): the start-up work after it calls
-// splashTick() only between its steps, and the card's start alone outlasts
-// the slide, which then went by unseen. (The splash stays SPLASH_MIN_MS
+// splashTick() only between its steps (and from the card's waits), and the
+// card's start alone outlasts the slide, which then went by unseen or jerky. (The splash stays SPLASH_MIN_MS
 // anyway, so this only adds to a start-up that takes longer than the rest.)
 void splashSlideIn() {
   while (millis() - shownAt < SLIDE_MS) {
@@ -219,6 +251,7 @@ void splashSlideIn() {
 }
 
 void hideSplash() {
+  tickOnYield(false);
   while (millis() - shownAt < SPLASH_MIN_MS) {
     splashTick();
     delay(10);
