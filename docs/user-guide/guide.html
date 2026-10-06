@@ -83,7 +83,7 @@
   <tr><td>Arrows</td><td>Move the selection: <span class="key">UP</span>/<span class="key">DOWN</span> between rows, <span class="key">LEFT</span>/<span class="key">RIGHT</span> between cells.</td></tr>
   <tr><td><span class="key">A</span> on a track</td><td>Empty track: record, press again to stop. Track with a clip: mute / unmute.</td></tr>
   <tr><td><span class="key">B</span> held + arrows</td><td>Adjust the selected cell (see below).</td></tr>
-  <tr><td><span class="key">B</span> twice</td><td>Reset the cell: whole loop, filter open, volume at unity and balance centred.</td></tr>
+  <tr><td><span class="key">B</span> twice</td><td>Reset the cell: whole loop, filter open, volume at unity and balance centred; on the clock cell, master volume back to 100%.</td></tr>
   <tr><td><span class="key">SHIFT</span> + <span class="key">A</span></td><td>Cut the track's clip to the clipboard, or paste it onto an empty track. On a recording track: cancel the recording.</td></tr>
   <tr><td><span class="key">SHIFT</span> + <span class="key">LEFT</span>/<span class="key">RIGHT</span></td><td>Put the previous / next recording on the card on the track (in name order).</td></tr>
   <tr><td><span class="key">SHIFT</span> + <span class="key">UP</span>/<span class="key">DOWN</span></td><td>Next / previous scene.</td></tr>
@@ -110,7 +110,7 @@
   <tr><td>Filter</td><td>Move the band</td><td>Widen / narrow the band</td></tr>
   <tr><td>Volume</td><td>Balance</td><td>Volume (off, then steps of 7.5 dB)</td></tr>
   <tr><td>Scene cell</td><td></td><td>Next / previous scene</td></tr>
-  <tr><td>Clock cell</td><td>Master volume, one step</td><td>UP: back to 100%. DOWN: off. (Each project keeps its own.)</td></tr>
+  <tr><td>Clock cell</td><td>Master volume, one step</td><td>UP: back to 100%. DOWN: off. One volume for all projects.</td></tr>
   <tr><td>Tempo cell</td><td>±0.1 BPM</td><td>±1 BPM (30–240 BPM)</td></tr>
 </table>
 <p>Changing the tempo re-pitches the loops, like a turntable. The tempo belongs to the project.</p>
@@ -148,7 +148,7 @@
   <tr><td><span class="key">A</span>, <span class="key">B</span> or <span class="key">START</span></td><td>Load that project (on an empty slot: start a new one) and go back to the looper. While playing, it comes in on the next bar line.</td></tr>
   <tr><td><span class="key">SHIFT</span> + <span class="key">A</span></td><td>Cut the project to the project clipboard, or paste it into an empty slot.</td></tr>
 </table>
-<p>Each project keeps its own scenes, tempo and master volume. New projects start with the tempo and master volume you last set by hand. Opening the menu with a project that has no clips at all deletes that project.</p>
+<p>Each project keeps its own scenes and tempo; new projects start with the tempo you last set by hand. The master volume is one for all projects. Opening the menu with a project that has no clips at all deletes that project.</p>
 
 <h2>Exporting to Ableton Live</h2>
 <p>Load the project, open the menu and choose <b>EXPORT ABLETON PROJECT</b>. The clock stops and L7 writes a Live 11 project to the card, in <code>/L7/EXPORTS/L7 A001 Project/</code> (the project's letter, then the next free number). The label then reads <b>SAVED AS L7 A001</b>, and the button stays off until you close the menu.</p>

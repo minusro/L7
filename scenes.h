@@ -30,12 +30,11 @@ void scenesForget();
 
 // After storageBegin(): loads project `project` (0-11; -1: the dummy one). The tempo goes
 // through the app (rounding, limits): getTempo returns it, setTempo applies a
-// project's as it loads (not a change by hand), newTempo and newVolume give
-// new projects' (the last set by hand; none: 120 BPM, 100%).
-void scenesBegin(float (*getTempo)(), bool (*setTempo)(float), int project = 0, float (*newTempo)() = nullptr,
-                 int (*newVolume)() = nullptr);
+// project's as it loads (not a change by hand), newTempo gives new projects'
+// (the last set by hand; none: 120 BPM). (The master volume is the app's, not
+// a project's.)
+void scenesBegin(float (*getTempo)(), bool (*setTempo)(float), int project = 0, float (*newTempo)() = nullptr);
 void projectTempoChanged();    // the tempo was set by hand: the loaded project keeps it (all its scenes)
-void projectVolumeChanged();   // the master volume too
 void sceneStateChanged();      // something in the looper changed: the current scene follows
 void serviceScenes();          // call from loop(): saves, one write at a time, when the buffers allow
 void flushScenes();            // everything waiting saved now (power off)

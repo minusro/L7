@@ -1260,7 +1260,6 @@ Session loadSession() {
     else if (!strncmp(line, "cell=", 5)) s.cell = (int)strtol(line + 5, nullptr, 10);
     // ("volume=": the master volume on today's scale; an older "master=" is left: 100% again)
     else if (!strncmp(line, "volume=", 7)) s.master = (int)strtol(line + 7, nullptr, 10);
-    else if (!strncmp(line, "newvolume=", 10)) s.newMaster = (int)strtol(line + 10, nullptr, 10);   // (new projects')
     else if (!strncmp(line, "project=", 8)) s.project = (int)strtol(line + 8, nullptr, 10) - 1;
     else if (!strncmp(line, "menu=", 5)) s.menu = (int)strtol(line + 5, nullptr, 10);
     else if (!strncmp(line, "playing=", 8)) s.playing = strtol(line + 8, nullptr, 10) != 0;
@@ -1269,7 +1268,6 @@ Session loadSession() {
   s.bpm = constrain(s.bpm, MIN_BPM, MAX_BPM);
   s.newBpm = constrain(s.newBpm, MIN_BPM, MAX_BPM);
   s.master = constrain(s.master, 0, MASTER_VOLUME_MAX);
-  s.newMaster = constrain(s.newMaster, 0, MASTER_VOLUME_MAX);
   s.project = constrain(s.project, -1, PROJECTS - 1);   // (-1, "project=0": the dummy project)
   return s;
 }
@@ -1277,8 +1275,8 @@ Session loadSession() {
 void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nnewbpm=%.2f\nvolume=%d\nnewvolume=%d\nproject=%d\nmenu=%d\nplaying=%d\n", s.bpm, s.newBpm, s.master, s.newMaster,
-           s.project + 1, s.menu, s.playing ? 1 : 0);
+  f.printf("bpm=%.2f\nnewbpm=%.2f\nvolume=%d\nproject=%d\nmenu=%d\nplaying=%d\n", s.bpm, s.newBpm, s.master, s.project + 1, s.menu,
+           s.playing ? 1 : 0);
   f.close();
 }
 

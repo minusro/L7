@@ -27,7 +27,7 @@ struct SceneList {
   uint16_t version, count, current;
   uint8_t row, cell;                             // the selection, each + 1 (0: none saved)
   uint16_t slot[MAX_SCENES];                     // record slot of each scene, in list order
-  uint8_t volume1, spare;                        // the project's master volume + 1 (0: not kept yet, older files)
+  uint8_t volume1, spare;                        // (unused: the master volume was a project's before it was the app's)
   uint16_t tempo10;                              // the project's tempo, tenths of a BPM (0: not kept yet, older files)
 };
 static constexpr uint32_t BLOCK = 512;
@@ -43,7 +43,6 @@ static bool projectClip = false;                 // the project clipboard holds 
 static float (*getTempo)() = nullptr;
 static bool (*setTempo)(float) = nullptr;        // a project's tempo, as it loads (not a change by hand)
 static float (*newTempo)() = nullptr;            // new projects' tempo (the last one set by hand)
-static int (*newVolume)() = nullptr;             // and master volume
 static uint16_t tenths(float b) { return (uint16_t)lroundf(b * 10); }
 static bool changed = false;                     // the looper changed: the current scene must follow
 static bool loading = false;                     // a scene is being put on the looper
@@ -410,7 +409,6 @@ static SceneList newList() {
   memcpy(l.magic, "M8SL", 4);
   l.version = 1;
   l.tempo10 = tenths(newTempo ? newTempo() : 120.0f);   // a new project: the last tempo set by hand
-  l.volume1 = (newVolume ? newVolume() : MASTER_VOLUME_UNITY) + 1;   // and master volume
   return l;
 }
 
@@ -575,24 +573,13 @@ static bool openAs(int p, bool apply_) {
     list.tempo10 = tenths(tempo);
     listDirty = true;
   }
-  int volume = list.volume1 ? list.volume1 - 1 : masterVolume();   // (one saved before: the level now, kept)
-  if (!list.volume1) {
-    list.volume1 = volume + 1;
-    listDirty = true;
-  }
   loading = true;                                 // (the scene's units go on as they are)
   if (apply_) apply(s, false, true, tempo);       // from 1.1.1
   else setTempo(tempo);
-  setMasterVolume(volume);
   loading = false;
   return true;
 }
 
-void projectVolumeChanged() {
-  if (loading || masterVolume() + 1 == list.volume1) return;
-  list.volume1 = masterVolume() + 1;
-  listDirty = true;
-}
 
 bool projectInfo(int p, int &scenes, float &tempo, int &current) {
   if (p < 0 || p >= PROJECTS) return false;
@@ -757,11 +744,10 @@ void scenesForget() {
   for (bool &f : filled) f = false;
 }
 
-void scenesBegin(float (*getTempoFn)(), bool (*setTempoFn)(float), int loaded, float (*newTempoFn)(), int (*newVolumeFn)()) {
+void scenesBegin(float (*getTempoFn)(), bool (*setTempoFn)(float), int loaded, float (*newTempoFn)()) {
   getTempo = getTempoFn;
   setTempo = setTempoFn;
   newTempo = newTempoFn;
-  newVolume = newVolumeFn;
   makeProjectFiles();
   loaded = loaded < 0 ? DUMMY : min(loaded, PROJECTS - 1);
   if (!openAs(loaded, false)) {

@@ -145,7 +145,7 @@ static void reloadFromCard() {
     fatal("SD card missing or full: the looper needs ~100 MB free in /L7.");
   beginSession();
   transport.spb = spbForBpm(bpm);
-  scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo, newProjectVolume);
+  scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo);
   scenesSelection(mainSelection, setMainSelection);
   takeProjectSelection(false);
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();
@@ -180,7 +180,7 @@ void setup() {
   beginSession();                                  // the tempo and the selection
   splashTick();
   transport.spb = spbForBpm(bpm);
-  scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo, newProjectVolume);
+  scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo);
   scenesSelection(mainSelection, setMainSelection);
   takeProjectSelection(false);
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();   // recordings no project uses

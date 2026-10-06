@@ -99,14 +99,8 @@ static void tempoByHand(float b) {
   simNewBpm = b;
   projectTempoChanged();
 }
-// And the master volume (the app's stepMasterVolume()).
-static int simNewMaster = MASTER_VOLUME_UNITY;
-static int simNewVolume() { return simNewMaster; }
-static void volumeByHand(int v) {
-  setMasterVolume(v);
-  simNewMaster = v;
-  projectVolumeChanged();
-}
+// And the master volume (the app's stepMasterVolume(): one for all projects).
+static void volumeByHand(int v) { setMasterVolume(v); }
 
 #include <map>
 static std::map<std::string, uint32_t> dropStages;   // what loop() was doing when tracks ran dry
@@ -386,7 +380,7 @@ int main(int argc, char **argv) {
   }
   printf("first boot (with track 5 in the older one-file-per-track format)\n");
   storageBegin([](const char *m) { if (*m) printf("  (%s)\n", m); });
-  scenesBegin(simTempo, simSetTempo, 0, simNewTempo, simNewVolume);
+  scenesBegin(simTempo, simSetTempo, 0, simNewTempo);
   check(sceneCount() == 1 && sceneCurrent() == 1, "scenes start with what's on the tracks as scene 1");
   {
     const Track &tr = tracks[4];
@@ -829,7 +823,7 @@ int main(int argc, char **argv) {
     int scenes = sceneCount(), scene = sceneCurrent();
     for (int i = 0; i < 20; i++) serviceScenes();  // anything left saved
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo, 0, simNewTempo, simNewVolume);
+    scenesBegin(simTempo, simSetTempo, 0, simNewTempo);
     check(sceneCount() == scenes && sceneCurrent() == scene, "scenes and the current one restored");
     bool same = true;
     for (int t = 0; t < NUM_TRACKS; t++) {
@@ -1530,7 +1524,7 @@ int main(int argc, char **argv) {
     runUntilIdle();
     for (int i = 0; i < 20; i++) serviceScenes();
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo, 2, simNewTempo, simNewVolume);
+    scenesBegin(simTempo, simSetTempo, 2, simNewTempo);
     check(projectCurrent() == 2 && sceneCount() == scenes && projectFilled(5) && projectFilled(2) && !projectFilled(1) && projectClipboardFull(),
           "after a power cycle: the slots as they were");
     {
@@ -1549,7 +1543,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  printf("projects: one tempo and master volume each; new ones take the last set by hand\n");
+  printf("projects: one tempo each, new ones take the last set by hand; the master volume is the app's, not a project's\n");
   {
     lastAction = "project tempo";
     auto at = [](float b, int v) { return fabsf(simTempo() - b) < 0.05f && masterVolume() == v; };
@@ -1561,20 +1555,19 @@ int main(int argc, char **argv) {
     int pos = sceneCurrent();
     check((sceneStep(-1) || sceneStep(1)) && sceneCurrent() != pos && at(133, U - 2), "another scene: the same tempo and master volume");
     check(sceneGoEmpty() && at(133, U - 2), "the empty scene too");
-    check(projectLoad(3) && sceneCount() == 0 && at(133, U - 2), "a new project (slot 4): the tempo and volume last set by hand");
+    check(projectLoad(3) && sceneCount() == 0 && at(133, U - 2), "a new project (slot 4): the tempo last set by hand, the volume unchanged");
     tempoByHand(97);
     volumeByHand(U + 3);
-    check(projectLoad(2) && at(133, U - 2), "project 3 again: its own tempo and volume");
-    check(projectLoad(4) && at(97, U + 3), "another new project (slot 5): 97, 100% + 3 steps, the last set by hand (loading project 3 didn't count)");
-    check(projectLoad(2) && at(133, U - 2), "and project 3");
+    check(projectLoad(2) && at(133, U + 3), "project 3 again: its own tempo, the volume as it is (100% + 3 steps)");
+    check(projectLoad(4) && at(97, U + 3), "another new project (slot 5): 97, the last set by hand (loading project 3 didn't count)");
+    check(projectLoad(2) && at(133, U + 3), "and project 3");
     for (int i = 0; i < 20; i++) serviceScenes();
-    simSetTempo(120);                              // (power off: the tempo and level forgotten)
-    setMasterVolume(U);
+    simSetTempo(120);                              // (power off: the tempo forgotten; the volume comes back from the session, not tested here)
     for (int i = 0; i < 5; i++) block();
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo, 2, simNewTempo, simNewVolume);
+    scenesBegin(simTempo, simSetTempo, 2, simNewTempo);
     for (int i = 0; i < 5; i++) block();
-    check(projectCurrent() == 2 && at(133, U - 2), "after a power cycle: project 3's tempo and volume");
+    check(projectCurrent() == 2 && at(133, U + 3), "after a power cycle: project 3's tempo, the volume not changed by loading it");
     volumeByHand(U);                               // (the rest at 100%)
     check(projectDelete(3) && projectDelete(4), "(the new ones deleted)");
   }
@@ -1745,7 +1738,7 @@ os.rename("EXPORTS", "../Ableton")
 )PY") + "' " + simRoot;
     check(system(cmd.c_str()) == 0, "(the card put back to the older layout)");
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo, 2, simNewTempo, simNewVolume);
+    scenesBegin(simTempo, simSetTempo, 2, simNewTempo);
     bool same = projectCurrent() == projectBefore && sceneCount() == scenesBefore && sampleCount() == samplesBefore && projectClipboardFull();
     for (int p = 0; p < PROJECTS; p++) same &= projectFilled(p) == filledBefore[p];
     check(same, "after the boot: the same projects, scenes and samples");
@@ -1777,7 +1770,7 @@ for f in os.listdir("."):
 )PY") + "' " + simRoot;
     check(system(cmd.c_str()) == 0, "(DATA's files put back to the earlier names)");
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo, 2, simNewTempo, simNewVolume);
+    scenesBegin(simTempo, simSetTempo, 2, simNewTempo);
     FILE *ls = popen(("cd " + simRoot + "/L7/DATA && ls | tr '\\n' ' '").c_str(), "r");
     char line[600] = {};
     if (ls) { if (!fgets(line, sizeof line, ls)) line[0] = 0; pclose(ls); }
@@ -1818,7 +1811,7 @@ for f in os.listdir("."):
     for (int t = 0; t < NUM_TRACKS; t++) forgot &= tracks[t].state == TrackState::Empty && tracks[t].sample == 0;
     check(forgot && sampleCount() == 0, "dropped: every track empty, no samples known");
     check(storageBegin([](const char *) {}), "the card read again");
-    scenesBegin(simTempo, simSetTempo, loaded, simNewTempo, simNewVolume);
+    scenesBegin(simTempo, simSetTempo, loaded, simNewTempo);
     bool same = true;
     for (int t = 0; t < NUM_TRACKS; t++) same &= tracks[t].sample == sampleBefore[t] && tracks[t].state == stateBefore[t];
     check(same && projectCurrent() == loaded && sceneCount() == scenesBefore, "the loaded project and its tracks as they were");
@@ -1844,7 +1837,7 @@ for f in os.listdir("."):
     storageForget();
     scenesForget();
     storageBegin([](const char *) {});
-    scenesBegin(simTempo, simSetTempo, projectCurrent() < 0 ? 0 : 2, simNewTempo, simNewVolume);
+    scenesBegin(simTempo, simSetTempo, projectCurrent() < 0 ? 0 : 2, simNewTempo);
     FILE *ls = popen(("ls " + simRoot + "/L7/DATA | grep '^[0-9]' | tr '\\n' ' '").c_str(), "r");
     char line[200] = {};
     if (ls) { if (!fgets(line, sizeof line, ls)) line[0] = 0; pclose(ls); }

@@ -20,7 +20,6 @@ extern int selectedCell;                           // cell in the row (ui.h: FIL
 bool setTempo(float b);
 bool loadTempo(float b);
 float newProjectTempo();                 // the last tempo set by hand (saved with the session; first 120)
-int newProjectVolume();                  // the last master volume set by hand (saved with it; first 100%)
 // The master volume a step up (by 1) or down (-1); saved with the session.
 void stepMasterVolume(int by);
 // The session: the tempo, the master volume and the loaded project, kept in

@@ -11,8 +11,8 @@ static constexpr uint32_t EDGE_HOLD_MS = 350;       // SHIFT+UP/DOWN's second ta
 // The selected track's current cell back to its defaults: the whole loop as
 // the range, the filter open, volume at unity and balance centred.
 static void resetCell() {
-  if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == CLOCK_CELL) {   // the master volume: off, or back to 100% from off
-    stepMasterVolume((masterVolume() == 0 ? MASTER_VOLUME_UNITY : 0) - masterVolume());
+  if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == CLOCK_CELL) {   // the master volume: back to 100%
+    stepMasterVolume(MASTER_VOLUME_UNITY - masterVolume());
     return;
   }
   if (selected == STATUS_ROW || !hasClip(selected)) return;

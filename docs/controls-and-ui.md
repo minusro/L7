@@ -11,7 +11,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. UP on track 1 (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
-| B twice | Reset the current cell (whole loop / filter open / unity, centre) |
+| B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
 | SHIFT + B twice | Duplicate the scene |
 | B (held) | On a cell it adjusts (B + arrows): the action button shows four small arrows round a small +, black on the accent colour; while an arrow is down (adjusting), or A is held with B, the pressed look, dark grey with the icon in the accent colour. A does nothing then (B+A on a cell: kept for finer adjusting later). On an empty track (any cell) the button shows resample (the record dot with a plus) and B + A **resamples** (unavailable, the button grey, while no clip plays unmuted: nothing to resample): records the app's output (everything heard) from the next bar line, queued like a recording; when it's saved it moves to a new scene, on the same track (scenes.md). Otherwise B + A does nothing (SHIFT+B+A: the scene clipboard, below) |
 | A, B or START (menu, on a project slot) | Once let go: load its project (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1; stopped: it stays stopped, ready to play) (an empty slot: a new, empty project there, on track 1's waveform cell) and close the menu; the loaded one: just close it. Not while recording |
@@ -47,7 +47,7 @@ scales from the edge at the edge), volume (UP/DOWN: 0–5, 7.5 dB steps, unity
 at 4) and balance (LEFT/RIGHT: ±5; each step moves one channel's level by a
 line, so every press shows),
 tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–240 BPM),
-the clock cell: the master volume, the project's (LEFT/RIGHT a step; UP: back to 100%; DOWN: off; B twice: off, or from off back to 100%; new projects start with the last level set).
+the clock cell: the master volume, one for all projects (LEFT/RIGHT a step; UP: back to 100%; DOWN: off; B twice: back to 100%, as B twice resets any cell).
 
 Timing constants (input.cpp): key repeat after 200 ms, every 50 ms;
 double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
