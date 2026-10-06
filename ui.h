@@ -134,12 +134,12 @@ extern uint32_t uiGeneration;
 
 // ---- The menu (ui_menu.cpp): a second view in place of the track rows
 // and the status row's cells (only the action button stays), opened with A
-// with DOWN on the status row (the bottom one), left by loading a project; the
+// with DOWN on the status row or UP on track 1, left by loading a project (or UP/DOWN off its edges); the
 // arrows move its selection. While it's open the track rows aren't drawn.
 bool menuOpen();
 void openMenu();
 void closeMenu();
-bool menuUpLeaves();                     // UP leaves the menu (a card of the top row selected, a project loaded)
+bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: UP on the top row, DOWN on the last item (a project loaded)
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)
 bool menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items (true: it moved)
 bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)

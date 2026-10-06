@@ -8,7 +8,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. DOWN on the status row (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); in the menu, UP on a card of the top row goes back once let go (unless no project is loaded) |
+| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. DOWN on the status row or UP on track 1 (a fresh press, not a held arrow repeating) opens the menu once let go (the clock goes on); in the menu, UP on a card of the top row or DOWN on the list's last item goes back once let go (unless no project is loaded) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
@@ -144,7 +144,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the looper's view (the first start, or with no project loaded: the menu, on the
   last project's card, that project already loaded), with the clock running if it was (from
   1.1.1). Opened with DOWN on the
-  status row (the bottom one), it takes the place of the track rows and the status row's
+  status row (the bottom one) or UP on track 1 (the top one), it takes the place of the track rows and the status row's
   cells, across the whole width; of the status row only the action button
   shows. Opening and leaving the menu never starts or stops the clock;
   exporting to Ableton and storage mode stop it first. On its items A and B both act
@@ -152,7 +152,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   new). Loading a project, or making a new one, doesn't start the clock either
   (playing: the project comes in on the next bar line). On its items A
   runs the action button's action when let go; B does nothing. The way out
-  is loading a project (A on the loaded one: just back), or UP on a card of the top row (once let go; not with no project loaded); with the dummy
+  is loading a project (A on the loaded one: just back), or UP on a card of the top row, or DOWN on the list's last item (once let go; not with no project loaded); with the dummy
   project loaded, one has to be loaded or made first. Opening the menu
   with a project that has no clips at all (not recording) deletes it: its
   slot empties and the dummy project is loaded.

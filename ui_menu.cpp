@@ -1,6 +1,6 @@
 // ui_menu.cpp — the menu (see ui.h): in place of the track rows and the
 // status row's cells (only the action button shows), the screen's whole
-// width. Opened with DOWN on the status row (the bottom one); left by loading a project
+// width. Opened with DOWN on the status row or UP on track 1; left by loading a project
 // (A on the loaded one: just back). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
 // "ENTER STORAGE MODE"; it scrolls once it has more than four. A runs
@@ -319,7 +319,10 @@ void menuExportStatus(const char *text, int nameAt) {
   if (shown) drawItem(CARDS);                   // (now: the export holds up the loop)
 }
 
-bool menuUpLeaves() { return shown && !onStatus && menuSel < COLS && projectCurrent() >= 0; }
+bool menuLeavesOn(uint8_t key) {
+  if (!shown || onStatus || projectCurrent() < 0) return false;   // (no project loaded: one has to be chosen first)
+  return key == m8::BTN_UP ? menuSel < COLS : key == m8::BTN_DOWN ? menuSel == ITEMS - 1 : false;
+}
 
 void openMenu() {
   if (shown) return;

@@ -88,30 +88,34 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
-  // DOWN on the status row, the bottom one, in the looper's view (a fresh press,
-  // not a held arrow repeating): the menu opens once DOWN is let go (the clock goes on).
+  // DOWN on the status row (the bottom one) or UP on track 1 (the top one) in the
+  // looper's view (a fresh press, not a held arrow repeating): the menu opens once
+  // that key is let go (the clock goes on).
   static uint8_t menuOnRelease = 0;                  // the key to wait for
   if (menuOnRelease && !(keys & menuOnRelease)) {
     menuOnRelease = 0;
     openMenu();
     return;
   }
-  // UP on a card of the menu's top row (a project loaded): back to the looper
-  // once UP is let go, as A on the loaded project's card.
+  // UP on a card of the menu's top row, or DOWN on its last item (a project
+  // loaded): back to the looper once that key is let go, as A on the loaded
+  // project's card.
   static uint8_t leaveOnRelease = 0;
   if (leaveOnRelease && !(keys & leaveOnRelease)) {
+    uint8_t key = leaveOnRelease;
     leaveOnRelease = 0;
-    if (menuUpLeaves()) {
+    if (menuLeavesOn(key)) {
       closeMenu();
       takeProjectSelection();
       for (int i = 0; i < ROWS; i++) drawTrack(i);
     }
     return;
   }
-  if (menuUpLeaves() && (pressed & m8::BTN_UP) && !repeat && !(keys & (m8::BTN_SHIFT | m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY))) {
-    leaveOnRelease = m8::BTN_UP;
-    return;
-  }
+  for (uint8_t key : {m8::BTN_UP, m8::BTN_DOWN})
+    if (menuLeavesOn(key) && (pressed & key) && !repeat && !(keys & (m8::BTN_SHIFT | m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY))) {
+      leaveOnRelease = key;
+      return;
+    }
   // The menu's items: the arrows move its selection; A or B runs the action
   // button's action once let go (on the item it was pressed on), and so does
   // START on a project card (loading, or making a new one). The menu doesn't
@@ -389,6 +393,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     // (By place on the screen: track 1 at the top, the status row at the bottom.)
     int pos = rowPos(selected);
     if (pressed & m8::BTN_UP && pos > 0) selected = rowAtPos(pos - 1);              // no wrapping
+    else if ((pressed & m8::BTN_UP) && !repeat) menuOnRelease = m8::BTN_UP;      // UP on the top row (a fresh press): the menu, once let go
     if (pressed & m8::BTN_DOWN && pos < ROWS - 1) selected = rowAtPos(pos + 1);
     else if ((pressed & m8::BTN_DOWN) && !repeat) menuOnRelease = m8::BTN_DOWN;  // DOWN on the status row (a fresh press): the menu, once let go
     if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell = selectedCellIn(selected) - 1;
