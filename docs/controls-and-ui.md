@@ -129,7 +129,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
   small square, not selectable, no frame, with the edge mark: a small solid triangle (3×5
   blocks) pointing left, its tip 3 blocks from the left edge, dark grey on black (grey where LEFT would open the
-  menu, a row's first cell; white while LEFT is held that opens it once let go; the selection frame hidden meanwhile, and while UP / DOWN are held to open it, the arrow unchanged then) (the selected status row's dark grey
+  menu, a row's first cell; white while an arrow is held that opens it once let go: LEFT, UP or DOWN; the selection frame hidden meanwhile) (the selected status row's dark grey
   ground starts at the scene cell's left edge), in the space from the screen's left edge to 2 blocks short of the scene cell's
   frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
   (an inverted SCN tag with the scene position,
@@ -184,11 +184,11 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). Along the right
   edge, the "peep": a strip the screen's height (coloured from the status row's top down, where the action
-  button is in the looper's view; black above) and 2 blocks wide (the action button's width while RIGHT or LEFT is held that leaves
-  the menu once let go, its coloured part's top left corner then cut a block, and a black line the screen's height
+  button is in the looper's view; black above) and 2 blocks wide (the action button's width while an arrow is held that leaves
+  the menu once let go, any edge, its coloured part's top left corner then cut a block, and a black line the screen's height
   2 blocks wide left of it; the track numbers 1–7 on its black part where the looper's buttons
   show them, dark grey as an empty track's; everything else in the menu moves left as much as the
-  peep grows, 20 px, meanwhile: drawn with the display's origin moved), in the loaded project's colour; with no project, none until RIGHT or LEFT is held, then in the
+  peep grows, 20 px, meanwhile: drawn with the display's origin moved), in the loaded project's colour; with no project, none until such an arrow is held, then in the
   first empty slot's colour (where leaving makes a new project); no arrow. While an arrow is held that leaves the menu, the selection
   frame is hidden. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export

@@ -159,7 +159,7 @@ void drawStatus() {
     // there once let go.
     static uint16_t markInk = 0;
     bool leftLeaves = selectedCellIn(selected) == firstCellIn(selected);
-    uint16_t ink = screenSwitchKey() == m8::BTN_LEFT ? INK : leftLeaves ? DIM : DARK;   // (white: only LEFT held, not UP / DOWN)
+    uint16_t ink = screenSwitchPending() ? INK : leftLeaves ? DIM : DARK;   // (white: LEFT, UP or DOWN held that opens the menu)
     if (cleared || ink != markInk) drawEdgeMark(false, 0, EDGE_W, top, ink, BG);
     markInk = ink;
   }
