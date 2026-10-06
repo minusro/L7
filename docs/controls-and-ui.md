@@ -125,7 +125,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey while the row is selected): the menu cell (a
   small square, not selectable, no frame, with the edge mark: a small filled triangle (3×5
-  blocks) pointing left, 2 blocks from the left edge, dark grey (black on the selected status row's dark grey
+  blocks) pointing left, 3 blocks from the left edge, dark grey (black on the selected status row's dark grey
   ground), in the space from the screen's left edge to two blocks short of the scene cell's
   frame: the menu is the looper's other screen, to its left), then the scene cell
   (an inverted SCN tag with the scene position,
