@@ -6,7 +6,7 @@
 // "ENTER STORAGE MODE"; it scrolls once it has more than four. A runs
 // the action button's action when let go. On a slot, A loads its project (an
 // empty one: a new project there) and closes
-// the menu; with SHIFT, cuts the project (a second A confirms), or pastes
+// the menu; with SHIFT, cuts the project, or pastes
 // one into an empty slot. B acts as A; START too on a card. Opening it stops
 // the clock; loading a project (or making a new one) starts it.
 //

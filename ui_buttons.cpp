@@ -25,8 +25,7 @@
 // list's items, export Ableton project (an arrow into a tray) and storage mode (the USB
 // trident), nothing yet; on a project slot, load (a small play; the loaded one too: back to it) or, on an
 // empty slot, new (a small asterisk), closing the menu; with SHIFT, cut the project
-// (a question mark after the first A: a second A confirms) or
-// paste one into an empty slot (dark grey while it can't: playing, recording,
+// or paste one into an empty slot (dark grey while it can't: playing, recording,
 // the project clipboard empty). On the status row itself:
 // start from 1.1.1 (|>, as SHIFT+START) on the scene cell, play / stop (a play
 // or a stop icon) on the clock cell, tap tempo ("TAP") on the tempo cell; with SHIFT,
@@ -52,7 +51,7 @@ static int actionIcon() {
   if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
     int slot = menuSlot();
     if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : ICON_USB;
-    if (shift) return projectFilled(slot) ? (cutConfirmSlot() == slot ? ICON_CHECK : ICON_CUT) : ICON_PASTE;
+    if (shift) return projectFilled(slot) ? ICON_CUT : ICON_PASTE;
     return projectFilled(slot) ? ICON_LOAD : ICON_NEW;
   }
   if (board.keys() & m8::BTN_OPT) {                // B: adjusting the cell (B + arrows); with SHIFT, the scene
@@ -186,7 +185,7 @@ static constexpr int PANEL_LEFT = 1;              // the selected track's panel'
 static bool unavailable(int i, int icon) {
   if (i != STATUS_ROW) return false;
   if (menuSlot() >= 0 && !menuOnStatus()) {        // a project slot: cut and paste not while recording or copying
-    if (icon == ICON_CUT || icon == ICON_CHECK) return !projectsMayCopy();
+    if (icon == ICON_CUT) return !projectsMayCopy();
     if (icon == ICON_PASTE) return !projectsMayCopy() || !projectClipboardFull();
     if (icon == ICON_LOAD || icon == ICON_NEW)        // (not while recording, nor while it's being copied)
       return (recording.mode != Recording::Idle && menuSlot() != projectCurrent()) || projectCopying(menuSlot());
