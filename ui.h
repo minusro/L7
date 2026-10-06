@@ -39,7 +39,7 @@ constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
-constexpr Cell MENU_BOX = {0, STATUS_H - 4 * PX}, SCENE_BOX = {16, 104}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
+constexpr Cell MENU_BOX = {0, STATUS_H - 4 * PX}, SCENE_BOX = {18, 102}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
 // The cells a row has (the status row's: as many as a track row's).
 inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The selected cell in row i's terms (on the status row, never the menu cell's).
@@ -54,11 +54,11 @@ inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // the menu's right edge),
 // on the status row's line: a small arrow (a filled 3 x 5 triangle, a
 // 2-block stem behind its middle) pointing left in the looper's view (its menu cell: the space left of the
-// scene cell, up to its frame), right in the menu (the same space
+// scene cell, 2 blocks short of its frame), right in the menu (the same space
 // at the right edge, mirrored, centred top to bottom), in ink on the
 // ground (the whole space). The looper's: dark grey, black on the selected
 // status row's dark grey ground; the menu's: black on its dark grey.
-constexpr int EDGE_W = MENU_BOX.w - PX;          // (up to the scene cell's frame)
+constexpr int EDGE_W = MENU_BOX.w - PX;          // (2 blocks short of the scene cell's frame)
 void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground);   // (y: the space's top)
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
