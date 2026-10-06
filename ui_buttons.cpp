@@ -340,11 +340,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   } else if (!menuOpen()) {
     t.fillRect(BUTTON_X - PX, top, PX, height, round);
   }
-  if (bottom < end) {                              // the margin below (the last track's: its ground's last block row, then black)
-    int groundEnd = i != STATUS_ROW && i == LAST_TRACK_ROW ? min(end, bottom + PX) : bottom;
-    if (groundEnd > bottom) t.fillRect(BUTTON_X - PX, bottom, BUTTON_W + PX, groundEnd - bottom, ground);
-    if (end > groundEnd) t.fillRect(BUTTON_X, groundEnd, BUTTON_W, end - groundEnd, round);
-  }
+  if (bottom < end) t.fillRect(BUTTON_X - PX, bottom, BUTTON_W + PX, end - bottom, round);   // the margin below (black: the selected last track's ground stops at its button's bottom, not above the action button)
 }
 
 // The row's button (the cells: drawWave(), drawFilter(), drawMix(),

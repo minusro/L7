@@ -130,6 +130,9 @@ int main(int argc, char **argv) {
   selectedCell = MIX_CELL;
   render(out + "/ui_mix_edit.png");
   board.heldKeys = 0;
+  selected = LAST_TRACK_ROW;                       // track 7: its ground stops at its button's bottom (none above the action button)
+  selectedCell = MIX_CELL;
+  render(out + "/ui_track7.png");
   selected = STATUS_ROW;
   selectedCell = TEMPO_CELL;
   render(out + "/ui_status.png");
