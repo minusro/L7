@@ -17,18 +17,18 @@ void (*usbDriveReload)() = nullptr;
 // The screen: grey (SCREEN), its title and logo light grey (then the hue
 // cycle), the connection's state under it white, the hint (and the messages
 // that replace it) black; all left-aligned with the menu's list, the hint
-// in two lines ("PRESS ANY KEY" / "TO DISCONNECT").
+// on the bottom line ("PRESS ANY KEY TO EXIT").
 static constexpr uint16_t SCREEN = DIM;
-static const char HINT[] = "PRESS ANY KEY", HINT2[] = "TO DISCONNECT";   // (two lines)
-// The lines (LINE: the hint's line pitch): the title, the connection's state
-// 32 px under it (placed as when the hint was 56 px under that and the three
-// were together a line lower than centred top to bottom, on the block grid);
-// the hint on the screen's bottom two lines, its second level with the
+static const char HINT[] = "PRESS ANY KEY TO EXIT";
+// The lines: the title, the connection's state 32 px under it (placed as
+// when a two-line hint was 56 px under that and the three were together a
+// line lower than centred top to bottom, on the block grid); the hint (and
+// the messages in its place) on the screen's bottom line, level with the
 // status row's text (the corner logo's row); left-aligned with the menu's list.
 static constexpr int LINE = FONT_H + 3 * PX;
-static constexpr int STATE_DY = 32, HINT2_DY = STATE_DY + 56 + LINE;   // (HINT2_DY: for the title's place)
-static constexpr int TITLE_Y = (240 - (HINT2_DY + FONT_H)) / 2 / PX * PX + LINE;
-static constexpr int STATE_Y = TITLE_Y + STATE_DY, HINT2_Y = STATUS_TOP + (STATUS_H - FONT_H) / 2 / PX * PX, HINT_Y = HINT2_Y - LINE;
+static constexpr int STATE_DY = 32, OLD_HINT2_DY = STATE_DY + 56 + LINE;   // (for the title's place)
+static constexpr int TITLE_Y = (240 - (OLD_HINT2_DY + FONT_H)) / 2 / PX * PX + LINE;
+static constexpr int STATE_Y = TITLE_Y + STATE_DY, HINT_Y = STATUS_TOP + (STATUS_H - FONT_H) / 2 / PX * PX;
 static int textX() { return menuListX(); }
 
 static void line(int y, const char *text, uint16_t ink) {
@@ -36,11 +36,8 @@ static void line(int y, const char *text, uint16_t ink) {
   drawText(textX(), y, text, ink, SCREEN);
 }
 
-// The hint's place: the hint (two lines), or a message in its first line's place.
-static void hint(const char *text = nullptr, uint16_t ink = BG) {
-  line(HINT_Y, text ? text : HINT, ink);
-  line(HINT2_Y, text ? "" : HINT2, ink);
-}
+// The bottom line: the hint, or a message in its place.
+static void hint(const char *text = nullptr, uint16_t ink = BG) { line(HINT_Y, text ? text : HINT, ink); }
 
 // The title and the corner logo (where and as big as the menu's), in one colour (light grey until the
 // computer is connected, then the hue cycle); drawn over
