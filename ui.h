@@ -54,11 +54,11 @@ inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // on the status row's line: a small chevron (3 x 5 blocks, a block wide)
 // pointing left in the looper's view (its menu cell: the space left of the
 // scene cell, 2 blocks short of its frame), right in the menu (the same space
-// at the right edge, mirrored: in the action button's place), in ink on the
+// at the right edge, mirrored, centred top to bottom), in ink on the
 // ground (the whole space). The looper's: dark grey, black on the selected
 // status row's dark grey ground; the menu's: black on its dark grey.
 constexpr int EDGE_W = MENU_BOX.w - 2 * PX;
-void drawEdgeMark(bool right, uint16_t ink, uint16_t ground);
+void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground);   // (y: the space's top)
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
 // A row's place on the screen from the top (0: the first track row), and back.

@@ -177,8 +177,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   project's is a thick outline (two blocks) in its colour, the letter in it too.
   While the clock runs, the loaded project's card shows a small play icon right of its letter (both 2 blocks left of centre), black like it, on the first half of each beat (pulsing). An empty slot is a grey outline, its letter grey (selected too; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height), always
-  in the colour the action button had for the item (`actionRestColor()`). In the bottom
-  right corner, the looper's edge mark mirrored (black, pointing right, as far from the
+  in the colour the action button had for the item (`actionRestColor()`). At the right
+  edge, centred top to bottom, the looper's edge mark mirrored (black, pointing right, as far from the
   right edge), only while a project is loaded: only then do the arrows off the edges leave the menu. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
@@ -221,9 +221,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   another: off its ends they leave the menu, as they do sideways off a list item); UP/DOWN go card row
   to card row and on into the list (back up: to the column it came from, on
   the A–D row). The looper's own selection is kept
-  meanwhile and comes back when the menu closes. The menu opens on the
-  loaded project's card (with the dummy project: where its selection was,
-  kept across power cycles too); if it was open at power off it opens again
+  meanwhile and comes back when the menu closes. The menu opens on the item
+  selected when it was last left (not the loaded project's card; kept across
+  power cycles too); if it was open at power off it opens again
   at boot (DATA/SESSION.DAT).
 * Splash (`ui_splash.cpp`): the "L7" logo (italic, the 7's right edge one
   45° line to a sharp corner, two equal cuts near the bottom; design options in

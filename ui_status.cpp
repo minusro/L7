@@ -30,7 +30,7 @@ static constexpr int INSET = 2 * PX;               // text from the cell's edges
 // The edge mark (ui.h), built in a buffer and sent at once. In the looper's
 // view its chevron's middle column where the triangle's was (a block right
 // of the space's middle); the menu's mirrored.
-void drawEdgeMark(bool right, uint16_t ink, uint16_t ground) {
+void drawEdgeMark(bool right, int y, uint16_t ink, uint16_t ground) {
   static const char *const CHEVRON_LEFT[5] = {"..#", ".#.", "#..", ".#.", "..#"};
   constexpr int COLS = EDGE_W / PX, ROWS = STATUS_H / PX, CW = 3, CH = 5;
   constexpr int C0 = COLS / 2, R0 = (ROWS - CH) / 2;   // (left: columns 4-6 of 9)
@@ -43,7 +43,7 @@ void drawEdgeMark(bool right, uint16_t ink, uint16_t ground) {
       for (int dy = 0; dy < PX; dy++)
         for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * EDGE_W + c * PX + dx] = on ? ink : ground;
     }
-  board.tft().writeRect(right ? 320 - EDGE_W : 0, STATUS_TOP, EDGE_W, STATUS_H, px);
+  board.tft().writeRect(right ? 320 - EDGE_W : 0, y, EDGE_W, STATUS_H, px);
 }
 
 // The status row's cells: the scene's, the clock's and the tempo's (ui.h).
@@ -148,7 +148,7 @@ void drawStatus() {
   {
     // The menu cell: the edge mark, pointing left: dark grey, black on the
     // selected row's ground (drawn when cleared: the ground changing clears).
-    if (cleared) drawEdgeMark(false, G == DARK ? BG : DARK, G);
+    if (cleared) drawEdgeMark(false, top, G == DARK ? BG : DARK, G);
   }
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the

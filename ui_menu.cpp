@@ -28,8 +28,8 @@
 // cells' (frameColor()), corners cut, a block out from a card (following its
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
-// logo small, in the item's colour (actionRestColor()). Bottom right, the
-// edge mark, a black chevron pointing right (the looper's, mirrored) while a
+// logo small, in the item's colour (actionRestColor()). At the right edge,
+// centred top to bottom, the edge mark, a black chevron pointing right (the looper's, mirrored) while a
 // project is loaded: only then do the edges lead out (menuLeavesOn()).
 #include "ui.h"
 #include "ui_font.h"
@@ -300,7 +300,7 @@ void drawMenu() {
   bool leaves = projectCurrent() >= 0;           // bottom right: the arrows off the edges leave the menu (a project loaded: menuLeavesOn())
   if (all || leaves != mark) {
     mark = leaves;
-    drawEdgeMark(true, leaves ? BG : MENU_BG, MENU_BG);
+    drawEdgeMark(true, (240 - STATUS_H) / 2 / PX * PX, leaves ? BG : MENU_BG, MENU_BG);   // (centred top to bottom)
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)
@@ -387,11 +387,7 @@ void openMenu() {
     projectDelete(projectCurrent());
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();   // recordings no project uses: gone
   shown = true;
-  if (projectCurrent() >= 0) {                   // on the loaded project's card (the dummy project: where it was)
-    onStatus = false;
-    menuSel = projectCurrent();
-    cardCol = menuSel % COLS;
-  }
+  onStatus = false;                              // (on the item selected last time, not the loaded project's card)
   mainRow = selected;
   mainCell = selectedCell;
   if (onStatus) {                                // (where it was last time)
