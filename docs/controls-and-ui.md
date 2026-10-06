@@ -130,7 +130,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   small square, not selectable, no frame, with the edge mark: a small solid triangle (3×5
   blocks) pointing left, its tip 3 blocks from the left edge, dark grey on black (grey where LEFT would open the
   menu, a row's first cell; white while LEFT is held that opens it once let go, a dark grey strip along the left edge then too, the
-  screen's height and 2 blocks wide, a black line a block wide right of it; the selection frame hidden meanwhile, and while UP / DOWN are held to open it, the arrow unchanged then) (the selected status row's dark grey
+  screen's height and out to the arrow's right end (6 blocks; the arrow white on it), a black line a
+  block wide right of it; the selection frame hidden meanwhile, and while UP / DOWN are held to open it, the arrow unchanged then) (the selected status row's dark grey
   ground starts at the scene cell's left edge), in the space from the screen's left edge to 2 blocks short of the scene cell's
   frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
   (an inverted SCN tag with the scene position,
