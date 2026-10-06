@@ -118,6 +118,10 @@ static void menuLongPress() {
   drawMenu();
 }
 
+// An arrow held that switches screens when let go: into the menu, or out of it.
+static uint8_t menuOnRelease = 0, leaveOnRelease = 0;
+bool screenSwitchPending() { return menuOnRelease || leaveOnRelease; }
+
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
@@ -125,7 +129,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // LEFT off a row's first cell, UP on track 1 or DOWN on the status row, in
   // the looper's view (a fresh press, not a held arrow repeating): the menu
   // opens once that key is let go (the clock goes on).
-  static uint8_t menuOnRelease = 0;                  // the key to wait for
+  // (menuOnRelease: the key to wait for, file scope: screenSwitchPending())
   if (menuOnRelease && !(keys & menuOnRelease)) {
     menuOnRelease = 0;
     openMenu();
@@ -134,7 +138,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // RIGHT off the menu's right edge or UP off its top (menuLeavesOn(); a
   // project loaded): back to the looper once that key is let go, as A on the
   // loaded project's card.
-  static uint8_t leaveOnRelease = 0;
+  // (leaveOnRelease: likewise)
   if (leaveOnRelease && !(keys & leaveOnRelease)) {
     uint8_t key = leaveOnRelease;
     leaveOnRelease = 0;

@@ -30,6 +30,7 @@
 // centred top to bottom, the edge mark, a black triangle pointing right (the looper's, mirrored) while a
 // project is loaded: only then do the edges lead out (menuLeavesOn()).
 #include "ui.h"
+#include "input.h"
 #include "ui_font.h"
 
 uint32_t uiGeneration = 1;
@@ -291,11 +292,12 @@ void drawMenu() {
     logo = actionRestColor();
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
-  static bool mark;                              // the edge mark shown
-  bool leaves = projectCurrent() >= 0;           // bottom right: the arrows off the edges leave the menu (a project loaded: menuLeavesOn())
-  if (all || leaves != mark) {
-    mark = leaves;
-    drawEdgeMark(true, (240 - STATUS_H) / 2 / PX * PX, leaves ? BG : MENU_BG, MENU_BG);   // (centred top to bottom)
+  static uint16_t mark;                          // the edge mark's colour shown
+  bool leaves = projectCurrent() >= 0;           // the arrows off the edges leave the menu (a project loaded: menuLeavesOn())
+  uint16_t ink = !leaves ? MENU_BG : screenSwitchPending() ? DIM : BG;   // (grey while an arrow is held that leaves once let go)
+  if (all || ink != mark) {
+    mark = ink;
+    drawEdgeMark(true, (240 - STATUS_H) / 2 / PX * PX, ink, MENU_BG);   // (centred top to bottom)
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)

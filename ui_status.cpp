@@ -1,5 +1,6 @@
 // ui_status.cpp — the status row: menu icon, scene, clock and tempo (see ui.h)
 #include "ui.h"
+#include "input.h"
 
 // Status row, in the pixel font, each cell framed like the tracks' when the
 // row is selected:
@@ -147,8 +148,12 @@ void drawStatus() {
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
     // The menu cell: the edge mark, pointing left: dark grey, black on the
-    // selected row's ground (drawn when cleared: the ground changing clears).
-    if (cleared) drawEdgeMark(false, top, G == DARK ? BG : DARK, G);
+    // selected row's ground; grey while an arrow is held that goes to the
+    // menu once let go.
+    static uint16_t markInk = 0;
+    uint16_t ink = screenSwitchPending() ? DIM : G == DARK ? BG : DARK;
+    if (cleared || ink != markInk) drawEdgeMark(false, top, ink, G);
+    markInk = ink;
   }
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the

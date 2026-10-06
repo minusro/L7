@@ -24,6 +24,7 @@ HardwareSerial midi;
 
 bool optBeforeShift() { return true; }             // (input.cpp isn't built here)
 bool arrowsMoved() { return true; }
+bool screenSwitchPending() { return false; }
 
 // A made-up waveform: a hit on every beat (louder on bar starts), decaying,
 // over some noise.
