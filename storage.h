@@ -137,6 +137,8 @@ void trackRange(int t, uint32_t &startBeat, uint32_t &beats);
 // or longer, the first bar start in it. The transport starting at 1.1.1
 // plays each track from here.
 uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats);
+// The grid start positions snap to, in beats (1, half a bar or a bar).
+uint32_t startGrid(uint32_t loopBeats, uint32_t rangeBeats);
 
 // The session: the tempo, the loaded project (0-11; -1: the dummy one) and the master volume, in
 // SESSION.DAT. row/cell: the selection (the app's; -1: none saved).

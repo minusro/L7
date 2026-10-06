@@ -32,7 +32,9 @@ tap restarts from 1.1.1 (running: snaps to the nearest bar start).
 ### B + arrows on the waveform (loop range)
 
 * LEFT/RIGHT: move the start on a grid — clips ≤ 8 bars: 1 beat; ≤ 16 bars:
-  half a bar; longer: a bar. Off-grid starts snap to the next grid point.
+  half a bar; longer: a bar; a range of the whole loop moves on the start
+  position's own grid (`startGrid()`: half bars on clips ≤ 8 bars, bars on longer ones), so
+  every press moves the start position. Off-grid starts snap to the next grid point.
   The start position (where 1.1.1 plays from) is then the range's first half
   bar or bar line on clips ≤ 8 bars, its first bar line on longer ones
   (playback.md).

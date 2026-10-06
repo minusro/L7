@@ -2210,14 +2210,18 @@ void trackRange(int t, uint32_t &startBeat, uint32_t &beats) {
   beats = tr.rangePending ? tr.pendingBeats : tr.rangeBeats;
 }
 
-uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats) {
-  // The grid to snap to: beats, half bars or bars. A range always holds one
-  // of its points (it's at least as long as the grid step: 1 beat, 2-3 beats,
-  // a bar or more); it may wrap past the loop's end, where the loop (and a
-  // bar) starts again. Loops whose range moves a beat at a time (up to
-  // BEAT_STEP_MAX_BARS): the first half bar or bar line, whichever comes first.
+uint32_t startGrid(uint32_t loopBeats, uint32_t rangeBeats) {
+  // Beats, half bars or bars. A range always holds one of its points (it's at
+  // least as long as the grid step: 1 beat, 2-3 beats, a bar or more). Loops
+  // whose range moves a beat at a time (up to BEAT_STEP_MAX_BARS): half bars.
   bool beatSteps = loopBeats <= BEAT_STEP_MAX_BARS * BEATS_PER_BAR;
-  uint32_t step = rangeBeats <= 1 ? 1 : rangeBeats < (uint32_t)BEATS_PER_BAR || beatSteps ? BEATS_PER_BAR / 2 : BEATS_PER_BAR;
+  return rangeBeats <= 1 ? 1 : rangeBeats < (uint32_t)BEATS_PER_BAR || beatSteps ? BEATS_PER_BAR / 2 : BEATS_PER_BAR;
+}
+
+uint32_t startPosition(uint32_t loopBeats, uint32_t rangeStart, uint32_t rangeBeats) {
+  // The first point of the grid (startGrid()) at or after the range's start;
+  // it may wrap past the loop's end, where the loop (and a bar) starts again.
+  uint32_t step = startGrid(loopBeats, rangeBeats);
   uint32_t first = (rangeStart + step - 1) / step * step;   // first grid point at or after the range start
   return first % loopBeats;
 }

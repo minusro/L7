@@ -334,8 +334,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       // Loop range in beats: any whole number of beats, up to the whole loop.
       //   LEFT/RIGHT: move its start a step, wrapping around the loop (a range
       //     may run past the loop's end): a beat for loops up to 8 bars (BEAT_STEP_MAX_BARS), half
-      //     a bar up to 16 bars, a bar beyond. Starts off that grid go to the
-      //     next grid point that way.
+      //     a bar up to 16 bars, a bar beyond; a range of the whole loop, the
+      //     start position's grid (startGrid(): each step moves the start
+      //     position). Starts off that grid go to the next grid point that way.
       //   UP/DOWN: to the next / previous of 1/4, 1/2, 3/4, 1, 1 1/2, 2, 3, 4,
       //     5, 6 ... bars (up to the whole loop).
       //   Tapped twice, LEFT/RIGHT: by its own length. A range inside the loop
@@ -370,6 +371,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         uint32_t j = 1; while (j * 2 < l) j *= 2; return l <= 1 ? 1 : j;
       };
       uint32_t step = tr.loopBars <= BEAT_STEP_MAX_BARS ? 1 : tr.loopBars <= 16 ? 2 : 4;   // the start's grid
+      // The whole loop: the start position's own grid (startGrid()), so every
+      // step moves it (a finer step would leave it where it was).
+      if (rb >= loopBeats) step = max(step, startGrid(loopBeats, rb));
       for (int k = 0; k < 4; k++) {
         if (!(pressed & keys4[k])) continue;
         bool twice = !repeat && tapTrack == selected && tapAt[k] && millis() - tapAt[k] < DOUBLE_TAP_MS;
