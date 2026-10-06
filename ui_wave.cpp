@@ -7,7 +7,7 @@
 // space. Rows of blocks (16 in the cell):
 //   0, 15   the border
 //   1, 14   space (the playheads reach into it)
-// A black line the waveform's height, a pixel wide, just before each bar's
+// A black line the waveform's height, a block wide, just before each bar's
 // start (but the first's), on every track, while recording too.
 //   2 - 13  the waveform, in pixels (the only part not in blocks): a 2-pixel
 //           line along the middle, the peaks reaching up to 11 pixels above
@@ -51,7 +51,7 @@ struct WaveView {
   uint16_t bg = BG;
   uint64_t borders = 0;                            // the border's sides (bordersOf())
   int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
-  int rangeFirstPx = 0, rangePx = 0;               // and its pixel columns: right after the bar line's pixel at each edge
+  int rangeFirstPx = 0, rangePx = 0;               // and its pixel columns
   int markCol = -1;                                // the start position's column; -1: none
   int markEdge = 0;                                // and its edge's column (the range's colour there)
   int playCol = -1;                                // playhead / record head; -1: none
@@ -133,8 +133,7 @@ static void drawColumn(int i, int bc) {
     int bars = v.live ? (int)v.liveBars : (int)tr.loopBars;      // (recording: as it's shown so far)
     for (int b = 1; b < bars; b++)                                // bars 2 on: a black line just before each start
       if (edgeCol(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) == c + 1) {
-        for (int y = (MID_ROW - WAVE_REACH) * PX; y < (MID_ROW + 2 + WAVE_REACH) * PX; y++)   // a pixel wide: the column's left one
-          px[y * PX] = v.live ? ACCENT_DARK : BG;                                                 // (recording: the dark accent)
+        for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) block(r, v.live ? ACCENT_DARK : BG);   // (recording: the dark accent)
         break;
       }
     if (uint16_t ink = startInk(v, c); ink != BG)                // the start position: a checkerboard line, 1-pixel squares, the
@@ -203,14 +202,8 @@ void drawWave(int i, bool recordingHere) {
     int first = edgeCol(rs, loopBeats), end = edgeCol(rs + rb, loopBeats);   // (end unwrapped)
     v.rangeFirst = first % WAVE_COLS;
     v.rangeCols = constrain(end - first, 1, WAVE_COLS);
-    // In pixels: from the pixel after the one a bar line takes at that edge
-    // (the left one of the column before it), so the colour meets the bar lines;
-    // at the loop's start and end (no bar line there) the waveform's own edge.
-    auto edgePx = [](int e) {                      // column edge e (unwrapped: past the loop's end too)
-      int k = e % WAVE_COLS;
-      return e / WAVE_COLS * WAVE_COLS * PX + (k == 0 ? 0 : k * PX - 1);
-    };
-    int firstPx = edgePx(first), endPx = edgePx(end);
+    // In pixels: on the column edges (the bar lines take the column before an edge).
+    int firstPx = first * PX, endPx = end * PX;
     v.rangeFirstPx = firstPx % (WAVE_COLS * PX);
     v.rangePx = constrain(endPx - firstPx, 1, WAVE_COLS * PX);
     int mark = edgeCol(startPosition(loopBeats, rs, rb), loopBeats) % WAVE_COLS;
