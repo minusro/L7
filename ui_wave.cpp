@@ -10,8 +10,10 @@
 // A black line the waveform's height just before each bar's start (but the
 // first's), on every track, while recording too.
 //   2 - 13  the waveform: a line along rows 7-8, the peaks reaching up to 5
-//           blocks above and below it. Heights go with the square root of
-//           the peak level (as the overview stores it).
+//           blocks above and below it, a block at a time (on an odd number
+//           of blocks, the one above gets the extra block): 11 heights, 2-12
+//           blocks. Heights go with the square root of the peak level (as
+//           the overview stores it).
 // The waveform is light grey inside the loop range (white on the selected
 // cell) and 50% grey outside; on a muted clip the range is 50% grey and the
 // rest dark grey. While B alone is held on the selected waveform cell (B +
@@ -32,9 +34,14 @@ static constexpr int WAVE_COLS = BLOCK_COLS - 2 * WAVE_LEFT;   // 90 waveform co
 static constexpr int BAND_ROWS = CELL_H / PX;                  // 16
 static constexpr int MID_ROW = 7, WAVE_REACH = 5;              // the line: rows 7-8; peaks: rows 2-13
 
-// Waveform height (blocks each way) for a stored overview level (the square
-// root of the peak, 0-255): in proportion.
-static uint8_t reachFor(uint8_t level) { return (uint8_t)((level * WAVE_REACH + 127) / 255); }
+// Waveform reach above and below the line (blocks) for a stored overview
+// level (the square root of the peak, 0-255): in proportion, a block at a
+// time, the extra one of an odd count above.
+static void reachFor(uint8_t level, int &up, int &down) {
+  int extra = (level * 2 * WAVE_REACH + 127) / 255;   // 0-10 blocks beyond the 2-block line
+  up = (extra + 1) / 2;
+  down = extra / 2;
+}
 
 struct WaveView {
   bool visible = false;                            // something is shown (not an empty track)
@@ -106,8 +113,9 @@ static void drawColumn(int i, int bc) {
     bool in = v.live || (c - v.rangeFirst + WAVE_COLS) % WAVE_COLS < v.rangeCols;
     if (!v.live || c < v.liveFilled) {
       uint16_t ink = !in ? v.outInk : v.rangeInk;                // (live: all of it, on the coloured cell)
-      int h = reachFor(columnLevel(v.live ? v.liveData : tr.overview, c));
-      for (int r = MID_ROW - h; r <= MID_ROW + 1 + h; r++)
+      int up, down;
+      reachFor(columnLevel(v.live ? v.liveData : tr.overview, c), up, down);
+      for (int r = MID_ROW - up; r <= MID_ROW + 1 + down; r++)
         col[r] = ink;
     }
     int bars = v.live ? (int)v.liveBars : (int)tr.loopBars;      // (recording: as it's shown so far)

@@ -82,8 +82,8 @@ button (the action button) is the accent colour with black icons (dark grey with
 A recording track's waveform area is in the accent colour (a block of black between it and the cell's border), the waveform growing on it in white, its bar lines in the dark accent.
 
 * Waveform (`ui_wave.cpp`): 90 columns, inside a block of space within
-  the frame (peaks up to 4 blocks each way from a two-block centre,
-  square-root scale); light grey inside the loop range (white on the selected cell), 50% grey outside (muted:
+  the frame (from a two-block centre line up to 5 blocks each way, a
+  block at a time: 11 heights, an odd extra block going above; square-root scale); light grey inside the loop range (white on the selected cell), 50% grey outside (muted:
   50% grey range, dark grey outside). On every track (recording too), a black line the
   waveform's height just before the start of each bar but the first (on the
   same column edges as the range, so the range's colour stops at them). The
