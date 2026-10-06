@@ -17,14 +17,21 @@ void (*usbDriveReload)() = nullptr;
 // The screen: grey (SCREEN), its title and logo light grey (then the hue
 // cycle), the connection's state under it white, the hint (and the messages
 // that replace it) black. Its texts are all left-aligned, the hint at the
-// bottom too, at the place they've always started.
+// bottom too ("PRESS ANY KEY" / "TO DISCONNECT"), at the place they've always started.
 static constexpr uint16_t SCREEN = DIM;
-static const char HINT[] = "PRESS ANY KEY TO DISCONNECT";
+static const char HINT[] = "PRESS ANY KEY", HINT2[] = "TO DISCONNECT";   // (two lines)
+static constexpr int HINT_Y = 176, HINT2_Y = HINT_Y + FONT_H + 3 * PX;
 static int textX() { return (320 - textWidth("PRESS START TO RETURN")) / 2 / PX * PX; }   // (where the texts have always started)
 
 static void line(int y, const char *text, uint16_t ink) {
   board.tft().fillRect(0, y, 320, FONT_H, SCREEN);
   drawText(textX(), y, text, ink, SCREEN);
+}
+
+// The hint's place: the hint (two lines), or a message in its first line's place.
+static void hint(const char *text = nullptr, uint16_t ink = BG) {
+  line(HINT_Y, text ? text : HINT, ink);
+  line(HINT2_Y, text ? "" : HINT2, ink);
 }
 
 // The title and the corner logo (where and as big as the menu's), in one colour (light grey until the
@@ -56,7 +63,7 @@ void usbDriveBegin() {
 [[noreturn]] static void restart(const char *why) {
   Serial.printf("storage mode: %s, restarting\n", why);
   cardSync();
-  line(176, why, BG);
+  hint(why);
   delay(300);
   SCB_AIRCR = 0x05FA0004;                           // restart: the computer may have changed anything
   for (;;) {}
@@ -72,7 +79,7 @@ static bool leave(const char *why, uint16_t ink = BG) {
   usb_msc_set_media(nullptr);                       // (an empty card reader again, answered from the timer)
   usb_msc_clear_host_state();
   pollTimer.begin([] { usb_msc_poll(); }, 2000);
-  line(176, why, ink);
+  hint(why, ink);
   uint32_t shownAt = millis();
   usbDriveReload();
   while (millis() - shownAt < 400) {}               // (the message stays readable)
@@ -93,7 +100,7 @@ bool usbDriveMode() {
   t.fillScreen(SCREEN);
   line(88, "STORAGE MODE", LIGHT);
   drawSmallLogo(PX, STATUS_TOP, LIGHT);
-  line(176, HINT, BG);
+  hint();
   uiGeneration++;
 
   pollTimer.end();                                  // (polled from here from now on: reads and writes wait for the card)
@@ -150,7 +157,7 @@ bool usbDriveMode() {
   t.fillScreen(SCREEN);
   line(88, "STORAGE MODE", LIGHT);
   drawSmallLogo(PX, STATUS_TOP, LIGHT);
-  line(176, HINT, BG);
+  hint();
   uiGeneration++;
 
   Serial.println("storage mode: started");
@@ -183,7 +190,7 @@ bool usbDriveMode() {
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
     if (board.keys()) {                           // any key: back to the app, restarted (the computer may have changed anything)
-      line(176, "RESTARTING", BG);
+      hint("RESTARTING");
       delay(100);
       SCB_AIRCR = 0x05FA0004;
       for (;;) {}
