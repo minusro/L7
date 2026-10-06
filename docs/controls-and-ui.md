@@ -9,7 +9,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | Keys | Action |
 |---|---|
 | UP/DOWN | Select row: tracks 8 (top) to 1 (bottom), status row (no wrapping); starts on track 1 |
-| LEFT/RIGHT | Select cell: waveform, filter, volume (status row: menu icon, scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform) |
+| LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: the menu (on release; the clock goes on) on the scene cell, start from 1.1.1 on the clock cell (as SHIFT+START; icon |>), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre) |
 | SHIFT + B twice | Duplicate the scene |
@@ -59,8 +59,8 @@ only what changed is redrawn (`uiGeneration` forces a full redraw, e.g. after
 the menu or splash). 8 rows: 7 tracks of 30 px from the top of the screen, a 4 px (two-block) gap,
 then the status row (y 214–239, to the screen's bottom edge, its cells framed all round); cells waveform | filter | volume | button (square). Columns:
 waveform x 0–187, filter 186–245, volume 244–291, then a block's space
-before the buttons (x 294–319); the status row's four cells share
-x 0–291 (menu x 0–25, a square, scene 24–119, clock 118–211, tempo 210–291). Cells share a one-block border
+before the buttons (x 294–319); the status row's three cells share
+x 0–291 (scene x 0–109, clock 108–201, tempo 200–291). Cells share a one-block border
 with their neighbours (left, right, above and below; a cell only shares a
 side with one right next to it): the selection frame is drawn there (`borderAt()` in ui.cpp), so
 content uses the cell's full size.
@@ -116,9 +116,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the line; the scene versions the same with a checkered square right round them.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
-  small square with a hamburger icon, three bars: selectable, with nothing to
-  do yet; the action button is empty on it), then the scene cell
+  Status row (labels 50% grey, light grey on the selected cell): the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -145,16 +143,13 @@ A recording track's waveform area is in the accent colour (a block of black betw
   drawing code to PNGs (see build-and-test.md).
 * Menu (`ui_menu.cpp`): the app starts in it (on the
   last project's card, that project already loaded). Opened with A on the
-  scene cell, it takes the place of the track rows across the whole width;
-  the status row stays (the clock, tempo and scene as in the looper's view,
-  the clock going on). Opening and leaving the menu never starts or stops
-  the clock; exporting to Ableton and storage mode stop it first. Down
-  from the list's last item the selection goes onto the status row (its
-  cells work as in the looper's view; UP, or LEFT from its menu icon, goes
-  back up). On the menu's items A and B both act (SHIFT with them: cut and
-  paste); on a project card START does too (load / new). Loading a project, or
-  making a new one, doesn't start the clock either (playing: the project
-  comes in on the next bar line). On its items A
+  scene cell, it takes the place of the track rows and the status row's
+  cells, across the whole width; of the status row only the action button
+  shows. Opening and leaving the menu never starts or stops the clock;
+  exporting to Ableton and storage mode stop it first. On its items A and B both act
+  (SHIFT with them: cut and paste); on a project card START does too (load /
+  new). Loading a project, or making a new one, doesn't start the clock either
+  (playing: the project comes in on the next bar line). On its items A
   runs the action button's action when let go; B does nothing. The way out
   is loading a project (A on the loaded one: just back); with the dummy
   project loaded, one has to be loaded or made first. Opening the menu

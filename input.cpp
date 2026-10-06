@@ -158,10 +158,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     return;
   }
   // The menu's selection on the status row: as in the looper's view, but UP
-  // (or LEFT from the first cell, the menu icon) goes back to the menu's items.
+  // (or LEFT from the scene cell) goes back to the menu's items.
   if (menuOpen() && !shift && !opt &&
-      ((pressed & m8::BTN_UP) || ((pressed & m8::BTN_LEFT) && selectedCellIn(STATUS_ROW) == MENU_CELL))) {
-    menuLeaveStatus();                               // (the list's last item)
+      ((pressed & m8::BTN_UP) || ((pressed & m8::BTN_LEFT) && selectedCellIn(STATUS_ROW) == SCENE_CELL))) {
+    menuLeaveStatus();                               // (LEFT from its first cell too: the list's last item)
     moved = true;
     return;
   }
@@ -172,7 +172,6 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool onScene = onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL;
   bool onClock = onStatus && selectedCellIn(STATUS_ROW) == CLOCK_CELL;
   bool onTempo = onStatus && selectedCellIn(STATUS_ROW) == TEMPO_CELL;
-  bool onMenuCell = onStatus && selectedCellIn(STATUS_ROW) == MENU_CELL;   // (the hamburger: selectable, nothing to do yet)
   // Any press but a lone A on the tempo cell (a tap): the next tap starts a new count.
   if (pressed && !(onTempo && pressed == m8::BTN_EDIT && keys == m8::BTN_EDIT)) tapCount = 0;
   bool sceneChanged = false;                         // every row to redraw
@@ -382,9 +381,6 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     int row = selected, at = selectedCellIn(selected);
     if (pressed & m8::BTN_UP && selected > 0) selected--;              // no wrapping
     if (pressed & m8::BTN_DOWN && selected < ROWS - 1) selected++;
-    // To or from the status row: the cell below / above, the status row's having the menu cell to the left of the tracks' first.
-    if (selected == STATUS_ROW && row != STATUS_ROW) selectedCell = at + 1;
-    else if (row == STATUS_ROW && selected != STATUS_ROW) selectedCell = max(at - 1, 0);
     if (pressed & m8::BTN_LEFT && selectedCell > 0) selectedCell = selectedCellIn(selected) - 1;
     if (pressed & m8::BTN_RIGHT && selectedCell < cellCount(selected) - 1) selectedCell++;
     if (pressed & arrows) moved = selected != row || selectedCellIn(selected) != at;
@@ -411,7 +407,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
-  if ((transportKey || (edit && onStatus && !onMenuCell)) && shift) transportRestart();
+  if ((transportKey || (edit && onStatus)) && shift) transportRestart();
   if (edit && onStatus && !shift) {
     if (onScene) menuOnRelease = m8::BTN_EDIT;      // the menu (the clock goes on)
     else if (onClock) transportRestart();          // from 1.1.1, as SHIFT+START

@@ -1,36 +1,32 @@
-// ui_status.cpp — the status row: menu icon, scene, clock and tempo (see ui.h)
+// ui_status.cpp — the status row: tempo, clock and scene (see ui.h)
 #include "ui.h"
 
 // Status row, in the pixel font, each cell framed like the tracks' when the
 // row is selected:
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
-//   first cell: a small square with a hamburger icon (the menu's; selectable, no
-//     action yet), light grey when selected.
-//   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
+//   first cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
 //     UP/DOWN step through the scenes. The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
 //     it, or the change waiting for its switch point.
-//   third cell: the clock (bar.beat.step), after a small play icon (the
+//   second cell: the clock (bar.beat.step), after a small play icon (the
 //     accent colour while it runs), centred together: stopped, 1.1.1 in dark
 //     grey (selected: grey); running, grey with light grey on each beat's
 //     first step (selected: light grey, white on the first step), in the
 //     accent colour on 1.1.1. Selected, A starts / stops the
 //     clock (as START; SHIFT+A as SHIFT+START).
-//   fourth cell: the tempo, followed by an inverted "BPM" tag (both in the
+//   third cell: the tempo, followed by an inverted "BPM" tag (both in the
 //     accent colour while B alone is held there: B + arrows change it).
 // Text and tags are redrawn whole each pass (their boxes clear what was
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
-// The status row's cells: the menu's, the scene's, the clock's and the tempo's (ui.h).
+// The status row's cells: the scene's, the clock's and the tempo's (ui.h).
 static constexpr int STATUS_CELLS = TEMPO_CELL + 1;
-static const Cell &statusCell(int cell) {
-  return cell == TEMPO_CELL ? TEMPO_BOX : cell == CLOCK_CELL ? CLOCK_BOX : cell == SCENE_CELL ? SCENE_BOX : MENU_BOX;
-}
+static const Cell &statusCell(int cell) { return cell == TEMPO_CELL ? TEMPO_BOX : cell == CLOCK_CELL ? CLOCK_BOX : SCENE_BOX; }
 
 // ---- The master volume: in the clock cell while B alone is held on it (B +
 // arrows change it). A vertical line per step in every other column, filling
@@ -90,6 +86,7 @@ static void drawFrame(int cell) {
 }
 
 void drawStatus() {
+  if (menuOpen()) return;                          // (the menu: only the action button shows on the status row)
   static uint64_t shownBorders = 0;                // the cells' borders (bordersOf())
   static uint32_t drawn = 0;                       // uiGeneration when the cells were last cleared
   auto &t = board.tft();
@@ -118,11 +115,6 @@ void drawStatus() {
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) ? selectedCellIn(STATUS_ROW) : -1;
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
-  {
-    // The menu cell's icon: a small hamburger (three bars), in the label colour.
-    static const int barsW = 7 * PX, barsX = MENU_BOX.x + (MENU_BOX.w - barsW) / 2 / PX * PX, barsY = top + (STATUS_H - 5 * PX) / 2 / PX * PX;
-    for (int r = 0; r < 3; r++) t.fillRect(barsX, barsY + 2 * r * PX, barsW, PX, labelInk(MENU_CELL));
-  }
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the
     // scene's "SCN"): both in the accent colour while B alone is held on the
