@@ -10,14 +10,12 @@
 // one into an empty slot. B acts as A (on a project's card: loads it at once, staying in the menu, as A held); START starts / stops the clock. Opening it stops
 // the clock; loading a project (or making a new one) starts it.
 //
-// Items: the cards 0-11 (A-L, rows of four, the first row at the bottom:
-// I-L on top, A-D above the list), then the list's 12 and 13 (the looper's
-// own selection is kept meanwhile and comes back when the menu closes).
-// UP/DOWN go card row to card row on the screen and on into the list (back
-// up: to the column it came from, on the A-D row); LEFT/RIGHT through
-// everything from the bottom up: the list (storage mode, export), then A-L
-// (off a row's right end up to the next row's left end, and back). It opens on the loaded project's card (the dummy
-// project loaded: where its selection was).
+// Items: the cards 0-11 (A-L, rows of four, top first: A-D on top, I-L
+// above the list), then the list's 12 and 13 (the looper's own selection is
+// kept meanwhile and comes back when the menu closes). UP/DOWN go card row to
+// card row and on into the list (back up: to the column it came from, on the
+// I-L row); LEFT/RIGHT along a card row (not on to another). It opens on the
+// item selected when it was last left.
 //
 // The ground: dark grey (MENU_BG), the whole screen's.
 // A card: a block shape, the bottom right corner cut diagonally (3 blocks),
@@ -39,9 +37,6 @@ uint32_t uiGeneration = 1;
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
 static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
-// A card's place in reading order on the screen (its rows top to bottom:
-// I-L, E-H, A-D); the list's items as they are.
-static int screenPos(int k) { return k < CARDS ? (CARD_ROWS - 1 - k / COLS) * COLS + k % COLS : k; }
 static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE"};
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), kept (the menu closed and opened again,
@@ -145,7 +140,7 @@ static constexpr int LOGO_X = CORNER_LOGO_X, LOGO_Y = CORNER_LOGO_Y;
 
 static Shape itemShape(int k) {
   if (k < CARDS)
-    return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (screenPos(k) / COLS) * (CARD_H + CARD_VGAP), CARD_W, CARD_H, CARD_CUT};
+    return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (k / COLS) * (CARD_H + CARD_VGAP), CARD_W, CARD_H, CARD_CUT};
   // A list item: the box fitting the longest label, centred (its label
   // left-aligned in it).
   int w = 0;
@@ -336,13 +331,13 @@ bool menuKeys(uint8_t pressed) {
   // end, or on a list item, leaves the menu: menuLeavesOn()).
   if (k < CARDS) {
     if (pressed & m8::BTN_LEFT && k % COLS > 0) k--;
-    if (pressed & m8::BTN_RIGHT && k % COLS < COLS - 1) k++;                                // (A-D the bottom row: UP goes on through the letters)
-    int row = screenPos(k) / COLS;
-    if (pressed & m8::BTN_UP && row > 0) k += COLS;
-    if (pressed & m8::BTN_DOWN) k = row < CARD_ROWS - 1 ? k - COLS : CARDS;
+    if (pressed & m8::BTN_RIGHT && k % COLS < COLS - 1) k++;
+    int row = k / COLS;
+    if (pressed & m8::BTN_UP && row > 0) k -= COLS;
+    if (pressed & m8::BTN_DOWN) k = row < CARD_ROWS - 1 ? k + COLS : CARDS;
     if (k < CARDS) cardCol = k % COLS;
   } else if (!(pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
-    if (pressed & m8::BTN_UP) k = k > CARDS ? k - 1 : cardCol;   // (to the bottom row: A-D)
+    if (pressed & m8::BTN_UP) k = k > CARDS ? k - 1 : CARDS - COLS + cardCol;   // (to the bottom row: I-L)
     if (pressed & m8::BTN_DOWN && k < ITEMS - 1) k++;
   }
   if (pressed & arrows) movedHere = k != menuSel;
@@ -368,8 +363,8 @@ void menuExportStatus(const char *text, int nameAt) {
 bool menuLeavesOn(uint8_t key) {
   if (!shown || onStatus || projectCurrent() < 0) return false;   // (no project loaded: one has to be chosen first)
   // RIGHT off the screen's right edge (the looper's that way): off a card
-  // row's right end, or a list item's side; UP off its top: the top card row (I-L).
-  if (key == m8::BTN_UP) return menuSel < CARDS && screenPos(menuSel) < COLS;
+  // row's right end, or a list item's side; UP off its top: the top card row (A-D).
+  if (key == m8::BTN_UP) return menuSel < COLS;
   return key == m8::BTN_RIGHT && (menuSel >= CARDS || menuSel % COLS == COLS - 1);
 }
 

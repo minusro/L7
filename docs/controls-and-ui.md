@@ -8,7 +8,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 
 | Keys | Action |
 |---|---|
-| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. A held DOWN (repeating) stops at track 7: only a fresh press goes on to the status row. DOWN on the status row (a fresh press) opens the menu once let go; in the menu, UP on the top card row (I–L) goes back once let go (unless no project is loaded) |
+| UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. A held DOWN (repeating) stops at track 7: only a fresh press goes on to the status row. DOWN on the status row (a fresh press) opens the menu once let go; in the menu, UP on the top card row (A–D) goes back once let go (unless no project is loaded) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform); LEFT on a row's first cell (a fresh press, not a held arrow repeating) opens the menu, to the looper's left, once let go (the clock goes on); in the menu, RIGHT off its right edge (a card row's right end, or on a list item) goes back once let go (unless no project is loaded) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one). Full track: mute/unmute. Status row: duplicate the scene on the scene cell (as SHIFT + B twice; icon: a + in a checkered square), play / stop on the clock cell (icon play or stop), tap tempo on the tempo cell; SHIFT+A as SHIFT+START |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%) |
@@ -169,7 +169,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   The menu's ground is dark grey (`MENU_BG`), the whole screen's.
   Twelve project cards (three rows of four, 21×15 blocks, 3 apart across and 3 down, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
-  A-L from the bottom row up (A–D above the list, I–L on top). Each slot has its colour (`PROJECT_COLORS`: twelve
+  A-L from the top row. Each slot has its colour (`PROJECT_COLORS`: twelve
   pastels, mint round to seafoam, picked by the author; the loaded project's is the
   app's accent colour, `ACCENT_DARK` at half its brightness; before one is
   loaded, the splash's turquoise). The loaded project's card is filled with
@@ -221,7 +221,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   under way, clipboard empty). LEFT/RIGHT go along a card row (not on to
   another; RIGHT off its right end leaves the menu, as RIGHT on a list item does); UP/DOWN go card row
   to card row and on into the list (back up: to the column it came from, on
-  the A–D row). The looper's own selection is kept
+  the I–L row). The looper's own selection is kept
   meanwhile and comes back when the menu closes. The menu opens on the item
   selected when it was last left (not the loaded project's card; kept across
   power cycles too); if it was open at power off it opens again
