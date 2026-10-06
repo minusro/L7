@@ -103,6 +103,22 @@ no dropouts or overruns
 - mountable drive on mac os V
 
 
+5oct26
+- ableton export improvements V
+- ableton pan/volume params V
+- ableton filter params V
+- move to new folder structure (all caps) V
+	- DATA
+	- EXPORT
+	- PROJECTS
+	- SAMPLES
+
+
+6oct26
+
+
+
+
 - crossfading between two scenes
 - overdubbing - not for now or ever maybe X
 
