@@ -28,13 +28,13 @@ static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
 // The edge chevron: two small filled triangles, 3 blocks wide and 2 high,
-// one behind the other, pointing down (rows bottom-up: up).
+// one behind the other with a block between, pointing down (rows bottom-up: up).
 void drawEdgeChevron(int x, int y, bool down, uint16_t color) {
-  static const char *const ROWS_DOWN[4] = {"###", ".#.", "###", ".#."};
+  static const char *const ROWS_DOWN[5] = {"###", ".#.", "...", "###", ".#."};
   auto &t = board.tft();
-  for (int r = 0; r < 4; r++)
+  for (int r = 0; r < 5; r++)
     for (int c = 0; c < 3; c++)
-      if (ROWS_DOWN[down ? r : 3 - r][c] == '#') t.fillRect(x + c * PX, y + r * PX, PX, PX, color);
+      if (ROWS_DOWN[down ? r : 4 - r][c] == '#') t.fillRect(x + c * PX, y + r * PX, PX, PX, color);
 }
 
 // The status row's cells: the scene's, the clock's and the tempo's (ui.h).

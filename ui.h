@@ -51,11 +51,12 @@ inline int selectedCellIn(int i) {
 // top: the front triangle 2 blocks above the bottom edge's block of space,
 // the other behind it), and in the menu mirrored top to bottom (as far from
 // the top).
-constexpr int CHEVRON_X = MENU_BOX.x + (STATUS_H - 5 * PX) / 2 / PX * PX, CHEVRON_DY = (STATUS_H - 3 * PX) / 2 / PX * PX;
-constexpr int CHEVRON_TOP_Y = 240 - (STATUS_TOP + CHEVRON_DY + 4 * PX);
+constexpr int CHEVRON_X = MENU_BOX.x + (STATUS_H - 5 * PX) / 2 / PX * PX, CHEVRON_DY = (STATUS_H - 3 * PX) / 2 / PX * PX - PX;
+constexpr int CHEVRON_TOP_Y = 240 - (STATUS_TOP + CHEVRON_DY + 5 * PX);
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
-// Two small triangles (3 x 2 blocks each, one behind the other: 3 x 4) at x,
+// Two small triangles (3 x 2 blocks each, one behind the other, a block
+// between: 3 x 5) at x,
 // y (the box's top left), pointing down or up: the screen's
 // edge where the other screen is (the status row's menu cell, the menu's top
 // left).
