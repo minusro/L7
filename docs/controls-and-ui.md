@@ -191,8 +191,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in the menu's corner place and size, in the same colour at all times):
   light grey until the computer is connected, then going round the hues; the
   connection's state under it in white, the hint in black (the messages that replace it, "EJECTED", "RESTARTING", too),
-  left-aligned, the hint at the bottom too, in two lines ("PRESS ANY KEY", "TO DISCONNECT" under it; a message replacing it takes the first line's place) (where the
-  shorter hint they used to align with, centred, started);
+  all left-aligned with the menu's list ("ENTER STORAGE MODE"), the hint in two lines ("PRESS ANY KEY",
+  "TO DISCONNECT" under it; a message replacing it takes the first line's place), the
+  title, the state and the hint centred together top to bottom;
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
   COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or pressing any key,
   leaves it with "WAIT" ("EJECTED" after an eject): the app drops everything it knew of the card

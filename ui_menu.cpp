@@ -159,6 +159,8 @@ static Shape itemShape(int k) {
   return {(320 / PX - w) / 2, LIST_Y + (k - CARDS - listTop) * LIST_PITCH, w, FONT_H / PX, 0};   // (in view: listInView())
 }
 
+int menuListX() { return itemShape(CARDS).x * PX; }
+
 // The selected item's frame, as the looper's cells': light grey; white while
 // only arrows are held and the last press moved the selection; grey while A
 // is held (B: no change, it only leads to leaving); on a card, in the

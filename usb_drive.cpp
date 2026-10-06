@@ -16,12 +16,17 @@ void (*usbDriveReload)() = nullptr;
 
 // The screen: grey (SCREEN), its title and logo light grey (then the hue
 // cycle), the connection's state under it white, the hint (and the messages
-// that replace it) black. Its texts are all left-aligned, the hint at the
-// bottom too ("PRESS ANY KEY" / "TO DISCONNECT"), at the place they've always started.
+// that replace it) black; all left-aligned with the menu's list, the hint
+// in two lines ("PRESS ANY KEY" / "TO DISCONNECT").
 static constexpr uint16_t SCREEN = DIM;
 static const char HINT[] = "PRESS ANY KEY", HINT2[] = "TO DISCONNECT";   // (two lines)
-static constexpr int HINT_Y = 176, HINT2_Y = HINT_Y + FONT_H + 3 * PX;
-static int textX() { return (320 - textWidth("PRESS START TO RETURN")) / 2 / PX * PX; }   // (where the texts have always started)
+// The lines: the title, the connection's state 32 px under it, the hint 56 px
+// further down (its second line 16 px under its first), centred together top
+// to bottom (on the block grid), left-aligned with the menu's list.
+static constexpr int STATE_DY = 32, HINT_DY = STATE_DY + 56, HINT2_DY = HINT_DY + FONT_H + 3 * PX;
+static constexpr int TITLE_Y = (240 - (HINT2_DY + FONT_H)) / 2 / PX * PX;
+static constexpr int STATE_Y = TITLE_Y + STATE_DY, HINT_Y = TITLE_Y + HINT_DY, HINT2_Y = TITLE_Y + HINT2_DY;
+static int textX() { return menuListX(); }
 
 static void line(int y, const char *text, uint16_t ink) {
   board.tft().fillRect(0, y, 320, FONT_H, SCREEN);
@@ -38,7 +43,7 @@ static void hint(const char *text = nullptr, uint16_t ink = BG) {
 // computer is connected, then the hue cycle); drawn over
 // themselves, no clearing first: no flicker.
 static void titleAndLogo(uint16_t c) {
-  drawText(textX(), 88, "STORAGE MODE", c, SCREEN);
+  drawText(textX(), TITLE_Y, "STORAGE MODE", c, SCREEN);
   drawSmallLogo(PX, STATUS_TOP, c);
 }
 
@@ -98,7 +103,7 @@ bool usbDriveMode() {
 
   auto &t = board.tft();
   t.fillScreen(SCREEN);
-  line(88, "STORAGE MODE", LIGHT);
+  line(TITLE_Y, "STORAGE MODE", LIGHT);
   drawSmallLogo(PX, STATUS_TOP, LIGHT);
   hint();
   uiGeneration++;
@@ -136,7 +141,7 @@ bool usbDriveMode() {
     if (state != shown) {
       shown = state;
       static const char *const TEXT[3] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED"};
-      line(120, TEXT[state], INK);
+      line(STATE_Y, TEXT[state], INK);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
     if (board.keys()) return leave("WAIT");          // any key: back to the app (ejecting on the computer does too)
@@ -155,7 +160,7 @@ bool usbDriveMode() {
 
   auto &t = board.tft();
   t.fillScreen(SCREEN);
-  line(88, "STORAGE MODE", LIGHT);
+  line(TITLE_Y, "STORAGE MODE", LIGHT);
   drawSmallLogo(PX, STATUS_TOP, LIGHT);
   hint();
   uiGeneration++;
@@ -186,7 +191,7 @@ bool usbDriveMode() {
     if (state != shown) {
       shown = state;
       static const char *const TEXT[3] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED"};
-      line(120, TEXT[state], INK);
+      line(STATE_Y, TEXT[state], INK);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
     if (board.keys()) {                           // any key: back to the app, restarted (the computer may have changed anything)
