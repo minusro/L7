@@ -315,11 +315,11 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
           if (on[r][c]) block(c0 + c, r0 + copy * (ROWS4 + 1) + r);
   } else if (icon == ICON_METRO) {
     // A metronome (a trapezoid, its pendulum out past the top), 7 x 8, and
-    // the setting SHIFT+A goes to (0, A or 1) a block right of it, level with
+    // the setting now (0, A or 1) a block right of it, level with
     // its base; centred in the backdrop together.
     static const char *const METRONOME[8] = {".....#.", "..###..", "..#.#..", ".#.#.#.", ".#.#.#.", ".##..#.", "#.....#", "#######"};
-    const int next = nextMetronomeMode();
-    const Glyph *g = glyphFor(next == METRO_OFF ? '0' : next == METRO_AUTO ? 'A' : '1');
+    const int now = metronomeMode();
+    const Glyph *g = glyphFor(now == METRO_OFF ? '0' : now == METRO_AUTO ? 'A' : '1');
     const int gw = g ? glyphWidth(*g) : 0, w = 7 + 1 + gw;
     int c0 = max(PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, PANEL_LEFT + 1), r0 = (rows - 8) / 2;   // (a block clear of the backdrop's edge)
     for (int r = 0; r < 8; r++)
@@ -382,7 +382,7 @@ void drawCells(int i) {
   k.iconColor = iconColor(i, k.icon);
   k.mark = i == selected && i != STATUS_ROW ? markColor() : BG;
   k.badge = trackBadge(i);
-  k.metro = k.icon == ICON_METRO ? (uint8_t)nextMetronomeMode() : 0;   // (its look: the setting it goes to)
+  k.metro = k.icon == ICON_METRO ? (uint8_t)metronomeMode() : 0;   // (its look: the setting now)
   k.ground = rowGround(i);                         // (the selected row's ground, under the button too)
   if (i != STATUS_ROW) k.topGround = rowGround(rowAbove(i));
   bool first = drawn[i] != uiGeneration;
