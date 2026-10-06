@@ -26,9 +26,9 @@
 // cells' (frameColor()), corners cut, a block out from a card (following its
 // shape too), three from the list's box (the longest label's size, centred;
 // labels left-aligned, light grey, white when selected). Bottom left, the
-// logo small, in the item's colour (actionRestColor()). At the right edge,
-// centred top to bottom, the edge mark, a black triangle pointing right (the looper's, mirrored) while a
-// project is loaded: only then do the edges lead out (menuLeavesOn()).
+// logo small, in the item's colour (actionRestColor()). Along the right
+// edge, a narrow strip in the loaded project's colour; a white line beside
+// it while an arrow is held that leaves the menu (drawMenu()).
 #include "ui.h"
 #include "input.h"
 #include "ui_font.h"
@@ -293,28 +293,23 @@ void drawMenu() {
     logo = actionRestColor();
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
-  // The edge mark: in a strip along the right edge, the screen's height, a
-  // third as wide as the space right of the cards (the loaded project's
-  // colour; none with no project: the menu's ground), centred in it. Dark grey; black where
-  // RIGHT would leave the menu (with no project: making a new one in the
-  // first empty slot); while an arrow is held that leaves once let go, white
-  // (with no project: that slot's colour).
-  static uint16_t mark, shownStrip;              // the edge mark's colour and the strip's shown
+  // The right edge (the looper's that way): a strip the screen's height, a
+  // sixth as wide as the space right of the cards, in the loaded project's
+  // colour (none with no project: the menu's ground). While an arrow is held
+  // that leaves the menu once let go, a white line the screen's height left
+  // of it, a block of space between.
+  static uint16_t shownStrip, shownLine;
   constexpr int cardsRight = (CARDS_X + COLS * CARD_W + (COLS - 1) * CARD_GAP) * PX;
-  constexpr int stripW = (320 - cardsRight) / 3 / PX * PX, stripX = 320 - stripW;
-  bool loaded = projectCurrent() >= 0;
-  int empty = menuFirstEmptySlot();
-  uint16_t strip = loaded ? ACCENT : MENU_BG;   // (no project: no strip, the menu's ground)
-  uint16_t ink = screenSwitchPending() ? (loaded ? INK : PROJECT_COLORS[max(empty, 0)])
-               : menuLeavesOn(m8::BTN_RIGHT) ? BG : DARK;
+  constexpr int stripW = (320 - cardsRight) / 3 / PX / 2 * PX, stripX = 320 - stripW, lineX = stripX - 2 * PX;
+  uint16_t strip = projectCurrent() >= 0 ? ACCENT : MENU_BG;
+  uint16_t line = screenSwitchPending() ? INK : MENU_BG;
   if (all || strip != shownStrip) {
     shownStrip = strip;
     board.tft().fillRect(stripX, 0, stripW, 240, strip);
-    mark = ~ink;                                 // (drawn again on it)
   }
-  if (ink != mark) {
-    mark = ink;
-    drawEdgeMark(true, stripX, stripW, (240 - STATUS_H) / 2 / PX * PX, ink, strip);
+  if (all || line != shownLine) {
+    shownLine = line;
+    board.tft().fillRect(lineX, 0, PX, 240, line);
   }
   bool redrawn = false;
   for (int pass = 0; pass < 2; pass++)

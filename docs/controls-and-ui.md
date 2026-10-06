@@ -182,12 +182,11 @@ A recording track's waveform area is in the accent colour (a block of black betw
   While the clock runs, the loaded project's card shows a small play icon right of its letter (both 2 blocks left of centre), black like it, on the first half of each beat (pulsing). An empty slot is a grey outline, its letter grey (selected too; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; 2 blocks
   in from the left edge, 2 up from the status row's top: `CORNER_LOGO_X/Y`), always
-  in the colour the action button had for the item (`actionRestColor()`). At the right
-  edge, centred top to bottom, the looper's edge mark mirrored (an arrow pointing right in the middle of a strip along the right edge, the screen's height and a
-  third as wide as the space right of the cards, in the loaded project's colour (no strip with
-  none: the menu's ground); the arrow dark grey, black where RIGHT would leave the menu
-  (with none: RIGHT makes a new project), white while an arrow is held that leaves
-  once let go (with none: the first empty slot's colour), the selection frame hidden meanwhile). Under them
+  in the colour the action button had for the item (`actionRestColor()`). Along the right
+  edge, a strip the screen's height and a sixth as wide as the space right of the cards (10 px),
+  in the loaded project's colour (none with no project: the menu's ground); no arrow. While an
+  arrow is held that leaves the menu once let go, a white line the screen's height a block left
+  of it (the selection frame hidden meanwhile). Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
