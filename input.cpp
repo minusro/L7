@@ -127,8 +127,15 @@ static bool nextSceneArmed = false;               // A pressed on the scene cell
 
 // An arrow held that switches screens when let go: into the menu, or out of it.
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0;
-bool screenSwitchPending() { return menuOnRelease || leaveOnRelease; }
-uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease; }
+// LEFT+RIGHT held together (nothing else) LONG_PRESS_MS: the other screen
+// (switchHold()). From the second one's press until both are let go, they
+// don't move the selection (the first one's step: undone by the second's, or
+// it stopped at an edge).
+static bool lrHeld = false, lrDone = false;
+static uint32_t lrAt = 0;
+static constexpr uint8_t LR = m8::BTN_LEFT | m8::BTN_RIGHT;
+bool screenSwitchPending() { return menuOnRelease || leaveOnRelease || (lrHeld && !lrDone); }
+uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease | (lrHeld && !lrDone ? LR : 0); }
 
 // Loads project slot p from the menu; a new project (an empty slot) opens
 // with the selection on track 1 (the looper's, for when the menu closes);
@@ -141,10 +148,70 @@ static bool loadFromMenu(int p) {
   return true;
 }
 
+// Out of the menu, back to the looper (as A on the loaded project's card);
+// with no project loaded, a new one is made in the first empty slot (its card
+// selected), as A there. False: nowhere to go.
+static bool leaveMenu() {
+  bool back = projectCurrent() >= 0;
+  if (!back) {
+    int slot = menuFirstEmptySlot();
+    if (slot < 0) return false;
+    menuSelectSlot(slot);
+    if (loadFromMenu(slot)) back = true;
+  }
+  if (back) {
+    closeMenu();
+    for (int i = 0; i < ROWS; i++) drawTrack(i);
+  }
+  return back;
+}
+
+// The selected row and the rows sharing its borders redrawn (the frame hidden
+// or back, a screen switch pending or not); in the menu, the menu.
+static void drawPending() {
+  if (menuOpen()) {
+    drawMenu();
+    return;
+  }
+  drawTrack(selected);
+  for (int r : {rowAbove(selected), rowBelow(selected)})
+    if (r >= 0 && r < NUM_TRACKS) drawTrack(r);
+}
+
+// LEFT+RIGHT held long enough: the menu opens, or closes (leaveMenu()).
+// Called every pass (pollKeys()).
+static void switchHold() {
+  if (!lrHeld || lrDone || millis() - lrAt < LONG_PRESS_MS) return;
+  lrDone = true;
+  if (!menuOpen()) openMenu();
+  else if (!leaveMenu()) drawPending();
+}
+
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
+  // LEFT+RIGHT (switchHold()): the second one pressed with only the first
+  // down; any other key meanwhile, or one let go: off (once done, the
+  // arrows still do nothing until both are let go).
+  if (lrHeld && ((keys & ~LR) || (keys & LR) != LR)) {
+    lrHeld = false;
+    if (!lrDone) drawPending();
+  }
+  if (!lrHeld && (pressed & LR) && keys == LR && !repeat) {
+    lrHeld = true;
+    lrDone = false;
+    lrAt = millis();
+    bool stepped = moved;                            // (the first one moved the selection: this one steps back)
+    if (menuOnRelease || leaveOnRelease) stepped = false;   // (it stopped at an edge, a switch waiting: that's off)
+    menuOnRelease = leaveOnRelease = 0;
+    if (!stepped) pressed &= ~LR;
+    else repeat = true;                              // (stepping back: no switch off this edge)
+    drawPending();
+  } else if (lrHeld || (lrDone && (keys & LR))) {
+    pressed &= ~LR;
+  }
+  if (lrDone && !(keys & LR)) lrDone = false;
   // Any arrow off the looper's edge (LEFT off a row's first cell, RIGHT off
   // its last, UP on track 1, DOWN on the status row; a fresh press, not a
   // held arrow repeating): the menu opens once that key is let go (the clock
@@ -163,18 +230,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (leaveOnRelease && !(keys & leaveOnRelease)) {
     uint8_t key = leaveOnRelease;
     leaveOnRelease = 0;
-    if (menuLeavesOn(key)) {
-      bool back = projectCurrent() >= 0;
-      if (!back) {
-        int slot = menuFirstEmptySlot();
-        menuSelectSlot(slot);
-        if (loadFromMenu(slot)) back = true;
-      }
-      if (back) {
-        closeMenu();
-        for (int i = 0; i < ROWS; i++) drawTrack(i);
-      }
-    }
+    if (menuLeavesOn(key)) leaveMenu();
     return;
   }
   for (uint8_t key : {m8::BTN_RIGHT, m8::BTN_UP, m8::BTN_DOWN, m8::BTN_LEFT})
@@ -613,6 +669,7 @@ void pollKeys() {
     onKeys(prev, repeatKey, true);
   }
   menuLongPress();
+  switchHold();
 }
 
 void followRecording() {
