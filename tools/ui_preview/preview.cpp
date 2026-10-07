@@ -139,6 +139,11 @@ int main(int argc, char **argv) {
   selected = STATUS_ROW;
   selectedCell = TEMPO_CELL;
   render(out + "/ui_status.png");
+  board.heldKeys = m8::BTN_EDIT;                   // A held on the tempo: TAP pressed, a block lower
+  noteActionPress();
+  render(out + "/ui_status_tap_held.png");
+  board.heldKeys = 0;
+  render(out + "/ui_status.png");
   board.heldKeys = m8::BTN_OPT;                    // B held on the tempo: B + arrows change it
   render(out + "/ui_status_tempo_edit.png");
   board.heldKeys = m8::BTN_SHIFT;                  // SHIFT held on the tempo: the metronome

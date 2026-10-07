@@ -296,10 +296,11 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   if (icon == ICON_TAP) {
     // Condensed: T and A touch (T's stem and A's point keep them apart), 10
     // blocks; the letters plain, in the icon's colour (black), their bottom
-    // row left out (4 rows), once, centred in the backdrop (a block lower).
+    // row left out (4 rows), once, centred in the backdrop; a block lower
+    // while A is held (pressed).
     const char *text = "TAP";
     const int w = textWidth(text) / PX - 1, ROWS4 = 4, h = ROWS4;
-    int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, r0 = (rows - h) / 2 + 1;
+    int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, r0 = (rows - h) / 2 + (heldAction >= 0);
     bool on[5][16] = {};                           // the word's blocks
     int x = 0;
     for (const char *p = text; *p; p++) {
