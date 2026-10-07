@@ -167,7 +167,7 @@ void drawStatus() {
     int right = box.x + box.w - INSET;
     uint16_t ink = cell == TEMPO_CELL && bAlone() ? ACCENT : labelInk(TEMPO_CELL);
     int tagX = right - tagWidth("BPM");
-    drawTag(tagX, tagY, "BPM", TAG_INVERTED, ink, G);
+    drawTag(tagX, tagY, "BPM", TAG_INVERTED, ink, G, 0, TAG_CUT_RIGHT);   // (its top left square: towards the tempo)
     static const int tempoW = textWidth("888.8");  // the widest tempo: its box clears any other
     int numRight = tagX - PX, numLeft = numRight - tempoW, w = textWidth(text);
     t.fillRect(numLeft, tagY, numRight - numLeft + PX, textY - tagY, G);   // round the text: what was there
@@ -226,7 +226,7 @@ void drawStatus() {
   // The tag and position in the accent colour: SHIFT held (SHIFT + UP/DOWN
   // step through the scenes), or B alone on the cell (B + UP/DOWN do).
   bool sceneAccent = (board.keys() & m8::BTN_SHIFT) || (cell == SCENE_CELL && bAlone());
-  drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : labelInk(SCENE_CELL), G);
+  drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : labelInk(SCENE_CELL), G, 0, TAG_CUT_LEFT);   // (its top right square: towards the position)
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last

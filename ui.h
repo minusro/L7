@@ -181,12 +181,15 @@ int textWidth(const char *text);
 // Text at (x, y) (top left), on bg: its box is drawn whole (no flash), as
 // wide as the text, or `width` px if wider (the rest bg).
 void drawText(int x, int y, const char *text, uint16_t ink, uint16_t bg, int width = 0);
-// A tag: text in a box with its top corners cut (the bottom ones square), a block of space around
+// A tag: text in a box with its top corners cut (or one of them; the bottom ones square), a block of space around
 // the text and a block of edge: plain (no box), outlined, or inverted (the
 // box in ink, the text in bg). TAG_H px tall; at least `width` px wide.
 enum TagStyle { TAG_PLAIN, TAG_OUTLINE, TAG_INVERTED };
 constexpr int TAG_H = FONT_H + 4 * PX;
-void drawTag(int x, int y, const char *text, TagStyle style, uint16_t ink, uint16_t bg, int width = 0);
+// cut: which top corners are cut (TAG_CUT_LEFT | TAG_CUT_RIGHT; the bottom ones never).
+enum : uint8_t { TAG_CUT_LEFT = 1, TAG_CUT_RIGHT = 2 };
+void drawTag(int x, int y, const char *text, TagStyle style, uint16_t ink, uint16_t bg, int width = 0,
+             uint8_t cut = TAG_CUT_LEFT | TAG_CUT_RIGHT);
 int tagWidth(const char *text);
 
 // Bumped when the whole screen must be redrawn (the menu opening or closing):
