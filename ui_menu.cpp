@@ -188,10 +188,11 @@ static bool playPulse();
 // The card shown as the loaded project's (filled, its letter black, the play
 // icon): the loaded one's; but from letting go of the A or B that loaded it
 // (loaded on the press: while it's held, steady) until the new project has
-// really come in (playing: its switch point, the next bar line), it and the
-// one before take turns every eighth (the new one on the first half of each
-// beat, the old one on the second).
-static int loadFrom = -1;                        // the project loaded before, while the new one's on its way
+// really come in (playing: its switch point, the next bar line), it flashes
+// every eighth: on for the first half of each beat (so on at the switch, N.1.1),
+// a project's outline for the second. The one before shows as not loaded
+// from the press on.
+static int loadFrom = -1;                        // the project loaded before, while the new one's on its way (-1: none on its way)
 
 void menuNoteLoad(int from) {
   loadFrom = from >= 0 && from != projectCurrent() && sceneChangeWaiting() ? from : -1;
@@ -204,7 +205,7 @@ static int shownLoaded() {
     noInterrupts();
     bool first = transport.sampleInBeat < transport.spb / 2;
     interrupts();
-    return first ? now : loadFrom;
+    return first ? now : -1;                     // (none: the one before stays a project's outline)
   }
   return now;
 }
