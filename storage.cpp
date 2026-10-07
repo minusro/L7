@@ -2212,6 +2212,7 @@ bool recordPress(int t, bool resample) {
   switch (recording.mode) {
     case Recording::Idle: {
       if (tracks[t].state != TrackState::Empty || !takeRecordingSample(t)) return false;
+      recording.latency = inputLatency();        // (the line input's, or USB's while USB audio comes in: kept to its end)
       if (!transport.running) {
         startRecording(t, 0, 0, -1, resample);   // starts with the transport, on bar 1
         transportStart();
@@ -2227,7 +2228,7 @@ bool recordPress(int t, bool resample) {
       uint32_t lastBar = transport.lastBarSample;
       int32_t lastBeat = transport.lastBarBeat;
       interrupts();
-      startRecording(t, lastBar + LATENCY_FRAMES, lastBeat, PREROLL_FRAMES + LATENCY_FRAMES);
+      startRecording(t, lastBar + recording.latency, lastBeat, PREROLL_FRAMES + recording.latency);
       return true;
     }
     case Recording::WaitBar:                     // cancel before it started
@@ -2270,7 +2271,10 @@ bool cancelRecording(int t) {
   if (queuedTrack >= 0) {                        // the next one: from the next bar line
     int q = queuedTrack;
     queuedTrack = -1;
-    if (tracks[q].sample || takeRecordingSample(q)) startRecording(q, 0, 0, -1, queuedResample);
+    if (tracks[q].sample || takeRecordingSample(q)) {
+      recording.latency = inputLatency();        // (a fresh start: the input's latency now)
+      startRecording(q, 0, 0, -1, queuedResample);
+    }
   }
   return true;
 }

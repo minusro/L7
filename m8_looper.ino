@@ -233,6 +233,7 @@ void loop() {
 
   debugStage = "MIDI in";
   midiInService();                                 // an external clock: its start, stop, tempo and beat
+  serviceUsbLatency();                             // USB audio's latency measured (its beats' sharp sounds)
   // While USB audio comes in: the line input's levels on the serial log every
   // 5 s (its gate's level is set from the quietest, nothing plugged in).
   static uint32_t lineLogAt = 0;

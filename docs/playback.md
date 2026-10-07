@@ -246,6 +246,24 @@ m8_looper.ino, only with that type).
   shows the line input's quietest and loudest block every 5 s while USB audio
   comes in ("USB audio in; line input: ..."), to set the level from the M8's
   own noise floor. The simulator checks the mix and the gate.
+* Recording what comes in over USB: on the beat. What's on a computer's beat
+  arrives late (its output buffer, e.g. ~23 ms at 1024 samples, its sync
+  delay, the USB buffers: a DAW's metronome recorded into L7 came back 20 ms
+  late, docs/design/ableton/L7 Latency Test 1 Project), and by how much
+  depends on the computer's settings, so it's measured: while USB audio comes
+  in and the clock runs, the first sharp sound after each of our beat lines
+  (well above the input's average level: a metronome, a kick; within the
+  first third of the beat: not offbeat content) is timed in its beat by the
+  interrupt, and `serviceUsbLatency()` (loop()) takes the middle of the last 8
+  beats in a row when they agree within ~2 ms as USB's input latency (the
+  serial log: "USB input latency: ... samples"; before any, the line input's
+  plus a block). A recording takes the input's latency when it's pressed
+  (`recording.latency`: USB's while USB audio comes in, else the line
+  input's `LATENCY_FRAMES`) and keeps it to its end (a queued one that carries
+  on from it: the same). The line input mixed in meanwhile lands late by the
+  difference (a delay line to match them: too much RAM). The simulator: a
+  click 900 samples after each beat, measured 900, a loop of it with the
+  click on frame 0.
 * Latency (tools/latency): a round trip through the M8 over USB measures
   10.9 ms, of which CoreAudio reports 5.2 ms; the M8's own ~5.7 ms (USB in
   filling a block, the engine's block, USB out's queue) isn't reported, and

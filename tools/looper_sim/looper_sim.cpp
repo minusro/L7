@@ -47,6 +47,7 @@ static void check(bool ok, const char *what) {
 // One audio interrupt only (runs while loop() is blocked in an SD transfer).
 static double pendingUs = 0;
 static int16_t feedUsb = 0;                         // USB audio in: this level (0: none coming in)
+static int32_t feedUsbClick = -1;                   // USB audio in: a click this many samples after each beat line (-1: none)
 static bool feedNoise = false;                      // the line input: noise only (overrides the feed below)
 static audio_block_t usbInL, usbInR;
 static void audioBlock();
@@ -86,6 +87,7 @@ static void block() {
   audioBlock();
   serviceStorage();
   serviceScenes();
+  serviceUsbLatency();                             // (as loop() does)
 }
 
 // The app's tempo, for scenes: simSetTempo as a project loads, tempoByHand as
@@ -137,8 +139,13 @@ static void audioBlock() {
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) inL.data[i] = inR.data[i] = (int16_t)(rand() % 21 - 10);
   engine.simIn[0] = &inL; engine.simIn[1] = &inR;
   engine.simSetInput(0, &inL); engine.simSetInput(1, &inR);
-  if (feedUsb) {                                   // USB audio from a computer: a constant level, both channels
+  if (feedUsb || feedUsbClick >= 0) {             // USB audio from a computer: a constant level, both channels, or a click after each beat
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) usbInL.data[i] = usbInR.data[i] = feedUsb;
+    if (feedUsbClick >= 0 && transport.running)
+      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+        int32_t in = (int32_t)((transport.sampleInBeat + i) % transport.spb) - feedUsbClick;   // (samples into the click)
+        if (in >= 0 && in < 300) usbInL.data[i] = usbInR.data[i] = (int16_t)(20000 * exp(-in / 30.0) * (in % 2 ? -1 : 1));
+      }
     engine.simIn[2] = &usbInL; engine.simIn[3] = &usbInR;
     engine.simSetInput(2, &usbInL); engine.simSetInput(3, &usbInR);
   }
@@ -2443,6 +2450,33 @@ for f in os.listdir("."):
     check(abs(ringL()) <= 10, m6);
     feedNoise = false;
     for (int i = 0; i < 4; i++) block();
+  }
+
+  printf("USB audio in: its latency measured from the computer's beats, recordings taken with it\n");
+  {
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);
+    if (!transport.running) transportStart();
+    feedRamp = false; feedSineHz = 0;
+    feedUsbClick = 900;                              // their click 900 samples (20.4 ms) after each of our beats
+    runBeats(12);
+    char m10[200];
+    snprintf(m10, sizeof m10, "measured: %u samples (their click 900 after our beats)", (unsigned)usbInputLatency);
+    check(abs((int)usbInputLatency - 900) <= 3, m10);
+    check(inputLatency() == usbInputLatency, "the input's latency USB's while USB audio comes in");
+    recordPress(3);                                  // a loop of what comes in
+    for (int i = 0; i < 4000 && recording.mode != Recording::Running; i++) block();
+    check(recording.latency == usbInputLatency, "a recording's latency: USB's, kept to its end");
+    runBeats(4.5);
+    recordPress(3);
+    for (int i = 0; i < 200000 && recording.mode != Recording::Idle; i++) block();
+    int at = -1, peak = 0;                           // where the click is in the loop's first beat
+    for (int k = 0; k < (int)transport.spb / 2; k++) if (abs(wavLeft(3, k)) > peak) { peak = abs(wavLeft(3, k)); at = k; }
+    snprintf(m10, sizeof m10, "the loop's click at its start, on the beat (frame %d, not 900)", at);
+    check(at >= 0 && at < 8 && peak > 10000, m10);
+    feedUsbClick = -1;
+    for (int i = 0; i < 4; i++) block();
+    check(inputLatency() == LATENCY_FRAMES, "no USB audio: the line input's latency again");
+    clearTrack(3);
   }
 
   printf("USB audio out: the mix before the master volume\n");

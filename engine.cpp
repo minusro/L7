@@ -96,6 +96,16 @@ static volatile float outputGain = 1.0f;          // the master volume's
 volatile bool metronomeOn = false;
 volatile float lineInPeak = 0, lineInFloor = 1;
 volatile bool usbAudioIn = false;
+// ---- USB's input latency (engine.h): sharp sounds near our beats, timed.
+static constexpr uint32_t USB_LATENCY_GUESS = LATENCY_FRAMES + AUDIO_BLOCK_SAMPLES;   // (L7's own USB buffering; a computer's not known yet)
+volatile uint32_t usbInputLatency = USB_LATENCY_GUESS;
+uint32_t inputLatency() { return usbAudioIn ? usbInputLatency : LATENCY_FRAMES; }
+struct UsbOnset { int32_t beat; uint32_t inBeat, spb; };
+static constexpr uint32_t USB_ONSETS = 16;
+static volatile UsbOnset usbOnsets[USB_ONSETS];
+static volatile uint32_t usbOnsetHead = 0;
+static float usbEnv = 0;                             // the USB input's slow average level (interrupt)
+static bool usbOnsetArmed = false;                   // (one a beat: its first)
 static constexpr float LINE_GATE_LEVEL = 0.0015f;   // ~ -56 dBFS (as measured on the M8: see the log)
 static constexpr uint32_t LINE_GATE_HOLD_MS = 2000;
 static constexpr bool USB_OUT_CLICK = false;          // the metronome on the USB output too (measuring: tools/latency/clocksync.c)
@@ -210,6 +220,43 @@ static void queueTick(uint32_t due) {
   if (tickHead - tickTail < TICK_QUEUE && (!usbOut || tickHead - usbTickTail < TICK_QUEUE)) {
     tickDue[tickHead % TICK_QUEUE] = due;
     tickHead++;
+  }
+}
+
+void serviceUsbLatency() {
+  // The last 8 beats' first sharp sounds, each within the first third of its
+  // beat: agreeing within USB_AGREE samples, their middle one is USB's latency.
+  static constexpr uint32_t USB_AGREE = 88;        // ~2 ms
+  static uint32_t seen = 0, last[8];
+  static int count = 0;
+  static int32_t lastBeat = INT32_MIN;
+  noInterrupts();
+  uint32_t head = usbOnsetHead;
+  interrupts();
+  if (head - seen > USB_ONSETS) seen = head - USB_ONSETS;
+  for (; seen < head; seen++) {
+    UsbOnset o;
+    noInterrupts();
+    o.beat = usbOnsets[seen % USB_ONSETS].beat;
+    o.inBeat = usbOnsets[seen % USB_ONSETS].inBeat;
+    o.spb = usbOnsets[seen % USB_ONSETS].spb;
+    interrupts();
+    if (o.inBeat > o.spb / 3) { count = 0; continue; }   // (not near a beat: offbeat content)
+    if (o.beat != lastBeat + 1) count = 0;            // (beats in a row)
+    lastBeat = o.beat;
+    for (int k = 7; k > 0; k--) last[k] = last[k - 1];
+    last[0] = o.inBeat;
+    if (count < 8) count++;
+    if (count < 8) continue;
+    uint32_t s[8];
+    memcpy(s, last, sizeof s);
+    for (int a = 0; a < 8; a++) for (int b = a + 1; b < 8; b++) if (s[b] < s[a]) { uint32_t x = s[a]; s[a] = s[b]; s[b] = x; }
+    if (s[7] - s[0] > USB_AGREE) continue;
+    uint32_t mid = (s[3] + s[4]) / 2;
+    if (abs((int32_t)mid - (int32_t)usbInputLatency) > 22) {   // (half a ms or more: news)
+      usbInputLatency = mid;
+      Serial.printf("USB input latency: %lu samples (%.1f ms)\n", (unsigned long)mid, mid * 1000.0f / AUDIO_SAMPLE_RATE_EXACT);
+    }
   }
 }
 
@@ -403,6 +450,21 @@ void LooperEngine::update() {
   const float outGain = outputGain;
   float outPeak[2] = {0, 0};
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+    // USB's latency: the first sharp sound after each beat line (well above the
+    // input's average level), timed in the beat (loop() decides).
+    if (usbIn && running) {
+      int32_t a = max(abs(usbL ? usbL->data[i] : 0), abs(usbR ? usbR->data[i] : 0));
+      if (transport.sampleInBeat == 0) usbOnsetArmed = true;
+      if (usbOnsetArmed && a > 1500 && a > 8 * usbEnv) {
+        usbOnsetArmed = false;
+        volatile UsbOnset &o = usbOnsets[usbOnsetHead % USB_ONSETS];
+        o.beat = transport.beat;
+        o.inBeat = transport.sampleInBeat;
+        o.spb = spb;
+        usbOnsetHead++;
+      }
+      usbEnv += (a - usbEnv) * (1.0f / 2048);
+    }
     // The input: the line input (gated, faded over the block) and USB audio, mixed.
     float g = lineFrom + (lineTo - lineFrom) * i / AUDIO_BLOCK_SAMPLES;
     int32_t li = (int32_t)((inL ? inL->data[i] : 0) * g) + (usbL ? usbL->data[i] : 0);

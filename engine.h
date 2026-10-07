@@ -132,6 +132,9 @@ struct Recording {
   uint32_t targetFrames = 0;             // set when stopped
   uint32_t loopBars = 0;
   volatile uint32_t overruns = 0;
+  // The input's latency it's taken with (inputLatency() when it was pressed:
+  // the line input's, or USB's while USB audio comes in), kept to its end.
+  uint32_t latency = LATENCY_FRAMES;
   // Resampling: the app's output is recorded instead of the input (the
   // interrupt puts it in inputRing while this recording is on; no latency).
   volatile bool resample = false;
@@ -160,7 +163,16 @@ extern uint32_t inputRing[INPUT_FRAMES];  // stereo input, index = sample % INPU
 extern volatile uint8_t silencedTracks;
 extern volatile uint32_t silenceFrom;
 // The input latency a recording is shifted by (none for a resampling).
-inline uint32_t recordingLatency() { return recording.resample ? 0 : LATENCY_FRAMES; }
+inline uint32_t recordingLatency() { return recording.resample ? 0 : recording.latency; }
+// The input's latency, in samples: how late what's on the beat arrives in the
+// input history. The line input's: LATENCY_FRAMES (the codec's round trip).
+// USB's (while USB audio comes in): measured (serviceUsbLatency()): the
+// computer's sharp sounds near our beats (its metronome, a kick) timed as they
+// arrive, 8 beats in a row agreeing within ~2 ms (its own output's delay, a
+// DAW's buffer, the USB buffers); before that, USB_LATENCY_GUESS.
+extern volatile uint32_t usbInputLatency;
+uint32_t inputLatency();
+void serviceUsbLatency();                         // loop(): USB's latency measured
 
 uint32_t spbForBpm(float bpm);
 // The clock at the start of the latest audio block (the interrupt writes it;
