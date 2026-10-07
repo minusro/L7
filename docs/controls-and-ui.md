@@ -187,7 +187,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   way out (any edge, `menuLeavesOn()`); while an arrow is held that leaves it once let go,
   the selection frame is hidden. Under them
   a list, "EXPORT ABLETON PROJECT", "ENTER STORAGE MODE" and six placeholders for now ("DUMMY ITEM 1" … "6": no action, no
-  action icon), four in view at a time (scrolling). Export
+  action icon), three in view at a time (scrolling; the row level with the logo left clear). Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
   3/14" (samples copied, then the set) and then "SAVED AS L7 A005" ("SAVED AS" grey,

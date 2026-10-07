@@ -4,7 +4,7 @@
 // just back), or any arrow off its edges (menuLeavesOn()). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
 // "ENTER STORAGE MODE" and six placeholders ("DUMMY ITEM 1" ..., no action);
-// it scrolls once it has more than four. A runs
+// it scrolls once it has more than three. A runs
 // the item's action when let go. On a slot, A loads its project (an
 // empty one: a new project there), the menu staying open; on the loaded
 // project's card, A closes the menu; with SHIFT, cuts the project, or pastes
@@ -37,7 +37,7 @@ uint32_t uiGeneration = 1;
 
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
-static constexpr int CARDS = PROJECTS, LIST = 8, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
+static constexpr int CARDS = PROJECTS, LIST = 8, LIST_ROOM = 3, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
 static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE",
                                          "DUMMY ITEM 1", "DUMMY ITEM 2", "DUMMY ITEM 3", "DUMMY ITEM 4", "DUMMY ITEM 5", "DUMMY ITEM 6"};   // (placeholders: no action)
 // The export item's label while exporting and after it ("EXPORTING 3/14",
@@ -134,8 +134,10 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 static constexpr int CARD_W = 21, CARD_H = 15, CARD_CUT = 3, CARD_GAP = 3, CARD_VGAP = 3;
 static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 13;
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
-// The last place's frame level with the action button (from the status row's top).
-static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - (LIST_ROOM - 1) * LIST_PITCH;   // 75
+// The first place where it was with four places, the last of them level with
+// the action button (from the status row's top); the fourth place gone (the
+// logo's row clear).
+static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - 3 * LIST_PITCH;   // 75
 
 // The logo in the bottom left corner (CORNER_LOGO_X / Y: a block in, on the status row's line).
 static constexpr int LOGO_X = CORNER_LOGO_X, LOGO_Y = CORNER_LOGO_Y;
