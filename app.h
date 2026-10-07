@@ -19,6 +19,9 @@ extern int selectedCell;                           // cell in the row (ui.h: FIL
 // projects start with it); loadTempo: a project's, as it loads (neither).
 bool setTempo(float b);
 bool loadTempo(float b);
+// An external clock's tempo (midi_in.cpp): spb exactly (nudged to its beat),
+// shownBpm the tempo shown.
+void followTempo(uint32_t spb, float shownBpm);
 float newProjectTempo();                 // the last tempo set by hand (saved with the session; first 120)
 // The master volume a step up (by 1) or down (-1); saved with the session.
 void stepMasterVolume(int by);

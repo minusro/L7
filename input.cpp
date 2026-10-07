@@ -3,6 +3,7 @@
 #include "ui.h"
 #include "ableton.h"
 #include "usb_drive.h"
+#include "midi_in.h"
 
 static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;   // held arrows
 static constexpr uint32_t DOUBLE_TAP_MS = 200;      // two taps of a key this close: a double tap
@@ -138,6 +139,7 @@ static bool loadFromMenu(int p) {
   menuNoteLoad(from);                              // (its card and the old one's take turns until it comes in)
   if (fresh) setMainSelection(NUM_TRACKS - 1, WAVE_CELL);
   metronomeOn = metronomeWanted();                 // (now: its first beat clicks too)
+  clickFromBeat = sceneSwitchBeat();               // (playing: silent until the switch)
   return true;
 }
 
@@ -329,7 +331,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         if (armedItem == 0 && !shifted && projectCurrent() >= 0 && projectHasClips() && !menuExportShown()) exportToAbleton();
         if (armedItem == 1 && !shifted) {
           bool wasRunning = transport.running;
-          if (usbDriveMode()) {                      // (back from it: everything read from the card again)
+          midiInSuspend(true);                       // (no MIDI taken in meanwhile)
+          bool back = usbDriveMode();
+          midiInSuspend(false);
+          if (back) {                                // (back from it: everything read from the card again)
             drawMenu();
             if (wasRunning) transportStart();        // (running before: again, from 1.1.1)
           }

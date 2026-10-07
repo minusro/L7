@@ -155,6 +155,12 @@ extern volatile uint32_t silenceFrom;
 inline uint32_t recordingLatency() { return recording.resample ? 0 : LATENCY_FRAMES; }
 
 uint32_t spbForBpm(float bpm);
+// The clock at the start of the latest audio block (the interrupt writes it;
+// midi_in.cpp maps an incoming tick's micros() onto the beat with it).
+struct BlockStamp { uint32_t us; int32_t beat; uint32_t sampleInBeat, spb; bool running; };
+extern volatile BlockStamp blockStamp;
+// Called from the MIDI timer (every 200 us): MIDI in read (midi_in.cpp).
+extern void (*midiInPollHook)();
 float bpmForSpb(uint32_t spb);
 float filterStepHz(int step);
 // Sets a track's filter points (steps). The width is clamped to 0..FILTER_MAX,
@@ -172,11 +178,19 @@ void setMasterVolume(int step);
 // bar's first beat. In the output, after the master volume; not in what a
 // resampling records.
 extern volatile bool metronomeOn;
+// No click before this transport beat (loop(): while a scene or project
+// switch waits for its bar line, the switch's beat: silent meanwhile, the
+// new one's first beat clicks if it should).
+extern volatile int32_t clickFromBeat;
 int masterVolume();
 void takeOutputPeaks(float &left, float &right);
 
 void midiBegin(HardwareSerial *port);   // port already started (Board::midiOutBegin)
 void midiSendNow(uint8_t status);        // transport start/stop messages
+// The same clock out for USB MIDI (midi_usb.cpp): attach once, then take what's
+// due by micros() `now` (start / stop first, then the ticks due), at most max bytes.
+void midiOutAttachUsb();
+int midiOutTakeUsb(uint32_t now, uint8_t *out, int max);
 
 class LooperEngine : public AudioStream {
 public:

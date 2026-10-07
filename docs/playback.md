@@ -100,4 +100,52 @@ and louder on the bar's first beat). It's added after the master volume and
 left out of what a resampling records. A recording started with it clicking keeps it
 until it's completely recorded: on auto it stops on the bar line where that
 recording ends and the clip starts playing (it goes on while the recording
-finishes its bar; that bar line itself doesn't click).
+finishes its bar; that bar line itself doesn't click). While a scene or project
+switch waits for its switch point, nothing clicks, whatever the setting: from
+the press until the switch (`clickFromBeat` = `sceneSwitchBeat()`, set by
+`loop()`; the switch's own beat clicks if the new scene should).
+
+## MIDI clock
+
+**Out** (`engine.cpp`, `MIDI_OUT_ENABLED`): 24 ticks a beat from the audio
+interrupt (each queued with the time it's due and sent by a 200 µs timer:
+<0.2 ms of jitter), Start on `transportStart()`, Stop on `transportStop()`.
+Port 2 on variant B (Serial3, TX pin 14), port 1 on variant A.
+
+**In** (`midi_in.*`, `MIDI_IN_ENABLED`): the serial MIDI in (variant B: port 1,
+Serial1 RX pin 0, opened receive-only, its TX pin 1 given back as the early
+boot line, HIGH; variant A: Serial7 RX 28, unverified), read by the same 200 µs
+timer, each clock tick stamped with `micros()`. In `loop()` (`midiInService()`):
+* Following: a tick within the last 0.5 s (`midiClockFollowing()`). Their
+  tempo: measured over their last 4 beats (whole beats, at least 1),
+  `micros()` turned into samples by the ratio measured from the audio blocks'
+  start times (`blockStamp`, written by the interrupt each block). Shown in the
+  tempo cell to a tenth of a BPM; not the project's tempo, not saved as set by
+  hand; meanwhile `setTempo()` / a project's tempo do nothing (tap tempo,
+  B + arrows: no effect).
+* Stopped: their tempo is taken on (`followTempo()`, exactly, not rounded).
+* Running: each tick, how far our beat is from theirs at that moment (our
+  position from `blockStamp` and the tick's time); once a beat the average,
+  and the next beat runs at their tempo nudged by half of it (at most ±2 %,
+  nothing under 0.003 beats). A tempo change under 0.1 % isn't made (each one
+  re-pitches the loops a little and is a recording's tempo mark). The
+  simulator holds a clock jittering by ±0.6 ms within 0.003 beats, with 2
+  small changes in 16 beats.
+* Start (0xFA) and Continue (0xFB): the transport from 1.1.1 (running:
+  restarted), the next tick its 1.1.1: bars in step (Continue's song position
+  is ignored). Stop (0xFC): the transport stops. Started with START instead,
+  only the beats are kept in step (not the bars).
+* Logged on the serial port: "MIDI in: start" / "stop".
+
+**USB** (`midi_usb.*`, `MIDI_USB_ENABLED`; the USB type "Serial + MIDI + Mass
+Storage", tools/teensy_msc/patch.py: a MIDI interface as Teensyduino's Serial +
+MIDI, endpoint 4, mass storage moved to endpoint 5 and interface 3): out, the
+same clock, Start and Stop as the serial out (a second reader of the engine's
+queues, `midiOutTakeUsb()`); in, clock / Start / Continue / Stop into the same
+follower (`midiInByte(..., MIDI_USB)`). Its own 250 µs timer at priority 224,
+under the audio interrupt's 208: the core's USB MIDI send waits (up to 40 ms,
+once) while a computer isn't reading, which may delay MIDI and `loop()`, never
+the audio. Two clocks at once (serial and USB): the one that ticked first is
+followed until it stops; the other's ticks, starts and stops are ignored
+meanwhile. A pause (no tick for 0.5 s) starts the tempo's measurement afresh.
+In storage mode nothing is taken in (`midiInSuspend()`).

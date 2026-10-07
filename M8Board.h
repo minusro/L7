@@ -51,6 +51,10 @@ struct Pins {
   // (Serial3, TX pin 14) — port 1's TX is pin 1, and driving it made the SD
   // card reset (see HARDWARE.md). Use midiOutBegin(), not begin() directly.
   HardwareSerial *midiOut;
+  // Serial port for MIDI in. Variant B: port 1 (Serial1, RX pin 0; its TX,
+  // pin 1, stays the early boot line, HIGH). Variant A: port 1 (Serial7, RX
+  // pin 28: the same port as MIDI out; unverified). Use midiInBegin().
+  HardwareSerial *midiIn;
 };
 
 extern const Pins PINS_A;
@@ -86,6 +90,9 @@ public:
   // Starts the MIDI out port at 31250 baud and returns it. On variant B this
   // also gives pin 15 back to the key expander's INT (Serial3 claims it as RX).
   HardwareSerial *midiOutBegin();
+  // MIDI in, at 31 250 baud, receiving only (variant B: pin 1 given back,
+  // HIGH). After midiOutBegin() (variant A: the same port).
+  HardwareSerial *midiInBegin();
 
   // Power button = the Teensy 4 On/Off pin, handled by the SNVS block like the
   // stock firmware does. Without software the chip only powers off after a ~5 s hold.

@@ -2,7 +2,7 @@
 // mounted drive (USB mass storage), to copy files to and from it.
 //
 // Teensyduino has no mass-storage USB type for the Teensy 4, so the core is
-// patched (tools/teensy_msc/patch.py: a "Serial + Mass Storage" type, usb_msc.c
+// patched (tools/teensy_msc/patch.py: a "Serial + MIDI + Mass Storage" type, usb_msc.c
 // the bulk-only SCSI engine) and the sketch is built with it (arduino-cli:
 // teensy:avr:teensy40:usb=serialmsc; Arduino IDE: Tools > USB Type > "Serial +
 // Mass Storage (L7 patch)"). Outside storage mode the M8 answers the computer's

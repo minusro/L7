@@ -998,6 +998,7 @@ int32_t beginSceneChange(bool quick, bool prepared, bool restart) {
 void endSceneChange() { inSceneChange = sceneRestart = false; }
 
 bool sceneChangeWaiting() { return transport.running && sceneChangeOn(); }
+int32_t sceneSwitchBeat() { return sceneChangeWaiting() && sceneQ >= 0 ? (sceneQ + 3) / 4 : INT32_MIN; }
 
 // A change on its way to track t (unit u, quarter beat q).
 static void requestChange(int t, const TrackUnit &u, int32_t q, bool scene) {

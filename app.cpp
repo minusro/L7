@@ -1,6 +1,7 @@
 // app.cpp — see app.h
 #include "app.h"
 #include "ui.h"
+#include "midi_in.h"
 
 m8::Board board;
 
@@ -21,6 +22,7 @@ static bool savedPlaying = false, bootPlaying = false;   // the clock running, a
 static float newBpm = 120.0f;
 
 static bool changeTempo(float b) {
+  if (midiClockFollowing()) return false;          // (an external clock's tempo: not by hand, nor a project's)
   b = constrain(roundf(b * 10) / 10, MIN_BPM, MAX_BPM);   // tenths of a BPM
   // (Recording too: the recorder follows the clock's tempo changes, engine.h.)
   uint32_t spb = spbForBpm(b);
@@ -43,6 +45,12 @@ bool setTempo(float b) {
 }
 
 bool loadTempo(float b) { return changeTempo(b); }
+
+void followTempo(uint32_t spb, float shownBpm) {
+  uint32_t now = transport.pendingSpb ? transport.pendingSpb : transport.spb;
+  if (spb != now) transport.pendingSpb = spb;      // (exactly: not rounded to tenths of a BPM)
+  bpm = constrain(shownBpm, MIN_BPM, MAX_BPM);     // (shown; not the project's, nor saved as set by hand)
+}
 float newProjectTempo() { return newBpm; }
 
 // ---- Master volume (steps, config.h): the app's, one for all projects (kept in the session).

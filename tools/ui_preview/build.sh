@@ -9,7 +9,7 @@ root="$here/../.."
 out="${TMPDIR:-/tmp}/m8_ui_preview"
 rm -rf "$out" && mkdir -p "$out"
 for f in "$root"/*.cpp "$root"/*.h; do
-  case "$(basename "$f")" in M8Board.*|input.cpp) ;; *) cp "$f" "$out/" ;; esac
+  case "$(basename "$f")" in M8Board.*|input.cpp|midi_usb.cpp) ;; *) cp "$f" "$out/" ;; esac
 done
 cp "$here"/stubs/*.h "$here/preview.cpp" "$out/"
 fontsrc="$HOME/Documents/Arduino/libraries/ILI9341_t3n/src/glcdfont.c"

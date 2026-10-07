@@ -39,6 +39,11 @@ constexpr uint32_t BEAT_STEP_MAX_BARS = 8;
 
 // MIDI clock out (serial MIDI port 2 on variant B, see M8Board.h).
 constexpr bool MIDI_OUT_ENABLED = true;
+// Following an external MIDI clock, start and stop (serial MIDI in, see
+// midi_in.h; read from the MIDI out's timer: needs MIDI_OUT_ENABLED).
+constexpr bool MIDI_IN_ENABLED = true;
+// MIDI clock over USB too, in and out (midi_usb.h; the USB type with MIDI).
+constexpr bool MIDI_USB_ENABLED = true;
 
 // After a recording ends with a clip, select the next free track (the next
 // empty one up, else the next muted one; input.cpp, followRecording()).

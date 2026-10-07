@@ -94,6 +94,7 @@ void setTrackMix(int t, int volume, int balance) {
 static int masterStep = MASTER_VOLUME_UNITY;
 static volatile float outputGain = 1.0f;          // the master volume's
 volatile bool metronomeOn = false;
+volatile int32_t clickFromBeat = INT32_MIN;
 
 // The metronome's wood block: two damped sines (its body and a harder upper
 // partial), started on a beat.
@@ -161,8 +162,15 @@ static volatile uint32_t tickDue[TICK_QUEUE];
 static volatile uint32_t tickHead = 0, tickTail = 0;     // audio interrupt / timer
 static volatile uint8_t msgQueue[8];
 static volatile uint32_t msgHead = 0, msgTail = 0;       // loop() / timer
+// A second reader, USB MIDI (midi_usb.cpp, its own timer): its own places in both.
+static volatile bool usbOut = false;
+static volatile uint32_t usbTickTail = 0, usbMsgTail = 0;
+
+volatile BlockStamp blockStamp;
+void (*midiInPollHook)() = nullptr;
 
 static void midiTimerIsr() {
+  if (midiInPollHook) midiInPollHook();
   while (msgTail != msgHead) midiPort->write(msgQueue[msgTail++ % 8]);
   uint32_t now = micros();
   while (tickTail != tickHead && (int32_t)(now - tickDue[tickTail % TICK_QUEUE]) >= 0) {
@@ -179,12 +187,31 @@ void midiBegin(HardwareSerial *port) {
 
 void midiSendNow(uint8_t status) {
   if (!midiPort) return;
-  if (msgHead - msgTail < 8) { msgQueue[msgHead % 8] = status; msgHead++; }
+  if (msgHead - msgTail < 8 && (!usbOut || msgHead - usbMsgTail < 8)) { msgQueue[msgHead % 8] = status; msgHead++; }
 }
 
 static void queueTick(uint32_t due) {
   if (!midiPort) return;
-  if (tickHead - tickTail < TICK_QUEUE) { tickDue[tickHead % TICK_QUEUE] = due; tickHead++; }
+  if (tickHead - tickTail < TICK_QUEUE && (!usbOut || tickHead - usbTickTail < TICK_QUEUE)) {
+    tickDue[tickHead % TICK_QUEUE] = due;
+    tickHead++;
+  }
+}
+
+void midiOutAttachUsb() {
+  usbTickTail = tickHead;
+  usbMsgTail = msgHead;
+  usbOut = true;
+}
+
+int midiOutTakeUsb(uint32_t now, uint8_t *out, int max) {
+  int n = 0;
+  while (n < max && usbMsgTail != msgHead) out[n++] = msgQueue[usbMsgTail++ % 8];
+  while (n < max && usbTickTail != tickHead && (int32_t)(now - tickDue[usbTickTail % TICK_QUEUE]) >= 0) {
+    out[n++] = 0xF8;
+    usbTickTail++;
+  }
+  return n;
 }
 
 // ---- Tempo marks while recording (engine.h)
@@ -230,7 +257,7 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
   // once the recording is completely done).
   bool recorded = recording.mode == Recording::Finishing &&
                   beat >= recording.startBeat + (int32_t)(recording.loopBars * BEATS_PER_BAR);
-  if (metronomeOn && !recorded) startClick(beat % BEATS_PER_BAR == 0);
+  if (metronomeOn && !recorded && beat >= clickFromBeat) startClick(beat % BEATS_PER_BAR == 0);   // (a switch waiting: not until it)
 
   if (beat % BEATS_PER_BAR == 0) {
     transport.lastBarSample = transport.now;
@@ -290,6 +317,11 @@ void LooperEngine::update() {
   }
   uint32_t spb = transport.spb;
   const bool running = transport.running;
+  blockStamp.us = blockMicros;                       // (MIDI in: the clock at this block's start)
+  blockStamp.beat = transport.beat;
+  blockStamp.sampleInBeat = transport.sampleInBeat;
+  blockStamp.spb = spb;
+  blockStamp.running = running;
 
   double speed[NUM_TRACKS];
   float mix[NUM_TRACKS][4];                          // the tracks' own volume/balance mixes (metered)

@@ -72,7 +72,7 @@
 
 * The card is shown to a computer as a mounted drive (USB mass storage). The
   Teensy 4 core has no such USB type, so `tools/teensy_msc/patch.py` adds one
-  to Teensyduino ("Serial + Mass Storage (L7 patch)", `usb=serialmsc`, flag
+  to Teensyduino ("Serial + MIDI + Mass Storage (L7 patch)", `usb=serialmsc`, flag
   `USB_SERIAL_MSC`; reversible, everything behind that flag) with a bulk-only
   SCSI engine (`usb_msc.c`). Read ~7.5 MB/s, write ~3 MB/s over USB 2.0 (the
   card on the Teensy's SDIO).

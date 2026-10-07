@@ -133,6 +133,9 @@
   <li>Cut a scene with <span class="key">SHIFT</span>, then <span class="key">B</span>, then <span class="key">A</span> (in that order). Paste it after the current one with <span class="key">B</span>, then <span class="key">SHIFT</span>, then <span class="key">A</span>. Cutting a scene with no clips removes it but leaves the clipboard as it was.</li>
 </ul>
 
+<h2>Following a MIDI clock</h2>
+<p>Connect a MIDI clock source (a drum machine, a DAW through a MIDI interface) to the M8's MIDI in, or send clock to it over USB (it shows up as a MIDI device on your computer). While its clock comes in, L7 follows it: the tempo cell shows its tempo, and you can't change the tempo by hand meanwhile. Its <b>Start</b> starts L7 from 1.1.1 (or restarts it), with the bars lined up with the source's; its <b>Stop</b> stops it. L7 keeps its beat in step by running a touch faster or slower for a beat when it drifts. If you start L7 with <span class="key">START</span> instead, the beats line up but not the bars. When the clock stops coming in, L7 keeps its last tempo and goes back to its own clock. L7 also sends its clock, Start and Stop, on the MIDI out and over USB, so other gear (or your DAW) can follow it. While a scene or project change waits for its bar line, the metronome stays silent.</p>
+
 <h2>Resampling</h2>
 <p>With a clip playing unmuted, select an empty track and press <span class="key">B</span> + <span class="key">A</span>. L7 records everything you hear (tracks and input, but not the master volume) from the next bar line, like a normal recording. When it's saved, it moves to a new scene right after the current one, on the same track, and the clips that were muted come along, still muted. The action button shows a record dot with a plus while resampling is available.</p>
 

@@ -41,6 +41,7 @@ int32_t beginSceneChange(bool quick = false, bool prepared = false, bool restart
 int32_t transportOrigin();
 void endSceneChange();
 bool sceneChangeWaiting();             // a scene change hasn't reached its switch point yet
+int32_t sceneSwitchBeat();             // and the transport beat it switches on (INT32_MIN: none waiting)
 // Preparing a scene ahead (selected while SHIFT is held): the units' sample
 // files are opened in the background, one per pass, so the change can launch
 // sooner. nullptr: drop it. unitsPrepared(): all opened (false when nothing

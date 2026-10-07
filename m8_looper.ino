@@ -77,6 +77,8 @@
 #include "ui.h"
 #include "usb_drive.h"
 #include "input.h"
+#include "midi_in.h"
+#include "midi_usb.h"
 
 AudioInputI2S        i2sIn;
 LooperEngine         engine;
@@ -183,6 +185,8 @@ void setup() {
   scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo);
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();   // recordings no project uses
   if (MIDI_OUT_ENABLED) midiBegin(board.midiOutBegin());
+  if (MIDI_OUT_ENABLED && MIDI_IN_ENABLED) midiInBegin(board.midiInBegin());
+  if (MIDI_OUT_ENABLED && MIDI_USB_ENABLED) midiUsbBegin();   // (the same clock over USB, in and out)
   usbDriveTick = [] { loopCount++; handlePowerButton(); };   // (storage mode's own loop)
   usbDriveReload = reloadFromCard;
   usbDriveBegin();
@@ -209,6 +213,8 @@ void loop() {
     Serial.printf("headphones %s: speaker %s\n", phones ? "in" : "out", phones ? "off" : "on");
   }
 
+  debugStage = "MIDI in";
+  midiInService();                                 // an external clock: its start, stop, tempo and beat
   debugStage = "keys (I2C)";
   pollKeys();
   saveSessionWhenIdle();
@@ -220,6 +226,7 @@ void loop() {
   if (recording.mode == Recording::Idle) clickedRecording = false;
   else if (metronomeOn) clickedRecording = true;
   metronomeOn = clickedRecording || metronomeWanted();   // (the metronome setting, app.h; not in the dummy project)
+  clickFromBeat = sceneSwitchBeat();               // a scene or project switch waiting for its bar line: no click until it, whatever the setting
 
   // Report dropouts with what the storage code was doing (debugging).
   static uint32_t lastDropCheck = 0, lastDrops[NUM_TRACKS] = {};

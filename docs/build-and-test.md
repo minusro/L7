@@ -2,9 +2,10 @@
 
 ## Firmware
 
-Teensyduino 1.62, board `teensy:avr:teensy40`, **USB type "Serial + Mass Storage
-(L7 patch)"** (`usb=serialmsc`, for storage mode, see usb_drive.h; with plain
-"Serial" the menu item does nothing), 600 MHz. That type isn't in Teensyduino:
+Teensyduino 1.62, board `teensy:avr:teensy40`, **USB type "Serial + MIDI + Mass Storage
+(L7 patch)"** (`usb=serialmsc`, for storage mode, see usb_drive.h, and USB MIDI,
+midi_usb.h; with plain "Serial" the menu item does nothing and there's no USB
+MIDI; a core patched before MIDI was added gets it by running the patch again), 600 MHz. That type isn't in Teensyduino:
 run `python3 tools/teensy_msc/patch.py` once (and again after a Teensyduino
 update; `--undo` restores the originals) before building. Without the patch,
 `usb=serialmtp` ("Serial + MTP Disk") also builds: storage mode then shows the
@@ -41,7 +42,7 @@ truncate; counts file-system changes and file creations).
 ```sh
 cd tools/looper_sim
 c++ -std=c++17 -O1 -Wno-macro-redefined -Istubs -I../.. \
-  ../../engine.cpp ../../storage.cpp ../../scenes.cpp ../../ableton.cpp looper_sim.cpp -o looper_sim
+  ../../engine.cpp ../../storage.cpp ../../scenes.cpp ../../ableton.cpp ../../midi_in.cpp looper_sim.cpp -o looper_sim
 ./looper_sim          # all checks + 5 random 600 s sessions; ./looper_sim 0 skips the fuzzing
 ```
 

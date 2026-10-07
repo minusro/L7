@@ -35,7 +35,7 @@ build and is unreachable on Model:01, because the flag can only be 0 or 1.
 | Audio codec control | none: no codec I²C traffic exists, so the DAC/ADC are hardware-configured | same | confirmed |
 | **SD card** | SDIO / USDHC1 on bottom pads 34–39 (`BUILTIN_SDCARD`) | same | confirmed |
 | SD card detect | pin 4, INPUT_PULLUP, CHANGE IRQ | pin 17, INPUT_PULLUP, CHANGE IRQ | pin setup confirmed, purpose inferred |
-| **Serial MIDI**, 31 250 baud | port 1: Serial7 (RX 28/TX 29); port 2: Serial1 (RX 0/TX 1) | port 1: Serial1 (RX 0/TX 1); port 2: Serial3 (TX 14. RX 15 is the key INT) | confirmed |
+| **Serial MIDI**, 31 250 baud | port 1: Serial7 (RX 28/TX 29); port 2: Serial1 (RX 0/TX 1) | port 1: Serial1 (RX 0/TX 1); port 2: Serial3 (TX 14. RX 15 is the key INT) | confirmed. MIDI in is read on variant B's port 1 RX (pin 0, the port opened receive-only and pin 1 put back HIGH); that the MIDI in jack is wired there is not yet confirmed on hardware |
 | Headphone sense (analog, INPUT_PULLDOWN, low-pass filtered) | pin 26 (A12) | pin 22 (A8) | variant B confirmed on hardware: `analogRead` ≈ 10 with headphones plugged in, ≈ 580 without; A inferred |
 | Speaker amp enable (OUTPUT, HIGH at init) | pin 30 | pin 9 | variant B confirmed on hardware: HIGH = speaker on, LOW = speaker off; A inferred |
 | **Charger** | no I²C charger; status pins 14 and 15 (INPUT_PULLUP); battery voltage on pin 22 (A8); pin 24 input | **TI BQ2589x** @0x6A on Wire; pin 2 INPUT (probably charger INT) | chips confirmed, pin roles inferred |

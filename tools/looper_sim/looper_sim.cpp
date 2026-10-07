@@ -15,6 +15,7 @@
 #include "storage.h"
 #include "ableton.h"
 #include "colors.h"
+#include "midi_in.h"
 
 using namespace looper;
 
@@ -92,6 +93,14 @@ static bool simSetTempo(float b) {
   if (spb != (transport.pendingSpb ? transport.pendingSpb : transport.spb)) transport.pendingSpb = spb;   // (the same: nothing, as the app)
   return true;
 }
+// The app's followTempo() (an external MIDI clock, midi_in.cpp): the spb as is, the tempo shown kept.
+static float simShownBpm = 0;
+static int simTempoChanges = 0;
+void followTempo(uint32_t spb, float shownBpm) {
+  if (spb != (transport.pendingSpb ? transport.pendingSpb : transport.spb)) transport.pendingSpb = spb, simTempoChanges++;
+  simShownBpm = shownBpm;
+}
+float bpm = 120.0f;
 static float simNewBpm = 120.0f;
 static float simNewTempo() { return simNewBpm; }
 static void tempoByHand(float b) {
@@ -744,7 +753,9 @@ int main(int argc, char **argv) {
     check(sceneDuplicate() && waitScene() && sceneCount() == 3 && sceneCurrent() == 3 && tracks[1].state == TrackState::Muted,
           "SHIFT+B twice: a copy as scene 3");
     check(sceneGoEnd() && waitScene() && sceneCurrent() == sceneCount() + 1, "SHIFT+UP twice: straight to N+1*");
-    check(sceneNext() && waitScene() && sceneCurrent() == 1, "the next scene action on N+1*: to 1");
+    check(sceneNext() && sceneSwitchBeat() > transport.beat && waitScene() &&
+          sceneCurrent() == 1 && sceneSwitchBeat() == INT32_MIN,
+          "the next scene action on N+1*: to 1 (meanwhile its switch beat known, the click silent until it; then none)");
     check(sceneNext() && waitScene() && sceneCurrent() == 2, "then: 2");
     while (sceneCurrent() < sceneCount()) sceneNext(), waitScene();
     check(sceneCurrent() == sceneCount() && sceneNext() && waitScene() && sceneCurrent() == 1,
@@ -1984,6 +1995,127 @@ for f in os.listdir("."):
     simSetTempo(120);
     runBeats(8);
     checkSync(4, "the clip at its average tempo in step with the clock");
+  }
+
+  printf("following an external MIDI clock (jittering up to 0.6 ms): its tempo, Start, its beat, a tempo change, Stop\n");
+  {
+    if (transport.running) transportStop();
+    runUntilIdle();
+    // Their clock, in the simulator's micros() (a little faster than its samples: the
+    // follower measures the ratio); ticks fed as the blocks go by.
+    double tickAt = simMicros + 1000, tickUs = 60e6 / 128 / 24;
+    int32_t sent = 0, startedAt = -1;
+    const double usPerSample = (AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT + 15 - 0.49) / AUDIO_BLOCK_SAMPLES;   // (audioBlock(): 2902 + 15 us a block)
+    double worst = 0;                                // their beat vs ours at their ticks, the last stretch
+    bool measure = false;
+    auto run = [&](int beats, bool clockOn = true) {
+      for (int i = 0; i < 100000 && sent < beats * 24; i++) {
+        block();
+        while (clockOn && simMicros >= tickAt) {
+          midiInByte(0xF8, (uint32_t)(tickAt + (rand() % 1201 - 600)));   // (their jitter: up to 0.6 ms)
+          if (measure && startedAt >= 0 && transport.running) {
+            double ours = transport.beat + (transport.sampleInBeat + ((uint32_t)tickAt - (int32_t)simMicros) / usPerSample) / transport.spb;
+            double theirs = (sent - startedAt) / 24.0, err = fmod(ours - theirs + 1000.5 * BEATS_PER_BAR, BEATS_PER_BAR) - BEATS_PER_BAR / 2.0;
+            worst = std::max(worst, fabs(err));
+          }
+          sent++;
+          tickAt += tickUs;
+        }
+        if (!clockOn) sent++;                        // (counting blocks instead)
+        midiInService();
+      }
+      sent = 0;
+    };
+    auto expectSpb = [&](double bpmTheirs) { return 60e6 / bpmTheirs / usPerSample; };
+    char m[200];
+    run(3);                                          // stopped: the tempo only
+    snprintf(m, sizeof m, "stopped, the clock coming in: following (%d), its tempo taken on (%u samples a beat, theirs %.0f)",
+             midiClockFollowing(), transport.spb, expectSpb(128));
+    check(midiClockFollowing() && !transport.running && fabs(transport.spb - expectSpb(128)) < expectSpb(128) * 0.002, m);
+    midiInByte(0xFA, simMicros);                     // Start: the next tick is 1.1.1
+    startedAt = 0;
+    run(1);
+    check(transport.running, "Start: the transport runs");
+    // (from here: ticks counted from the start)
+    int32_t total = 24;
+    auto runCounted = [&](int beats) {
+      for (int i = 0; i < 400000 && beats > 0; i++) {
+        block();
+        while (simMicros >= tickAt) {
+          midiInByte(0xF8, (uint32_t)(tickAt + (rand() % 1201 - 600)));   // (their jitter: up to 0.6 ms)
+          if (measure && transport.running) {
+            double ours = transport.beat + (transport.sampleInBeat + ((int32_t)((uint32_t)tickAt - simMicros)) / usPerSample) / transport.spb;
+            double theirs = total / 24.0, err = ours - theirs;
+            worst = std::max(worst, fabs(err));
+          }
+          total++;
+          tickAt += tickUs;
+          if (total % 24 == 0) beats--;
+        }
+        midiInService();
+      }
+    };
+    runCounted(12);                                  // settling
+    measure = true; worst = 0;
+    int changesBefore = simTempoChanges;
+    runCounted(16);
+    snprintf(m, sizeof m, "locked to their beat (and bar): at most %.4f beats off over 16 beats, the tempo %u (theirs %.0f), changed %d time(s) meanwhile",
+             worst, transport.spb, expectSpb(128), simTempoChanges - changesBefore);
+    check(worst < 0.01 && simTempoChanges - changesBefore <= 4, m);
+    tickUs = 60e6 / 133.5 / 24;                      // their tempo changes
+    measure = false;
+    runCounted(12);
+    measure = true; worst = 0;
+    runCounted(8);
+    snprintf(m, sizeof m, "their tempo up to 133.5: followed, at most %.4f beats off, shown %.1f", worst, simShownBpm);
+    check(worst < 0.01 && fabs(transport.spb - expectSpb(133.5)) < expectSpb(133.5) * 0.003, m);
+    midiInByte(0xFC, simMicros);
+    runCounted(1);
+    check(!transport.running, "Stop: the transport stops");
+    for (int i = 0; i < 300; i++) { block(); midiInService(); }   // their clock gone (~0.9 s)
+    check(!midiClockFollowing(), "their clock gone: not following");
+    // Two clocks: the serial one ticking, USB's ignored until the serial one stops.
+    auto feed = [&](MidiSource src, double us, int n, double bpmTheirs) {
+      double step = 60e6 / bpmTheirs / 24;
+      for (int k = 0; k < n; k++) {
+        while (simMicros < us) { block(); midiInService(); }
+        midiInByte(0xF8, (uint32_t)us, src);
+        us += step;
+      }
+      return us;
+    };
+    double at = feed(MIDI_SERIAL, simMicros + 1000, 72, 100);
+    midiInByte(0xF8, (uint32_t)at - 500, MIDI_USB);  // (USB's tick between: ignored)
+    midiInByte(0xFA, (uint32_t)at - 400, MIDI_USB);   // (and its start)
+    for (int i = 0; i < 4; i++) { block(); midiInService(); }
+    snprintf(m, sizeof m, "two clocks: the serial one followed (%.1f shown), USB's ticks and start ignored (running: %d)", simShownBpm, transport.running);
+    check(midiClockFollowing() && !transport.running && fabs(simShownBpm - 100.5) < 1.5, m);
+    for (int i = 0; i < 300; i++) { block(); midiInService(); }   // the serial one stops
+    feed(MIDI_USB, simMicros + 1000, 72, 150);
+    snprintf(m, sizeof m, "the serial clock gone: USB's followed (%.1f shown)", simShownBpm);
+    check(midiClockFollowing() && fabs(simShownBpm - 150.7) < 2, m);
+    midiInSuspend(true);                             // storage mode: nothing taken in
+    midiInByte(0xFA, simMicros, MIDI_USB);
+    for (int i = 0; i < 4; i++) { block(); midiInService(); }
+    midiInSuspend(false);
+    check(!transport.running, "storage mode: a start meanwhile ignored");
+    for (int i = 0; i < 300; i++) { block(); midiInService(); }
+    // The clock out for USB too: Start, the ticks, Stop, as the serial one's.
+    midiOutAttachUsb();
+    uint8_t got[64];
+    int ticks = 0, startSeen = 0, stopSeen = 0;
+    auto take = [&]() {
+      int n = midiOutTakeUsb(simMicros + 10000, got, sizeof got);
+      for (int k = 0; k < n; k++) ticks += got[k] == 0xF8, startSeen += got[k] == 0xFA, stopSeen += got[k] == 0xFC;
+    };
+    transportStart();
+    for (int i = 0; i < 2000 && ticks < 48; i++) { block(); take(); }
+    transportStop();
+    take();
+    snprintf(m, sizeof m, "USB's clock out: start %d, %d ticks (2 beats), stop %d", startSeen, ticks, stopSeen);
+    check(startSeen == 1 && ticks >= 48 && stopSeen == 1, m);
+    simSetTempo(120);
+    runBeats(1);
   }
 
   printf("random sessions\n");

@@ -54,6 +54,8 @@ class HardwareSerial {
 public:
   void begin(uint32_t) {}
   size_t write(uint8_t b) { if (b == 0xF8) ticks++; else msgs[nmsg++ % 16] = b; return 1; }
+  int available() { return 0; }                   // (MIDI in: the simulator feeds midiInByte() instead)
+  int read() { return -1; }
   uint32_t ticks = 0;
   uint8_t msgs[16] = {};
   int nmsg = 0;
