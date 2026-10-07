@@ -177,7 +177,7 @@ PROGMEM static const Icon ICONS[] = {
   {9, 7, {"..#.#....", "..#.##...", "..#.###..", "..#.####.", "..#.###..", "..#.##...", "..#.#...."}},   // RESTART (|>: start from 1.1.1; a block right of centre)
   {9, 9, {"#.#.#.#.#", ".........", "#...#...#", "....#....", "#.#####.#",
           "....#....", "#...#...#", ".........", "#.#.#.#.#"}},   // SCENE_DUP (a + in a checkered square, as SCENE_CUT / PASTE)
-  {7, 5, {"#...#..", "##..##.", "###.###", "##..##.", "#...#.."}},   // NEXT (two small plays, a block apart: the next scene)
+  {7, 5, {"#...#..", "##..##.", "###.###", "##..##.", "#...#.."}},   // NEXT (two small plays, a block apart: the next scene; a block right of centre)
   {0, 0, {}},                                                                  // METRO (drawn on its own: a metronome and the next setting)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
@@ -296,10 +296,9 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   if (icon == ICON_TAP) {
     // Condensed: T and A touch (T's stem and A's point keep them apart), 10
     // blocks; the letters plain, in the icon's colour (black), their bottom
-    // row left out (4 rows), twice, one under the other a block apart (9
-    // rows), centred in the backdrop.
+    // row left out (4 rows), once, centred in the backdrop.
     const char *text = "TAP";
-    const int w = textWidth(text) / PX - 1, ROWS4 = 4, h = 2 * ROWS4 + 1;
+    const int w = textWidth(text) / PX - 1, ROWS4 = 4, h = ROWS4;
     int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w) / 2, r0 = (rows - h) / 2;
     bool on[5][16] = {};                           // the word's blocks
     int x = 0;
@@ -310,10 +309,9 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
           if (g->rows[r][c] == '#') on[r][x + c] = true;
       x += glyphWidth(*g) + (*p == 'T' ? 0 : 1);
     }
-    for (int copy = 0; copy < 2; copy++)
-      for (int r = 0; r < ROWS4; r++)
-        for (int c = 0; c < w; c++)
-          if (on[r][c]) block(c0 + c, r0 + copy * (ROWS4 + 1) + r);
+    for (int r = 0; r < ROWS4; r++)
+      for (int c = 0; c < w; c++)
+        if (on[r][c]) block(c0 + c, r0 + r);
   } else if (icon == ICON_METRO) {
     // A metronome, filled (a trapezoid; its pendulum a slit up through it and
     // out past the top), 10 x 10, a block of margin round it at least;
@@ -340,7 +338,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
-    int c0 = track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE), r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
+    int c0 = track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE || icon == ICON_NEXT), r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);
