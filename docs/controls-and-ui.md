@@ -10,6 +10,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 |---|---|
 | UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. A held DOWN (repeating) goes on to the status row and stops there: only a fresh press there opens the menu. UP on track 1 or DOWN on the status row (a fresh press) opens the menu once let go; in the menu, UP on the top card row (A–D) or DOWN on the list's last item goes back once let go (with no project loaded: a new one in the first empty slot, its card selected, as A there) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo; UP/DOWN between the rows keeps the column, across empty tracks (one cell) and on to the status row and back too: the scene cell is below the waveform); LEFT on a row's first cell or RIGHT on its last (a fresh press, not a held arrow repeating) opens the menu, to the looper's left, once let go (the clock goes on); in the menu, RIGHT off its right edge (a card row's right end, or on a list item) goes back once let go (with no project loaded: a new one in the first empty slot) |
+| LEFT + RIGHT held (0.6 s) | Switch screens from anywhere: the menu opens, or closes (the looper's selection as it was; with no project loaded: a new one in the first empty slot; with every slot full: nothing; a project loaded from the menu still on its way: once it has come in). Only when the two were pressed within 100 ms of each other (`LR_WINDOW_MS`), nothing else held; the second one's press doesn't move the selection (it steps back where the first one moved it), and the looper's edge mark is lit and the selection frame hidden while they're held; once switched, they do nothing more until both are let go (`switchHold()` in input.cpp) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one; the waveform cell is selected). Full track: mute/unmute. Status row: the next scene on the scene cell, once A is let go (1 … N, then round to 1; from N+1* or 0* to 1 too: neither is stepped onto; `sceneNext()`; as SHIFT+UP: on the next bar line while playing; the clock isn't started; icon: two small play triangles a block apart, a block right of centre), SHIFT+A there duplicates the scene (as SHIFT + B twice; icon: a + in a checkered square); play / stop on the clock cell (icon play or stop; SHIFT+A as SHIFT+START), tap tempo on the tempo cell (SHIFT+A: the metronome's next setting, of 0 off / A auto, in a silent scene only / 1 on: from 1 or A, 0 in a silent scene, else the other one; from 0, A in a silent scene, else 1 (it always changes what's heard); icon: a filled metronome, 10×10 blocks, crossed out while it would click with the clock running) |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%; the tempo cell: the tempo the project's last recording was made at, if it has one) |
 | SHIFT + B twice | Duplicate the scene |
@@ -193,9 +194,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   While the clock runs, the playing project's card shows a small play icon right of its letter (both 2 blocks left of centre), in the letter's colour, on the first half of each beat (pulsing): the loaded one's, or while another is on its way in, the one still heard. An empty slot is a grey outline, its letter grey (selected too; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; a block
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
-  in the colour the action button had for the item (`actionRestColor()`). The bottom right
-  corner cut off at 45°, as high and wide as the logo (26 px, in full resolution: a pixel per
-  step), black (`drawCornerCut()`). No mark for the
+  in the colour the action button had for the item (`actionRestColor()`).  No mark for the
   way out (any edge, `menuLeavesOn()`); while an arrow is held that leaves it once let go,
   the selection frame is hidden. Under them
   a list, "EXPORT ABLETON PROJECT", "ENTER STORAGE MODE" and "SETTINGS" (off for now: grey, as export with nothing to export, the action button grey with no icon; still selectable), up to three in view at a time (scrolling once it has more; the row level with the logo left clear). Export
@@ -216,7 +215,6 @@ A recording track's waveform area is in the accent colour (a block of black betw
   all left-aligned with the menu's list ("ENTER STORAGE MODE"), the hint ("PRESS ANY KEY TO EXIT"; the messages
   replacing it in its place), the
   title at y 78, the state 32 px under it, the hint on the screen's bottom line (level with the status row's text, the corner logo's row);
-  the bottom right corner cut off as the menu's, dark grey;
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
   COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or pressing any key,
   leaves it with "WAIT" ("EJECTED" after an eject): the app drops everything it knew of the card

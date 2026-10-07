@@ -248,10 +248,7 @@ int splashBottom();                    // y just below the logo (for startup mes
 void drawSmallLogo(int x, int y, uint16_t color);   // the logo small, 55 x 26 px (the menu's corner), top left at (x, y)
 // The corner logo's place (the menu's, storage mode's): bottom left, a block
 // in from the left edge, on the status row's line (its height).
-constexpr int CORNER_LOGO_X = PX, CORNER_LOGO_Y = STATUS_TOP, CORNER_LOGO_H = 26;
-// The bottom right corner cut off at 45 degrees, as high (and wide) as the
-// corner logo, in full resolution (a pixel per step): the menu's black, storage mode's dark grey.
-void drawCornerCut(uint16_t color);
+constexpr int CORNER_LOGO_X = PX, CORNER_LOGO_Y = STATUS_TOP;
 
 // ---- Drawing (ui*.cpp)
 void drawTrack(int i);                   // ui.cpp: row i (a track or the status row), whatever changed
