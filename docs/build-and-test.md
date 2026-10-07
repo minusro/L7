@@ -69,13 +69,13 @@ devices, scenes, clips and copied samples).
 ## Live Set templates (`tools/ableton/make_template.py`)
 
 `ableton_template.h` is made from a set Live saved
-(`docs/design/ableton/L7 Test 1 Project/L7 Test 1.als`, Live 11.3): its first
+(`docs/design/ableton/L7 Test 2 Project/L7 Test 2 Project.als`, Live 11.3): its first
 track (the two Auto Filters kept, other devices left out), a clip slot, a
 clip, a scene and the set around them, with the fields the export fills in
 marked. Remake it after changing that set:
 
 ```sh
-python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 1 Project/L7 Test 1.als" ableton_template.h
+python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 2 Project/L7 Test 2 Project.als" ableton_template.h
 ```
 
 ## UI preview (`tools/ui_preview`)

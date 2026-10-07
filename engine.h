@@ -96,9 +96,24 @@ struct Track {
   // the next one; grainsOn false: set up afresh from the playhead.
   bool stretch = STRETCH_DEFAULT;
   bool grainsOn = false;
-  uint32_t grainSrc[2] = {0, 0};
-  int16_t grainPos[2] = {-1, -1};
+  // Grains 0-1 the two playing; 2-3 the two before a transient, fading out
+  // (grainGain falling) after it; fadeLimit that transient (they play nothing from it on).
+  uint32_t grainSrc[4] = {};
+  int16_t grainPos[4] = {-1, -1, -1, -1};
+  float grainGain[4] = {1, 1, 0, 0};
+  uint32_t fadeLimit = 0;
   int16_t toNextGrain = 0;
+  // Transients in the stream (findTransients(): loop() as it fills the ring):
+  // the stream frames of the next ones, onsetIn written by loop(), onsetOut by
+  // the interrupt as the playhead passes them (stretching: the grains start
+  // afresh on each). The finder's state (loop() only): the windows' slow
+  // average energy, the window being summed (its sum, frames in it, its first
+  // stream frame), the last transient found.
+  static constexpr uint32_t ONSET_QUEUE = 32;
+  uint32_t onsets[ONSET_QUEUE] = {};
+  volatile uint32_t onsetIn = 0, onsetOut = 0;
+  float onsetSlow = 0, onsetSum = 0;
+  uint32_t onsetFrames = 0, onsetWindow = 0, onsetLast = 0;
 
   // Producer side (loop() only)
   uint32_t sample = 0;             // the sample it plays (or records into), by id (storage.h); 0: none
@@ -257,6 +272,15 @@ extern void (*usbAudioWritten)();
 extern volatile int32_t clickFromBeat;
 int masterVolume();
 void takeOutputPeaks(float &left, float &right);
+// Transients in a track's stream (stretching locks its grains to them): the
+// frames written into its ring from stream frame `at` on (loop(), as it fills
+// it); resetTransients(): the stream starts afresh at `at` (none queued; the
+// track not live), dropTransientsFrom(): its frames from `at` on are dropped (a
+// clip switch: the transients found there go too).
+void findTransients(Track &tr, uint32_t at, const uint32_t *frames, uint32_t n);
+extern bool transientLock;                         // (stretching locks its grains to them; off: plain WSOLA, for comparing)
+void resetTransients(Track &tr, uint32_t at);
+void dropTransientsFrom(Track &tr, uint32_t at);
 // The audio interrupt's CPU use (the engine's update, its share of a block's
 // time) since loop() last took it: the average and the most; 0 where it can't be counted.
 void takeEngineLoad(float &avg, float &most);

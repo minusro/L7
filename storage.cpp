@@ -773,6 +773,7 @@ static PlanResult planSwitch(int t, const TrackUnit &u, int32_t q, bool restart)
   p.on = true;
   if (tr.rangePending && (int32_t)(tr.switchS - switchS) >= 0) tr.rangePending = false;   // replaced
   if ((int32_t)(tr.head - switchS) >= 0) {
+    dropTransientsFrom(tr, switchS);
     tr.head = switchS;                           // the old clip's buffered rest: dropped
     applyPlan(t);
   }                                              // otherwise when the stream gets there
@@ -1789,6 +1790,7 @@ static void produce(Track &tr) {
     }
   }
   uint32_t head = tr.head;
+  findTransients(tr, head, chunk, n);             // (stretching locks its grains to them)
   for (uint32_t i = 0; i < n; i++) tr.ring[(head + i) % RING_FRAMES] = chunk[i];
   tr.head = head + n;
   if (n == toRangeEnd) tr.fileFrame = tr.rangeStartFrame();
@@ -1816,6 +1818,7 @@ static void startTrack(int t, int32_t beat0, bool fillNow) {
   tr.s0 = quarterFrames(phaseQ, tr.spbNative);
   tr.tail = tr.s0;
   tr.head = tr.s0;
+  resetTransients(tr, tr.s0);
   tr.fileFrame = tr.rangeFrame(tr.s0);
   if (fillNow)
     while (streamRoom(tr) >= CHUNK_FRAMES) produce(tr);
@@ -1899,6 +1902,8 @@ static void armRecordedLoop(bool endAhead) {
   tr.tail = 0;
   tr.frac = 0;
   tr.head = min(recording.written, RING_FRAMES);  // the beginning, already in the ring
+  resetTransients(tr, 0);
+  findTransients(tr, 0, tr.ring, tr.head);         // (its transients too)
   tr.fileFrame = tr.head;
   tr.startBeat = recording.startBeat + (int32_t)tr.rangeBeats;
   tr.playSpb = tr.spbNative;

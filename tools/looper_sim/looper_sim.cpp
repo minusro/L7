@@ -56,6 +56,7 @@ static bool feedNoise = false;                      // the line input: noise onl
 // snare on 2 and 4, a closed hat on the eighths, over a quiet pad; at drumBpm
 // (0: none), drumBeat its position in beats; each beat's kick (its input sample) in drumKicks.
 static double drumBpm = 0, drumBeat = 0;
+static bool drumClicks = false;                      // (instead: a click on each beat but the bar's first, a 2 kHz burst dying in ~3 ms)
 static bool drumsOverUsb = false;                    // (the drums from the computer, USB audio, the line input silent)
 static float drumLevel = 1;
 static std::vector<uint32_t> drumKicks;
@@ -67,6 +68,8 @@ static float drumSample(uint32_t at) {
   const double secPerBeat = 60 / drumBpm;
   double inBeat = (drumBeat - floor(drumBeat)) * secPerBeat, inEighth = fmod(drumBeat * 2, 1.0) * secPerBeat / 2;
   int beat = (int)floor(drumBeat);
+  if (drumClicks)                                    // (none on a bar's first beat: by a loop's wrap, crossfaded there)
+    return beat % BEATS_PER_BAR == 0 ? 0 : 0.8f * sinf(2 * (float)M_PI * 2000 * (float)inBeat) * expf(-(float)inBeat / 0.003f) * drumLevel;
   drumNoise = drumNoise * 1664525u + 1013904223u;
   float noise = (int32_t)drumNoise / 2147483648.0f;
   float v = 0.6f * sinf(2 * (float)M_PI * 55 * (float)inBeat) * expf(-(float)inBeat / 0.08f);   // kick
@@ -2917,6 +2920,105 @@ for f in os.listdir("."):
     tracks[4].stretch = false;
     engine.monitor = wasMonitor;
     clearTrack(4);
+    simSetTempo(120);
+    runBeats(1);
+  }
+
+  printf("transient locking: each attack once, on time, as sharp as recorded\n");
+  {
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);
+    if (!transport.running) transportStart();
+    simSetTempo(120);
+    runBeats(1);
+    bool wasMonitor = engine.monitor;
+    feedRamp = false; feedSineHz = 0;
+    drumClicks = true;
+    drumBpm = 120;
+    drumBeat = transport.beat + (double)transport.sampleInBeat / transport.spb;
+    recordPress(5);
+    for (int i = 0; i < 4000 && recording.mode != Recording::Running; i++) block();
+    runBeats(3.5);
+    recordPress(5);
+    for (int i = 0; i < 200000 && recording.mode != Recording::Idle; i++) block();
+    drumBpm = 0;
+    drumClicks = false;
+    engine.monitor = false;
+    // Six of our beats' clicks (each beat's start from beatLog): their onsets (ms from the beat) and how
+    // closely each matches `ref`, the click as recorded (the best normalised correlation within 2 ms:
+    // a click played twice, a flam or a smear match less).
+    struct Hits { int beats = 0; double onsetMean = 0, matchMin = 1; std::vector<float> first; };
+    auto listen = [&](const std::vector<float> *ref) {
+      runBeats(1.5);
+      std::vector<float> v;
+      uint32_t from = transport.now;
+      std::vector<uint32_t> starts;
+      int32_t seen = transport.beat;
+      while (starts.size() < 10) {
+        block();
+        for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) v.push_back(outL.data[i]);
+        if (transport.beat != seen) { seen = transport.beat; starts.push_back((uint32_t)beatLog[(uint32_t)seen % BEAT_LOG].now); }
+      }
+      Hits h;
+      const int pre = 44, len = 441;                 // (1 ms before the onset, 10 ms of it)
+      std::vector<double> on;
+      for (size_t k = 1; k + 1 < starts.size(); k++) {   // (each beat's window: from a quarter of a beat before it to three quarters after)
+        int32_t b = (int32_t)(starts[k] - from);
+        int32_t q = (int32_t)(starts[k + 1] - starts[k]) / 4;
+        int32_t lo = b - q, hi = b + 3 * q;
+        if (lo < 0 || hi > (int32_t)v.size()) continue;
+        int32_t am = lo;
+        for (int32_t i = lo; i < hi; i++) if (fabsf(v[i]) > fabsf(v[am])) am = i;
+        float peak = fabsf(v[am]);
+        if (peak < 1000) continue;
+        int32_t at = am;                             // (its onset: back from the peak to where it's quiet)
+        int quiet = 0;
+        for (int32_t i = am; i > lo && quiet < 22; i--) { if (fabsf(v[i]) < 0.1f * peak) quiet++; else { quiet = 0; at = i; } }
+        on.push_back((at - b) * 1000.0 / AUDIO_SAMPLE_RATE_EXACT);
+        std::vector<float> w(v.begin() + std::max<int32_t>(0, at - pre), v.begin() + std::min<int32_t>((int32_t)v.size(), at - pre + len));
+        if (h.first.empty()) h.first = w;
+        if (ref && ref->size() == (size_t)len && w.size() == (size_t)len) {
+          double best = 0;
+          for (int lag = -88; lag <= 88; lag++) {
+            double c = 0, ea = 0, eb = 0;
+            for (int i = 0; i < len; i++) {
+              int j = i + lag;
+              float x = j >= 0 && j < len ? w[j] : 0, y = (*ref)[i];
+              c += x * y; ea += x * x; eb += y * y;
+            }
+            best = std::max(best, c / sqrt(ea * eb + 1));
+          }
+          h.matchMin = std::min(h.matchMin, best);
+        }
+        h.beats++;
+      }
+      for (double x : on) h.onsetMean += x / std::max<size_t>(1, on.size());
+      return h;
+    };
+    tracks[5].stretch = false;
+    simSetTempo(120);
+    Hits base = listen(nullptr);                     // as recorded
+    char m15[260];
+    snprintf(m15, sizeof m15, "the clicks as recorded: %d beats, %+.1f ms from our beats", base.beats, base.onsetMean);
+    check(base.beats >= 5 && base.first.size() == 441, m15);
+    for (float tempo : {120.0f, 96.0f, 80.0f, 150.0f}) {
+      simSetTempo(tempo);
+      tracks[5].stretch = false;                     // (resampled: where each click belongs at this tempo)
+      Hits want = listen(&base.first);
+      tracks[5].stretch = true;
+      transientLock = false;
+      Hits plain = listen(&base.first);
+      transientLock = true;
+      Hits locked = listen(&base.first);
+      printf("  info  %.0f BPM: resampled %+.1f ms (matching %.3f); stretched, not locked: %+.1f ms, matching at least %.3f\n",
+             tempo, want.onsetMean, want.matchMin, plain.onsetMean, plain.matchMin);
+      snprintf(m15, sizeof m15, "%.0f BPM (recorded at 120), locked: the clicks %+.1f ms from our beats (resampled %+.1f), matching the recorded one at least %.3f",
+               tempo, locked.onsetMean, want.onsetMean, locked.matchMin);
+      check(locked.beats >= 5 && fabs(locked.onsetMean - want.onsetMean) < 1.0 && locked.matchMin > 0.98, m15);
+    }
+    tracks[5].stretch = true;
+    tracks[5].stretch = false;
+    engine.monitor = wasMonitor;
+    clearTrack(5);
     simSetTempo(120);
     runBeats(1);
   }

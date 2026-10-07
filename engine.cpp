@@ -244,18 +244,104 @@ static uint32_t placeGrain(const Track &tr, uint32_t natural, uint32_t target) {
   return target + coarse - STRETCH_FINE + bestK;
 }
 
+// ---- Transients (engine.h findTransients()): the energy of each window of
+// TR_WINDOW frames, against the windows' average before it (an exponential one,
+// TR_SLOW a window): TR_RISE times that and over TR_FLOOR, at least TR_GAP
+// frames after the last, is one, placed TR_EARLY frames before its window
+// (an attack starts in it, maybe just before: better a little early than cut).
+static constexpr uint32_t TR_WINDOW = 64, TR_GAP = 2205, TR_EARLY = 32;   // (TR_GAP: 50 ms)
+static constexpr float TR_SLOW = 0.1f, TR_RISE = 8.0f;   // (~9 dB above the last ~15 ms)
+static constexpr float TR_FLOOR = 2 * 180.0f * 180.0f;   // (~-45 dBFS, both channels)
+
+void findTransients(Track &tr, uint32_t at, const uint32_t *frames, uint32_t n) {
+  for (uint32_t i = 0; i < n; i++) {
+    if (tr.onsetFrames == 0) tr.onsetWindow = at + i;
+    uint32_t v = frames[i];
+    float l = (int16_t)(v & 0xFFFF), r = (int16_t)(v >> 16);
+    tr.onsetSum += l * l + r * r;
+    if (++tr.onsetFrames < TR_WINDOW) continue;
+    float e = tr.onsetSum / TR_WINDOW;
+    if (e > TR_FLOOR && e > tr.onsetSlow * TR_RISE && (int32_t)(tr.onsetWindow - tr.onsetLast) >= (int32_t)TR_GAP) {
+      tr.onsetLast = tr.onsetWindow;
+      if (tr.onsetIn - tr.onsetOut < Track::ONSET_QUEUE) {   // (full: this one's left out)
+        tr.onsets[tr.onsetIn % Track::ONSET_QUEUE] = tr.onsetWindow - TR_EARLY;
+        __asm__ volatile("" ::: "memory");
+        tr.onsetIn = tr.onsetIn + 1;
+      }
+    }
+    tr.onsetSlow += (e - tr.onsetSlow) * TR_SLOW;
+    tr.onsetSum = 0;
+    tr.onsetFrames = 0;
+  }
+}
+
+void resetTransients(Track &tr, uint32_t at) {
+  noInterrupts();
+  tr.onsetOut = tr.onsetIn;
+  interrupts();
+  tr.onsetSlow = tr.onsetSum = 0;
+  tr.onsetFrames = 0;
+  tr.onsetLast = at - TR_GAP;
+}
+
+void dropTransientsFrom(Track &tr, uint32_t at) {
+  noInterrupts();
+  while (tr.onsetIn != tr.onsetOut && (int32_t)(tr.onsets[(tr.onsetIn - 1) % Track::ONSET_QUEUE] - at) >= 0)
+    tr.onsetIn = tr.onsetIn - 1;
+  interrupts();
+  tr.onsetSum = 0;
+  tr.onsetFrames = 0;                              // (the window starts again where the stream goes on)
+}
+
+// Transient locking: a grain reading towards the next transient fades out over
+// LOCK_FADE_IN frames before it (it plays nothing past it: no attack early, or
+// twice); when the playhead reaches it, the grains start afresh on it (one at
+// full level from the transient on, its partner rising: the attack as it was,
+// on time) and the ones before fade out over LOCK_FADE_OUT samples. A transient
+// the playhead is already LOCK_STALE frames past (a start part way in): passed
+// over.
+static constexpr int LOCK_FADE_IN = 32, LOCK_FADE_OUT = 64;
+static constexpr int32_t LOCK_STALE = 512;
+bool transientLock = true;
+static inline float beforeLimit(uint32_t f, uint32_t limit) {   // (a grain's frame f, the transient at limit)
+  int32_t d = (int32_t)(limit - f);
+  return d >= LOCK_FADE_IN ? 1.0f : d <= 0 ? 0.0f : d * (1.0f / LOCK_FADE_IN);
+}
+
+// The grains afresh from the playhead: two, both from it (their windows
+// summing to 1), the next one due `toNext` samples on.
+static inline void grainsFrom(Track &tr, uint32_t tail, int o) {
+  tr.grainPos[0] = STRETCH_HOP + o;
+  tr.grainSrc[0] = tail - tr.grainPos[0];
+  tr.grainPos[1] = o;
+  tr.grainSrc[1] = tail - o;
+  tr.grainGain[0] = tr.grainGain[1] = 1;
+  tr.toNextGrain = STRETCH_HOP - o;
+}
+
 // The track's sample now, stretched (its playhead at tail, moving at speed).
 static inline void stretchSample(Track &tr, uint32_t tail, double speed, float &sl, float &sr) {
-  if (!tr.grainsOn) {                              // afresh: two grains, both from the playhead on (their
-    // windows summing to 1), the next one due part way through (each track at
-    // another point of the hop: their searches spread over the blocks).
-    const int o = (int)((&tr - tracks) * STRETCH_HOP / NUM_TRACKS);
-    tr.grainPos[0] = STRETCH_HOP + o;
-    tr.grainSrc[0] = tail - tr.grainPos[0];
-    tr.grainPos[1] = o;
-    tr.grainSrc[1] = tail - o;
-    tr.toNextGrain = STRETCH_HOP - o;
+  if (!tr.grainsOn) {                              // afresh: each track at another point of the hop (their
+    grainsFrom(tr, tail, (int)((&tr - tracks) * STRETCH_HOP / NUM_TRACKS));   // searches spread over the blocks)
+    tr.grainPos[2] = tr.grainPos[3] = -1;
     tr.grainsOn = true;
+  }
+  // The next transient: reached, the grains from it (the ones before fading out).
+  bool ahead = tr.onsetOut != tr.onsetIn;
+  uint32_t onset = ahead ? tr.onsets[tr.onsetOut % Track::ONSET_QUEUE] : 0;
+  while (ahead && (int32_t)(tail - onset) >= 0) {
+    if ((int32_t)(tail - onset) < LOCK_STALE && transientLock) {
+      for (int g = 0; g < 2; g++) {
+        tr.grainSrc[2 + g] = tr.grainSrc[g];
+        tr.grainPos[2 + g] = tr.grainPos[g];
+        tr.grainGain[2 + g] = 1;
+      }
+      tr.fadeLimit = onset;
+      grainsFrom(tr, tail, 0);
+    }
+    tr.onsetOut = tr.onsetOut + 1;
+    ahead = tr.onsetOut != tr.onsetIn;
+    onset = ahead ? tr.onsets[tr.onsetOut % Track::ONSET_QUEUE] : 0;
   }
   if (tr.toNextGrain <= 0) {                       // (the older one has just ended)
     int old = tr.grainPos[0] >= 0 ? 0 : 1, fresh = 1 - old;
@@ -266,16 +352,30 @@ static inline void stretchSample(Track &tr, uint32_t tail, double speed, float &
     tr.toNextGrain = STRETCH_HOP;
   }
   sl = sr = 0;
-  for (int g = 0; g < 2; g++) {
+  for (int g = 0; g < 4; g++) {
     int pos = tr.grainPos[g];
     if (pos < 0) continue;
-    uint32_t v = tr.ring[(tr.grainSrc[g] + pos) % RING_FRAMES];
+    uint32_t f = tr.grainSrc[g] + pos;
     float w = stretchW(pos);
+    if (g < 2) {
+      if (ahead && transientLock) w *= beforeLimit(f, onset);   // (not past the next transient)
+    } else {                                       // (the ones before the last transient: fading out)
+      w *= tr.grainGain[g] * beforeLimit(f, tr.fadeLimit);
+      tr.grainGain[g] -= 1.0f / LOCK_FADE_OUT;
+      if (tr.grainGain[g] <= 0) pos = STRETCH_GRAIN;
+    }
+    uint32_t v = tr.ring[f % RING_FRAMES];
     sl += w * (int16_t)(v & 0xFFFF);
     sr += w * (int16_t)(v >> 16);
     tr.grainPos[g] = pos + 1 < STRETCH_GRAIN ? pos + 1 : -1;
   }
   tr.toNextGrain--;
+}
+
+// Not stretching: the transients the playhead has passed, let go.
+static inline void passTransients(Track &tr, uint32_t tail) {
+  while (tr.onsetOut != tr.onsetIn && (int32_t)(tail - tr.onsets[tr.onsetOut % Track::ONSET_QUEUE]) >= 0)
+    tr.onsetOut = tr.onsetOut + 1;
 }
 
 // The engine's CPU use (takeEngineLoad()).
@@ -497,9 +597,11 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
     if (ahead >= 2 && ahead <= (int32_t)RING_FRAMES) {
       tr.tail = expected;
       tr.frac = 0;
-      if (!tr.live) memset(tr.curMix, 0, sizeof tr.curMix);   // joining: glides in from silence
+      if (!tr.live) {                              // joining: glides in from silence; stretching, its grains from here
+        memset(tr.curMix, 0, sizeof tr.curMix);    // (playing already: they go on through the playhead's snap)
+        tr.grainsOn = false;
+      }
       tr.live = true;
-      tr.grainsOn = false;                           // (stretching: its grains from here)
       tr.armed = false;
     } else if (!tr.live) {
       tr.armed = false;                          // missed its start: loop() refills
@@ -679,6 +781,7 @@ void LooperEngine::update() {
         if (tr.stretch) {
           stretchSample(tr, tail, speed[t], sl, sr);
         } else {
+          passTransients(tr, tail);
           uint32_t a = tr.ring[tail % RING_FRAMES], b = tr.ring[(tail + 1) % RING_FRAMES];
           float f = (float)tr.frac;
           float al = (int16_t)(a & 0xFFFF), ar = (int16_t)(a >> 16);

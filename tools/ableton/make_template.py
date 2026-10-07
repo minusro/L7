@@ -151,6 +151,9 @@ def main(src, dst):
     clip = re.sub(r'<OriginalCrc Value="[^"]*"', '<OriginalCrc Value="0"', clip)
     clip = re.sub(r'<DefaultSampleRate Value="[^"]*"', '<DefaultSampleRate Value="44100"', clip)
     clip = re.sub(r'<RelativePathType Value="[^"]*"', '<RelativePathType Value="3"', clip)
+    # Warped in Complex mode (4: the clip at its own pitch whatever the tempo, as L7 stretches it).
+    assert len(re.findall(r'<WarpMode Value="[^"]*"', clip)) == 1
+    clip = re.sub(r'<WarpMode Value="[^"]*"', '<WarpMode Value="4"', clip)
     # The warp markers: one at every bar line of the sample (field K).
     i = clip.index('<WarpMarkers>') + len('<WarpMarkers>')
     j = clip.index('</WarpMarkers>', i)

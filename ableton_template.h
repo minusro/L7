@@ -2425,7 +2425,7 @@ PROGMEM static const char ALS_CLIP_SLOT[] =
     "<UserOnsets />\n"
     "<HasUserOnsets Value=\"false\" />\n"
     "</Onsets>\n"
-    "<WarpMode Value=\"3\" />\n"
+    "<WarpMode Value=\"4\" />\n"
     "<GranularityTones Value=\"30\" />\n"
     "<GranularityTexture Value=\"65\" />\n"
     "<FluctuationTexture Value=\"25\" />\n"

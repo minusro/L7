@@ -90,6 +90,53 @@ Measured in the simulator (realistic card, 120 BPM, all 8 tracks switching, befo
 new samples heard ~230 ms after the request (max ~280 ms) with no silence;
 before this design a switch left 1–2 beats of silence (~770 ms average).
 
+## Time stretching
+
+Every track keeps its own pitch whatever the tempo (`Track::stretch`, on for
+new tracks: `STRETCH_DEFAULT`, config.h; off: resampled, its pitch with the
+tempo, as before). The playhead (`tail`, `frac`) moves exactly as when
+resampling (sync, starts, switches, ranges, recording all as ever); only the
+sound is made differently (engine.cpp `stretchSample()`):
+* WSOLA: grains of 1024 frames (23 ms), a new one every 512 output samples,
+  Hann-windowed (two overlapping always sum to 1), each read at speed 1. A new
+  grain comes from around where the playhead says (centred: its middle where
+  the playhead will be by then), within ±256 frames, where it best continues
+  the grain before (`placeGrain()`): the normalised cross-correlation of its
+  first half with where the grain before would go on, on one signal (left +
+  right, or left − right where that's louder: a mono sum loses what's
+  opposite), every 8th frame (energies from running sums), then to the frame
+  (±5); the nearest lag within 95 % of the best (a periodic sound matches as
+  well a period further). At the tempo recorded that's where the grain before
+  goes on: the stream as it is. Each track's grains are due at another point
+  of the hop (their searches spread over the blocks).
+* The streamer keeps `STRETCH_HISTORY` (1024) frames behind the playhead in
+  each ring (`STREAM_FRAMES` ahead at most; `streamRoom()`): a grain reads up
+  to ~515 frames back at half speed, ~710 at an eighth.
+* A track's grains start afresh when it starts playing (not when the playhead
+  snaps to its beat each beat: they go on through it).
+* Transients (`findTransients()`, loop(), as the streamer writes each chunk;
+  from a recording's own frames when it starts playing): each window of 64
+  frames' energy against the windows' average before it (exponential, 0.1 a
+  window): 8 times that (~9 dB) and over ~-45 dBFS, 50 ms after the last at
+  least, is one, marked 32 frames before its window. A queue per track (32),
+  emptied as the playhead passes, cleared when its stream starts afresh,
+  trimmed when a clip switch drops what's buffered.
+* Transient locking (`transientLock`): grains fade out over the 32 frames
+  before the next transient and play nothing past it (no attack early, or
+  twice); when the playhead reaches it, the grains start afresh there (one at
+  full level from it, its partner rising: the attack as recorded, on time),
+  the ones before fading out over 64 samples.
+* The simulator: a 440 Hz loop recorded at 120 BPM stays 440 Hz at 96 and 150,
+  its level within 2 %, no clicks; drums on our beats; clicks recorded at 120
+  played at 96, 80 and 150: locked, each as recorded (correlation 0.995, as
+  at the tempo recorded) and on time (within 0.8 ms of where resampling puts
+  it); not locked, 0.97-0.99 and up to 4 ms off; a fuzz session all stretched.
+* On the M8 (`LOG_ENGINE_LOAD`: the engine's CPU use every 5 s): 7 stretched
+  tracks ~24 % on average, ~31 % at most (the first version, with a search
+  30 times dearer, ~44 %, single blocks over 100 %: the card timing out).
+* The Live Set export warps the clips in Complex mode (`WarpMode 4`), the
+  same: their own pitch at Live's tempo.
+
 ## Metronome
 
 A setting (the session's `metro=`; SHIFT+A on the tempo cell): 0 (off), A
