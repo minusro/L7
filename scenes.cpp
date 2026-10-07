@@ -17,8 +17,9 @@ namespace looper {
 struct SceneInfo {
   char magic[4];                                 // "M8SC"
   uint32_t version;
-  float tempo;                                   // the tempo when saved (projects keep one tempo now:
-                                                 // an older project's comes from its current scene's)
+  float tempo;                                   // the scene's saved tempo: the one it was made at, then its latest
+                                                 // recording's (sceneSavedTempo()); before, the tempo when it was last
+                                                 // saved (an older project's own tempo comes from its current scene's)
   TrackUnit units[NUM_TRACKS];
   uint8_t row, cell;                             // (unused: the selection a scene kept, before it stopped keeping one)
 };
@@ -27,8 +28,8 @@ struct SceneList {
   uint16_t version, count, current;
   uint8_t row, cell;                             // (unused: the selection a project kept, before it stopped keeping one)
   uint16_t slot[MAX_SCENES];                     // record slot of each scene, in list order
-  uint16_t recTempo10;                           // the tempo its last recording was made at, tenths of a BPM (out of MIN_BPM-MAX_BPM: none;
-                                                 // these 2 bytes were a project's master volume and a spare before)
+  uint16_t recTempo10;                           // (unused: the tempo its last recording was made at, before each scene kept its own;
+                                                 // these 2 bytes were a project's master volume and a spare before that)
   uint16_t tempo10;                              // the project's tempo, tenths of a BPM (0: not kept yet, older files)
 };
 static constexpr uint32_t BLOCK = 512;
@@ -55,6 +56,10 @@ static bool holding = false;                     // stepping with the change hel
 static int target = -1;                          // where the held steps got to (-1: none)
 static bool clipFull = false;
 static int8_t clipsKnown = -1;                   // projectHasClips()'s answer for the stored scenes (-1: to find out)
+// The scene on the looper: its saved tempo (0: none yet, on 0* or N+1*: made
+// a scene, it takes the tempo then, or its recording's); a resampling's,
+// waiting for the scene it moves to (sceneFromResample()).
+static float sceneTempo = 0, resampleTempo = 0;
 
 int sceneCurrent() { return target >= 0 ? target : list.current; }
 bool sceneHeld() { return target >= 0; }
@@ -84,7 +89,7 @@ static SceneInfo emptyScene() {
 
 static SceneInfo snapshot() {
   SceneInfo s = emptyScene();
-  s.tempo = getTempo();
+  s.tempo = sceneTempo > 0 ? sceneTempo : getTempo();
   for (int t = 0; t < NUM_TRACKS; t++) s.units[t] = unitOf(t);
   return s;
 }
@@ -159,6 +164,7 @@ static void commit() {
       return;
     }
     list.current = pos;
+    if (sceneTempo <= 0) sceneTempo = getTempo();   // made now: the tempo now (a recording made it: its own, already)
   }
   int slot = list.slot[list.current - 1];
   if (recordSlot >= 0 && recordSlot != slot) writeRecordNow();   // another scene's change: out first
@@ -209,6 +215,7 @@ static bool go(int pos, bool quick = false) {
   list.current = pos;
   listDirty = true;
   SceneInfo s = sceneAt(min(pos, (int)list.count));   // N+1*: a copy of N
+  sceneTempo = pos >= 1 && pos <= list.count ? s.tempo : 0;   // (0* and N+1*: none until made a scene)
   apply(s, quick);
   return true;
 }
@@ -275,6 +282,7 @@ bool scenePaste() {
   record = clip;
   recordSlot = slot;
   list.current = pos;
+  sceneTempo = clip.tempo;                         // (the scene moved: its own)
   apply(clip, true);
   return true;
 }
@@ -288,6 +296,7 @@ bool sceneDuplicate() {
   int slot = insertAt(pos);
   if (slot < 0) return false;
   if (recordSlot >= 0) writeRecordNow();
+  s.tempo = sceneTempo = getTempo();              // (a new scene: made at the tempo now)
   record = s;
   recordSlot = slot;
   list.current = pos;
@@ -298,7 +307,8 @@ bool sceneFromResample(int t) {
   takeHeld();
   commit();                                        // (the current scene, the resampling on it)
   SceneInfo from = snapshot(), to = emptyScene();
-  to.tempo = from.tempo;
+  to.tempo = resampleTempo > 0 ? resampleTempo : getTempo();   // (made by the resampling: its tempo)
+  resampleTempo = 0;
   to.units[t] = from.units[t];                     // (on the same track)
   from.units[t] = emptyScene().units[t];
   for (int u = 0; u < NUM_TRACKS; u++)              // the muted clips come along, still muted (and stay here too)
@@ -319,6 +329,7 @@ bool sceneFromResample(int t) {
   record = to;
   recordSlot = slot;
   list.current = pos;
+  sceneTempo = to.tempo;
   apply(to, true);                                 // on the next beat
   return true;
 }
@@ -540,6 +551,8 @@ static bool openAs(int p, bool apply_) {
   listDirty = false;
   changed = false;
   SceneInfo s = sceneAt(min((int)list.current, (int)list.count));   // N+1*: a copy of N
+  sceneTempo = list.current >= 1 && list.current <= list.count ? s.tempo : 0;
+  resampleTempo = 0;
   float tempo = list.tempo10 ? list.tempo10 / 10.0f : s.tempo > 0 ? s.tempo : getTempo();
   if (!list.tempo10) {
     list.tempo10 = tenths(tempo);
@@ -580,16 +593,19 @@ bool projectScene(int p, int pos, TrackUnit *units) {
   return true;
 }
 
-void projectRecorded(float bpm) {
-  uint16_t t = tenths(bpm);
-  if (t == list.recTempo10) return;
-  list.recTempo10 = t;
-  listDirty = true;
+void sceneRecorded(float bpm, bool resample) {
+  if (resample) {                                  // (it moves to a scene of its own: that one's)
+    resampleTempo = bpm;
+    return;
+  }
+  sceneTempo = bpm;
+  if (list.current >= 1 && list.current <= list.count) changed = true;   // (saved with the scene; 0*, N+1*: it's made a scene with it)
 }
 
-float projectRecordingTempo() {
-  float b = list.recTempo10 / 10.0f;
-  return b >= MIN_BPM && b <= MAX_BPM ? b : 0;   // (none kept, or an older file's other use of the field)
+float sceneSavedTempo() {
+  float b = list.current >= 1 && list.current <= list.count ? sceneTempo
+          : list.current == list.count + 1 && list.count ? sceneAt(list.count).tempo : 0;   // (N+1*: the copy of N's)
+  return b >= MIN_BPM && b <= MAX_BPM ? b : 0;
 }
 
 void projectTempoChanged() {

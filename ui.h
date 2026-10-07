@@ -207,11 +207,10 @@ int menuFirstEmptySlot();                // the first slot with no project (-1: 
 void menuSelectSlot(int k);              // the menu's selection on card k
 void menuNoteLoad(int from);             // a project just loaded from the menu, `from` the one before: its card flashing until it comes in
 bool menuLoadPending();                  // a project loaded from the menu hasn't come in yet (playing: its switch point): the menu can't be left meanwhile
-// Switching screens, each one's selection is where it was last left. The
-// menu's first time (menuVisited() false), opened off an edge (key: the
-// arrow): menuLand() puts its selection on its nearest place that way, as if
-// the screens wrapped round.
-bool menuVisited();
+// Switching screens, each one's selection is where it was last left; opened
+// off the looper's edge (key: the arrow), menuLand() puts the menu's on its far
+// edge (UP: its bottom item; DOWN: its top card row, at its own column;
+// LEFT/RIGHT: its right / left side, in its own row).
 void menuLand(uint8_t key);
 bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: RIGHT off its right edge (a card row's right end, a list item) or UP off its top (the top card row); a project loaded
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)

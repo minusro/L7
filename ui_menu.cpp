@@ -16,8 +16,9 @@
 // card row and on into the list (back up: to the column it came from, on the
 // I-L row); LEFT/RIGHT along a card row (not on to another). Switching
 // screens, each screen's selection is where it was last left (row and
-// column); only the menu's very first one, off an edge, lands as if it had
-// wrapped round (menuLand()).
+// column); off an edge, it lands on the other screen's far edge (UP/DOWN: its
+// bottom / top row, at the column it was left on; LEFT/RIGHT: its right / left
+// side, in the row it was left on: menuLand(), and input.cpp's leaveMenu()).
 //
 // The ground: dark grey (MENU_BG), the whole screen's.
 // A card: a block shape, the bottom right corner cut diagonally (3 blocks),
@@ -53,7 +54,6 @@ static void dropStaleExport() {
 static int listTop = 0;                          // the list's first item in view
 
 static bool shown = false;
-static bool visited = false;                      // the menu has been shown (or its selection restored): it has one to go back to
 static int menuSel = 0;                          // the selected item
 static int cardCol = 0;                          // the card column last selected (UP from the list goes back to it)
 static bool onStatus = false;                    // the selection is on the status row (selected = STATUS_ROW meanwhile)
@@ -385,74 +385,34 @@ bool menuKeys(uint8_t pressed) {
   return movedHere;
 }
 
-// ---- Switching screens off an edge: the selection lands as if it had
-// wrapped round, on the other screen's nearest place on the side it comes in
-// from (UP off the looper's top: the menu's bottom item; DOWN off its bottom:
-// the menu's top card row; LEFT off its left edge: the menu's right side (its
-// right card column, the list); RIGHT: its left side; and the same from the
-// menu): the nearest by their centres, across (UP/DOWN) or down (LEFT/RIGHT).
-// A press back the other way from where it landed returns where it came from.
-
-// A menu item's centre, px (a list item: where it is with the list as scrolled now).
-static void itemCentre(int k, int &x, int &y) {
-  Shape s = itemShape(k);
-  x = (2 * s.x + s.w) * PX / 2;
-  y = (2 * s.y + s.h) * PX / 2;
-}
-
-// A looper cell's centre, px, and the cell in a row's own terms (a span: 0; the status row: from the scene cell).
-static int mainCellOf(int row, int cell) {
-  int c = min(cell, cellCount(row) - 1);
-  return row == STATUS_ROW ? max(c, SCENE_CELL) : c;
-}
-static Cell mainCellRect(int row, int cell) {
-  if (row == STATUS_ROW) return cell == SCENE_CELL ? SCENE_BOX : cell == CLOCK_CELL ? CLOCK_BOX : TEMPO_BOX;
-  return cellRect(row, cell);
-}
-static void mainCentre(int row, int cell, int &x, int &y) {
-  Cell r = mainCellRect(row, mainCellOf(row, cell));
-  x = r.x + r.w / 2;
-  y = rowTop(row) + (row == STATUS_ROW ? STATUS_H : ROW_BAND) / 2;
-}
-
-// Into the menu off the looper's edge with `key`: from the looper's selection (mainRow/mainCell).
+// ---- Switching screens off an edge: into the menu, onto its far edge (UP
+// off the looper's top: the menu's bottom item, the list's last; DOWN off its
+// bottom: the menu's top card row, at its own column, the card column last
+// selected; LEFT off the looper's left edge: the menu's right side, RIGHT: its
+// left side, in its own row, where its selection was: a card row, a list item,
+// or its status row).
 static void landInMenu(uint8_t key) {
-  int k = -1;
-  int x, y;
-  mainCentre(mainRow, mainCell, x, y);
-  int best = 1 << 30, top = listTop;
-  for (int i = 0; i < ITEMS; i++) {
-    bool list = i >= CARDS;
-    bool side = key == m8::BTN_UP ? i == ITEMS - 1 :                      // (wrapped: the menu's bottom)
-                key == m8::BTN_DOWN ? i < COLS :                          // its top card row
-                key == m8::BTN_LEFT ? list || i % COLS == COLS - 1 :      // its right side
-                list || i % COLS == 0;                                    // its left side
-    if (!side) continue;
-    if (list) scrollList(i - CARDS, 0);          // (its place with it in view)
-    int ix, iy;
-    itemCentre(i, ix, iy);
-    int d = key == m8::BTN_UP || key == m8::BTN_DOWN ? abs(ix - x) : abs(iy - y);
-    if (d < best) { best = d; k = i; }
+  const bool vertical = key == m8::BTN_UP || key == m8::BTN_DOWN;
+  if (onStatus && vertical) {                      // (off its status row, onto its items)
+    onStatus = false;
+    statusCell = selectedCellIn(STATUS_ROW);
+    selected = mainRow;
+    selectedCell = mainCell;
   }
-  listTop = top;                                 // (as it was: scrolled to the one chosen below)
-  if (k < 0) return;
+  if (onStatus) {                                  // its status row: its far cell
+    selectedCell = key == m8::BTN_LEFT ? TEMPO_CELL : SCENE_CELL;
+    movedHere = true;
+    return;
+  }
+  int k = menuSel;
+  if (key == m8::BTN_UP) k = ITEMS - 1;
+  else if (key == m8::BTN_DOWN) k = cardCol;
+  else if (k < CARDS) k = k / COLS * COLS + (key == m8::BTN_LEFT ? COLS - 1 : 0);   // (a list item spans the side: as it is)
   menuSel = k;
-  if (k < CARDS) {
-    cardCol = k % COLS;
-  } else {
-    scrollList(k - CARDS, 0);
-    int x, y, best = 1 << 30;                    // (UP from the list later: the card column nearest)
-    mainCentre(mainRow, mainCell, x, y);
-    for (int c = 0; c < COLS; c++) {
-      int cx, cy;
-      itemCentre(c, cx, cy);
-      if (abs(cx - x) < best) { best = abs(cx - x); cardCol = c; }
-    }
-  }
+  if (k < CARDS) cardCol = k % COLS;
+  else scrollList(k - CARDS, 0);
   movedHere = true;
 }
-
-bool menuVisited() { return visited; }
 
 void menuLand(uint8_t key) {
   if (!shown || !key) return;
@@ -521,7 +481,6 @@ void closeMenu() {
   if (!shown) return;
   if (exportNameAt <= 0) exportText[0] = 0;      // ("EXPORT FAILED" goes with the menu: exporting can be tried again)
   if (onStatus) statusCell = selectedCellIn(STATUS_ROW);
-  visited = true;
   selected = mainRow;
   selectedCell = mainCell;
   shown = false;
@@ -536,6 +495,5 @@ void restoreMenu(int state) {
   menuSel = constrain(sel, 0, ITEMS - 1);         // (saved on the status row, before it was hidden: the list's end)
   if (menuSel < CARDS) cardCol = menuSel % COLS;
   if (menuSel >= CARDS) scrollList(menuSel - CARDS, 0);
-  visited = true;
   if (state >= 1000) openMenu();
 }
