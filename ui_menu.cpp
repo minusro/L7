@@ -210,6 +210,13 @@ static int shownLoaded() {
   return now;
 }
 
+// The card with the play icon (the clock running; its letter 2 blocks left to
+// make room): the project heard, the one before until the new one comes in.
+static int playingCard() {
+  if (loadFrom >= 0 && !sceneChangeWaiting()) loadFrom = -1;
+  return loadFrom >= 0 ? loadFrom : projectCurrent();
+}
+
 static void drawItem(int k) {
   if (!listInView(k)) return;
   auto &t = board.tft();
@@ -226,7 +233,7 @@ static void drawItem(int k) {
       if (rowSpan(s, 2, r, c0, c1, true)) t.fillRect((c1 + 1) * PX, r * PX, PX, PX, frame);
     }
     uint16_t color = PROJECT_COLORS[k];
-    bool filled = projectFilled(k), loaded = k == shownLoaded();
+    bool filled = projectFilled(k), loaded = k == shownLoaded(), playing = k == playingCard() && transport.running;
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
     uint16_t letter = loaded ? BG : filled || (sel && actionHeld()) ? color : DIM;   // (an empty slot's: grey, as its outline; its colour while an action button is held)
     if (loaded) {                                 // the loaded one: filled
@@ -243,11 +250,11 @@ static void drawItem(int k) {
     }
     const Glyph *g = glyphFor((char)('A' + k));
     if (g) {
-      int w = glyphWidth(*g), x0 = s.x + (s.w - w) / 2 - (loaded && transport.running ? 2 : 0), y0 = s.y + (s.h - 5) / 2;   // (with the play icon: both 2 blocks left)
+      int w = glyphWidth(*g), x0 = s.x + (s.w - w) / 2 - (playing ? 2 : 0), y0 = s.y + (s.h - 5) / 2;   // (with the play icon: both 2 blocks left)
       for (int r = 0; r < 5 && g->rows[r]; r++)
         for (int c = 0; c < w; c++)
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
-      if (loaded && playPulse()) {                // the clock running: a small play icon right of the letter, as black, on the first half of each beat
+      if (playing && playPulse()) {               // the clock running: a small play icon right of the letter, in the letter's colour, on the first half of each beat
         static const char *const PLAY[5] = {"#..", "##.", "###", "##.", "#.."};
         for (int r = 0; r < 5; r++)
           for (int c = 0; c < 3; c++)
@@ -295,11 +302,11 @@ static bool playPulse() {
 // What an item shows: redrawn when it changes.
 static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
-  int loaded = shownLoaded();
+  int loaded = shownLoaded(), playing = playingCard();
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == loaded) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
          (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
-         (uint32_t)(k == loaded && transport.running) << 24 | (uint32_t)(k == loaded && playPulse()) << 25;
+         (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25;
 }
 
 void drawMenu() {
