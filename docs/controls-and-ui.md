@@ -216,6 +216,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   all left-aligned with the menu's list ("ENTER STORAGE MODE"), the hint ("PRESS ANY KEY TO EXIT"; the messages
   replacing it in its place), the
   title at y 78, the state 32 px under it, the hint on the screen's bottom line (level with the status row's text, the corner logo's row);
+  the bottom right corner cut off as the menu's, dark grey;
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
   COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or pressing any key,
   leaves it with "WAIT" ("EJECTED" after an eject): the app drops everything it knew of the card
