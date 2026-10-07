@@ -3,7 +3,7 @@
 // edges; left by loading a project (A on the loaded one:
 // just back), or any arrow off its edges (menuLeavesOn()). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
-// "ENTER STORAGE MODE", "SETTINGS" (no action yet); it scrolls once it has
+// "ENTER STORAGE MODE", "SETTINGS" (off for now, grey); it scrolls once it has
 // more than three. A runs
 // the item's action when let go. On a slot, A loads its project (an
 // empty one: a new project there), the menu staying open; on the loaded
@@ -39,7 +39,7 @@ uint32_t uiGeneration = 1;
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
 static constexpr int CARDS = PROJECTS, LIST = 3, LIST_ROOM = 3, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE", "SETTINGS"};   // (settings: no action yet)
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE", "SETTINGS"};   // (settings: off for now)
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), kept (the menu closed and opened again,
 // storage mode too) until the project changes (projectEdits()) or another one
@@ -232,7 +232,7 @@ static void drawItem(int k) {
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
     fillRing(s, LIST_SPACE, 0, MENU_BG);
-    bool off = k - CARDS == 0 && !projectHasClips();   // export: nothing to export (no clips, or the dummy project)
+    bool off = (k - CARDS == 0 && !projectHasClips()) || k - CARDS == 2;   // export: nothing to export (no clips, or the dummy project); settings: off for now
     const char *label = k == CARDS && exportText[0] ? exportText : LABELS[k - CARDS];
     uint16_t ink = off ? DIM : sel ? INK : LIGHT;
     if (k == CARDS && exportText[0] && exportNameAt > 0 && exportFor >= 0) {   // "SAVED AS " grey, the name in the project's colour
@@ -254,7 +254,8 @@ uint16_t menuActionColor() {
   dropStaleExport();
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
-  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode, settings: system-level)
+  if (menuSel - CARDS == 2) return DIM;            // settings: off for now (grey)
+  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode: system-level)
   return projectHasClips() && !exportText[0] ? ACCENT : DIM;   // export: grey with nothing to export, or while its label shows
 }
 
