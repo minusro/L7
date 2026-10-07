@@ -110,7 +110,7 @@ void drawTag(int x, int y, const char *text, TagStyle style, uint16_t ink, uint1
   for (int py = 0; py < h; py++)
     for (int px = 0; px < w; px++) {
       bool edge = onFrame(px, py, w, h);
-      bool corner = (px < PX || px >= w - PX) && (py < PX || py >= h - PX);
+      bool corner = (px < PX || px >= w - PX) && py < PX;   // (the top corners cut, the bottom ones square)
       box[py * w + px] = corner || style == TAG_PLAIN ? bg : style == TAG_INVERTED || edge ? ink : bg;
     }
   putText(w, (w / PX - textWidth(text) / PX) / 2, (TAG_PAD + PX) / PX, text, style == TAG_INVERTED ? bg : ink);

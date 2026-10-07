@@ -181,7 +181,7 @@ int textWidth(const char *text);
 // Text at (x, y) (top left), on bg: its box is drawn whole (no flash), as
 // wide as the text, or `width` px if wider (the rest bg).
 void drawText(int x, int y, const char *text, uint16_t ink, uint16_t bg, int width = 0);
-// A tag: text in a box with rounded (cut) corners, a block of space around
+// A tag: text in a box with its top corners cut (the bottom ones square), a block of space around
 // the text and a block of edge: plain (no box), outlined, or inverted (the
 // box in ink, the text in bg). TAG_H px tall; at least `width` px wide.
 enum TagStyle { TAG_PLAIN, TAG_OUTLINE, TAG_INVERTED };
