@@ -3,7 +3,8 @@
 // edges; left by loading a project (A on the loaded one:
 // just back), or any arrow off its edges (menuLeavesOn()). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
-// "ENTER STORAGE MODE"; it scrolls once it has more than three. A runs
+// "ENTER STORAGE MODE", "SETTINGS" (no action yet); it scrolls once it has
+// more than three. A runs
 // the item's action when let go. On a slot, A loads its project (an
 // empty one: a new project there), the menu staying open; on the loaded
 // project's card, A closes the menu; with SHIFT, cuts the project, or pastes
@@ -11,7 +12,7 @@
 // the clock; loading a project (or making a new one) starts it.
 //
 // Items: the cards 0-11 (A-L, rows of four, top first: A-D on top, I-L
-// above the list), then the list's 12 and 13. UP/DOWN go card row to
+// above the list), then the list's 12-14. UP/DOWN go card row to
 // card row and on into the list (back up: to the column it came from, on the
 // I-L row); LEFT/RIGHT along a card row (not on to another). Switching
 // screens off an edge, the selection lands as if it had wrapped round
@@ -37,8 +38,8 @@ uint32_t uiGeneration = 1;
 
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
-static constexpr int CARDS = PROJECTS, LIST = 2, LIST_ROOM = 3, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE"};
+static constexpr int CARDS = PROJECTS, LIST = 3, LIST_ROOM = 3, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE", "SETTINGS"};   // (settings: no action yet)
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), kept (the menu closed and opened again,
 // storage mode too) until the project changes (projectEdits()) or another one
@@ -253,7 +254,7 @@ uint16_t menuActionColor() {
   dropStaleExport();
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
-  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode: system-level)
+  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode, settings: system-level)
   return projectHasClips() && !exportText[0] ? ACCENT : DIM;   // export: grey with nothing to export, or while its label shows
 }
 
