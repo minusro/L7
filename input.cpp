@@ -127,6 +127,9 @@ static uint32_t armedAt = 0;
 static constexpr uint32_t LONG_PRESS_MS = 600;
 
 static bool nextSceneArmed = false;               // A pressed on the scene cell: the next scene once it's let go
+// UP / DOWN between the tracks and the status row: each keeps its own column,
+// the one it was last left on (-1: none yet; the nearest then).
+static int trackColumn = -1, statusColumn = -1;
 // Swipe to mute / solo: A pressed on a track with a clip mutes or unmutes it;
 // still held, UP / DOWN (each tap, and a held one's repeats) step a track up /
 // down (wrapping from the top track to the bottom one and back, not onto the
@@ -670,10 +673,17 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     // (a fresh press): the menu, once let go.
     if (pressed & m8::BTN_DOWN && pos < ROWS - 1) selected = rowAtPos(pos + 1);
     else if ((pressed & m8::BTN_DOWN) && pos == ROWS - 1 && !repeat) menuOnRelease = m8::BTN_DOWN;
-    // To or from the status row: the cell below / above, the status row's having the menu cell to the left of the tracks' first.
+    // To or from the status row: the column that row was last left on (the
+    // tracks' and the status row's each their own); the first time, the cell
+    // below / above, the status row's having the menu cell to the left of the tracks' first.
     // (From an empty track, its one cell: the column kept for the rows with three, not that cell's.)
-    if (selected == STATUS_ROW && row != STATUS_ROW) selectedCell = min(selectedCell, CELLS - 1) + 1;
-    else if (row == STATUS_ROW && selected != STATUS_ROW) selectedCell = max(at - 1, 0);
+    if (selected == STATUS_ROW && row != STATUS_ROW) {
+      trackColumn = selectedCell;                  // (the column kept, as on an empty track)
+      selectedCell = statusColumn >= 0 ? statusColumn : min(selectedCell, CELLS - 1) + 1;
+    } else if (row == STATUS_ROW && selected != STATUS_ROW) {
+      statusColumn = at;
+      selectedCell = trackColumn >= 0 ? trackColumn : max(at - 1, 0);
+    }
     // LEFT off a row's first cell (a fresh press): the menu, once let go (it's to the left).
     if (pressed & m8::BTN_LEFT && selectedCellIn(selected) > firstCellIn(selected)) selectedCell = selectedCellIn(selected) - 1;
     else if ((pressed & m8::BTN_LEFT) && !repeat) menuOnRelease = m8::BTN_LEFT;
