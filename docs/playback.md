@@ -125,12 +125,18 @@ timer, each clock tick stamped with `micros()`. In `loop()` (`midiInService()`):
   about half the time). Their ticks while
   they're stopped (some send clock all the time) are timed but not followed:
   the tempo stays free to change by hand, and their Start takes theirs at
-  once. Their tempo: a straight line through their last ticks' times (least
-  squares, so each tick's jitter weighs little), up to their last 4 beats, at
-  least 1; after a pause counted afresh from the tick after the first (often
-  late after a Start), and over fewer than 4 beats the tempo known is kept
-  unless the new one is 2 % off it (a real change, not their start's jitter:
-  played again at the same tempo, the tempo shown doesn't move). Measured in
+  once. Their tempo: two alpha-beta trackers on their ticks' times (each tick
+  the next one predicted, its miss moving the prediction and the tick period
+  a little): a slow one, whose tempo is used (steady through jitter), and a
+  fast one; the fast one 0.6 % off the slow one for 4 ticks running means
+  their tempo changed: the slow one takes its state and its gains, easing
+  back to its own over a beat. After a pause tracked afresh from the tick
+  after the first (often late after a Start), from the tempo known (played
+  again at the same tempo, it doesn't move). Modelled with ±0.8 ms of jitter:
+  steady within 0.054 %; a change of 1 to 10 BPM followed to within 0.2 % in
+  ~11 ticks (the simulator: 120 to 123 while playing, the tempo shown right
+  after 19 ticks; before, up to 4 beats). Applied every quarter beat; shown
+  to a tenth of a BPM, changing only once clear of the last (no flicker). Measured in
   `micros()` turned into samples by the ratio measured from the audio blocks'
   start times (`blockStamp`, written by the interrupt each block). Shown in the
   tempo cell to a tenth of a BPM; not the project's tempo, not saved as set by

@@ -10,9 +10,19 @@ static constexpr float BIG_NUDGE = 0.02f;             // and when we're far off 
 static constexpr float FAR_BEATS = 0.03f;
 static constexpr float NUDGE_GAIN = 0.5f;             // of the beat's difference, taken out over the next beat
 static constexpr float DEADBAND_BEATS = 0.003f;       // a difference this small: left (their jitter)
-static constexpr float MIN_CHANGE = 0.001f;           // a tempo change this small: not made (each one is a recording's tempo mark)
-static constexpr uint32_t SPAN = 96;                  // their tempo: over their last 4 beats (24 ticks at least)
-static constexpr float NEW_TEMPO = 0.02f;             // measured over fewer than SPAN ticks, a tempo this far off the one known: theirs changed
+static constexpr float MIN_CHANGE = 0.0015f;          // a tempo change this small: not made (each one is a recording's tempo mark; ~2.6 cents)
+// Their tempo: two alpha-beta trackers on their ticks' times (each tick: the
+// next one predicted; its miss moves the prediction by alpha of it and the
+// tick period by beta of it), a slow one (the tempo used: steady through
+// jitter) and a fast one. The fast one HANDOVER off the slow one for
+// HANDOVER_TICKS ticks running: their tempo changed, the slow one takes the
+// fast one's state, and the fast gains, easing back to its own over
+// BOOST_TICKS. Modelled with ±0.8 ms of jitter: steady within 0.054 %; a
+// change (1 to 10 BPM either way) followed to within 0.2 % in ~11 ticks.
+static constexpr double SLOW_ALPHA = 0.06, SLOW_BETA = 0.0019, FAST_ALPHA = 0.3, FAST_BETA = 0.053;
+static constexpr double HANDOVER = 0.006;
+static constexpr uint32_t HANDOVER_TICKS = 4, BOOST_TICKS = 24;
+static constexpr uint32_t APPLY_TICKS = 6;            // their tempo and beat applied every quarter beat
 
 static HardwareSerial *port = nullptr;
 
@@ -119,7 +129,11 @@ static uint32_t lastStampUs = 0;
 static double errSum = 0;                             // this beat's ticks' differences (beats, ours less theirs)
 static int errCount = 0;
 static uint32_t theirSpb = 0;                         // their tempo (samples a beat), over their last beats
-static uint32_t firstTick = 0;                        // the first tick of their clock as it is now (after a pause: a new one)
+static uint32_t trackFrom = 0;                        // the trackers' first tick (after a pause: the one after the first, often late after a Start)
+static uint32_t trackBase = 0;                        // the latest tick's time (micros())
+struct Tracker { double next, period; };              // the next tick's predicted time (us after trackBase), the tick period (us)
+static Tracker slowT = {0, 0}, fastT = {0, 0};
+static uint32_t apart = 0, boost = 0;                 // ticks running the fast one's been HANDOVER off; fast gains left (BOOST_TICKS down)
 
 // Our beat position (beats from the transport's start) at micros() `us`.
 static double ourBeatAt(uint32_t us, const BlockStamp &s) {
@@ -219,32 +233,39 @@ void midiInService() {
   if (!transport.running && startAt == INT32_MIN && refTick >= 0 && !theirsRunning) refTick = -1;   // (stopped: a later start here is ours)
   for (; seenTicks < n; seenTicks++) {
     uint32_t i = seenTicks, us = tickUs[i % TICKS];
-    // After a pause (or another clock) counted afresh, from the tick after the
-    // first (often a little late after a Start).
-    if (i == 0 || (uint32_t)(us - tickUs[(i - 1) % TICKS]) > FOLLOW_TIMEOUT_MS * 1000) firstTick = i + 1;
-    // Their tempo: a straight line through their last ticks' times (least
-    // squares: each tick's jitter weighs little), up to SPAN of them, 24 at
-    // least. Over fewer than SPAN, the tempo known is kept unless this one's
-    // NEW_TEMPO off it (theirs changed; not their start's jitter).
-    // Their last beat alone NEW_TEMPO off the tempo known: theirs changed, the
-    // line from that beat on.
-    auto fit = [&](uint32_t span) {                   // samples a beat, the line through ticks i - span .. i
-      double sx = 0, sy = 0, sxx = 0, sxy = 0, m = span + 1;
-      for (uint32_t k = 0; k <= span; k++) {
-        double y = (int32_t)(tickUs[(i - span + k) % TICKS] - tickUs[(i - span) % TICKS]);
-        sx += k; sy += y; sxx += (double)k * k; sxy += k * y;
+    // After a pause (or another clock) tracked afresh, from the tick after the
+    // first (often late after a Start), from the tempo known if any.
+    if (i == 0 || (uint32_t)(us - tickUs[(i - 1) % TICKS]) > FOLLOW_TIMEOUT_MS * 1000) {
+      trackFrom = i + 1;
+      slowT.period = fastT.period = theirSpb ? theirSpb * usPerSample / 24 : 0;
+      apart = 0;
+      boost = theirSpb ? 0 : BOOST_TICKS;             // (no tempo known: learnt quickly)
+    } else if (i == trackFrom) {
+      trackBase = us;
+      slowT.next = slowT.period;
+      fastT.next = fastT.period;
+    } else if (i > trackFrom) {
+      double meas = (int32_t)(us - trackBase);
+      if (!slowT.period) slowT = fastT = {meas, meas};   // (no tempo known: its first interval)
+      auto step = [&](Tracker &t, double alpha, double beta) {
+        double miss = meas - t.next;
+        if (fabs(miss) > t.period / 2) { t.period = meas; miss = 0; }   // (way off: as its interval, afresh)
+        double at = t.next + alpha * miss;
+        t.period += beta * miss;
+        t.next = at - meas + t.period;
+      };
+      double f = boost ? (double)--boost / BOOST_TICKS : 0;
+      step(slowT, SLOW_ALPHA + (FAST_ALPHA - SLOW_ALPHA) * f, SLOW_BETA + (FAST_BETA - SLOW_BETA) * f);
+      step(fastT, FAST_ALPHA, FAST_BETA);
+      trackBase = us;
+      apart = fabs(fastT.period - slowT.period) > HANDOVER * slowT.period ? apart + 1 : 0;
+      if (apart >= HANDOVER_TICKS) {                  // their tempo changed: the fast one's
+        slowT = fastT;
+        apart = 0;
+        boost = BOOST_TICKS;
       }
-      return (uint32_t)((m * sxy - sx * sy) / (m * sxx - sx * sx) * 24 / usPerSample + 0.5);
-    };
-    if (theirSpb && i >= firstTick + 24 && n - (i - 24) <= TICKS) {
-      uint32_t last = fit(24);
-      if (fabsf((float)last - theirSpb) > NEW_TEMPO * theirSpb) firstTick = i - 24;
-    }
-    uint32_t span = i >= firstTick ? min(i - firstTick, SPAN) : 0;
-    if (span >= 24 && n - (i - span) <= TICKS) {
-      uint32_t spb = fit(span);
-      bool sure = span >= SPAN || !theirSpb || fabsf((float)spb - theirSpb) > NEW_TEMPO * theirSpb;
-      if (sure && spb >= spbForBpm(MAX_BPM) && spb <= spbForBpm(MIN_BPM)) theirSpb = spb;
+      uint32_t spb = (uint32_t)(slowT.period * 24 / usPerSample + 0.5);
+      if (spb >= spbForBpm(MAX_BPM) && spb <= spbForBpm(MIN_BPM) && i - trackFrom >= 3) theirSpb = spb;
     }
     // Their next whole beat reached: our transport from that beat (the clock
     // reads it; the tracks where they'd be).
@@ -270,7 +291,7 @@ void midiInService() {
   if (!theirSpb || !theirsRunning) return;          // (their transport stopped: timed, not followed; the tempo's free)
   uint32_t shown = theirSpb;
   uint32_t want = theirSpb;
-  if (running && errCount >= 24) {                    // once a beat: their tempo, nudged to their beat
+  if (running && errCount >= (int)APPLY_TICKS) {      // every quarter beat: their tempo, nudged to their beat
     float err = errSum / errCount;
     errSum = 0;
     errCount = 0;
@@ -281,7 +302,7 @@ void midiInService() {
     return;                                           // (between: as it is)
   }
   uint32_t now = transport.pendingSpb ? transport.pendingSpb : transport.spb;
-  float shownBpm = roundf(bpmForSpb(shown) * 10) / 10;
+  float raw = bpmForSpb(shown), shownBpm = fabsf(raw - bpm) < 0.08f ? bpm : roundf(raw * 10) / 10;   // (shown: a tenth's change only when clear, no flicker)
   if (fabsf((float)want - now) > MIN_CHANGE * now) followTempo(want, shownBpm);
   else if (shownBpm != bpm) followTempo(now, shownBpm);   // (the tempo shown only)
 }

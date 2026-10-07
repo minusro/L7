@@ -2238,6 +2238,31 @@ for f in os.listdir("."):
                speedOff * 100, posOff);
       check(speedOff < 0.006 && posOff < 0.01, m3);
     }
+    // Their tempo changing while playing: locked onto quickly.
+    {
+      midiInByte(0xFA, simMicros, MIDI_USB);
+      double tAt = simMicros + 2000, usTick = 60e6 / 120 / 24;
+      auto tick = [&]() {
+        while (simMicros < tAt) { block(); midiInService(); }
+        midiInByte(0xF8, (uint32_t)(tAt + (rand() % 1601 - 800)), MIDI_USB);
+        tAt += usTick;
+      };
+      for (int k = 0; k < 24 * 8; k++) tick();
+      usTick = 60e6 / 123 / 24;                      // 120 to 123
+      float want = 44100.0f * 60 / (float)expectSpb(123);
+      int lockedAfter = -1;
+      for (int k = 0; k < 24 * 4; k++) {
+        tick();
+        for (int b = 0; b < 2; b++) { block(); midiInService(); }
+        if (lockedAfter < 0 && fabsf(simShownBpm - want) <= 0.15f) lockedAfter = k + 1;
+        if (lockedAfter >= 0 && fabsf(simShownBpm - want) > 0.15f) lockedAfter = -1;   // (it has to stay)
+      }
+      char m4[160];
+      snprintf(m4, sizeof m4, "their tempo 120 to 123 while playing: locked onto (shown %.1f) after %d ticks", simShownBpm, lockedAfter);
+      check(lockedAfter > 0 && lockedAfter <= 24, m4);
+      midiInByte(0xFC, simMicros, MIDI_USB);
+      for (int i = 0; i < 400; i++) { block(); midiInService(); }
+    }
     // The clock out for USB too: Start, the ticks, Stop, as the serial one's.
     midiOutAttachUsb();
     uint8_t got[64];

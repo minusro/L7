@@ -123,6 +123,7 @@ no dropouts or overruns
 - sync in V
 - usb midi V
 - usb audio
+- audio in sync 
 
 123456123456
 0x00x00x00x0
