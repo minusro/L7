@@ -12,8 +12,8 @@
 //   unselected: grey / dark grey;  the selected track: light grey / grey;
 //   muted (no meter): dark grey / black.
 // While B is held on the cell (with other keys or not), muted or not (B + arrows change volume
-// and balance), no meter: the level's lines in the accent colour, the outer
-// ones grey. A line is only redrawn when its colour changes.
+// and balance): the level's lines in the accent colour, the outer ones grey,
+// and the meter white over them as ever (unmuted). A line is only redrawn when its colour changes.
 static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = CELL_H / PX;   // 24 x 16, the border's included
 // The lines: one in every other column, from the centre out (a column short
 // of the cell's edges), 2 taller each one out, the outermost the waveform's
@@ -77,7 +77,7 @@ void drawMix(int i) {
   uint16_t levelInk = onGround(editing ? ACCENT : muted ? DARK : here ? LIGHT : DIM, ground);
   uint16_t outerInk = editing ? DIM : muted ? ground : here ? DIM : DARK;   // (muted: none)
   for (int ch = 0; ch < 2; ch++) {
-    int level = levels[ch], meter = editing ? 0 : arcsForDb(meterDb[i][ch]);
+    int level = levels[ch], meter = arcsForDb(meterDb[i][ch]);   // (muted: none)
     for (int j = 0; j < MIX_ARCS; j++)
       looks[ch * MIX_ARCS + j] = !hasClip(i) ? ground : j < meter ? INK : j < level ? levelInk : outerInk;
   }

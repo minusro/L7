@@ -117,7 +117,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the volume step minus its balance cut (one line per step of either). Up to
   the level / the outer lines: grey / dark grey; the selected track: light grey / grey;
   muted: dark grey / black. The meter: white. B held on it (muted or not, other keys too):
-  no meter, the level in the accent colour.
+  the level in the accent colour, the outer lines grey, the meter still white over them (unmuted).
 * Editing (B held on the selected cell, with other keys or not, so B + arrows change it): white turns to the accent colour and light grey to the
   dark accent (`ACCENT_DARK`, the same for the filter fill and the volume
   level): the loop range, the filter line and fill, the volume meter and
