@@ -2,6 +2,12 @@
 #pragma once
 #include <stdint.h>
 
+// Code that's rarely run (boot, the Ableton export) goes in flash, not the
+// fast RAM (RAM1, full: its code grows in 32 KB banks). The simulator: as is.
+#ifndef FLASHMEM
+#define FLASHMEM
+#endif
+
 namespace looper {
 
 constexpr const char *APP_NAME = "L7";            // the app's name (exports are named after it)

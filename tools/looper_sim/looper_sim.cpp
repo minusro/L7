@@ -30,7 +30,7 @@ void (*IntervalTimer::fn)() = nullptr;
 HardwareSerial midi;
 
 static LooperEngine engine;
-static audio_block_t inL, inR, outL, outR;
+static audio_block_t inL, inR, outL, outR, usbOutL, usbOutR;
 static uint32_t inputIndex = 0;        // index of the next input sample (== transport.now)
 static bool feedRamp = true;
 static double feedSineHz = 0;                       // instead: a sine (declicking tests)
@@ -142,6 +142,7 @@ static void audioBlock() {
     engine.simSetInput(2, &usbInL); engine.simSetInput(3, &usbInR);
   }
   engine.simOut[0] = &outL; engine.simOut[1] = &outR;
+  engine.simOut[2] = &usbOutL; engine.simOut[3] = &usbOutR;
   engine.update();
   inputIndex += AUDIO_BLOCK_SAMPLES;
   simMicros += (uint32_t)(AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT);
@@ -2375,6 +2376,32 @@ for f in os.listdir("."):
     snprintf(m6, sizeof m6, "USB audio gone: the line input in again, noise and all (%d)", ringL());
     check(abs(ringL()) <= 10, m6);
     feedNoise = false;
+    for (int i = 0; i < 4; i++) block();
+  }
+
+  printf("USB audio out: the mix before the master volume\n");
+  {
+    bool wasMonitor = engine.monitor;
+    engine.monitor = true;
+    feedSineHz = 440;
+    int vol = masterVolume();
+    setMasterVolume(MASTER_VOLUME_UNITY - 4);        // turned down
+    for (int i = 0; i < 6; i++) block();
+    double ratioMin = 1e9, ratioMax = 0;
+    int peakUsb = 0;
+    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+      peakUsb = std::max(peakUsb, abs(usbOutL.data[i]));
+      if (abs(usbOutL.data[i]) < 2000) continue;
+      double r = (double)outL.data[i] / usbOutL.data[i];
+      ratioMin = std::min(ratioMin, r);
+      ratioMax = std::max(ratioMax, r);
+    }
+    char m7[200];
+    snprintf(m7, sizeof m7, "master volume turned down: the line out at %.3f-%.3f of USB's, USB's at full level (peak %d)", ratioMin, ratioMax, peakUsb);
+    check(ratioMax < 0.9 && ratioMax - ratioMin < 0.01 && peakUsb > 6000, m7);
+    setMasterVolume(vol);
+    feedSineHz = 0;
+    engine.monitor = wasMonitor;
     for (int i = 0; i < 4; i++) block();
   }
 

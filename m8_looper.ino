@@ -89,7 +89,7 @@ AudioConnection      c3(engine, 0, i2sOut, 0), c4(engine, 1, i2sOut, 1);
 AudioInputUSB        usbInput;
 AudioOutputUSB       usbOutput;
 AudioConnection      c5(usbInput, 0, engine, 2), c6(usbInput, 1, engine, 3);
-AudioConnection      c7(engine, 0, usbOutput, 0), c8(engine, 1, usbOutput, 1);
+AudioConnection      c7(engine, 2, usbOutput, 0), c8(engine, 3, usbOutput, 1);   // (before the master volume)
 #endif
 AudioControlSGTL5000 codec;
 
@@ -212,11 +212,23 @@ void loop() {
   debugStage = "storage";
   serviceStorage();
 
-  // Speaker off while headphones are plugged in.
+  // Speaker off while headphones are plugged in, or while a computer records
+  // the M8's USB audio (its streaming interface selected).
+  static bool phonesIn = false, speakerOn = true, first = true;
   bool phones;
   if (board.headphonesChanged(phones)) {
-    board.setSpeaker(!phones);
-    Serial.printf("headphones %s: speaker %s\n", phones ? "in" : "out", phones ? "off" : "on");
+    phonesIn = phones;
+    Serial.printf("headphones %s\n", phones ? "in" : "out");
+  }
+  bool usbRecording = false;
+#if defined(AUDIO_INTERFACE)
+  usbRecording = usb_audio_transmit_setting != 0;
+#endif
+  if (first || speakerOn != (!phonesIn && !usbRecording)) {
+    first = false;
+    speakerOn = !phonesIn && !usbRecording;
+    board.setSpeaker(speakerOn);
+    Serial.printf("speaker %s%s%s\n", speakerOn ? "on" : "off", phonesIn ? " (headphones in)" : "", usbRecording ? " (streaming to USB)" : "");
   }
 
   debugStage = "MIDI in";

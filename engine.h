@@ -207,6 +207,8 @@ int midiOutTakeUsb(uint32_t now, uint8_t *out, int max);
 class LooperEngine : public AudioStream {
 public:
   // Inputs 0-1: the line input; 2-3: USB audio from a computer (mixed in).
+  // Outputs 0-1: the line out and headphones (after the master volume, the
+  // metronome in); 2-3: to USB (before the master volume, no metronome).
   LooperEngine() : AudioStream(4, inputQueue_) {}
   float masterGain = 0.7f;                         // the tracks' mix, before the master volume (headroom)
   bool monitor = true;

@@ -151,6 +151,14 @@ timer, each clock tick stamped with `micros()`. In `loop()` (`midiInService()`):
   about a beat, not over several each off pitch. A tick way off its predicted
   time (half a tick: their first after a Start often is) is taken as it is,
   the tempo left; three in a row: their tempo's another, measured afresh.
+* Played ahead (`AHEAD_US`, per source: serial 0, USB 2.0 ms): our beat kept
+  that much ahead of theirs, their clock's way in and our audio's way out, so
+  L7's audio reaches the computer on their beat as a DAW's recording places
+  it. Measured with tools/latency/clocksync.c (a scheduled 120 BPM clock to
+  "L7", its metronome recorded over USB audio with `USB_OUT_CLICK`, placed
+  less CoreAudio's input latency): 1.7-2.1 ms late without it; with it the
+  clicks within about ±1 ms of the beat (100-140 BPM), the beat correction's
+  dead zone.
 * Measured on a DAW's clock over USB (`tools/looper_sim/data/daw_clock_usb.txt`,
   captured with `LOG_TICKS`): ticks up to ±2 ms off, its first after a Start
   early; replayed by the simulator: the tempo read 72.0 / 83.0, the speed
@@ -205,8 +213,13 @@ Audio type: stereo, 16-bit, 44.1 kHz both ways; interfaces 4-6, endpoints 6 and
 7, after mass storage's 3 and 5). The M8 shows up on a computer as an audio
 device, "L7", 2 in and 2 out (`AudioInputUSB` / `AudioOutputUSB`,
 m8_looper.ino, only with that type).
-* Out: the engine's output, as the line out and headphones get it (after the
-  master volume).
+* Out: the engine's outputs 2-3: the mix before the master volume (the
+  tracks and the monitored input; no metronome, as resampling), whatever the
+  master volume; the line out and headphones (outputs 0-1) have the master
+  volume and the metronome. `USB_OUT_CLICK` (engine.cpp) puts the metronome on
+  USB too, for measuring (tools/latency/clocksync.c). While a computer records
+  it (its streaming interface selected, `usb_audio_transmit_setting`), the
+  speaker is off (headphones as ever); the serial log says so.
 * In: the engine's inputs 2-3, mixed into the input with the line input (what's
   monitored and recorded, `inputRing`; clipped to 16 bits). While USB audio
   comes in, the line input is left out once it has been quiet (block peaks

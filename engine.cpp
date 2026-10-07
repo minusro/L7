@@ -98,6 +98,7 @@ volatile float lineInPeak = 0, lineInFloor = 1;
 volatile bool usbAudioIn = false;
 static constexpr float LINE_GATE_LEVEL = 0.0015f;   // ~ -56 dBFS (as measured on the M8: see the log)
 static constexpr uint32_t LINE_GATE_HOLD_MS = 2000;
+static constexpr bool USB_OUT_CLICK = false;          // the metronome on the USB output too (measuring: tools/latency/clocksync.c)
 volatile int32_t clickFromBeat = INT32_MIN;
 
 // The metronome's wood block: two damped sines (its body and a harder upper
@@ -299,7 +300,10 @@ void LooperEngine::update() {
   audio_block_t *inL = receiveReadOnly(0), *inR = receiveReadOnly(1);
   audio_block_t *usbL = receiveReadOnly(2), *usbR = receiveReadOnly(3);
   audio_block_t *outL = allocate(), *outR = allocate();
+  audio_block_t *usbOutL = allocate(), *usbOutR = allocate();   // (outputs 2-3: to USB; none spare: not sent this block)
   if (!outL || !outR) {
+    if (usbOutL) release(usbOutL);
+    if (usbOutR) release(usbOutR);
     if (outL) release(outL);
     if (outR) release(outR);
     if (inL) release(inL);
@@ -455,7 +459,13 @@ void LooperEngine::update() {
       int16_t cr = (int16_t)constrain(mixR + monR, -32767.0f, 32767.0f);
       inputRing[at % INPUT_FRAMES] = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
     }
-    float click = clickSample() * outGain;
+    float click = clickSample();
+    if (usbOutL && usbOutR) {                        // USB: the mix before the master volume (and without the metronome)
+      float uc = USB_OUT_CLICK ? click : 0.0f;
+      usbOutL->data[i] = (int16_t)constrain(mixL + monL + uc, -32767.0f, 32767.0f);
+      usbOutR->data[i] = (int16_t)constrain(mixR + monR + uc, -32767.0f, 32767.0f);
+    }
+    click *= outGain;
     mixL = (mixL + monL) * outGain + click;          // the master volume
     mixR = (mixR + monR) * outGain + click;
     outPeak[0] = max(outPeak[0], fabsf(mixL));
@@ -484,6 +494,12 @@ void LooperEngine::update() {
   transmit(outR, 1);
   release(outL);
   release(outR);
+  if (usbOutL && usbOutR) {
+    transmit(usbOutL, 2);
+    transmit(usbOutR, 3);
+  }
+  if (usbOutL) release(usbOutL);
+  if (usbOutR) release(usbOutR);
   if (inL) release(inL);
   if (inR) release(inR);
   if (usbL) release(usbL);

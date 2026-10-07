@@ -197,7 +197,7 @@ static void clipEnvelopes() {
   gz.puts("</Envelopes>\n");
 }
 
-static void field(char code) {
+FLASHMEM static void field(char code) {
   char b[96];
   switch (code) {
     // the set
@@ -328,7 +328,7 @@ static void folderIcon() {
   appleDouble(path, 0x0400, nullptr, 0);
 }
 
-int exportProject(int p, void (*progress)(int done, int total)) {
+FLASHMEM int exportProject(int p, void (*progress)(int done, int total)) {
   if (p < 0 || p >= PROJECTS || transport.running || recording.mode != Recording::Idle) return 0;
   x.p = p;
   x.color = liveColorFor(PROJECT_COLORS[p]);

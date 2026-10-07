@@ -26,6 +26,11 @@ static constexpr double SLOW_ALPHA = 0.06, SLOW_BETA = 0.0019, FAST_ALPHA = 0.3,
 static constexpr double HANDOVER = 0.006;
 static constexpr uint32_t HANDOVER_TICKS = 4, BOOST_TICKS = 24;
 static constexpr uint32_t APPLY_TICKS = 6;            // their tempo and beat applied every quarter beat
+// Our beat kept this far ahead of theirs (us; serial, USB): their clock's way in
+// and our audio's way out, so our audio reaches them on their beat (as their
+// recording of it places it). USB: measured with tools/latency/clocksync.c,
+// L7's audio recorded over USB audio (aheadBeats(): at their tempo).
+static constexpr int32_t AHEAD_US[2] = {0, 2000};    // (USB: 1.7-2.1 ms late without it; with it within ±1 ms, median ~0; 2026-10-07)
 static constexpr bool LOG_TICKS = false;              // (diagnosing: each tick's time and each tempo applied, on the serial log; data/daw_clock_usb.txt came from it)
 
 static HardwareSerial *port = nullptr;
@@ -148,6 +153,10 @@ static double ourBeatAt(uint32_t us, const BlockStamp &s) {
 
 uint32_t midiTheirSpb() { return theirSpb; }
 
+static double aheadBeats() {                          // (at their tempo)
+  return theirSpb ? AHEAD_US[source & 1] / (theirSpb * usPerSample) : 0;
+}
+
 // Their position (beats) at tick i.
 static double theirBeatAt(uint32_t i) { return refBeats + (double)((int32_t)i - refTick) / 24; }
 
@@ -158,7 +167,7 @@ static int32_t startingBeat = 0;
 static uint32_t pastStartingBeat() {
   uint32_t spb = transport.pendingSpb ? transport.pendingSpb : transport.spb;
   double usPerBeat = (theirSpb ? theirSpb : spb) * usPerSample;
-  double beats = theirBeatAt(startTickAt) - startingBeat + (int32_t)(micros() - tickUs[startTickAt % TICKS]) / usPerBeat;
+  double beats = theirBeatAt(startTickAt) + aheadBeats() - startingBeat + (int32_t)(micros() - tickUs[startTickAt % TICKS]) / usPerBeat;
   return beats <= 0 ? 0 : (uint32_t)(beats * spb + 0.5);
 }
 
@@ -301,7 +310,7 @@ void midiInService() {
     if (!running || !theirSpb) continue;
     // How far we're off their position at this tick: theirs known (bars too),
     // else beats only.
-    double ours = ourBeatAt(us, s), theirs = refTick >= 0 ? theirBeatAt(i) : 0;
+    double ours = ourBeatAt(us, s), theirs = (refTick >= 0 ? theirBeatAt(i) : 0) + aheadBeats();   // (where we should be: ahead of them)
     double period = refTick >= 0 ? BEATS_PER_BAR : 1;
     double err = fmod(ours - theirs, period);
     if (err >= period / 2) err -= period;

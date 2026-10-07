@@ -1534,7 +1534,7 @@ static bool sdBegin() {
   return SD.sdfs.begin(SdioConfig(DMA_SDIO));
 }
 
-bool storageBegin(void (*progress)(const char *)) {
+FLASHMEM bool storageBegin(void (*progress)(const char *)) {
   if (!sdBegin()) return false;
   if (!SD.sdfs.exists("/L7") && SD.sdfs.exists("/looper")) SD.sdfs.rename("/looper", "/L7");   // (the app's folder, renamed)
   SD.sdfs.mkdir("/L7");

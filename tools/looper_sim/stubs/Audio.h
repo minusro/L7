@@ -35,12 +35,12 @@ public:
   virtual ~AudioStream() {}
   virtual void update() = 0;
   // Test hooks
-  audio_block_t *simOut[2] = {};
+  audio_block_t *simOut[4] = {};
   void simSetInput(int i, audio_block_t *b) { inputs_[i] = b; }
 protected:
   audio_block_t *receiveReadOnly(int i) { audio_block_t *b = inputs_[i]; inputs_[i] = nullptr; return b; }
   audio_block_t *allocate() { return new audio_block_t(); }
-  void transmit(audio_block_t *b, int ch) { memcpy(simOut[ch], b, sizeof *b); }
+  void transmit(audio_block_t *b, int ch) { if (simOut[ch]) memcpy(simOut[ch], b, sizeof *b); }
   void release(audio_block_t *b) { if (!isInput(b)) delete b; }
 private:
   bool isInput(audio_block_t *b) { return b == simIn[0] || b == simIn[1] || b == simIn[2] || b == simIn[3]; }
