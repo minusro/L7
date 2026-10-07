@@ -211,11 +211,13 @@ extern volatile bool usbAudioIn;                     // USB audio coming in (its
 //   usbAudioRead: the computer's audio for this block (AUDIO_BLOCK_SAMPLES stereo
 //     frames, left | right << 16); false when none is coming in.
 //   usbAudioWrite: room for this block to the computer (AUDIO_BLOCK_SAMPLES frames of
-//     USB_OUT_CHANNELS samples, interleaved): the main mix (before the master volume,
-//     no metronome), then each track as heard in it (its volume, balance, filters,
-//     mute; the mix's headroom), left and right; nullptr when not streaming.
+//     USB_OUT_CHANNELS samples, interleaved): the main mix (the master volume in it,
+//     no metronome), then each track from the top row down, as heard in the mix
+//     before the master volume (its volume, balance, filters, mute; the mix's
+//     headroom), left and right; nullptr when not streaming.
 //     usbAudioWritten() once written.
 constexpr int USB_OUT_CHANNELS = 2 + 2 * NUM_TRACKS;
+constexpr int usbTrackChannel(int t) { return 2 + 2 * (NUM_TRACKS - 1 - t); }   // track t's left (the top row: track NUM_TRACKS - 1)
 extern bool (*usbAudioRead)(uint32_t *frames);
 extern int16_t *(*usbAudioWrite)();
 extern void (*usbAudioWritten)();

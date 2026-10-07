@@ -522,9 +522,10 @@ void LooperEngine::update() {
         sr *= masterGain;
         mixL += sl;
         mixR += sr;
-        if (usbFrame) {                              // to USB: the track as it is in the mix
-          usbFrame[2 + 2 * t] = (int16_t)constrain(sl, -32767.0f, 32767.0f);
-          usbFrame[3 + 2 * t] = (int16_t)constrain(sr, -32767.0f, 32767.0f);
+        if (usbFrame) {                              // to USB: the track as it is in the mix (the top row's first)
+          int16_t *st = usbFrame + usbTrackChannel(t);
+          st[0] = (int16_t)constrain(sl, -32767.0f, 32767.0f);
+          st[1] = (int16_t)constrain(sr, -32767.0f, 32767.0f);
         }
         double fr = tr.frac + speed[t];
         while (fr >= 1.0) { fr -= 1.0; tail++; }
@@ -544,15 +545,16 @@ void LooperEngine::update() {
       int16_t cr = (int16_t)constrain(mixR + monR, -32767.0f, 32767.0f);
       inputRing[at % INPUT_FRAMES] = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
     }
-    float click = clickSample();
-    if (usbFrame) {                                  // USB: the mix before the master volume (and without the metronome)
+    float click = clickSample() * outGain;
+    mixL = (mixL + monL) * outGain;                  // the master volume
+    mixR = (mixR + monR) * outGain;
+    if (usbFrame) {                                  // USB: the mix as the line out has it, without the metronome
       float uc = USB_OUT_CLICK ? click : 0.0f;
-      usbFrame[0] = (int16_t)constrain(mixL + monL + uc, -32767.0f, 32767.0f);
-      usbFrame[1] = (int16_t)constrain(mixR + monR + uc, -32767.0f, 32767.0f);
+      usbFrame[0] = (int16_t)constrain(mixL + uc, -32767.0f, 32767.0f);
+      usbFrame[1] = (int16_t)constrain(mixR + uc, -32767.0f, 32767.0f);
     }
-    click *= outGain;
-    mixL = (mixL + monL) * outGain + click;          // the master volume
-    mixR = (mixR + monR) * outGain + click;
+    mixL += click;
+    mixR += click;
     outPeak[0] = max(outPeak[0], fabsf(mixL));
     outPeak[1] = max(outPeak[1], fabsf(mixR));
     outL->data[i] = (int16_t)constrain(mixL, -32767.0f, 32767.0f);

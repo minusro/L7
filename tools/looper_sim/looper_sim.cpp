@@ -2487,27 +2487,38 @@ for f in os.listdir("."):
     clearTrack(3);
   }
 
-  printf("USB audio out: the mix before the master volume\n");
+  printf("USB audio out: the mix as the line out has it, without the metronome\n");
   {
     bool wasMonitor = engine.monitor;
     engine.monitor = true;
     feedSineHz = 440;
+    if (!transport.running) transportStart();
     int vol = masterVolume();
     setMasterVolume(MASTER_VOLUME_UNITY - 4);        // turned down
-    for (int i = 0; i < 6; i++) block();
-    double ratioMin = 1e9, ratioMax = 0;
+    auto lineMinusUsb = [](int blocks, int &usbPeak) {   // the line out's left less USB's main left, at most
+      int worst = 0;
+      usbPeak = 0;
+      for (int b = 0; b < blocks; b++) {
+        block();
+        for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+          int16_t u = usbOut[i * USB_OUT_CHANNELS];
+          usbPeak = std::max(usbPeak, abs((int)u));
+          worst = std::max(worst, abs(outL.data[i] - u));
+        }
+      }
+      return worst;
+    };
     int peakUsb = 0;
-    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-      int16_t u = usbOut[i * USB_OUT_CHANNELS];
-      peakUsb = std::max(peakUsb, abs(u));
-      if (abs(u) < 2000) continue;
-      double r = (double)outL.data[i] / u;
-      ratioMin = std::min(ratioMin, r);
-      ratioMax = std::max(ratioMax, r);
-    }
-    char m7[200];
-    snprintf(m7, sizeof m7, "master volume turned down: the line out at %.3f-%.3f of USB's, USB's at full level (peak %d)", ratioMin, ratioMax, peakUsb);
-    check(ratioMax < 0.9 && ratioMax - ratioMin < 0.01 && peakUsb > 6000, m7);
+    for (int i = 0; i < 6; i++) block();
+    int off = lineMinusUsb(4 * (int)(transport.spb / AUDIO_BLOCK_SAMPLES), peakUsb);   // (4 beats)
+    bool wasClick = metronomeOn;
+    metronomeOn = true;
+    int unusedPeak = 0, on = lineMinusUsb(4 * (int)(transport.spb / AUDIO_BLOCK_SAMPLES), unusedPeak);
+    metronomeOn = wasClick;
+    char m7[240];
+    snprintf(m7, sizeof m7, "master volume turned down: USB's mix follows it (peak %d of the sine's 8000), the line out's same (within %d); "
+             "the metronome on: only on the line out (%d off USB)", peakUsb, off, on);
+    check(peakUsb > 2000 && peakUsb < 7000 && off <= 1 && on > 1000, m7);
     setMasterVolume(vol);
     feedSineHz = 0;
     engine.monitor = wasMonitor;
@@ -2534,7 +2545,7 @@ for f in os.listdir("."):
       for (int b = 0; b < 40; b++) {
         block();
         for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
-          for (int c = 0; c < 2 * NUM_TRACKS; c++) pk[c] = std::max(pk[c], abs((int)usbOut[i * USB_OUT_CHANNELS + 2 + c]));
+          for (int c = 0; c < 2 * NUM_TRACKS; c++) pk[c] = std::max(pk[c], abs((int)usbOut[i * USB_OUT_CHANNELS + usbTrackChannel(c / 2) + c % 2]));
       }
     };
     int before[2 * NUM_TRACKS], after[2 * NUM_TRACKS];
@@ -2550,9 +2561,9 @@ for f in os.listdir("."):
       for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
         const int16_t *f = usbOut + i * USB_OUT_CHANNELS;
         int sumL = 0, sumR = 0;
-        for (int t = 0; t < NUM_TRACKS; t++) { sumL += f[2 + 2 * t]; sumR += f[3 + 2 * t]; }
+        for (int t = 0; t < NUM_TRACKS; t++) { sumL += f[usbTrackChannel(t)]; sumR += f[usbTrackChannel(t) + 1]; }
         worst = std::max(worst, std::max(abs(sumL - f[0]), abs(sumR - f[1])));
-        for (int t = 0; t < NUM_TRACKS; t++) if (t != 1 && t != 4) others = std::max(others, abs((int)f[2 + 2 * t]) + abs((int)f[3 + 2 * t]));
+        for (int t = 0; t < NUM_TRACKS; t++) if (t != 1 && t != 4) others = std::max(others, abs((int)f[usbTrackChannel(t)]) + abs((int)f[usbTrackChannel(t) + 1]));
       }
     }
     char m8[260];
@@ -2565,10 +2576,13 @@ for f in os.listdir("."):
     int muted = 0;
     for (int b = 0; b < 10; b++) {
       block();
-      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) muted = std::max(muted, abs((int)usbOut[i * USB_OUT_CHANNELS + 2 + 8]));
+      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) muted = std::max(muted, abs((int)usbOut[i * USB_OUT_CHANNELS + usbTrackChannel(4)]));
     }
     snprintf(m8, sizeof m8, "track 5 muted: silent on USB too (%d)", muted);
     check(muted == 0, m8);
+    snprintf(m8, sizeof m8, "the top row's track on channels 3-4, the bottom row's on 15-16 (track 5 on %d-%d, track 2 on %d-%d)",
+             usbTrackChannel(4) + 1, usbTrackChannel(4) + 2, usbTrackChannel(1) + 1, usbTrackChannel(1) + 2);
+    check(usbTrackChannel(NUM_TRACKS - 1) == 2 && usbTrackChannel(0) == 14, m8);
     usbStreaming = false;                            // the computer not taking it: nothing written, all the same
     std::fill(usbOut, usbOut + AUDIO_BLOCK_SAMPLES * USB_OUT_CHANNELS, 12345);
     block();

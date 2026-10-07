@@ -104,7 +104,7 @@ MSC_TYPE = """#elif defined(USB_SERIAL_MSC) // L7_MSC L7_MIDI L7_UAC2: Serial + 
   #define AUDIO_INTERFACE	3	// audio: USB Audio Class 2.0 (usb_audio_l7.cpp), 3 interfaces: control, to the computer, from it
   #define AUDIO_UAC2		1
   #define AUDIO_CLOCK_ID	9
-  #define AUDIO_TX_CHANNELS_480	16	// to the computer: the main mix and the 7 tracks, stereo pairs
+  #define AUDIO_TX_CHANNELS_480	16	// to the computer: the master and the 7 tracks (top row first), stereo pairs
   #define AUDIO_TX_CHANNELS_12	2	// (full speed: the main mix only)
   #define AUDIO_RX_CHANNELS	2	// from the computer
   #define AUDIO_TX_ENDPOINT     6
@@ -122,7 +122,7 @@ MSC_TYPE = """#elif defined(USB_SERIAL_MSC) // L7_MSC L7_MIDI L7_UAC2: Serial + 
 #elif defined(USB_AUDIO)
 """
 
-CHANNEL_NAMES = ["Main L", "Main R"] + ["Track %d %s" % (t, side) for t in range(1, 8) for side in "LR"]
+CHANNEL_NAMES = ["Master L", "Master R"] + ["Ch %d %s" % (t, side) for t in range(1, 8) for side in "LR"]   # (Ch 1: the top row)
 
 
 def uac2_descriptor(speed):
@@ -307,11 +307,28 @@ def edit_marked(path, marker, steps):
     return True
 
 
+def channel_names():
+    """The channels' names as string descriptors (usb_desc.c), and their entries in the descriptor list."""
+    names = "#ifdef AUDIO_CHANNEL_NAMES // L7_UAC2: the channels to the computer, by name\n"
+    entries = "#ifdef AUDIO_CHANNEL_NAMES // L7_UAC2\n"
+    for k, name in enumerate(CHANNEL_NAMES):
+        names += "PROGMEM const struct usb_string_descriptor_struct usb_string_channel%d = {%d, 3, {%s}};\n" % (
+            k, 2 + 2 * len(name), ",".join("'%s'" % c for c in name))
+        entries += "        {0x0300 + AUDIO_CHANNEL_NAMES + %d, 0x0409, (const uint8_t *)&usb_string_channel%d, 0},\n" % (k, k)
+    return names + "#endif\n\n", entries + "#endif\n"
+
+
 def uac2_desc(desc):
-    """usb_desc.c: the UAC2 audio function (both speeds), its size, the channels' names."""
+    """usb_desc.c: the UAC2 audio function (both speeds), its size, the channels' names (renamed: refreshed)."""
     s = open(desc).read()
     if "L7_UAC2" in s:
-        return False
+        names, _ = channel_names()
+        i = s.index("#ifdef AUDIO_CHANNEL_NAMES // L7_UAC2: the channels")
+        j = s.index("#endif\n\n", i) + len("#endif\n\n")
+        if s[i:j] == names:
+            return False
+        open(desc, "w").write(s[:i] + names + s[j:])
+        return True
     backup(desc)
     size_old = "#define AUDIO_INTERFACE_DESC_SIZE\t8 + 9+10+12+9+12+10+9 + 9+9+7+11+9+7 + 9+9+7+11+9+7+9\n"
     if s.count(size_old) != 1:
@@ -328,14 +345,7 @@ def uac2_desc(desc):
         j = s.index(end, i) + len("\t0,\t\t\t\t\t// bSynchAddress\n")
         s = s[:j] + "#endif // L7_UAC2\n" + s[j:]
         at = j
-    names = "#ifdef AUDIO_CHANNEL_NAMES // L7_UAC2: the channels to the computer, by name\n"
-    entries = "#ifdef AUDIO_CHANNEL_NAMES // L7_UAC2\n"
-    for k, name in enumerate(CHANNEL_NAMES):
-        names += "PROGMEM const struct usb_string_descriptor_struct usb_string_channel%d = {%d, 3, {%s}};\n" % (
-            k, 2 + 2 * len(name), ",".join("'%s'" % c for c in name))
-        entries += "        {0x0300 + AUDIO_CHANNEL_NAMES + %d, 0x0409, (const uint8_t *)&usb_string_channel%d, 0},\n" % (k, k)
-    names += "#endif\n\n"
-    entries += "#endif\n"
+    names, entries = channel_names()
     list_head = "const usb_descriptor_list_t usb_descriptor_list[] = {\n"
     string0 = "        {0x0300, 0x0000, (const uint8_t *)&string0, 0},\n"
     if s.count(list_head) != 1 or s.count(string0) != 1:

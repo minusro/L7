@@ -125,10 +125,14 @@ no dropouts or overruns
 - stereo usb audio V
 - more usb midi sync work for latency V
 	- maybe some more testing later
+- multitrack usb audio V
 - audio in sync 
+
 - midi clips page
 - mute played clips after finishing recording (?)
-- multitrack usb audio 
+
+- more audio testing and fixes
+
 - track ms offset
 - clip ms fine rotate
 

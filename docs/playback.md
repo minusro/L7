@@ -235,9 +235,11 @@ macOS and Windows 10 (1703) and later have the class driver built in.
   its descriptor still comes first). Endpoints: audio 6 (both ways), the
   feedback endpoint 7. One clock source (ID 9, fixed 44.1 kHz), no controls:
   no volume on the computer's side.
-* Channels to the computer (named in the descriptors, "Main L" ... "Track 7 R",
-  string descriptors 0x10-0x1F): 1-2 the main mix, then 3-4 track 1 to 15-16
-  track 7. At full speed (through a USB 1.1 hub) only the main mix (2 channels).
+* Channels to the computer (named in the descriptors, "Master L" ... "Ch 7 R",
+  string descriptors 0x10-0x1F): 1-2 the master, then the tracks from the top
+  row down: 3-4 Ch 1 (the top row, track index 6) to 15-16 Ch 7 (the bottom
+  row, index 0; `usbTrackChannel()`, engine.h). At full speed (through a USB
+  1.1 hub) only the master (2 channels).
 * Packets every microframe (125 us) both ways, 5-6 frames each (7 at most); the
   feedback (frames a microframe, 16.16) every 1 ms. With data every microframe,
   "frames a microframe" and "frames a packet" agree, whichever a host takes.
@@ -257,12 +259,13 @@ macOS and Windows 10 (1703) and later have the class driver built in.
   Teensyduino's stereo audio) may need it removed once in Device Manager
   (View > Show hidden devices, the "L7" entries: Uninstall device) before the
   16 channels show up.
-* Out, channels 1-2: the mix before the master volume (the
-  tracks and the monitored input; no metronome, as resampling), whatever the
-  master volume; channels 3-16: each track as heard in that mix (its volume,
-  balance, filters and mute, the mix's headroom `masterGain`; the tracks add up
-  to the main mix, without the monitored input; a track not playing: silent); the line out and headphones (outputs 0-1) have the master
-  volume and the metronome. `USB_OUT_CLICK` (engine.cpp) puts the metronome on
+* Out, channels 1-2: the mix as the line out has it (the tracks and the
+  monitored input, the master volume in it) without the metronome; channels
+  3-16: each track as heard in the mix before the master volume (its volume,
+  balance, filters and mute, the mix's headroom `masterGain`; at the master
+  volume's 100 % the tracks add up to channels 1-2, without the monitored
+  input; a track not playing: silent); the line out and headphones have the
+  metronome too. `USB_OUT_CLICK` (engine.cpp) puts the metronome on
   USB too, for measuring (tools/latency/clocksync.c). While a computer records
   it (its streaming interface selected, `usb_audio_transmit_setting`), the
   speaker is off (headphones as ever); the serial log says so.
