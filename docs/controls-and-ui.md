@@ -238,14 +238,19 @@ A recording track's waveform area is in the accent colour (a block of black betw
   under way, clipboard empty). LEFT/RIGHT go along a card row (not on to
   another; RIGHT or LEFT off its ends leaves the menu, as they do on a list item); UP/DOWN go card row
   to card row and on into the list (back up: to the column it came from, on
-  the I–L row). Switching screens (off an edge, LEFT+RIGHT, A on the loaded
-  project's card), each screen's selection is where it was last left, its row
-  and its column (the menu's: a card or list item, or its status row). Only
-  the menu's very first opening off an edge (nothing to go back to yet) lands
-  as if the screens had wrapped round: on its nearest place on the side it
-  comes in from, by the centres (UP off track 1: the list's last item; DOWN off
-  the status row: the A–D card nearest; LEFT off the looper: the D column or a
-  list item nearest in height; RIGHT: the A column; `menuLand()` in ui_menu.cpp). The menu's
+  the I–L row). Switching screens, each screen keeps its own selection, row
+  and column (the menu's: a card or list item, or its status row; the
+  looper's: its row and cell, the tracks and the status row each their own
+  column). With LEFT+RIGHT or A on the loaded project's card it's where it was
+  left. Off an edge it lands on the other screen's far edge, as if they wrapped
+  round: UP/DOWN onto its bottom / top row at the column that row was left on
+  (UP off track 1: the menu's last list item; DOWN off the status row: the A–D
+  row, at the card column last selected; UP off the A–D row: the looper's
+  status row; DOWN off the last list item: track 1), LEFT/RIGHT onto its right
+  / left side in the row it was left on (LEFT off the looper: the menu's right
+  column, D H L, a list item or its status row as it was; RIGHT off the menu:
+  the looper's row's first cell; LEFT off the menu's left side: its last).
+  `menuLand()` in ui_menu.cpp, `leaveMenu()` in input.cpp. The menu's
   selection is kept across power cycles; if it was open at power off it
   opens again at boot (DATA/SESSION.DAT).
 * Splash (`ui_splash.cpp`): the "L7" logo (italic, the 7's right edge one
