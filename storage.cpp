@@ -1279,6 +1279,15 @@ bool pasteTrack(int t) {
   return true;
 }
 
+bool swapTracks(int a, int b) {
+  if (a == b || recordingTrack(a) || recordingTrack(b)) return false;
+  TrackUnit ua = unitOf(a), ub = unitOf(b);      // (changes on their way count)
+  bool ok = setTrackUnit(a, ub);
+  ok = setTrackUnit(b, ua) && ok;
+  sceneStateChanged();                           // (setTrackUnit() alone leaves the scene to its caller)
+  return ok;
+}
+
 // ---- Choosing a track's sample
 bool stepSample(int t, int dir) {
   if (sampleTotal < 2 || recordingTrack(t)) return false;

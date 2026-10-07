@@ -96,6 +96,11 @@ void clearTrack(int t);               // its sample stays on the card
 bool cutTrack(int t);
 bool pasteTrack(int t);
 bool clipboardFull();
+// Tracks a and b swap their units (a clip, its range, mute, filter, volume,
+// balance): at once while stopped, else both on the next quarter beat after
+// the lead, each clip in step with the clock as it was (no gap); the scene
+// follows. Not with a recording on (or queued for) either.
+bool swapTracks(int a, int b);
 // Samples are known by an id: the name's tag (project letter, track) and
 // number ("A30012.wav"; older ones: the number alone, "0012.wav").
 // Marks on the samples in use (clearSampleMarks(), markSample() each), then

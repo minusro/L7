@@ -375,6 +375,16 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         if (pressed & (m8::BTN_LEFT | m8::BTN_DOWN)) stepMasterVolume(-1);
         if (pressed & (m8::BTN_RIGHT | m8::BTN_UP)) stepMasterVolume(1);
       }
+    } else if ((pressed & (m8::BTN_UP | m8::BTN_DOWN)) && unitOf(selected).sample == 0 && !recordingOn(selected) &&
+               recordQueued() != selected) {
+      // An empty track (a change on its way counts): B + UP/DOWN moves it up /
+      // down, the track in its way taking its place (wrapping round the 7);
+      // the selection goes with it.
+      int to = (pressed & m8::BTN_UP) ? (selected + 1) % NUM_TRACKS : (selected + NUM_TRACKS - 1) % NUM_TRACKS;   // (row 6: track 1, at the top)
+      if (swapTracks(selected, to)) {
+        drawTrack(selected);
+        selected = to;
+      }
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats: any whole number of beats, up to the whole loop.
       //   LEFT/RIGHT: move its start a step, wrapping around the loop (a range

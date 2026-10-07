@@ -547,6 +547,30 @@ int main(int argc, char **argv) {
     engine.monitor = true;
   }
 
+  printf("moving an empty track (B + UP/DOWN): track 3 (empty) and track 2 swap while playing\n");
+  {
+    uint32_t sample = tracks[1].sample;
+    setTrackFilter(2, 10, 30);                     // (the empty track's own settings go with it)
+    trackChanged(2);
+    uint32_t edits = projectEdits();
+    check(swapTracks(2, 1), "swapped");
+    check(unitOf(2).sample == sample && unitOf(1).sample == 0, "on its way: track 3 gets the clip, track 2 the empty unit");
+    check(projectEdits() != edits, "the scene follows");
+    runBeats(2);
+    check(tracks[2].sample == sample && tracks[2].state != TrackState::Empty && tracks[1].state == TrackState::Empty &&
+          tracks[1].filterLo == 10 && tracks[1].filterHi == 30, "done: the clip on track 3, track 2 empty with track 3's filter");
+    runBeats(4);
+    checkSync(2, "the clip moved to track 3, in step with the clock");
+    check(!swapTracks(2, 2), "not with itself");
+    check(swapTracks(1, 2), "and back");
+    runBeats(2);
+    check(tracks[1].sample == sample && tracks[2].state == TrackState::Empty, "back: the clip on track 2 again");
+    setTrackFilter(2, 0, FILTER_MAX);
+    trackChanged(2);
+    for (auto &x : tracks) x.gain = 1;
+    engine.monitor = true;
+  }
+
   printf("choosing samples on track 7 (empty) while playing: in the order of their names\n");
   {
     Track &tr = tracks[6];
