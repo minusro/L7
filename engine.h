@@ -179,6 +179,22 @@ uint32_t spbForBpm(float bpm);
 // midi_in.cpp maps an incoming tick's micros() onto the beat with it).
 struct BlockStamp { uint32_t us; int32_t beat; uint32_t sampleInBeat, spb; bool running; };
 extern volatile BlockStamp blockStamp;
+// Audio follow (audio_follow.cpp): while onsetListen, the interrupt measures
+// the input (what's monitored and recorded: the line input and USB audio)
+// once a block: how sharply it gets louder (the rise of its log energy, in
+// three bands: lows, highs, all; ONSET_SCALE a unit), into onsetRing. Block n
+// (onsetCount: blocks so far) started at transport.now onsetNow - (onsetCount
+// - 1 - n) * AUDIO_BLOCK_SAMPLES.
+constexpr uint32_t ONSET_FRAMES = 2048;                 // (~5.9 s)
+constexpr float ONSET_SCALE = 1000.0f;
+extern volatile bool onsetListen;
+extern uint16_t onsetRing[ONSET_FRAMES];
+extern volatile uint32_t onsetCount, onsetNow;
+// Our beats as they started (running): beat b's first sample (transport.now)
+// and its samples a beat, for the last BEAT_LOG beats (index b % BEAT_LOG).
+constexpr int BEAT_LOG = 8;
+struct BeatStart { int32_t beat; uint32_t now, spb; };
+extern volatile BeatStart beatLog[BEAT_LOG];
 // Called from the MIDI timer (every 200 us): MIDI in read (midi_in.cpp).
 extern void (*midiInPollHook)();
 float bpmForSpb(uint32_t spb);

@@ -222,6 +222,60 @@ followed until it stops; the other's ticks, starts and stops are ignored
 meanwhile. A pause (no tick for 0.5 s) starts the tempo's measurement afresh.
 In storage mode nothing is taken in (`midiInSuspend()`).
 
+## Audio follow
+
+`audio_follow.cpp` (its header has the outline). B+A on the tempo cell turns it
+on / off (the session's `follow=`); the button, B held there: an ear, crossed
+out while it's on. On, the tempo can't be changed by hand or by a project
+(`changeTempo()`, tap tempo: nothing). An external MIDI clock being followed
+comes first (audio follow listens on, but doesn't touch the clock meanwhile).
+* What's listened to: the input as monitored and recorded (the line input and
+  USB audio mixed, before resampling's swap). The interrupt (only while on),
+  each block: the mono input through three bands (two one-poles under
+  ~150 Hz; above ~2.5 kHz; all), each band's energy smoothed over ~10 ms, its
+  log at the block's end; the rises (half-wave: only louder) summed, into
+  `onsetRing` (2048 blocks, ~5.9 s, 4 KB, RAM2).
+* The tempo, every 0.5 s once ~5.2 s are in: the autocorrelation of the onsets
+  (frames of two blocks, mean removed, peaks widened a frame either side),
+  every lag of 60-200 BPM tried in quarter frames, each scored by the mean
+  of its lag and three multiples (a pattern repeats every beat, two, three,
+  four; a whole-frame lag's multiples would miss narrow peaks: 174 BPM was
+  taken for 116), weighted towards the tempo shown (a log-normal, 0.6 of an
+  octave): a beat's half or double is a matter of taste, so the tempo set
+  nearer decides (drums at 174 with 150 set: 174; with 100 set: 87). Not
+  clear enough (silence): none.
+* The beat: from a tempo, the phase whose beats rose most over the last few
+  seconds; then each beat looked for within a quarter period of where it's
+  due (weighted by closeness), found if its rise stands out (2.5 times the
+  last 2 s's average); found, the beat moves by alpha of its miss and the
+  period by beta (0.2 / 0.03; 0.35 / 0.06 for the first 8 beats and for any
+  miss of 3 frames or more: a tempo changing). Found often enough: locked
+  (the serial log: "audio follow: locked (126.00 BPM)"); a new tempo estimate
+  4 % off (twice in a row unlocked, 6 times locked): afresh. Every 0.5 s,
+  locked, the strongest phase at its period checked: 0.2 of a beat off three
+  times in a row (an off-beat taken), moved there.
+* The clock, each beat found: stopped, the tempo theirs (`followTempo()`, as
+  the MIDI clock's; shown to a tenth); running, also nudged: their beat as
+  heard (its rise found, else as expected), less the input's latency
+  (`inputLatency()`: the line input's or USB's, as recordings), is where our
+  beat should be; our position then from `beatLog` (the engine: each beat's
+  first sample, a start part way into a beat included), and the next beat at
+  their tempo nudged by half the difference (at most 0.5 %; nothing under
+  0.006 beats; for 8 beats after a lock or a start, or 0.025 beats off or
+  more, all of it, up to 5 %). Beats only: the bars stay where START put
+  them.
+* START (or A on the clock cell, SHIFT+START) while locked: on their beat
+  (`audioFollowStart()`): in the first half of theirs, at once, that far into
+  the beat (`transportStartAt(0, inBeat)`); in the second half, on their next.
+* The tempo cell's number flashes with the beat (the accent colour its first
+  half): the clock's while it runs, theirs while stopped and locked.
+* The simulator (drums: a kick every beat, a snare on 2 and 4, hats on the
+  eighths, a pad): 126 BPM found within 10 s (126.0 shown); START on their
+  beat from the first (within 0.3 ms); running, within 0.2 ms of their kicks;
+  their tempo rising to 132 over 8 s, followed (within ~16 ms meanwhile, a few
+  ms after); silence: the beat lost, the tempo kept; 90 / 70 / 174 BPM found
+  from the tempo set. Real music, on the M8: to try.
+
 ## USB audio
 
 The patched USB type ("Serial + MIDI + Audio + Mass Storage",

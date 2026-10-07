@@ -2,6 +2,7 @@
 #include "app.h"
 #include "ui.h"
 #include "midi_in.h"
+#include "audio_follow.h"
 
 m8::Board board;
 
@@ -16,13 +17,14 @@ static int savedProject = 0;                    // and the loaded project
 static int savedMenu = -1, bootMenu = -1;       // and the menu (its selection, + 1000 open)
 static int bootProject = 0;
 static bool savedPlaying = false, bootPlaying = false;   // the clock running, as saved / at boot
+static bool savedFollow = false;                // audio follow, as saved
 
 // ---- Tempo: MIN_BPM-MAX_BPM, whatever the loops were recorded at. It's the
 // project's (all its scenes); new projects take the last one set by hand.
 static float newBpm = 120.0f;
 
 static bool changeTempo(float b) {
-  if (midiClockFollowing()) return false;          // (an external clock's tempo: not by hand, nor a project's)
+  if (midiClockFollowing() || audioFollowOn()) return false;   // (an external clock's tempo, or the one heard: not by hand, nor a project's)
   b = constrain(roundf(b * 10) / 10, MIN_BPM, MAX_BPM);   // tenths of a BPM
   // (Recording too: the recorder follows the clock's tempo changes, engine.h.)
   uint32_t spb = spbForBpm(b);
@@ -104,6 +106,8 @@ void beginSession() {
   savedPlaying = bootPlaying = s.playing;
   savedMenu = bootMenu = s.menu;
   if (s.metro >= METRO_OFF && s.metro <= METRO_ON) metroMode = savedMetro = s.metro;
+  audioFollowBegin(s.follow);
+  savedFollow = s.follow;
 }
 
 int sessionProject() { return bootProject; }
@@ -115,7 +119,7 @@ static bool sessionDirty() {
   mainSelection(row, cell);                        // (the looper's, not the menu's)
   return tempoDirty || masterVolume() != savedMaster || projectCurrent() != savedProject ||
          menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell ||
-         metroMode != savedMetro;
+         metroMode != savedMetro || audioFollowOn() != savedFollow;
 }
 
 static void writeSession() {
@@ -128,8 +132,10 @@ static void writeSession() {
   s.playing = transport.running;
   mainSelection(s.row, s.cell);
   s.metro = metroMode;
+  s.follow = audioFollowOn();
   saveSession(s);
   savedMetro = s.metro;
+  savedFollow = s.follow;
   savedRow = s.row;
   savedCell = s.cell;
   savedMenu = s.menu;

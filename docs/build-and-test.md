@@ -42,7 +42,7 @@ truncate; counts file-system changes and file creations).
 ```sh
 cd tools/looper_sim
 c++ -std=c++17 -O1 -Wno-macro-redefined -Istubs -I../.. \
-  ../../engine.cpp ../../storage.cpp ../../scenes.cpp ../../ableton.cpp ../../midi_in.cpp looper_sim.cpp -o looper_sim
+  ../../engine.cpp ../../storage.cpp ../../scenes.cpp ../../ableton.cpp ../../midi_in.cpp ../../audio_follow.cpp looper_sim.cpp -o looper_sim
 ./looper_sim          # all checks + 5 random 600 s sessions; ./looper_sim 0 skips the fuzzing
 ```
 

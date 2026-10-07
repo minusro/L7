@@ -2,6 +2,7 @@
 #include "ui.h"
 #include "input.h"
 #include "ui_font.h"
+#include "audio_follow.h"
 
 // ---- Row buttons
 // Track rows show the track's state: an unmuted track play while the clock
@@ -17,7 +18,8 @@
 // clipboard is empty). With B
 // held alone on a cell it adjusts: four small arrows round a + (B + arrows),
 // black on the accent colour; the pressed look (dark grey, the icon in the
-// accent colour) while an arrow is down; A does nothing then; on an empty track: resample
+// accent colour) while an arrow is down; A does nothing then; on the tempo cell (no arrow
+// down): audio follow (an ear; crossed while it's on, B+A turning it off); on an empty track: resample
 // (the record dot with a plus: B+A); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a checkered square (9 x 9, as the duplicate one).
 // While the menu is open (on its items A runs the action when let go; B does
@@ -32,7 +34,7 @@
 // start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_METRO, ICON_MOVE };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_METRO, ICON_MOVE, ICON_EAR };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -61,6 +63,9 @@ static int actionIcon() {
         recordQueued() != selected)
       return ICON_RESAMPLE;                          // an empty track: B+A resamples (unavailable with no clip playing unmuted)
     if (board.keys() & m8::BTN_PLAY) return ICON_NONE;
+    const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
+    if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == TEMPO_CELL && !(board.keys() & arrows))
+      return ICON_EAR;                               // the tempo cell: B+A turns audio follow on / off
     if (selected == STATUS_ROW) return ICON_ADJUST;
     return hasClip(selected) ? ICON_ADJUST : ICON_NONE;
   }
@@ -183,6 +188,7 @@ PROGMEM static const Icon ICONS[] = {
   {7, 5, {"#...#..", "##..##.", "###.###", "##..##.", "#...#.."}},   // NEXT (two small plays, a block apart: the next scene; a block right of centre)
   {0, 0, {}},                                                                  // METRO (drawn on its own: a metronome and the next setting)
   {3, 5, {".#.", "###", "...", "###", ".#."}},   // MOVE (a track's: up and down, a block apart: B + UP/DOWN moves the empty track)
+  {0, 0, {}},                                                                  // EAR (drawn on its own: an ear, crossed while following)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
@@ -318,21 +324,27 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     for (int r = 0; r < ROWS4; r++)
       for (int c = 0; c < w; c++)
         if (on[r][c]) block(c0 + c, r0 + r);
-  } else if (icon == ICON_METRO) {
+  } else if (icon == ICON_METRO || icon == ICON_EAR) {
     // A metronome, filled (a trapezoid; its pendulum a slit up through it and
     // out past the top), 10 x 10, a block of margin round it at least;
     // crossed out while it would click with the clock running (what SHIFT+A
-    // will change): a slash from the top right to the bottom left, cleared a
-    // block either side.
+    // will change). Or an ear (its rim, its inner fold, its lobe), the same
+    // size, crossed out while audio follow is on (what B+A will change). The
+    // cross: a slash from the top right to the bottom left, cleared a block
+    // either side.
     static const char *const METRONOME[10] = {
         ".......#..", "......#...", "...###....", "...###....", "..###.##..", "..###.##..",
         ".###.####.", ".###.####.", "####.#####", "##########"};
+    static const char *const EAR[10] = {
+        "...####...", "..######..", ".###..###.", ".##.##.##.", ".##.#..##.",
+        ".....#.##.", "....##.##.", "...##.##..", ".##..##...", ".####....."};
+    const char *const *art = icon == ICON_EAR ? EAR : METRONOME;
     constexpr int W = 10, H = 10;
     int c0 = PANEL_LEFT + 1, r0 = (rows - H) / 2;
-    bool crossed = metronomeOn;                    // (it would click were the clock running: metronomeOn, kept up to date running or not)
+    bool crossed = icon == ICON_EAR ? audioFollowOn() : metronomeOn;   // (the metronome: it would click were the clock running, metronomeOn, kept up to date running or not)
     for (int r = 0; r < H; r++)
       for (int c = 0; c < W; c++) {
-        bool on = METRONOME[r][c] == '#';
+        bool on = art[r][c] == '#';
         if (crossed) {                             // the cross: a slash from the top right to the bottom left, a gap either side of it
           int s = (W - 1) - r * (W - 1) / (H - 1);
           if (c == s) on = true;
@@ -393,7 +405,8 @@ void drawCells(int i) {
   k.iconColor = iconColor(i, k.icon);
   k.mark = i == selected && i != STATUS_ROW ? markColor() : BG;
   k.badge = trackBadge(i);
-  k.metro = k.icon == ICON_METRO ? (uint8_t)(metronomeMode() + 4 * metronomeOn) : 0;   // (its look: the setting now, crossed while clicking)
+  k.metro = k.icon == ICON_METRO ? (uint8_t)(metronomeMode() + 4 * metronomeOn)   // (its look: the setting now, crossed while clicking;
+          : k.icon == ICON_EAR ? (uint8_t)(8 + audioFollowOn()) : 0;                   // the ear: crossed while following)
   k.ground = rowGround(i);                         // (the selected row's ground, under the button too)
   if (i != STATUS_ROW) k.topGround = rowGround(rowAbove(i));
   bool first = drawn[i] != uiGeneration;

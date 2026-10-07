@@ -45,7 +45,9 @@
 //                      whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
 //   OPT+EDIT         empty track: resample (record the output, from the next bar line);
-//                      then it moves to a new scene after this one (on the same track)
+//                      then it moves to a new scene after this one (on the same track);
+//                      tempo cell: audio follow on / off (the tempo and beat heard in the
+//                      input followed, audio_follow.h; the tempo flashes with the beat)
 //   SHIFT+UP/DOWN    newer / older scene (0*: empty; after the last, a copy of it);
 //                    on the status row's scene cell B+UP/DOWN does the same
 //                    (while playing: on the next bar line after SHIFT is let go; SCN
@@ -79,6 +81,7 @@
 #include "input.h"
 #include "midi_in.h"
 #include "midi_usb.h"
+#include "audio_follow.h"
 
 AudioInputI2S        i2sIn;
 LooperEngine         engine;
@@ -232,6 +235,7 @@ void loop() {
 
   debugStage = "MIDI in";
   midiInService();                                 // an external clock: its start, stop, tempo and beat
+  audioFollowService();                            // the tempo and beat heard in the input
   serviceUsbLatency();                             // USB audio's latency measured (its beats' sharp sounds)
   // While USB audio comes in: the line input's levels on the serial log every
   // 5 s (its gate's level is set from the quietest, nothing plugged in).

@@ -186,6 +186,17 @@ static volatile bool usbOut = false;
 static volatile uint32_t usbTickTail = 0, usbMsgTail = 0;
 
 volatile BlockStamp blockStamp;
+volatile bool onsetListen = false;
+DMAMEM uint16_t onsetRing[ONSET_FRAMES];
+volatile uint32_t onsetCount = 0, onsetNow = 0;
+volatile BeatStart beatLog[BEAT_LOG];
+// The onset measure's state (interrupt): the bands' filters (one-pole: the
+// lows two below ~150 Hz, the highs above ~2.5 kHz), their energies smoothed
+// over ~10 ms, and each band's log energy at the last block's end.
+static float onLo1 = 0, onLo2 = 0, onHiLp = 0, onE[3] = {}, onPrev[3] = {};
+static constexpr float ON_K_LO = 2 * 3.14159265f * 150 / AUDIO_SAMPLE_RATE_EXACT;
+static constexpr float ON_K_HI = 2 * 3.14159265f * 2500 / AUDIO_SAMPLE_RATE_EXACT;
+static constexpr float ON_K_E = 1.0f / (0.010f * AUDIO_SAMPLE_RATE_EXACT);
 void (*midiInPollHook)() = nullptr;
 
 static void midiTimerIsr() {
@@ -418,6 +429,10 @@ void LooperEngine::update() {
         tr.armed = false;
       }
     }
+    volatile BeatStart &b = beatLog[(uint32_t)transport.beat % BEAT_LOG];   // (the beat as if started a whole one: audio follow)
+    b.beat = transport.beat;
+    b.now = transport.now - in;
+    b.spb = spbNow;
     tickInBeat_ = (int)min((uint64_t)24, ((uint64_t)in * 24 + spbNow - 1) / spbNow);   // the MIDI clock: from its next tick
     nextTickAt_ = (uint64_t)tickInBeat_ * spbNow / 24;
   }
@@ -444,6 +459,8 @@ void LooperEngine::update() {
     mix[t][3] = g * tr.mixRR;
   }
 
+  const bool listen = onsetListen;
+  const uint32_t blockNow = transport.now;
   // Resampling: the output goes in the input history (what's recorded) instead.
   const bool captureOutput = recording.resample && recording.mode != Recording::Idle;
   const float outGain = outputGain;
@@ -471,6 +488,16 @@ void LooperEngine::update() {
     int16_t l = (int16_t)constrain(li, -32768, 32767), r = (int16_t)constrain(ri, -32768, 32767);
     const uint32_t at = transport.now;
     inputRing[at % INPUT_FRAMES] = (uint16_t)l | ((uint32_t)(uint16_t)r << 16);
+    if (listen) {                                    // audio follow: the bands' energies
+      float m = 0.5f * (l + r);
+      onLo1 += (m - onLo1) * ON_K_LO;
+      onLo2 += (onLo1 - onLo2) * ON_K_LO;
+      onHiLp += (m - onHiLp) * ON_K_HI;
+      float hi = m - onHiLp;
+      onE[0] += (onLo2 * onLo2 - onE[0]) * ON_K_E;
+      onE[1] += (hi * hi - onE[1]) * ON_K_E;
+      onE[2] += (m * m - onE[2]) * ON_K_E;
+    }
 
     const float monL = monitor ? l : 0, monR = monitor ? r : 0;   // the input being monitored
     float mixL = 0, mixR = 0;                        // the tracks
@@ -486,6 +513,10 @@ void LooperEngine::update() {
           for (int t = 0; t < NUM_TRACKS; t++) speed[t] = tracks[t].playSpb ? (double)tracks[t].playSpb / spb : 0;
         }
         onBeat(blockMicros, i);
+        volatile BeatStart &b = beatLog[(uint32_t)transport.beat % BEAT_LOG];
+        b.beat = transport.beat;
+        b.now = at;
+        b.spb = spb;
       }
       if (tickInBeat_ < 24 && transport.sampleInBeat >= nextTickAt_) {
         queueTick(blockMicros + (uint32_t)((i + AUDIO_BLOCK_SAMPLES) * usPerSample));
@@ -561,6 +592,17 @@ void LooperEngine::update() {
     outR->data[i] = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
   }
 
+  if (listen) {                                      // audio follow: this block's rise in loudness
+    float flux = 0;
+    for (int b = 0; b < 3; b++) {
+      float c = logf(1 + onE[b] * (1.0f / 1000));    // (log energy, from ~-60 dBFS)
+      flux += max(0.0f, c - onPrev[b]);
+      onPrev[b] = c;
+    }
+    onsetRing[onsetCount % ONSET_FRAMES] = (uint16_t)min(flux * ONSET_SCALE, 65535.0f);
+    onsetNow = blockNow;
+    onsetCount = onsetCount + 1;
+  }
   for (int t = 0; t < NUM_TRACKS; t++) {
     Track &tr = tracks[t];
     if (tr.stopping && tr.live) {                    // faded out: off

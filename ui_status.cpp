@@ -1,6 +1,7 @@
 // ui_status.cpp — the status row: menu icon, scene, clock and tempo (see ui.h)
 #include "ui.h"
 #include "input.h"
+#include "audio_follow.h"
 
 // Status row, in the pixel font, each cell framed like the tracks' when the
 // row is selected:
@@ -22,7 +23,10 @@
 //     accent colour on 1.1.1. Selected, A starts / stops the
 //     clock (as START; SHIFT+A as SHIFT+START).
 //   fourth cell: the tempo, followed by an inverted "BPM" tag (both in the
-//     accent colour while B alone is held there: B + arrows change it).
+//     accent colour while B alone is held there: B + arrows change it). With
+//     audio follow on (B+A there), the tempo flashes with the beat (the accent
+//     colour, then as it was): the clock's while it runs, else the one heard
+//     (none found: steady).
 // Text and tags are redrawn whole each pass (their boxes clear what was
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
@@ -174,7 +178,8 @@ void drawStatus() {
     t.fillRect(numLeft, textY + FONT_H, numRight - numLeft + PX, tagY + TAG_H - textY - FONT_H, G);
     t.fillRect(numLeft, textY, tempoW - w, FONT_H, G);
     t.fillRect(numRight, textY, PX, FONT_H, G);
-    drawText(numRight - w, textY, text, ink, G);
+    uint16_t numInk = audioFollowFlash() ? ACCENT : ink;   // (audio follow: the beat)
+    drawText(numRight - w, textY, text, numInk, G);
   }
 
   // The clock, or the master volume while B alone is held on its cell.

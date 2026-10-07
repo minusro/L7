@@ -1,5 +1,6 @@
 // input.cpp — see input.h. The key list is at the top of m8_looper.ino.
 #include "input.h"
+#include "audio_follow.h"
 #include "ui.h"
 #include "ableton.h"
 #include "usb_drive.h"
@@ -47,6 +48,7 @@ static int tapCount = 0;                            // taps in this run (0: the 
 
 
 static void tapTempo() {
+  if (audioFollowOn()) return;                       // (the tempo heard: not by hand)
   static uint32_t first, last;                      // this run's first and latest taps
   static double sumT, sumIT;                        // over the taps: t (ms after the first), i * t
   uint32_t now = millis();
@@ -71,6 +73,17 @@ static void tapTempo() {
     if (transport.running) transportSnapToBar();
     else transportRestart();
   }
+}
+
+// The clock started by hand (START, A on the clock cell; SHIFT: from 1.1.1
+// again): on the beat heard while audio follow has one (audio_follow.h).
+static void startByHand() {
+  if (!audioFollowStart()) transportStart();
+}
+static void restartByHand() {
+  if (!audioFollowLocked()) return transportRestart();
+  transportStop();
+  startByHand();
 }
 
 // With SHIFT and B both held, which came first: A then pastes a scene (B
@@ -292,9 +305,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
     if (pressed & m8::BTN_PLAY) {                    // START: the clock, as in the looper's view (SHIFT: from 1.1.1)
-      if (shift) transportRestart();
+      if (shift) restartByHand();
       else if (transport.running) transportStop();
-      else transportStart();
+      else startByHand();
     }
     const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
     if (pressed & act) noteActionPress();            // (the icon: what letting go will do)
@@ -623,7 +636,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // press, running or not. A on the status row: duplicate the scene (scene
   // cell), play / stop (clock cell), tap tempo (tempo cell); with SHIFT, on any of them: the same
   // as SHIFT+START.
-  // B+A on an empty track: resample (B otherwise adjusts cells). With SHIFT too, the order they were pressed in:
+  // B+A on the tempo cell: audio follow on / off; on an empty track: resample (B otherwise adjusts cells). With SHIFT too, the order they were pressed in:
   // B then SHIFT, +A: paste the scene clipboard after the scene; SHIFT then
   // B, +A: cut the scene to it.
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
@@ -631,6 +644,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if ((pressed & m8::BTN_EDIT) && opt) {
     if (shift) {
       sceneChanged = optFirst ? scenePaste() : sceneCut();
+    } else if (onTempo) {
+      audioFollowToggle();                         // B+A on the tempo cell: audio follow on / off
     } else if (!onStatus && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
                recordQueued() != selected && anyClipHeard()) {
       // An empty track resamples: records the app's output (queued behind a
@@ -640,7 +655,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
-  if ((transportKey || (edit && onStatus && !onScene && !onTempo)) && shift) transportRestart();
+  if ((transportKey || (edit && onStatus && !onScene && !onTempo)) && shift) restartByHand();
   if (edit && onStatus && shift && onTempo) {      // SHIFT+A on the tempo cell: the metronome's next setting
     setMetronomeMode(nextMetronomeMode());
     metronomeOn = metronomeWanted();               // (at once: the next beat too)
@@ -650,7 +665,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if (onScene) nextSceneArmed = true;            // (acts once A is let go, below)
     else if (onClock) {                            // play / stop, as START
       if (transport.running) transportStop();
-      else transportStart();
+      else startByHand();
     } else if (onTempo) tapTempo();
   }
   if (edit && !onStatus) {
@@ -671,7 +686,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if (transport.running) {
       transportStop();
     } else {
-      transportStart();
+      startByHand();
     }
   }
   if (!sceneMod) sceneChanged |= sceneHold(false);  // SHIFT (or B) let go: to the scene stepped to

@@ -16,6 +16,7 @@
 #include "ableton.h"
 #include "colors.h"
 #include "midi_in.h"
+#include "audio_follow.h"
 
 using namespace looper;
 
@@ -51,6 +52,30 @@ static double pendingUs = 0;
 static int16_t feedUsb = 0;                         // USB audio in: this level (0: none coming in)
 static int32_t feedUsbClick = -1;                   // USB audio in: a click this many samples after each beat line (-1: none)
 static bool feedNoise = false;                      // the line input: noise only (overrides the feed below)
+// The input: a drum pattern (audio follow's tests): a kick on every beat, a
+// snare on 2 and 4, a closed hat on the eighths, over a quiet pad; at drumBpm
+// (0: none), drumBeat its position in beats; each beat's kick (its input sample) in drumKicks.
+static double drumBpm = 0, drumBeat = 0;
+static float drumLevel = 1;
+static std::vector<uint32_t> drumKicks;
+static uint32_t drumNoise = 12345;
+static float drumSample(uint32_t at) {
+  double prev = drumBeat;
+  drumBeat += drumBpm / 60 / AUDIO_SAMPLE_RATE_EXACT;
+  if (floor(drumBeat) != floor(prev)) drumKicks.push_back(at);
+  const double secPerBeat = 60 / drumBpm;
+  double inBeat = (drumBeat - floor(drumBeat)) * secPerBeat, inEighth = fmod(drumBeat * 2, 1.0) * secPerBeat / 2;
+  int beat = (int)floor(drumBeat);
+  drumNoise = drumNoise * 1664525u + 1013904223u;
+  float noise = (int32_t)drumNoise / 2147483648.0f;
+  float v = 0.6f * sinf(2 * (float)M_PI * 55 * (float)inBeat) * expf(-(float)inBeat / 0.08f);   // kick
+  if (beat % 2 == 1) v += expf(-(float)inBeat / 0.05f) * (0.35f * noise + 0.2f * sinf(2 * (float)M_PI * 190 * (float)inBeat));   // snare
+  static float lastNoise = 0;
+  v += 0.12f * (noise - lastNoise) * expf(-(float)inEighth / 0.012f);   // hat (the noise's highs)
+  lastNoise = noise;
+  v += 0.04f * sinf(2 * (float)M_PI * 220 * at / AUDIO_SAMPLE_RATE_EXACT);   // a pad
+  return v * drumLevel;
+}
 static uint32_t usbIn[AUDIO_BLOCK_SAMPLES];        // from the computer this block (left | right << 16)
 static bool usbInOn = false;
 static void audioBlock();
@@ -91,6 +116,7 @@ static void block() {
   serviceStorage();
   serviceScenes();
   serviceUsbLatency();                             // (as loop() does)
+  audioFollowService();
 }
 
 // The app's tempo, for scenes: simSetTempo as a project loads, tempoByHand as
@@ -138,6 +164,11 @@ static void audioBlock() {
     inL.data[i] = v;
     inR.data[i] = -v;
   }
+  if (drumBpm > 0)
+    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+      int16_t v = (int16_t)constrain(lroundf(drumSample(inputIndex + i) * 32767), -32767L, 32767L);
+      inL.data[i] = inR.data[i] = v;
+    }
   if (feedNoise)                                   // (the line input: a little noise, as with nothing plugged in)
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) inL.data[i] = inR.data[i] = (int16_t)(rand() % 21 - 10);
   engine.simIn[0] = &inL; engine.simIn[1] = &inR;
@@ -2594,6 +2625,102 @@ for f in os.listdir("."):
     engine.monitor = wasMonitor;
     for (int t : {1, 4}) clearTrack(t);
     for (int i = 0; i < 4; i++) block();
+  }
+
+  printf("audio follow: the tempo and the beat heard in the input\n");
+  {
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);
+    if (transport.running) transportStop();
+    simSetTempo(120);
+    bpm = 120;
+    feedRamp = false; feedSineHz = 0;
+    const double fps = AUDIO_SAMPLE_RATE_EXACT / AUDIO_BLOCK_SAMPLES;
+    std::vector<uint32_t> ours;                      // our beats' first samples (beatLog)
+    int32_t lastLogged = INT32_MIN;
+    auto run = [&](double sec) {
+      for (int n = (int)(sec * fps); n > 0; n--) {
+        block();
+        for (int k = 0; k < BEAT_LOG; k++) {
+          const volatile BeatStart &b = beatLog[k];
+          if (transport.running && b.spb && b.beat > lastLogged && b.beat <= transport.beat) { lastLogged = b.beat; ours.push_back((uint32_t)b.now); }
+        }
+      }
+    };
+    // How far our beats are off theirs (ms: the mean, the worst) over the kicks heard from `from` on: their
+    // kick heard at s is on our beat at s - the input's latency.
+    auto offBy = [&](uint32_t from, double &mean, double &worst) {
+      mean = 0, worst = 0;
+      int n = 0;
+      for (uint32_t k : drumKicks) {
+        if ((int32_t)(k - from) < 0) continue;
+        uint32_t want = k - inputLatency();
+        double nearest = 1e9;
+        for (uint32_t o : ours) if (fabs((double)(int32_t)(o - want)) < fabs(nearest)) nearest = (double)(int32_t)(o - want);
+        if (fabs(nearest) > AUDIO_SAMPLE_RATE_EXACT) continue;   // (none near)
+        double ms = nearest * 1000 / AUDIO_SAMPLE_RATE_EXACT;
+        mean += ms;
+        worst = std::max(worst, fabs(ms));
+        n++;
+      }
+      if (n) mean /= n;
+      return n;
+    };
+    drumBpm = 126; drumBeat = 0.37; drumKicks.clear();
+    audioFollowToggle();
+    check(audioFollowOn() && onsetListen, "B+A: on, the input listened to");
+    run(10);
+    char m9[260];
+    snprintf(m9, sizeof m9, "drums at 126 BPM, stopped: their beat found (%d), the tempo theirs (%.1f shown, %.3f found)",
+             audioFollowLocked(), bpm, audioFollowBpm());
+    check(audioFollowLocked() && fabs(bpm - 126) <= 0.15f && fabs(audioFollowBpm() - 126) < 0.2f, m9);
+    int flips = 0;
+    bool was = audioFollowFlash();
+    for (int n = 0; n < (int)(4 * fps); n++) { block(); if (audioFollowFlash() != was) { was = !was; flips++; } }
+    snprintf(m9, sizeof m9, "stopped: the tempo flashes with their beat (%d changes in 4 s: 8.4 beats)", flips);
+    check(flips >= 15 && flips <= 19, m9);
+    check(audioFollowStart(), "START: in step with them");
+    for (int n = 0; n < 2000 && !transport.running; n++) block();
+    uint32_t startedAt = inputIndex;
+    run(4);
+    double mean, worst;
+    int n = offBy(startedAt, mean, worst);
+    snprintf(m9, sizeof m9, "started on their beat: our beats on theirs from the first (%d kicks, mean %+.1f ms, worst %.1f ms)", n, mean, worst);
+    check(n >= 7 && worst < 12, m9);
+    run(20);
+    n = offBy(inputIndex - (uint32_t)(15 * AUDIO_SAMPLE_RATE_EXACT), mean, worst);
+    snprintf(m9, sizeof m9, "running: kept on their beat (the last 15 s: %d kicks, mean %+.1f ms, worst %.1f ms; %.2f BPM shown)", n, mean, worst, bpm);
+    check(n >= 25 && fabs(mean) < 3 && worst < 10 && fabs(bpm - 126) <= 0.15f, m9);
+    for (int k = 0; k < 8 * (int)fps; k++) {        // their tempo rising to 132 over 8 s
+      drumBpm = 126 + 6.0 * k / (8 * fps);
+      run(1 / fps);
+    }
+    run(6);
+    n = offBy(inputIndex - (uint32_t)(5 * AUDIO_SAMPLE_RATE_EXACT), mean, worst);
+    snprintf(m9, sizeof m9, "theirs rising to 132 BPM: followed (%.2f shown; the last 5 s: mean %+.1f ms, worst %.1f ms)", bpm, mean, worst);
+    check(fabs(bpm - 132) <= 0.3f && worst < 10, m9);
+    drumBpm = 0;                                     // silence: the beat lost, the clock as it was
+    run(8);
+    snprintf(m9, sizeof m9, "silence: their beat lost (%d), the tempo kept (%.2f)", audioFollowLocked(), bpm);
+    check(!audioFollowLocked() && fabs(bpm - 132) <= 0.35f, m9);
+    transportStop();
+    audioFollowToggle();
+    check(!audioFollowOn() && !onsetListen && !audioFollowFlash(), "B+A again: off, nothing listened to, no flashing");
+    // Their tempo far from ours: not taken for its half or double (the tempo set nearer it than them).
+    for (auto [their, set] : std::vector<std::pair<double, float>>{{90, 120}, {174, 150}, {70, 85}, {174, 100}}) {
+      simSetTempo(set);
+      bpm = set;
+      run(0.1);
+      drumBpm = their; drumBeat = 0; drumKicks.clear();
+      audioFollowToggle();
+      run(10);
+      double expect = their / set > 1.5 ? their / 2 : their;   // (twice the tempo set: its half, a beat every two of theirs)
+      snprintf(m9, sizeof m9, "drums at %.0f BPM, the tempo set %.0f: %.1f found (%d)", their, set, audioFollowBpm(), audioFollowLocked());
+      check(audioFollowLocked() && fabs(audioFollowBpm() - expect) < 0.3, m9);
+      audioFollowToggle();
+    }
+    drumBpm = 0;
+    simSetTempo(120);
+    run(0.2);
   }
 
   printf("random sessions\n");

@@ -128,8 +128,10 @@ no dropouts or overruns
 - multitrack usb audio V
 - audio in sync 
 
+- clip warping :D
+
 - midi clips page
-- mute played clips after finishing recording (?)
+	- mute played clips after finishing recording (?)
 
 - more audio testing and fixes
 

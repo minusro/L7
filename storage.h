@@ -165,6 +165,7 @@ struct Session {
   int row = -1, cell = -1, master = MASTER_VOLUME_UNITY, project = 0, menu = -1;
   bool playing = false;
   int metro = 1;                                   // the metronome: 0 off, 1 auto, 2 on (app.h)
+  bool follow = false;                             // audio follow (audio_follow.h)
 };
 Session loadSession();
 void saveSession(const Session &s);  // creates/rewrites a file: only while stopped
