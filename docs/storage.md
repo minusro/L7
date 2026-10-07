@@ -69,6 +69,19 @@ ms to seconds and starves the streams. So:
   history), otherwise waits for the next bar line (`WaitBar`). Stopped: the
   transport starts and recording begins on bar 1.
 * Recordings are shifted by `LATENCY_FRAMES` (153, measured round trip).
+* **The tempo may change while recording** (by hand, tap tempo): the
+  interrupt keeps the clock's tempo marks from the recording's first bar line
+  (`recording.marks`: at each change, the transport sample, the beat position
+  there and the samples per beat; up to 32). The clip is written at the tempo
+  it started at (`marks[0]`, its `spbNative`): output frame k is beat
+  `k / spb0` of the clock, read from the input history wherever the clock was
+  on that beat (between two input samples where the tempo changed:
+  interpolated). So every bar of the clip is a bar of the clock, the stretched
+  bars re-pitched as varispeed playback would. The bars it's stopped at count
+  the clock's beats; a queued recording starts on the input sample of the
+  end's bar line. With no change, frame k is input sample `startSample + k`
+  exactly, as before (`recInputOffset()` and friends in storage.cpp; the
+  simulator checks a 4-bar take with changes to 100 and 140 BPM).
 * Stop: the loop is whole bars. `targetBars()`: if stopped within
   `SNAP_THRESHOLD_BEATS` (1 beat) after a bar line it ends there (trimmed),
   otherwise it carries on to the end of the current bar (`Finishing`).

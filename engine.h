@@ -127,7 +127,20 @@ struct Recording {
   // Resampling: the app's output is recorded instead of the input (the
   // interrupt puts it in inputRing while this recording is on; no latency).
   volatile bool resample = false;
+  // The clock while it records (the tempo may change meanwhile): from its
+  // first bar line, a mark at every tempo change: the transport sample, the
+  // beat position there and the samples per beat from there on. marks[0]'s
+  // tempo is the recording's (the clip's spbNative): the recorder writes it
+  // stretched to it bar by bar, so every bar of the clip is a bar of the
+  // clock (storage.cpp). The interrupt adds the marks.
+  struct TempoMark { uint32_t sample; double beat; uint32_t spb; };
+  static constexpr int TEMPO_MARKS = 32;
+  TempoMark marks[TEMPO_MARKS];
+  volatile int markCount = 0;
 };
+// The tempo marks begun (a recording starting): its first bar line, at
+// transport sample `sample` (interrupts off, or from the interrupt).
+void beginTempoMarks(uint32_t sample, int32_t beat);
 
 extern Track tracks[NUM_TRACKS];
 extern Transport transport;

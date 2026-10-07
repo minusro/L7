@@ -14,8 +14,8 @@ extern float bpm;
 extern int selected;                               // row: a track, or STATUS_ROW (ui.h)
 extern int selectedCell;                           // cell in the row (ui.h: FILTER_CELL ...)
 
-// In tenths of a BPM, limited to MIN_BPM-MAX_BPM. false (and no change)
-// while recording. setTempo: by hand (the loaded project keeps it, and new
+// In tenths of a BPM, limited to MIN_BPM-MAX_BPM; recording too (the
+// recording follows: engine.h's tempo marks). setTempo: by hand (the loaded project keeps it, and new
 // projects start with it); loadTempo: a project's, as it loads (neither).
 bool setTempo(float b);
 bool loadTempo(float b);

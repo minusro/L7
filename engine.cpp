@@ -187,6 +187,22 @@ static void queueTick(uint32_t due) {
   if (tickHead - tickTail < TICK_QUEUE) { tickDue[tickHead % TICK_QUEUE] = due; tickHead++; }
 }
 
+// ---- Tempo marks while recording (engine.h)
+void beginTempoMarks(uint32_t sample, int32_t beat) {
+  recording.marks[0] = {sample, (double)beat, transport.spb};
+  recording.markCount = 1;
+}
+
+// The tempo just changed at transport sample `at`: a mark, while recording.
+static void markTempo(uint32_t at) {
+  if ((recording.mode != Recording::Running && recording.mode != Recording::Finishing) ||
+      recording.markCount < 1 || recording.markCount >= Recording::TEMPO_MARKS)
+    return;
+  int n = recording.markCount;
+  recording.marks[n] = {at, transport.beat + (double)transport.sampleInBeat / transport.spb, transport.spb};
+  recording.markCount = n + 1;
+}
+
 // ---- Engine
 // A track's stream has reached its sample switch: its clock mapping follows.
 static void takeSwitch(Track &tr) {
@@ -222,6 +238,7 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
     if (recording.mode == Recording::WaitBar) {
       recording.startSample = transport.now + recordingLatency();
       recording.startBeat = beat;
+      beginTempoMarks(transport.now, beat);
       recording.mode = Recording::Running;
     }
   }
@@ -269,6 +286,7 @@ void LooperEngine::update() {
     transport.spb = spb;
     transport.pendingSpb = 0;
     nextTickAt_ = (uint64_t)tickInBeat_ * spb / 24;
+    markTempo(transport.now);
   }
   uint32_t spb = transport.spb;
   const bool running = transport.running;
@@ -305,6 +323,7 @@ void LooperEngine::update() {
           spb = transport.spb = transport.pendingSpb;   // a scene's tempo, on its bar line
           transport.pendingSpb = 0;
           transport.spbAtBeat = -1;
+          markTempo(at);
           for (int t = 0; t < NUM_TRACKS; t++) speed[t] = tracks[t].playSpb ? (double)tracks[t].playSpb / spb : 0;
         }
         onBeat(blockMicros, i);

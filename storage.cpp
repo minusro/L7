@@ -1061,16 +1061,62 @@ static void buildOverview(Track &tr, const uint16_t *bins, uint32_t recordedFram
   tr.overviewVersion++;
 }
 
+// ---- The recording against the clock's tempo marks (engine.h). The clip is
+// written at the tempo the recording started at (marks[0]): output frame k is
+// beat marks[0].beat + k / spb0 of the clock, taken from the input history
+// wherever the clock was on that beat (between two input samples when the
+// tempo changed: interpolated). With no tempo change, frame k is input sample
+// startSample + k, as it always was.
+static uint32_t recSpb() { return recording.markCount ? recording.marks[0].spb : transport.spb; }
+static bool recWarped() { return recording.markCount > 1; }
+
+// The mark in force at beat position bp / at transport sample s.
+static const Recording::TempoMark &markAtBeat(double bp) {
+  int i = recording.markCount - 1;
+  while (i > 0 && recording.marks[i].beat > bp) i--;
+  return recording.marks[i];
+}
+static const Recording::TempoMark &markAtSample(uint32_t s) {
+  int i = recording.markCount - 1;
+  while (i > 0 && (int32_t)(s - recording.marks[i].sample) < 0) i--;
+  return recording.marks[i];
+}
+
+// Output frame k's place in the input, in samples from startSample.
+static double recInputOffset(double k) {
+  if (!recWarped()) return k;
+  const auto &m0 = recording.marks[0];
+  double bp = m0.beat + k / m0.spb;
+  const auto &e = markAtBeat(bp);
+  return (double)(int32_t)(e.sample - m0.sample) + (bp - e.beat) * e.spb;
+}
+// The clock's beats since the recording's first bar line at input sample s.
+static double recBeatsAt(uint32_t s) {
+  const auto &m0 = recording.marks[0];
+  if (!recWarped()) return (int32_t)(s - recording.startSample) / (double)m0.spb;
+  uint32_t ts = s - recordingLatency();          // (the transport's sample for it)
+  const auto &e = markAtSample(ts);
+  return e.beat + (int32_t)(ts - e.sample) / (double)e.spb - m0.beat;
+}
+// Output frames the input before sample s covers (negative before the start;
+// stretched: a frame short, the next input sample being needed too).
+static int32_t recFramesBefore(uint32_t s) {
+  if (!recWarped()) return (int32_t)(s - recording.startSample);
+  return (int32_t)floor(recBeatsAt(s) * recSpb()) - 1;
+}
+// Input sample of output frame k (rounded).
+static uint32_t recInputSample(uint32_t k) { return recording.startSample + (uint32_t)llround(recInputOffset(k)); }
+
 bool recordingWaveform(uint8_t *cols, uint32_t &bars, uint32_t &framesPerBar, uint32_t &recordedFrames) {
   if (recording.mode != Recording::Running && recording.mode != Recording::Finishing) return false;
-  framesPerBar = BEATS_PER_BAR * transport.spb;
+  framesPerBar = BEATS_PER_BAR * recSpb();         // (the recording's tempo: the bars as it's written)
   recordedFrames = recording.written;
   if (recording.mode == Recording::Finishing) {
     bars = recording.loopBars;
   } else {
     // Room for the bars started so far, in powers of two (a stop can still
     // end it on any bar).
-    uint32_t sofar = max<int32_t>(0, (int32_t)(transport.now - recording.startSample));
+    uint32_t sofar = max<int32_t>(0, recFramesBefore(transport.now));
     uint32_t started = (sofar + framesPerBar - 1) / framesPerBar;
     bars = 1;
     while (bars < started) bars *= 2;
@@ -1777,7 +1823,8 @@ static uint32_t targetBars(double beats) {
 }
 
 static uint32_t maxRecordingFrames() {
-  return min(MAX_BARS * BEATS_PER_BAR * transport.spb, MAX_REC_FRAMES);
+  uint32_t spb = recording.markCount ? recording.marks[0].spb : transport.spb;   // (a recording's: its own tempo)
+  return min(MAX_BARS * BEATS_PER_BAR * spb, MAX_REC_FRAMES);
 }
 
 // The recording's loop length is known: set its track up to play. If the
@@ -1792,7 +1839,7 @@ static void armRecordedLoop(bool endAhead) {
   tr.live = false;
   tr.armed = false;
   tr.needsRestart = false;
-  tr.spbNative = transport.spb;
+  tr.spbNative = recSpb();                       // (the recording's tempo)
   tr.loopBars = recording.loopBars;
   tr.recordedFrames = recording.targetFrames;
   tr.rangeStartBeat = 0;
@@ -1819,10 +1866,11 @@ static void armRecordedLoop(bool endAhead) {
 static void stopRecording() {
   noInterrupts();
   uint32_t stopSample = transport.now + recordingLatency();
-  uint32_t spb = transport.spb;
   interrupts();
-  uint32_t length = min(stopSample - recording.startSample, maxRecordingFrames());
-  recording.loopBars = targetBars((double)length / spb);
+  uint32_t spb = recSpb();                       // (the recording's tempo: where it started)
+  double beats = recBeatsAt(stopSample);         // (the clock's, its tempo changes included)
+  uint32_t length = min((uint32_t)max(0.0, beats * spb), maxRecordingFrames());
+  recording.loopBars = targetBars(beats);
   // Shorter than `length`: the end is trimmed. Longer: recording continues
   // until it is reached (serviceRecorder keeps writing the input until then).
   recording.targetFrames = min(recording.loopBars * BEATS_PER_BAR * spb, maxRecordingFrames());
@@ -1833,7 +1881,7 @@ static void stopRecording() {
     uint8_t others = 0;
     for (int t = 0; t < NUM_TRACKS; t++)
       if (t != recording.track && (tracks[t].live || tracks[t].armed)) others |= 1 << t;
-    silenceFrom = recording.startSample + recording.targetFrames;
+    silenceFrom = recInputSample(recording.targetFrames);   // (no latency: the transport's sample)
     silencedTracks = others;
   }
   armRecordedLoop(recording.targetFrames > length);
@@ -1855,7 +1903,7 @@ static void takePreroll() {
 static void finishRecording() {
   int t = recording.track;
   Track &tr = tracks[t];
-  tr.spbNative = transport.spb;
+  tr.spbNative = recSpb();                       // (the recording's tempo)
   tr.loopBars = recording.loopBars;
   tr.recordedFrames = recording.targetFrames;
   tr.rangeStartBeat = 0;
@@ -1884,7 +1932,7 @@ static void finishRecording() {
   noteSample(tr.sample);
   lastOrder++;
   if (untrimmedCount < 64) untrimmed[untrimmedCount++] = tr.sample;   // (cut down and named once stopped)
-  uint32_t end = recording.startSample + recording.targetFrames;
+  uint32_t end = recInputSample(recording.targetFrames);   // (the input sample of its end: the next one starts there)
   int32_t endBeat = recording.startBeat + (int32_t)(recording.loopBars * BEATS_PER_BAR);
   bool resampled = recording.resample;
   if (resampled) finishedResample = t;
@@ -1947,10 +1995,10 @@ static void serviceRecorder() {
   if (recording.mode != Recording::Running && recording.mode != Recording::Finishing) return;
   takePreroll();
   uint32_t now = transport.now;
-  uint32_t next = recording.startSample + recording.written;   // next input sample to save
+  uint32_t next = recInputSample(recording.written);   // next input sample to save (stretched: about)
   if ((int32_t)(now - next) > (int32_t)(INPUT_FRAMES - CHUNK_FRAMES)) {
     recording.overruns++;                        // SD fell too far behind: skip ahead
-    uint32_t lost = (now - next) - INPUT_FRAMES / 2;
+    uint32_t lost = (uint32_t)max(0, recFramesBefore(now - INPUT_FRAMES / 2) - (int32_t)recording.written);
     Serial.printf("recording fell behind (%s): %u ms of input lost, saved as silence\n", (const char *)debugStage,
                   (unsigned)(lost / 44));
     if (gapCount == 8) gaps[7].to = recording.written + lost;   // rarely: merged with the last one
@@ -1960,12 +2008,13 @@ static void serviceRecorder() {
       for (uint32_t f = recording.written; f < recording.written + lost && f < RING_FRAMES; f++) tr.ring[f] = 0;
     }
     recording.written += lost;
-    next = recording.startSample + recording.written;
   }
-  int32_t avail = (int32_t)(now - next);
+  if (recording.mode == Recording::Finishing && recording.resample)   // (the tempo may still change before its end)
+    silenceFrom = recInputSample(recording.targetFrames);
+  int32_t avail = recFramesBefore(now) - (int32_t)recording.written;
   if (recording.mode == Recording::Finishing)
     avail = min(avail, (int32_t)(recording.targetFrames - recording.written));
-  else if ((int32_t)(now - recording.startSample) >= (int32_t)maxRecordingFrames())
+  else if (recFramesBefore(now) >= (int32_t)maxRecordingFrames())
     stopRecording();                             // longest loop reached
   // (Signed on purpose: a recording starts LATENCY_FRAMES in the future, so for
   // a moment `now` is before startSample and avail is negative.)
@@ -1990,7 +2039,20 @@ static void serviceRecorder() {
     return;
   }
   uint32_t n = min((uint32_t)avail, toBoundary);
-  for (uint32_t i = 0; i < n; i++) chunk[i] = inputRing[(next + i) % INPUT_FRAMES];
+  if (!recWarped()) {
+    for (uint32_t i = 0; i < n; i++) chunk[i] = inputRing[(next + i) % INPUT_FRAMES];
+  } else {                                       // the tempo changed: each frame from where the clock was on its beat
+    for (uint32_t i = 0; i < n; i++) {
+      double off = recInputOffset(recording.written + i);
+      double fl = floor(off);
+      float f = (float)(off - fl);
+      uint32_t s = recording.startSample + (uint32_t)(int32_t)fl;
+      uint32_t a = inputRing[s % INPUT_FRAMES], b = inputRing[(s + 1) % INPUT_FRAMES];
+      float al = (int16_t)(a & 0xFFFF), ar = (int16_t)(a >> 16), bl = (int16_t)(b & 0xFFFF), br = (int16_t)(b >> 16);
+      int16_t l = (int16_t)lroundf(al + (bl - al) * f), r = (int16_t)lroundf(ar + (br - ar) * f);
+      chunk[i] = (uint16_t)l | ((uint32_t)(uint16_t)r << 16);
+    }
+  }
   if (!writeRecordingChunk(recording.written, n)) return;
   addPeaks(chunk, n, recording.written, recPeaks);
   // The loop's beginning also goes into the track's ring (stream frame = loop
@@ -2083,9 +2145,11 @@ static void startRecording(int t, uint32_t from, int32_t beat, int32_t maxBehind
   recording.overruns = 0;
   memset(recPeaks, 0, sizeof recPeaks);
   noInterrupts();
+  recording.markCount = 0;                       // (the tempo marks begin on its first bar line)
   if (maxBehind >= 0 && (int32_t)(transport.now - from) <= maxBehind) {
     recording.startSample = from;
     recording.startBeat = beat;
+    beginTempoMarks(from - recordingLatency(), beat);
     recording.mode = Recording::Running;
   } else {
     recording.mode = Recording::WaitBar;

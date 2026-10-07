@@ -34,7 +34,7 @@ void drawEdgeMark(bool right, int x, int w, int y, uint16_t ink, uint16_t ground
   // A solid triangle (3 x 5).
   static const char *const ARROW_LEFT[5] = {"..#", ".##", "###", ".##", "..#"};
   constexpr int ROWS = STATUS_H / PX, CW = 3, CH = 5, R0 = (ROWS - CH) / 2;
-  constexpr int MAX_W = 160;
+  constexpr int MAX_W = EDGE_W;                    // (its space: the menu cell's; the menu's at the top left too)
   w = min(w, MAX_W);
   const int cols = w / PX;
   const int C0 = right ? (cols - CW) / 2 : 3;      // the looper's: its tip 3 blocks in; centred (right)

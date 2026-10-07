@@ -1883,6 +1883,63 @@ for f in os.listdir("."):
     check(id > 0 && id < 10000 && ::stat((simRoot + path).c_str(), &st) == 0 && st.st_size < 10 * 1000 * 1000 && spaceFiles == 8, m);
   }
 
+  printf("tempo changes while recording: the clip stretched bar by bar to the tempo it started at\n");
+  {
+    if (!transport.running) transportStart();
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);
+    simSetTempo(120);
+    runBeats(1);
+    uint32_t spb0 = transport.spb;
+    feedRamp = true;
+    engine.monitor = true;
+    recordPress(4);
+    for (int i = 0; i < 4000 && recording.mode != Recording::Running; i++) block();
+    int32_t startBeat = recording.startBeat;
+    std::vector<uint32_t> bars = {recording.startSample};   // each bar line's input sample
+    int32_t seenBar = transport.lastBarBeat;
+    auto run = [&](double toBeat) {
+      for (int i = 0; i < 200000 && transport.beat + (double)transport.sampleInBeat / transport.spb < toBeat; i++) {
+        block();
+        if (transport.lastBarBeat != seenBar) {
+          seenBar = transport.lastBarBeat;
+          bars.push_back(transport.lastBarSample + LATENCY_FRAMES);
+        }
+      }
+    };
+    run(startBeat + 5.5);
+    simSetTempo(100);                               // mid bar 2
+    run(startBeat + 10.25);
+    simSetTempo(140);                               // mid bar 3
+    run(startBeat + 15.5);
+    recordPress(4);                                 // half a beat before 4 bars: 4 bars
+    for (int i = 0; i < 200000 && recording.mode != Recording::Idle; i++) {
+      block();
+      if (transport.lastBarBeat != seenBar) {
+        seenBar = transport.lastBarBeat;
+        bars.push_back(transport.lastBarSample + LATENCY_FRAMES);
+      }
+    }
+    const Track &tr = tracks[4];
+    char m[200];
+    snprintf(m, sizeof m, "4 bars (%u), at the starting tempo (%u vs %u samples a beat), %u frames", tr.loopBars, tr.spbNative, spb0, tr.recordedFrames);
+    check(tr.loopBars == 4 && tr.spbNative == spb0 && tr.recordedFrames == 4 * BEATS_PER_BAR * spb0, m);
+    int off = 0, checked = 0;
+    for (int b = 0; b < 4 && b < (int)bars.size(); b++) {
+      uint32_t in = bars[b];
+      if (in % 20000 > 19990 || in % 20000 < 10) continue;   // (the ramp wraps there)
+      int16_t got = wavLeft(4, b * BEATS_PER_BAR * spb0), want = rampAt(in);
+      checked++;
+      if (abs(got - want) > 1) off++;
+    }
+    snprintf(m, sizeof m, "every bar line of the clip is that bar line's input, tempo changes or not (%d of %d off)", off, checked);
+    check(checked >= 3 && off == 0, m);
+    int16_t mid = wavLeft(4, (uint32_t)(1.5 * BEATS_PER_BAR * spb0));   // in bar 2: 100 BPM there, stretched
+    check(mid != INT16_MIN, "the stretched part is written");
+    simSetTempo(120);
+    runBeats(8);
+    checkSync(4, "the stretched clip in step with the clock");
+  }
+
   printf("random sessions\n");
   for (unsigned seed = 1; seed <= (argc > 1 ? atoi(argv[1]) : 5); seed++) fuzz(600, seed);
 

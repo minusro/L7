@@ -22,7 +22,7 @@ static float newBpm = 120.0f;
 
 static bool changeTempo(float b) {
   b = constrain(roundf(b * 10) / 10, MIN_BPM, MAX_BPM);   // tenths of a BPM
-  if (recording.mode != Recording::Idle) return false;   // a recording keeps its tempo
+  // (Recording too: the recorder follows the clock's tempo changes, engine.h.)
   uint32_t spb = spbForBpm(b);
   if (b == bpm) return true;
   bpm = b;
