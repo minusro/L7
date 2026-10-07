@@ -6,9 +6,12 @@ using namespace looper;
 
 static constexpr uint32_t FOLLOW_TIMEOUT_MS = 500;
 static constexpr float MAX_NUDGE = 0.005f;            // the speed off their tempo, at most (to catch their beat up: ~9 cents)
-static constexpr float BIG_NUDGE = 0.02f;             // and when we're far off their beat (FAR_BEATS: after their tempo jumped)
-static constexpr float FAR_BEATS = 0.03f;
 static constexpr float NUDGE_GAIN = 0.5f;             // of the beat's difference, taken out over the next beat
+// For CHANGE_TICKS after their tempo changed (or a start), while the loops
+// change pitch anyway: up to CHANGE_NUDGE, CHANGE_GAIN: the beat caught up
+// within about a beat, not over several (each of them off pitch).
+static constexpr float CHANGE_NUDGE = 0.05f, CHANGE_GAIN = 2.0f;
+static constexpr uint32_t CHANGE_TICKS = 96;
 static constexpr float DEADBAND_BEATS = 0.003f;       // a difference this small: left (their jitter)
 static constexpr float MIN_CHANGE = 0.0015f;          // a tempo change this small: not made (each one is a recording's tempo mark; ~2.6 cents)
 // Their tempo: two alpha-beta trackers on their ticks' times (each tick: the
@@ -23,6 +26,7 @@ static constexpr double SLOW_ALPHA = 0.06, SLOW_BETA = 0.0019, FAST_ALPHA = 0.3,
 static constexpr double HANDOVER = 0.006;
 static constexpr uint32_t HANDOVER_TICKS = 4, BOOST_TICKS = 24;
 static constexpr uint32_t APPLY_TICKS = 6;            // their tempo and beat applied every quarter beat
+static constexpr bool LOG_TICKS = false;              // (diagnosing: each tick's time and each tempo applied, on the serial log; data/daw_clock_usb.txt came from it)
 
 static HardwareSerial *port = nullptr;
 
@@ -131,15 +135,18 @@ static int errCount = 0;
 static uint32_t theirSpb = 0;                         // their tempo (samples a beat), over their last beats
 static uint32_t trackFrom = 0;                        // the trackers' first tick (after a pause: the one after the first, often late after a Start)
 static uint32_t trackBase = 0;                        // the latest tick's time (micros())
-struct Tracker { double next, period; };              // the next tick's predicted time (us after trackBase), the tick period (us)
-static Tracker slowT = {0, 0}, fastT = {0, 0};
+struct Tracker { double next, period; int wayOff; };  // the next tick's predicted time (us after trackBase), the tick period (us), ticks way off running
+static Tracker slowT = {0, 0, 0}, fastT = {0, 0, 0};
 static uint32_t apart = 0, boost = 0;                 // ticks running the fast one's been HANDOVER off; fast gains left (BOOST_TICKS down)
+static uint32_t changing = 0;                         // ticks left since their tempo changed or they started (CHANGE_TICKS down)
 
 // Our beat position (beats from the transport's start) at micros() `us`.
 static double ourBeatAt(uint32_t us, const BlockStamp &s) {
   double samples = (int32_t)(us - s.us) / usPerSample;
   return s.beat + (s.sampleInBeat + samples) / s.spb;
 }
+
+uint32_t midiTheirSpb() { return theirSpb; }
 
 // Their position (beats) at tick i.
 static double theirBeatAt(uint32_t i) { return refBeats + (double)((int32_t)i - refTick) / 24; }
@@ -159,6 +166,7 @@ static uint32_t pastStartingBeat() {
 // started again on their next whole beat (as Start, Continue or a jump).
 static void startWith(uint32_t tick, uint16_t pos16) {
   theirsRunning = true;
+  changing = CHANGE_TICKS;
   startedUs = micros();
   refTick = (int32_t)tick;
   refBeats = pos16 / 4.0;
@@ -233,6 +241,8 @@ void midiInService() {
   if (!transport.running && startAt == INT32_MIN && refTick >= 0 && !theirsRunning) refTick = -1;   // (stopped: a later start here is ours)
   for (; seenTicks < n; seenTicks++) {
     uint32_t i = seenTicks, us = tickUs[i % TICKS];
+    if (changing) changing--;
+    if (LOG_TICKS) Serial.printf("T %lu %lu\n", (unsigned long)i, (unsigned long)us);
     // After a pause (or another clock) tracked afresh, from the tick after the
     // first (often late after a Start), from the tempo known if any.
     if (i == 0 || (uint32_t)(us - tickUs[(i - 1) % TICKS]) > FOLLOW_TIMEOUT_MS * 1000) {
@@ -246,10 +256,20 @@ void midiInService() {
       fastT.next = fastT.period;
     } else if (i > trackFrom) {
       double meas = (int32_t)(us - trackBase);
-      if (!slowT.period) slowT = fastT = {meas, meas};   // (no tempo known: its first interval)
+      if (!slowT.period) slowT = fastT = {meas, meas, 0};   // (no tempo known: its first interval)
       auto step = [&](Tracker &t, double alpha, double beta) {
         double miss = meas - t.next;
-        if (fabs(miss) > t.period / 2) { t.period = meas; miss = 0; }   // (way off: as its interval, afresh)
+        if (fabs(miss) > t.period / 2) {             // way off: one (as their first after a Start often is) taken as it is, the
+          if (++t.wayOff >= 3) {                     // tempo left; three running: their tempo's another, measured afresh from this interval
+            t.period = meas;
+            t.wayOff = 0;
+          }
+          miss = meas - t.next;                      // (the prediction from this tick on: at it)
+          t.next = meas;
+          miss = 0;
+        } else {
+          t.wayOff = 0;
+        }
         double at = t.next + alpha * miss;
         t.period += beta * miss;
         t.next = at - meas + t.period;
@@ -263,6 +283,7 @@ void midiInService() {
         slowT = fastT;
         apart = 0;
         boost = BOOST_TICKS;
+        changing = CHANGE_TICKS;
       }
       uint32_t spb = (uint32_t)(slowT.period * 24 / usPerSample + 0.5);
       if (spb >= spbForBpm(MAX_BPM) && spb <= spbForBpm(MIN_BPM) && i - trackFrom >= 3) theirSpb = spb;
@@ -295,14 +316,15 @@ void midiInService() {
     float err = errSum / errCount;
     errSum = 0;
     errCount = 0;
-    float most = fabsf(err) > FAR_BEATS ? BIG_NUDGE : MAX_NUDGE;
-    float nudge = fabsf(err) < DEADBAND_BEATS ? 0 : constrain(err * NUDGE_GAIN, -most, most);   // (ahead: slower)
+    float most = changing ? CHANGE_NUDGE : MAX_NUDGE, gain = changing ? CHANGE_GAIN : NUDGE_GAIN;
+    float nudge = fabsf(err) < DEADBAND_BEATS ? 0 : constrain(err * gain, -most, most);   // (ahead: slower)
     want = (uint32_t)(theirSpb * (1 + nudge) + 0.5f);
   } else if (running) {
     return;                                           // (between: as it is)
   }
   uint32_t now = transport.pendingSpb ? transport.pendingSpb : transport.spb;
   float raw = bpmForSpb(shown), shownBpm = fabsf(raw - bpm) < 0.08f ? bpm : roundf(raw * 10) / 10;   // (shown: a tenth's change only when clear, no flicker)
+  if (LOG_TICKS) Serial.printf("E %lu %lu %lu\n", (unsigned long)theirSpb, (unsigned long)want, (unsigned long)now);
   if (fabsf((float)want - now) > MIN_CHANGE * now) followTempo(want, shownBpm);
   else if (shownBpm != bpm) followTempo(now, shownBpm);   // (the tempo shown only)
 }

@@ -33,6 +33,7 @@ void midiInSuspend(bool off);             // storage mode: nothing taken in mean
 void midiInSongPosition(uint16_t pos16, uint32_t us, MidiSource from);   // a Song Position (0xF2; in 16ths): USB's, already put together
 void midiInService();                     // loop(): start / stop, the tempo and the beat followed
 bool midiClockFollowing();                // an external clock is running (its Start had, its ticks coming in)
+uint32_t midiTheirSpb();                  // their tempo as measured (samples a beat; 0: none yet)
 
 // From the app (app.cpp): the tempo shown, and an external clock's tempo
 // taken on (spb exactly, nudged to its beat; shownBpm the tempo shown).

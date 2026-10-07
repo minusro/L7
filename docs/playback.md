@@ -145,9 +145,17 @@ timer, each clock tick stamped with `micros()`. In `loop()` (`midiInService()`):
 * Running: each tick, how far our beat is from theirs at that moment (our
   position from `blockStamp` and the tick's time); once a beat the average,
   and the next beat runs at their tempo nudged by half of it (at most ±0.5 %,
-  ~9 cents; ±2 % while more than 0.03 beats off, after their tempo jumped;
-  nothing under 0.003 beats). Their tempo jumping (their last beat alone 2 %
-  off the tempo known): measured afresh from that beat.
+  ~9 cents;
+  nothing under 0.003 beats). For 4 beats after their Start or a tempo change
+  (while the loops change pitch anyway) up to ±5 %, the beat caught up within
+  about a beat, not over several each off pitch. A tick way off its predicted
+  time (half a tick: their first after a Start often is) is taken as it is,
+  the tempo left; three in a row: their tempo's another, measured afresh.
+* Measured on a DAW's clock over USB (`tools/looper_sim/data/daw_clock_usb.txt`,
+  captured with `LOG_TICKS`): ticks up to ±2 ms off, its first after a Start
+  early; replayed by the simulator: the tempo read 72.0 / 83.0, the speed
+  within 0.65 % of theirs while steady, up to ~4 % for a beat or two starting
+  and around their change from 72 to 83, on their beat within 0.003 beats.
 * Starting where they are, not catching up: our transport starts once their
   clock reaches the beat it starts on, and the tracks fill first; then
   `transportStartAt(beat, inBeat)` asks how far past that beat they are by now

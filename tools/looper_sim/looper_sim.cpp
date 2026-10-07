@@ -2263,6 +2263,64 @@ for f in os.listdir("."):
       midiInByte(0xFC, simMicros, MIDI_USB);
       for (int i = 0; i < 400; i++) { block(); midiInService(); }
     }
+    // A DAW's clock over USB as the M8 really got it (data/daw_clock_usb.txt: 72 BPM with ticks off by up
+    // to ±2 ms, its first after a Start early; a change to 83 while playing): the speed played near theirs.
+    {
+      FILE *f = fopen("data/daw_clock_usb.txt", "r");
+      check(f != nullptr, "(the captured DAW clock: data/daw_clock_usb.txt)");
+      std::vector<std::pair<char, uint32_t>> ev;
+      char line[64];
+      while (f && fgets(line, sizeof line, f)) {
+        if (line[0] == 'T') ev.push_back({'T', (uint32_t)strtoul(line + 2, nullptr, 10)});
+        else if (line[0] == 'A' || line[0] == 'C') ev.push_back({line[0], 0});
+      }
+      if (f) fclose(f);
+      for (int i = 0; i < 400; i++) { block(); midiInService(); }
+      uint32_t base = simMicros + 5000, lastT = 0;
+      int run = 0, sinceStart = -1;
+      double steadyOff = 0, changeOff = 0, posOffEnd[4] = {}, theirBpm[4] = {};
+      int stillOff[4] = {};
+      for (size_t e = 0; e < ev.size(); e++) {
+        if (ev[e].first == 'A' || ev[e].first == 'C') {
+          uint32_t next = lastT;                     // (just before the next tick)
+          for (size_t k = e; k < ev.size(); k++) if (ev[k].first == 'T') { next = ev[k].second; break; }
+          uint32_t at = base + next - 1000;
+          while ((int32_t)(simMicros - at) < 0) { block(); midiInService(); }
+          midiInByte(ev[e].first == 'A' ? 0xFA : 0xFC, simMicros, MIDI_USB);
+          if (ev[e].first == 'A') { run++; sinceStart = 0; }
+          else sinceStart = -1;
+          continue;
+        }
+        lastT = ev[e].second;
+        uint32_t at = base + ev[e].second;
+        while ((int32_t)(simMicros - at) < 0) { block(); midiInService(); }
+        midiInByte(0xF8, at, MIDI_USB);
+        if (sinceStart < 0) continue;
+        sinceStart++;
+        uint32_t theirs = midiTheirSpb(), applied = transport.pendingSpb ? transport.pendingSpb : transport.spb;
+        if (!transport.running || !theirs || sinceStart < 24 || run > 3) continue;
+        double off = fabs((double)applied - theirs) / theirs;
+        bool around = sinceStart < 48 || (run == 2 && sinceStart > 440 && sinceStart < 600);   // (a start, their change to 83: catching up allowed)
+        if (around) changeOff = std::max(changeOff, off);
+        else steadyOff = std::max(steadyOff, off);
+        if (!around && off > 0.0066) stillOff[run]++;
+        if (getenv("TRACE_DAW") && off > 0.0051) printf("    off %.2f%% run %d tick %d\n", off * 100, run, sinceStart);
+        double ours = transport.beat + (transport.sampleInBeat + (int32_t)(at - simMicros) / usPerSample) / transport.spb;
+        posOffEnd[run] = fabs(ours - (sinceStart - 1) / 24.0);
+        if (getenv("TRACE_DAW") && (sinceStart % 12 == 0 || (run == 1 && sinceStart > 166 && sinceStart < 182)))
+          printf("    run %d tick %d: theirs %u applied %u, ours %.3f theirs %.3f (beat %d in %u spb %u t.now %u)\n", run, sinceStart, theirs, applied, ours, (sinceStart - 1) / 24.0, (int)transport.beat, (unsigned)transport.sampleInBeat, (unsigned)transport.spb, (unsigned)transport.now);
+        theirBpm[run] = 44100.0 * 60 / theirs / 1.005;   // (the simulator's micros() run ~0.5 % fast)
+      }
+      for (int i = 0; i < 4; i++) { block(); midiInService(); }
+      char m5[240];
+      snprintf(m5, sizeof m5, "a real DAW clock: their tempo read %.1f, %.1f, %.1f; the speed at most %.2f%% off theirs while steady (%d, %d, %d ticks over 0.66%%), %.2f%% starting and around their change",
+               theirBpm[1], theirBpm[2], theirBpm[3], steadyOff * 100, stillOff[1], stillOff[2], stillOff[3], changeOff * 100);
+      check(steadyOff < 0.0066 && changeOff < 0.051 && fabs(theirBpm[1] - 72) < 0.5 && fabs(theirBpm[2] - 83) < 0.5, m5);
+      snprintf(m5, sizeof m5, "and on their beat at each run's end: %.4f, %.4f, %.4f beats off", posOffEnd[1], posOffEnd[2], posOffEnd[3]);
+      check(posOffEnd[1] < 0.02 && posOffEnd[2] < 0.02 && posOffEnd[3] < 0.02, m5);
+      if (transport.running) transportStop();
+      for (int i = 0; i < 400; i++) { block(); midiInService(); }
+    }
     // The clock out for USB too: Start, the ticks, Stop, as the serial one's.
     midiOutAttachUsb();
     uint8_t got[64];
