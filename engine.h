@@ -115,6 +115,10 @@ struct Transport {
   // (sampleInBeat > 0: an external clock's position, midi_in.cpp): the tracks
   // armed for this beat join where they'd be, in the next block.
   volatile bool joinMidBeat = false;
+  // loop() -> interrupt: the clock reads 1.1.1 from this beat on (a project
+  // switching while playing): Stop, Song Position 0 and Continue sent at it,
+  // before its first tick (INT32_MIN: none).
+  volatile int32_t midiRestartBeat = INT32_MIN;
 };
 
 // Recording: the interrupt only fills in where it starts.
@@ -198,7 +202,8 @@ int masterVolume();
 void takeOutputPeaks(float &left, float &right);
 
 void midiBegin(HardwareSerial *port);   // port already started (Board::midiOutBegin)
-void midiSendNow(uint8_t status);        // transport start/stop messages
+void midiSendNow(uint8_t status);        // transport start/stop messages (from loop() or the audio interrupt)
+void midiSendPosition(int32_t beats);    // a Song Position (beats from 1.1.1)
 // The same clock out for USB MIDI (midi_usb.cpp): attach once, then take what's
 // due by micros() `now` (start / stop first, then the ticks due), at most max bytes.
 void midiOutAttachUsb();

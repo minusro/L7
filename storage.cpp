@@ -991,6 +991,7 @@ int32_t beginSceneChange(bool quick, bool prepared, bool restart) {
     for (auto &c : changes)
       if (c.on && c.scene) c.restart = true;
     clockOriginNext = sceneQ / 4;
+    transport.midiRestartBeat = sceneQ / 4;      // (MIDI followers: back to 1.1.1 there too)
   }
   return sceneQ / 4;
 }
@@ -2350,6 +2351,7 @@ void transportStart() { transportStartAt(0); }
 
 void transportStartAt(int32_t beat, uint32_t (*inBeat)()) {
   if (transport.running) return;
+  transport.midiRestartBeat = INT32_MIN;
   clockOrigin = 0;
   clockOriginNext = -1;
   transport.beat = beat;
@@ -2364,15 +2366,8 @@ void transportStartAt(int32_t beat, uint32_t (*inBeat)()) {
     }
     startTrack(t, beat, true);                   // (from beat 0's alignment: where they'd be at `beat`)
   }
-  if (beat == 0) {
-    midiSendNow(0xFA);                           // MIDI Start
-  } else {                                       // MIDI Song Position (in 16ths) and Continue
-    uint32_t pos = (uint32_t)beat * 4 & 0x3FFF;
-    midiSendNow(0xF2);
-    midiSendNow(pos & 0x7F);
-    midiSendNow(pos >> 7);
-    midiSendNow(0xFB);
-  }
+  midiSendPosition(beat);                        // MIDI: Song Position, then Start (1.1.1) or Continue (from there)
+  midiSendNow(beat == 0 ? 0xFA : 0xFB);
   if (inBeat) {                                  // part way into the beat already (asked now: the tracks filled)
     uint32_t spb = transport.pendingSpb ? transport.pendingSpb : transport.spb, in = inBeat();
     if (in > 0 && in < spb * 9 / 10) {
@@ -2397,6 +2392,7 @@ void transportStop() {
   silenceTracks(0xFF);                           // faded out, not cut off
   silencedTracks = 0;
   transport.running = false;
+  transport.midiRestartBeat = INT32_MIN;
   transport.spbAtBeat = -1;                      // a scene's tempo: now
   for (int t = 0; t < NUM_TRACKS; t++) {
     Track &tr = tracks[t];
@@ -2423,6 +2419,9 @@ void transportSnapToBar() {
   transport.beat = target;
   transport.sampleInBeat = 0;
   for (int t = 0; t < NUM_TRACKS; t++) startTrack(t, target, true);
+  midiSendNow(0xFC);                             // MIDI followers: there too (Stop, Song Position, Continue)
+  midiSendPosition(target - transportOrigin());
+  midiSendNow(0xFB);
   transport.running = true;
 }
 

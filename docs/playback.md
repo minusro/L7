@@ -109,9 +109,16 @@ the press until the switch (`clickFromBeat` = `sceneSwitchBeat()`, set by
 
 **Out** (`engine.cpp`, `MIDI_OUT_ENABLED`): 24 ticks a beat from the audio
 interrupt (each queued with the time it's due and sent by a 200 µs timer:
-<0.2 ms of jitter), Start on `transportStart()` (started at another beat,
-following an external clock's song position: Song Position and Continue
-instead), Stop on `transportStop()`.
+<0.2 ms of jitter), Stop on `transportStop()`, and a Song Position wherever
+L7's position starts or jumps, so whatever follows it stays on its bar:
+started, Song Position 0 then Start (started at another beat, following an
+external clock's song position: Song Position then Continue); a project
+switching while playing (the clock back to 1.1.1 at its bar line):
+Stop, Song Position 0, Continue on that beat before its first tick (the
+engine, `transport.midiRestartBeat`); tap tempo's snap to a bar: Stop, Song
+Position, Continue. Sent from `loop()` and the audio interrupt both (the queue
+guarded); over USB MIDI too (midi_usb.cpp puts a Song Position's three bytes
+together). Checked on the M8 with tools/latency/midimon.c.
 Port 2 on variant B (Serial3, TX pin 14), port 1 on variant A.
 
 **In** (`midi_in.*`, `MIDI_IN_ENABLED`): the serial MIDI in (variant B: port 1,

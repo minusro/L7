@@ -1561,7 +1561,14 @@ int main(int argc, char **argv) {
       }
       check(ok && origin % BEATS_PER_BAR == 0, what);
     };
+    auto sentLast = [&](std::initializer_list<int> want) {   // (the MIDI out's last non-clock bytes)
+      int k = (int)want.size(), i = 0;
+      if (midi.nmsg < k) return false;
+      for (int b : want) if (midi.msgs[(midi.nmsg - k + i++) % 16] != b) return false;
+      return true;
+    };
     transportStart();
+    check(sentLast({0xF2, 0, 0, 0xFA}), "started: MIDI Song Position 0, then Start");
     check(projectsMayCopy(), "cut and paste work while playing");
     check(projectLoad(5), "loading while playing");
     waitScene();
@@ -1574,6 +1581,21 @@ int main(int argc, char **argv) {
     runBeats(2);
     check(tracks[0].sample == sample0 && tracks[0].state != TrackState::Empty, "project 3's scene playing again");
     check(transportOrigin() > 0, "the clock counts from the switch's bar line");
+    check(sentLast({0xFC, 0xF2, 0, 0, 0xFB}), "MIDI followers back to 1.1.1 with it: Stop, Song Position 0, Continue");
+    {
+      runBeats(5.3);                                 // (tap tempo's snap: to the nearest bar start)
+      transportSnapToBar();
+      int32_t at = transport.beat - transportOrigin();
+      block(); block();                              // (sent by the MIDI timer)
+      uint32_t pos = (uint32_t)at * 4;
+      char m9[160];
+      snprintf(m9, sizeof m9, "snapped to a bar (%d beats in): MIDI Stop, Song Position %u, Continue", (int)at, pos);
+      char got[64] = "";
+      for (int k = std::max(0, midi.nmsg - 6); k < midi.nmsg; k++) snprintf(got + strlen(got), sizeof got - strlen(got), " %02X", midi.msgs[k % 16]);
+      snprintf(m9 + strlen(m9), sizeof m9 - strlen(m9), " [last:%s]", got);
+      check(sentLast({0xFC, 0xF2, (int)(pos & 0x7F), (int)(pos >> 7), 0xFB}), m9);
+      runBeats(1);
+    }
     fromStart("its tracks from their 1.1.1 positions there");
     runBeats(5.5);
     check(projectLoad(7), "loading a project with the same clips, mid-bar");
@@ -2183,9 +2205,9 @@ for f in os.listdir("."):
       check(!transport.running, "Stop: stopped");
       transportStartAt(12);                          // our own start mid-song: Song Position and Continue out
       for (int b = 0; b < 4; b++) block();
-      bool sent = false;
-      for (int k = 0; k + 3 < 16; k++)
-        if (midi.msgs[k] == 0xF2 && midi.msgs[k + 1] == ((12 * 4) & 0x7F) && midi.msgs[k + 2] == 0 && midi.msgs[k + 3] == 0xFB) sent = true;
+      bool sent = false;                             // (the stand-in keeps the last 16 bytes, in a ring)
+      for (int k = std::max(0, midi.nmsg - 16); k + 3 < midi.nmsg; k++)
+        if (midi.msgs[k % 16] == 0xF2 && midi.msgs[(k + 1) % 16] == ((12 * 4) & 0x7F) && midi.msgs[(k + 2) % 16] == 0 && midi.msgs[(k + 3) % 16] == 0xFB) sent = true;
       snprintf(m2, sizeof m2, "started at beat 12 here: Song Position 48 and Continue sent (%d message bytes)", midi.nmsg - before);
       check(sent, m2);
       transportStop();

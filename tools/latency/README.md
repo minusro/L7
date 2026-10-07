@@ -35,3 +35,7 @@ about ±1 ms.
 ```sh
 clang -O1 -o clocksync clocksync.c -framework CoreAudio -framework CoreFoundation -framework CoreMIDI && ./clocksync 120
 ```
+
+`midimon.c`: what L7 sends over USB MIDI while this sends it a Song Position
+and Continue (or Start: `./midimon -1`), 4 beats of clock and Stop: every
+non-clock byte, and the count of its ticks.

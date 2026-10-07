@@ -165,7 +165,8 @@ static IntervalTimer midiTimer;
 static constexpr uint32_t TICK_QUEUE = 64;
 static volatile uint32_t tickDue[TICK_QUEUE];
 static volatile uint32_t tickHead = 0, tickTail = 0;     // audio interrupt / timer
-static volatile uint8_t msgQueue[8];
+static constexpr uint32_t MSG_QUEUE = 16;
+static volatile uint8_t msgQueue[MSG_QUEUE];
 static volatile uint32_t msgHead = 0, msgTail = 0;       // loop() / timer
 // A second reader, USB MIDI (midi_usb.cpp, its own timer): its own places in both.
 static volatile bool usbOut = false;
@@ -176,7 +177,7 @@ void (*midiInPollHook)() = nullptr;
 
 static void midiTimerIsr() {
   if (midiInPollHook) midiInPollHook();
-  while (msgTail != msgHead) midiPort->write(msgQueue[msgTail++ % 8]);
+  while (msgTail != msgHead) midiPort->write(msgQueue[msgTail++ % MSG_QUEUE]);
   uint32_t now = micros();
   while (tickTail != tickHead && (int32_t)(now - tickDue[tickTail % TICK_QUEUE]) >= 0) {
     midiPort->write(0xF8);
@@ -192,7 +193,16 @@ void midiBegin(HardwareSerial *port) {
 
 void midiSendNow(uint8_t status) {
   if (!midiPort) return;
-  if (msgHead - msgTail < 8 && (!usbOut || msgHead - usbMsgTail < 8)) { msgQueue[msgHead % 8] = status; msgHead++; }
+  noInterrupts();                                  // (loop() and the audio interrupt both send)
+  if (msgHead - msgTail < MSG_QUEUE && (!usbOut || msgHead - usbMsgTail < MSG_QUEUE)) { msgQueue[msgHead % MSG_QUEUE] = status; msgHead++; }
+  interrupts();
+}
+
+void midiSendPosition(int32_t beats) {
+  uint32_t pos = (uint32_t)max(beats, 0) * 4 & 0x3FFF;   // (in 16ths)
+  midiSendNow(0xF2);
+  midiSendNow(pos & 0x7F);
+  midiSendNow(pos >> 7);
 }
 
 static void queueTick(uint32_t due) {
@@ -211,7 +221,7 @@ void midiOutAttachUsb() {
 
 int midiOutTakeUsb(uint32_t now, uint8_t *out, int max) {
   int n = 0;
-  while (n < max && usbMsgTail != msgHead) out[n++] = msgQueue[usbMsgTail++ % 8];
+  while (n < max && usbMsgTail != msgHead) out[n++] = msgQueue[usbMsgTail++ % MSG_QUEUE];
   while (n < max && usbTickTail != tickHead && (int32_t)(now - tickDue[usbTickTail % TICK_QUEUE]) >= 0) {
     out[n++] = 0xF8;
     usbTickTail++;
@@ -263,6 +273,12 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
   bool recorded = recording.mode == Recording::Finishing &&
                   beat >= recording.startBeat + (int32_t)(recording.loopBars * BEATS_PER_BAR);
   if (metronomeOn && !recorded && beat >= clickFromBeat) startClick(beat % BEATS_PER_BAR == 0);   // (a switch waiting: not until it)
+  if (beat == transport.midiRestartBeat) {           // the clock back to 1.1.1 here (a project's switch): MIDI followers too,
+    transport.midiRestartBeat = INT32_MIN;           // before this beat's first tick
+    midiSendNow(0xFC);
+    midiSendPosition(0);
+    midiSendNow(0xFB);
+  }
 
   if (beat % BEATS_PER_BAR == 0) {
     transport.lastBarSample = transport.now;
