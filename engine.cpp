@@ -189,6 +189,7 @@ volatile BlockStamp blockStamp;
 volatile bool onsetListen = false;
 DMAMEM uint16_t onsetRing[ONSET_FRAMES];
 volatile uint32_t onsetCount = 0, onsetNow = 0;
+volatile float onsetLevel = 0;
 volatile BeatStart beatLog[BEAT_LOG];
 // The onset measure's state (interrupt): the bands' filters (one-pole: the
 // lows two below ~150 Hz, the highs above ~2.5 kHz), their energies smoothed
@@ -601,6 +602,7 @@ void LooperEngine::update() {
     }
     onsetRing[onsetCount % ONSET_FRAMES] = (uint16_t)min(flux * ONSET_SCALE, 65535.0f);
     onsetNow = blockNow;
+    onsetLevel = onE[2];
     onsetCount = onsetCount + 1;
   }
   for (int t = 0; t < NUM_TRACKS; t++) {

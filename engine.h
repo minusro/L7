@@ -190,6 +190,7 @@ constexpr float ONSET_SCALE = 1000.0f;
 extern volatile bool onsetListen;
 extern uint16_t onsetRing[ONSET_FRAMES];
 extern volatile uint32_t onsetCount, onsetNow;
+extern volatile float onsetLevel;                       // the input's loudness at the latest block's end (mean square, over ~10 ms)
 // Our beats as they started (running): beat b's first sample (transport.now)
 // and its samples a beat, for the last BEAT_LOG beats (index b % BEAT_LOG).
 constexpr int BEAT_LOG = 8;

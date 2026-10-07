@@ -2721,6 +2721,34 @@ for f in os.listdir("."):
     for (int n = 0; n < (int)(4 * fps); n++) { block(); if (audioFollowFlash() != was) { was = !was; flips++; } }
     snprintf(m9, sizeof m9, "stopped: the tempo flashes with their beat (%d changes in 4 s: 8.4 beats)", flips);
     check(flips >= 15 && flips <= 19, m9);
+    {                                                // the input silent a while (the line input's noise floor): nothing changes
+      float before = bpm;
+      uint32_t spbBefore = transport.pendingSpb ? transport.pendingSpb : transport.spb;
+      feedNoise = true;
+      double lostAfter = -1;
+      bool changed = false;
+      for (int k = 0; k < (int)(12 * fps); k++) {
+        run(1 / fps);
+        if (lostAfter < 0 && !audioFollowLocked()) lostAfter = k / fps;
+        if (bpm != before || (transport.pendingSpb ? transport.pendingSpb : transport.spb) != spbBefore) changed = true;
+      }
+      snprintf(m9, sizeof m9, "stopped, 12 s of silence: the tempo kept (%.2f, before %.2f; changed %d), the beat counted as lost after %.1f s (black flashing)",
+               bpm, before, changed, lostAfter);
+      check(!changed && lostAfter > 1.0 && lostAfter < 2.5 && !audioFollowLocked() && audioFollowOn(), m9);
+      feedNoise = false;
+      drumBeat += 0.4;                               // back, the same tempo, its beat elsewhere
+      double relockAfter = -1;
+      float lo = bpm, hi = bpm;
+      for (int k = 0; k < (int)(15 * fps) && relockAfter < 0; k++) {
+        run(1 / fps);
+        lo = std::min(lo, bpm);
+        hi = std::max(hi, bpm);
+        if (audioFollowLocked()) relockAfter = k / fps;
+      }
+      snprintf(m9, sizeof m9, "sound again (its beat 0.4 later): their beat found again after %.1f s, the tempo steady meanwhile (%.2f-%.2f)", relockAfter, lo, hi);
+      check(relockAfter > 0 && relockAfter < 6 && hi - lo <= 0.1f && fabs(bpm - 126) <= 0.15f, m9);
+      run(4);
+    }
     check(audioFollowStart(), "START: in step with them");
     for (int n = 0; n < 2000 && !transport.running; n++) block();
     uint32_t startedAt = inputIndex;

@@ -45,6 +45,12 @@ static constexpr int CATCH_BEATS = 8;
 static constexpr float CATCH_BEATS_OFF = 0.025f;
 static constexpr float DEADBAND_BEATS = 0.006f;     // (their beats' jitter: ~3 ms at 120 BPM)
 static constexpr float MIN_CHANGE = 0.0015f;
+// Silence: the input under SILENT_DBFS for SILENT_MS (sparse music's gaps are
+// shorter). Meanwhile nothing changes: no tempo estimated, the clock left as it
+// is; their beat counts as lost (it's looked for afresh once they're back).
+static constexpr float SILENT_DBFS = -50;
+static constexpr uint32_t SILENT_MS = 1500;
+static constexpr float SILENT_LEVEL = 32768.0f * 32768.0f * 1e-5f;   // (-50 dBFS, as a mean square)
 
 static bool on = false;
 static uint32_t listenFrom = 0;                     // the first frame heard since turned on
@@ -59,6 +65,11 @@ static uint32_t estimateAt = 0;
 static int disagree = 0;                            // estimates in a row far from the tracker's period
 static int offPhase = 0;                            // and in a row with the beats strongest elsewhere in the period
 static bool startPending = false;
+static uint32_t loudAt = 0;                         // millis() the input was last above SILENT_DBFS
+static bool silent = false;
+static bool resuming = false;                       // sound again after silence: its beat found afresh once
+static uint32_t resumeFrom = 0;                     // RESUME_BEATS are heard from this frame on (the tempo kept meanwhile)
+static constexpr int RESUME_BEATS = 3;
 static double pendingFrom = 0;                      // their phase when START was pressed
 
 static inline float osf(uint32_t n) { return onsetRing[n % ONSET_FRAMES] * (1.0f / ONSET_SCALE); }
@@ -271,7 +282,7 @@ static void trackBeat(uint32_t count, uint32_t at) {
     locked = false;
     return;
   }
-  if (audioFollowActive() && (locked || !transport.running)) follow(locked && transport.running, count, at);   // (stopped: the tempo, its beat found or not)
+  if (audioFollowActive() && !silent && (locked || !transport.running)) follow(locked && transport.running, count, at);   // (stopped: the tempo, its beat found or not; silence: as it is)
 }
 
 FLASHMEM void audioFollowBegin(bool o) {
@@ -301,17 +312,44 @@ FLASHMEM void audioFollowToggle() {
   locked = false;
   startPending = false;
   estimateAt = millis();
+  loudAt = millis();
+  silent = false;
+  resuming = false;
 }
 
 bool audioFollowActive() { return on && !midiClockFollowing(); }
-bool audioFollowLocked() { return audioFollowActive() && locked; }
+bool audioFollowLocked() { return audioFollowActive() && locked && !silent; }
 float audioFollowBpm() { return period > 0 ? bpmOfFrames(period) : 0; }
 
 void audioFollowService() {
   if (!on) return;
   uint32_t count, at;
   snapshot(count, at);
-  if (millis() - estimateAt >= ESTIMATE_MS) {        // the tempo, afresh
+  if (onsetLevel > SILENT_LEVEL) loudAt = millis();
+  bool wasSilent = silent;
+  silent = millis() - loudAt >= SILENT_MS;
+  if (silent != wasSilent) {
+    Serial.printf("audio follow: %s\n", silent ? "silence (the tempo kept)" : "sound again");
+    if (silent) {
+      locked = false;                                // (their beat: to be found again)
+      hitRate = 0;
+      startPending = false;
+    } else if (period > 0) {
+      resuming = true;
+      resumeFrom = count;
+    }
+  }
+  if (resuming && !silent && (double)(count - resumeFrom) >= RESUME_BEATS * period + 2) {
+    double last = findPhase(count, period);          // (the silence before adds nothing: their beat in what's come since)
+    if (last >= 0) {
+      lastBeat = heardBeat = last;
+      nextBeat = last + period;
+      beatsTracked = 0;
+      hitRate = 0.5f;
+    }
+    resuming = false;
+  }
+  if (millis() - estimateAt >= ESTIMATE_MS && !silent && !resuming) {   // the tempo, afresh (not in silence)
     estimateAt = millis();
     float strength;
     double est = estimate(count, bpm, strength);    // (towards the tempo shown: the one set, or theirs once followed)
@@ -323,6 +361,7 @@ void audioFollowService() {
         if (++disagree >= (locked ? 6 : 2)) restart(count, est);
       } else {
         disagree = 0;
+        if (!locked && hitRate < LOSE_RATE && beatsTracked >= 8) restart(count, est);   // (the tempo right, the beat not found: its phase afresh)
       }
     }
     // The beat itself, checked: the phase whose beats rose most over the last
@@ -346,7 +385,7 @@ void audioFollowService() {
       }
     }
   }
-  while (period > 0 && (double)(count - 1) >= nextBeat + WINDOW * period + 1) trackBeat(count, at);
+  while (period > 0 && !resuming && (double)(count - 1) >= nextBeat + WINDOW * period + 1) trackBeat(count, at);
   if (startPending) {                                // START pressed late in their beat: on their next one
     if (!locked || transport.running || !audioFollowActive()) {
       startPending = false;

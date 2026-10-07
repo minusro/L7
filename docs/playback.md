@@ -268,6 +268,13 @@ comes first (audio follow listens on, but doesn't touch the clock meanwhile).
 * START (or A on the clock cell, SHIFT+START) while locked: on their beat
   (`audioFollowStart()`): in the first half of theirs, at once, that far into
   the beat (`transportStartAt(0, inBeat)`); in the second half, on their next.
+* Silence (the input, as analysed, under -50 dBFS for 1.5 s: `onsetLevel`,
+  the interrupt's energy over ~10 ms; sparse music's gaps are shorter):
+  nothing changes. No tempo estimated, the clock left as it is (stopped or
+  running), their beat counted as lost (the tempo flashes black, START not
+  on it; the serial log: "audio follow: silence (the tempo kept)"). Sound again:
+  after 3 beats of it, their beat found afresh at the tempo kept (the
+  strongest phase since; the tempo still kept meanwhile), then tracked as ever.
 * The tempo cell's number flashes with the beat (its first half: black until
   their beat is locked, then the accent colour), whenever audio follow is on: the clock's while it runs; stopped,
   theirs as the tracker has it (locked or not yet), or, nothing found yet, at
@@ -276,7 +283,9 @@ comes first (audio follow listens on, but doesn't touch the clock meanwhile).
   eighths, a pad): 126 BPM found within 10 s (126.0 shown); START on their
   beat from the first (within 0.3 ms); running, within 0.2 ms of their kicks;
   their tempo rising to 132 over 8 s, followed (within ~16 ms meanwhile, a few
-  ms after); silence: the beat lost, the tempo kept; 90 / 70 / 174 BPM found
+  ms after); silence (12 s of the line input's noise floor, stopped): the
+  tempo kept exactly, the beat lost after 1.5 s, found again 3.3 s after the
+  drums are back (0.4 of a beat later), the tempo steady meanwhile; 90 / 70 / 174 BPM found
   from the tempo set; the drums over USB audio alone (the line input silent):
   found, and running on their beat less USB's input latency (within 4 ms).
   Real music, on the M8: to try.
