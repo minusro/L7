@@ -57,8 +57,8 @@ def edit(path, steps):
     return True
 
 
-MIDI_MARK = "L7_AUDIO"
-MSC_TYPE = """#elif defined(USB_SERIAL_MSC) // L7_MSC L7_MIDI L7_AUDIO: Serial + MIDI + Audio + a mass-storage disk (tools/teensy_msc)
+MIDI_MARK = "L7_AUDIO_DELAY2"
+MSC_TYPE = """#elif defined(USB_SERIAL_MSC) // L7_MSC L7_MIDI L7_AUDIO L7_AUDIO_DELAY2: Serial + MIDI + Audio + a mass-storage disk (tools/teensy_msc)
   #define VENDOR_ID		0x16C0
   #define PRODUCT_ID		0x0483
   #define MANUFACTURER_NAME	{'T','e','e','n','s','y','d','u','i','n','o'}
@@ -103,6 +103,8 @@ MSC_TYPE = """#elif defined(USB_SERIAL_MSC) // L7_MSC L7_MIDI L7_AUDIO: Serial +
   #define AUDIO_RX_ENDPOINT     6
   #define AUDIO_RX_SIZE         180
   #define AUDIO_SYNC_ENDPOINT	7
+  #define AUDIO_TX_DELAY_MS	3	// bDelay: the M8's own delay to the computer / from it (~5.5 ms the two together, as
+  #define AUDIO_RX_DELAY_MS	3	// measured: tools/latency); macOS ignores it (10 made no difference), others may not
   #define ENDPOINT5_CONFIG	ENDPOINT_RECEIVE_BULK + ENDPOINT_TRANSMIT_BULK
   #define ENDPOINT6_CONFIG	ENDPOINT_RECEIVE_ISOCHRONOUS + ENDPOINT_TRANSMIT_ISOCHRONOUS
   #define ENDPOINT7_CONFIG	ENDPOINT_RECEIVE_UNUSED + ENDPOINT_TRANSMIT_ISOCHRONOUS
@@ -161,6 +163,28 @@ USB_C_REQUESTS = """#endif
 	printf("endpoint 0 stall\\n");"""
 
 
+def delay_fields(desc):
+    """The audio streams' bDelay (the delay they report, in ms): AUDIO_TX_DELAY_MS (to the
+    computer) and AUDIO_RX_DELAY_MS (from it) when the USB type sets them, else 3 as before."""
+    s = open(desc).read()
+    if "L7_DELAY" in s:
+        return False
+    line = "\t3,\t\t\t\t\t// bDelay (approx 3ms delay, audio lib updates)\n"
+    if s.count(line) != 4:
+        sys.exit("usb_desc.c: the audio streams' bDelay lines not as expected")
+    parts = s.split(line)
+    out = parts[0]
+    for k, rest in enumerate(parts[1:]):
+        macro = "AUDIO_TX_DELAY_MS" if k % 2 == 0 else "AUDIO_RX_DELAY_MS"   # (each speed: to the computer, then from it)
+        out += "\t%s,\t\t\t// bDelay  L7_DELAY\n" % macro + rest
+    head = '#include "usb_desc.h"\n'
+    if out.count(head) < 1:
+        sys.exit("usb_desc.c: include not found")
+    out = out.replace(head, head + "#ifndef AUDIO_TX_DELAY_MS // L7_DELAY\n#define AUDIO_TX_DELAY_MS 3\n#endif\n#ifndef AUDIO_RX_DELAY_MS\n#define AUDIO_RX_DELAY_MS 3\n#endif\n", 1)
+    open(desc, "w").write(out)
+    return True
+
+
 def apply():
     plat = find_platform()
     core = os.path.join(plat, "cores", "teensy4")
@@ -195,6 +219,8 @@ def apply():
         s = s[:j] + "\n" + msc_descriptor("12") + s[j:]
         open(desc, "w").write(s)
         changed.append("usb_desc.c")
+    if delay_fields(desc):
+        changed.append("usb_desc.c (bDelay)")
     usbc = os.path.join(core, "usb.c")
     mtp_end = ("\t\tbreak;\n#endif\n\t}\n\tprintf(\"endpoint 0 stall\\n\");")
     if edit(usbc, [

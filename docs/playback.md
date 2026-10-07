@@ -216,4 +216,9 @@ m8_looper.ino, only with that type).
   shows the line input's quietest and loudest block every 5 s while USB audio
   comes in ("USB audio in; line input: ..."), to set the level from the M8's
   own noise floor. The simulator checks the mix and the gate.
+* Latency (tools/latency): a round trip through the M8 over USB measures
+  10.9 ms, of which CoreAudio reports 5.2 ms; the M8's own ~5.7 ms (USB in
+  filling a block, the engine's block, USB out's queue) isn't reported, and
+  can't be: macOS ignores the streams' bDelay (the patch sets it, 3 ms each
+  way; 10 made no difference). A DAW's offset for the device takes the rest.
 
