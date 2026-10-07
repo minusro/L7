@@ -2199,12 +2199,19 @@ for f in os.listdir("."):
     // Started again at the same tempo (no clock while stopped, the first tick a little late, the rest jittering):
     // the tempo stays as it was through the first bars.
     {
+      double speedOff = 0, posOff = 0;               // the speed applied off theirs; our position off theirs (from their 2nd beat)
       auto play = [&](int beats, double bpmTheirs, bool lateFirst, double &worstOff, float &shownMin, float &shownMax) {
         midiInByte(0xFA, simMicros, MIDI_USB);
         double usTick = 60e6 / bpmTheirs / 24, tAt = simMicros + 3000 + (lateFirst ? 2500 : 0);
         for (int k = 0; k < beats * 24; k++) {
           while (simMicros < tAt) { block(); midiInService(); }
           midiInByte(0xF8, (uint32_t)(tAt + (rand() % 1601 - 800)), MIDI_USB);   // (USB: up to 0.8 ms either way)
+          if (transport.running && k >= 24) {
+            double applied = transport.pendingSpb ? transport.pendingSpb : transport.spb;
+            speedOff = std::max(speedOff, fabs(applied - expectSpb(bpmTheirs)) / expectSpb(bpmTheirs));
+            double ours = transport.beat + (transport.sampleInBeat + ((int32_t)((uint32_t)tAt - simMicros)) / usPerSample) / transport.spb;
+            posOff = std::max(posOff, fabs(ours - k / 24.0));
+          }
           if (k == 0 && lateFirst) tAt -= 2500;
           tAt += usTick;
           if (transport.running && k > 0) {
@@ -2222,10 +2229,14 @@ for f in os.listdir("."):
       float lo = 1e9f, hi = 0;
       play(12, 120, false, off, lo, hi);             // a first play: its tempo learnt
       off = 0; lo = 1e9f; hi = 0;
+      speedOff = 0; posOff = 0;
       play(8, 120, true, off, lo, hi);               // played again, the same tempo
       char m3[200];
       snprintf(m3, sizeof m3, "played again at the same tempo: the tempo shown %.1f-%.1f, at most %.2f%% off theirs", lo, hi, off * 100);
       check(hi - lo < 0.15f && off < 0.001, m3);
+      snprintf(m3, sizeof m3, "and started where they are: the speed at most %.2f%% off theirs, our position at most %.4f beats off theirs from the start",
+               speedOff * 100, posOff);
+      check(speedOff < 0.006 && posOff < 0.01, m3);
     }
     // The clock out for USB too: Start, the ticks, Stop, as the serial one's.
     midiOutAttachUsb();

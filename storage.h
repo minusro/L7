@@ -62,7 +62,10 @@ void storageForget();
 void serviceStorage();               // call as often as possible from loop()
 
 void transportStart();               // from bar 1, all tracks in sync
-void transportStartAt(int32_t beat);  // from that beat (the clock reads it; each track where it'd be then: an external clock's song position)
+// From that beat (the clock reads it; each track where it'd be then: an
+// external clock's song position); inBeat (asked once the tracks are filled):
+// samples already into that beat, so it starts exactly where the clock is.
+void transportStartAt(int32_t beat, uint32_t (*inBeat)() = nullptr);
 void transportStop();
 void transportRestart();             // from bar 1 again, running or not
 // Running (and not recording): jump to the nearest bar start (the playheads

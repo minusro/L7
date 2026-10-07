@@ -2348,7 +2348,7 @@ bool setRange(int t, uint32_t startBeat, uint32_t beats) {
 // ---- Transport
 void transportStart() { transportStartAt(0); }
 
-void transportStartAt(int32_t beat) {
+void transportStartAt(int32_t beat, uint32_t (*inBeat)()) {
   if (transport.running) return;
   clockOrigin = 0;
   clockOriginNext = -1;
@@ -2372,6 +2372,13 @@ void transportStartAt(int32_t beat) {
     midiSendNow(pos & 0x7F);
     midiSendNow(pos >> 7);
     midiSendNow(0xFB);
+  }
+  if (inBeat) {                                  // part way into the beat already (asked now: the tracks filled)
+    uint32_t spb = transport.pendingSpb ? transport.pendingSpb : transport.spb, in = inBeat();
+    if (in > 0 && in < spb * 9 / 10) {
+      transport.sampleInBeat = in;
+      transport.joinMidBeat = true;
+    }
   }
   transport.running = true;
 }

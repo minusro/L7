@@ -111,6 +111,10 @@ struct Transport {
   volatile uint32_t now = 0;             // samples processed since boot
   volatile uint32_t lastBarSample = 0;   // `now` at the latest bar line
   volatile int32_t lastBarBeat = 0;
+  // loop() -> interrupt: the transport started part way into its beat
+  // (sampleInBeat > 0: an external clock's position, midi_in.cpp): the tracks
+  // armed for this beat join where they'd be, in the next block.
+  volatile bool joinMidBeat = false;
 };
 
 // Recording: the interrupt only fills in where it starts.

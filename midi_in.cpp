@@ -5,7 +5,9 @@
 using namespace looper;
 
 static constexpr uint32_t FOLLOW_TIMEOUT_MS = 500;
-static constexpr float MAX_NUDGE = 0.02f;             // the speed off their tempo, at most (to catch their beat up)
+static constexpr float MAX_NUDGE = 0.005f;            // the speed off their tempo, at most (to catch their beat up: ~9 cents)
+static constexpr float BIG_NUDGE = 0.02f;             // and when we're far off their beat (FAR_BEATS: after their tempo jumped)
+static constexpr float FAR_BEATS = 0.03f;
 static constexpr float NUDGE_GAIN = 0.5f;             // of the beat's difference, taken out over the next beat
 static constexpr float DEADBAND_BEATS = 0.003f;       // a difference this small: left (their jitter)
 static constexpr float MIN_CHANGE = 0.001f;           // a tempo change this small: not made (each one is a recording's tempo mark)
@@ -128,6 +130,17 @@ static double ourBeatAt(uint32_t us, const BlockStamp &s) {
 // Their position (beats) at tick i.
 static double theirBeatAt(uint32_t i) { return refBeats + (double)((int32_t)i - refTick) / 24; }
 
+// Starting: how far they are past the beat we start on, now (samples at our
+// tempo): from the tick that got there, at their tempo since.
+static uint32_t startTickAt = 0;
+static int32_t startingBeat = 0;
+static uint32_t pastStartingBeat() {
+  uint32_t spb = transport.pendingSpb ? transport.pendingSpb : transport.spb;
+  double usPerBeat = (theirSpb ? theirSpb : spb) * usPerSample;
+  double beats = theirBeatAt(startTickAt) - startingBeat + (int32_t)(micros() - tickUs[startTickAt % TICKS]) / usPerBeat;
+  return beats <= 0 ? 0 : (uint32_t)(beats * spb + 0.5);
+}
+
 // Theirs (from tick `tick`, at position pos16): our transport stopped, and
 // started again on their next whole beat (as Start, Continue or a jump).
 static void startWith(uint32_t tick, uint16_t pos16) {
@@ -213,22 +226,32 @@ void midiInService() {
     // squares: each tick's jitter weighs little), up to SPAN of them, 24 at
     // least. Over fewer than SPAN, the tempo known is kept unless this one's
     // NEW_TEMPO off it (theirs changed; not their start's jitter).
-    uint32_t span = i >= firstTick ? min(i - firstTick, SPAN) : 0;
-    if (span >= 24 && n - (i - span) <= TICKS) {
+    // Their last beat alone NEW_TEMPO off the tempo known: theirs changed, the
+    // line from that beat on.
+    auto fit = [&](uint32_t span) {                   // samples a beat, the line through ticks i - span .. i
       double sx = 0, sy = 0, sxx = 0, sxy = 0, m = span + 1;
       for (uint32_t k = 0; k <= span; k++) {
         double y = (int32_t)(tickUs[(i - span + k) % TICKS] - tickUs[(i - span) % TICKS]);
         sx += k; sy += y; sxx += (double)k * k; sxy += k * y;
       }
-      double usPerTick = (m * sxy - sx * sy) / (m * sxx - sx * sx);
-      uint32_t spb = (uint32_t)(usPerTick * 24 / usPerSample + 0.5);
+      return (uint32_t)((m * sxy - sx * sy) / (m * sxx - sx * sx) * 24 / usPerSample + 0.5);
+    };
+    if (theirSpb && i >= firstTick + 24 && n - (i - 24) <= TICKS) {
+      uint32_t last = fit(24);
+      if (fabsf((float)last - theirSpb) > NEW_TEMPO * theirSpb) firstTick = i - 24;
+    }
+    uint32_t span = i >= firstTick ? min(i - firstTick, SPAN) : 0;
+    if (span >= 24 && n - (i - span) <= TICKS) {
+      uint32_t spb = fit(span);
       bool sure = span >= SPAN || !theirSpb || fabsf((float)spb - theirSpb) > NEW_TEMPO * theirSpb;
       if (sure && spb >= spbForBpm(MAX_BPM) && spb <= spbForBpm(MIN_BPM)) theirSpb = spb;
     }
     // Their next whole beat reached: our transport from that beat (the clock
     // reads it; the tracks where they'd be).
     if (startAt != INT32_MIN && refTick >= 0 && (int32_t)i >= refTick && theirBeatAt(i) >= startAt - 1e-9) {
-      transportStartAt(startAt);
+      startTickAt = i;                                // (started exactly where they are: no catching up)
+      startingBeat = startAt;
+      transportStartAt(startAt, pastStartingBeat);
       startAt = INT32_MIN;
       seenTicks++;
       return;                                         // (running from the next block)
@@ -251,7 +274,8 @@ void midiInService() {
     float err = errSum / errCount;
     errSum = 0;
     errCount = 0;
-    float nudge = fabsf(err) < DEADBAND_BEATS ? 0 : constrain(err * NUDGE_GAIN, -MAX_NUDGE, MAX_NUDGE);   // (ahead: slower)
+    float most = fabsf(err) > FAR_BEATS ? BIG_NUDGE : MAX_NUDGE;
+    float nudge = fabsf(err) < DEADBAND_BEATS ? 0 : constrain(err * NUDGE_GAIN, -most, most);   // (ahead: slower)
     want = (uint32_t)(theirSpb * (1 + nudge) + 0.5f);
   } else if (running) {
     return;                                           // (between: as it is)

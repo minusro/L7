@@ -138,8 +138,19 @@ timer, each clock tick stamped with `micros()`. In `loop()` (`midiInService()`):
   B + arrows: no effect).
 * Running: each tick, how far our beat is from theirs at that moment (our
   position from `blockStamp` and the tick's time); once a beat the average,
-  and the next beat runs at their tempo nudged by half of it (at most ±2 %,
-  nothing under 0.003 beats). A tempo change under 0.1 % isn't made (each one
+  and the next beat runs at their tempo nudged by half of it (at most ±0.5 %,
+  ~9 cents; ±2 % while more than 0.03 beats off, after their tempo jumped;
+  nothing under 0.003 beats). Their tempo jumping (their last beat alone 2 %
+  off the tempo known): measured afresh from that beat.
+* Starting where they are, not catching up: our transport starts once their
+  clock reaches the beat it starts on, and the tracks fill first; then
+  `transportStartAt(beat, inBeat)` asks how far past that beat they are by now
+  (from that tick's time, at their tempo) and starts that far into the beat
+  (`transport.joinMidBeat`: the engine's next block joins the armed tracks at
+  that point of their streams, gliding in, and the MIDI clock out from its
+  next tick). The simulator: played again after a pause, the speed at most
+  0.19 % off theirs and our position within 0.004 beats of theirs from the
+  first beat. A tempo change under 0.1 % isn't made (each one
   re-pitches the loops a little and is a recording's tempo mark). The
   simulator holds a clock jittering by ±0.6 ms within 0.003 beats, with 2
   small changes in 16 beats.

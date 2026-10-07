@@ -315,6 +315,24 @@ void LooperEngine::update() {
     nextTickAt_ = (uint64_t)tickInBeat_ * spb / 24;
     markTempo(transport.now);
   }
+  if (transport.joinMidBeat && transport.running) {  // started part way into this beat: the tracks join there
+    transport.joinMidBeat = false;
+    uint32_t in = transport.sampleInBeat, spbNow = transport.spb;
+    for (auto &tr : tracks) {
+      if (tr.live || !tr.armed || tr.startBeat != transport.beat || !tr.playSpb) continue;
+      uint32_t at = tr.s0 + (uint32_t)((uint64_t)in * tr.playSpb / spbNow);
+      int32_t ahead = (int32_t)(tr.head - at);
+      if (ahead >= 2 && ahead <= (int32_t)RING_FRAMES) {
+        tr.tail = at;
+        tr.frac = 0;
+        memset(tr.curMix, 0, sizeof tr.curMix);    // (glides in from silence)
+        tr.live = true;
+        tr.armed = false;
+      }
+    }
+    tickInBeat_ = (int)min((uint64_t)24, ((uint64_t)in * 24 + spbNow - 1) / spbNow);   // the MIDI clock: from its next tick
+    nextTickAt_ = (uint64_t)tickInBeat_ * spbNow / 24;
+  }
   uint32_t spb = transport.spb;
   const bool running = transport.running;
   blockStamp.us = blockMicros;                       // (MIDI in: the clock at this block's start)
