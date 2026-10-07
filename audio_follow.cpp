@@ -379,5 +379,7 @@ bool audioFollowFlash() {
     interrupts();
     return first;
   }
-  return locked && theirPhase() < 0.5;
+  if (period > 0 && lastBeat >= 0) return theirPhase() < 0.5;   // stopped: their beat, as the tracker has it (locked or not yet)
+  uint32_t msPerBeat = (uint32_t)(60000 / bpm);    // (nothing found yet: the tempo shown, still listening)
+  return millis() % msPerBeat < msPerBeat / 2;
 }

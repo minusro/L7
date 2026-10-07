@@ -2673,10 +2673,15 @@ for f in os.listdir("."):
     check(audioFollowOn() && onsetListen, "B+A: on, the input listened to");
     float firstShown = 0;
     double firstAt = 0;
+    int earlyFlips = 0;
+    bool earlyWas = audioFollowFlash();
     for (int k = 0; k < (int)(10 * fps); k++) {     // stopped: the tempo theirs as soon as it's found (before the beat is)
       run(1 / fps);
       if (!firstShown && bpm != 120) { firstShown = bpm; firstAt = k / fps; }
+      if (k < 4 * fps && audioFollowFlash() != earlyWas) { earlyWas = !earlyWas; earlyFlips++; }
     }
+    snprintf(m9, sizeof m9, "still listening (nothing found yet): flashing at the tempo shown (%d changes in 4 s: 8 beats at 120)", earlyFlips);
+    check(earlyFlips >= 15 && earlyFlips <= 17, m9);
     snprintf(m9, sizeof m9, "stopped: the tempo theirs as soon as it's found (%.1f shown after %.1f s)", firstShown, firstAt);
     check(fabs(firstShown - 126) < 0.5f && firstAt < 6.5, m9);
     snprintf(m9, sizeof m9, "drums at 126 BPM, stopped: their beat found (%d), the tempo theirs (%.1f shown, %.3f found)",

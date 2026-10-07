@@ -26,7 +26,7 @@
 //     accent colour while B alone is held there: B + arrows change it). With
 //     audio follow on (B+A there), the tempo flashes with the beat (the accent
 //     colour, then as it was): the clock's while it runs, else the one heard
-//     (none found: steady).
+//     (none found yet: at the tempo shown).
 // Text and tags are redrawn whole each pass (their boxes clear what was
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1

@@ -127,6 +127,7 @@ no dropouts or overruns
 	- maybe some more testing later
 - multitrack usb audio V
 - audio in sync V
+- multi mute/unmute while holding action and up/down
 
 - clip warping :D
 

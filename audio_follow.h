@@ -33,6 +33,7 @@ bool audioFollowLocked();                // their beat found (active)
 void audioFollowService();               // loop(): the tempo, the beat, the clock
 bool audioFollowStart();                 // START pressed: true if it starts (now or on their next beat) in step with them
 // The beat to flash on (active): true in the first half of each beat (running:
-// ours; stopped and locked: theirs); false otherwise.
+// ours; stopped: theirs, found or still being looked for; nothing found yet:
+// the tempo shown's); false when not active.
 bool audioFollowFlash();
 float audioFollowBpm();                  // their tempo as found (0: none yet)

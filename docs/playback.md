@@ -269,7 +269,9 @@ comes first (audio follow listens on, but doesn't touch the clock meanwhile).
   (`audioFollowStart()`): in the first half of theirs, at once, that far into
   the beat (`transportStartAt(0, inBeat)`); in the second half, on their next.
 * The tempo cell's number flashes with the beat (the accent colour its first
-  half): the clock's while it runs, theirs while stopped and locked.
+  half), whenever audio follow is on: the clock's while it runs; stopped,
+  theirs as the tracker has it (locked or not yet), or, nothing found yet, at
+  the tempo shown.
 * The simulator (drums: a kick every beat, a snare on 2 and 4, hats on the
   eighths, a pad): 126 BPM found within 10 s (126.0 shown); START on their
   beat from the first (within 0.3 ms); running, within 0.2 ms of their kicks;
