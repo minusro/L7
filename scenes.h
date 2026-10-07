@@ -35,8 +35,11 @@ void scenesForget();
 // a project's.)
 void scenesBegin(float (*getTempo)(), bool (*setTempo)(float), int project = 0, float (*newTempo)() = nullptr);
 void projectTempoChanged();    // the tempo was set by hand: the loaded project keeps it (all its scenes)
-void projectRecorded(float bpm);   // a recording was made at this tempo: the loaded project keeps it
-float projectRecordingTempo();     // the tempo the loaded project's last recording was made at (0: none kept)
+// Each scene keeps a tempo of its own (not the project's, which is the same in
+// all of them): the one it was made at (0* or N+1* made a scene, a duplicate,
+// a resampling's own; a pasted scene its own), then its latest recording's.
+void sceneRecorded(float bpm, bool resample);   // a recording was made at this tempo (resampled: for its own scene)
+float sceneSavedTempo();           // the current scene's (N+1*: N's; 0*: 0, none)
 void sceneStateChanged();      // something in the looper changed: the current scene follows
 void serviceScenes();          // call from loop(): saves, one write at a time, when the buffers allow
 void flushScenes();            // everything waiting saved now (power off)

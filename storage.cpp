@@ -1976,7 +1976,7 @@ static void finishRecording() {
   recording.resample = false;
   recording.track = -1;
   trackChanged(t);                               // unit saved when the buffers allow
-  projectRecorded(bpmForSpb(tr.spbNative));      // the project keeps the tempo it was made at
+  sceneRecorded(bpmForSpb(tr.spbNative), resampled);   // its scene keeps the tempo it was made at
   if (transport.running && !tr.live && !tr.armed) startTrack(t, transport.beat + 2, false);
   if (queuedTrack >= 0) {                        // the next one takes over where this one ends
     int q = queuedTrack;

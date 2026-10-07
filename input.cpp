@@ -17,8 +17,8 @@ static void resetCell() {
     stepMasterVolume(MASTER_VOLUME_UNITY - masterVolume());
     return;
   }
-  if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == TEMPO_CELL) {   // the tempo: the project's last recording's
-    float b = projectRecordingTempo();
+  if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == TEMPO_CELL) {   // the tempo: the scene's saved one
+    float b = sceneSavedTempo();
     if (b > 0) setTempo(b);
     return;
   }
