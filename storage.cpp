@@ -2188,7 +2188,7 @@ int takeResampled() {
 void endSilencing() { silencedTracks = 0; }
 void hearAgain(int t) { __atomic_fetch_and(&silencedTracks, (uint8_t)~(1 << t), __ATOMIC_RELAXED); }   // (the interrupt clears bits too)
 
-bool recordPress(int t, bool resample) {
+bool recordPress(int t, bool resample, uint32_t heldFor) {
   if (t == queuedTrack) {                        // pressed again: no longer queued
     queuedTrack = -1;
     returnRecordingSample(t);
@@ -2229,7 +2229,11 @@ bool recordPress(int t, bool resample) {
       uint32_t lastBar = transport.lastBarSample;
       int32_t lastBeat = transport.lastBarBeat;
       interrupts();
-      startRecording(t, lastBar + recording.latency, lastBeat, PREROLL_FRAMES + recording.latency);
+      // (Held a while before it was let go: the window from the press, as
+      // long as the history still has the bar line and its pre-roll.)
+      int32_t maxBehind = min((int64_t)PREROLL_FRAMES + recording.latency + heldFor,
+                              (int64_t)INPUT_FRAMES - PREROLL_FRAMES - 4096);
+      startRecording(t, lastBar + recording.latency, lastBeat, maxBehind);
       return true;
     }
     case Recording::WaitBar:                     // cancel before it started

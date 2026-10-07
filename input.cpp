@@ -127,6 +127,9 @@ static uint32_t armedAt = 0;
 static constexpr uint32_t LONG_PRESS_MS = 600;
 
 static bool nextSceneArmed = false;               // A pressed on the scene cell: the next scene once it's let go
+static int recordArmed = -1;                       // A (or B+A) pressed on an empty track: it records (resamples) once A is let go
+static bool recordArmedResample = false;
+static uint32_t recordArmedAt = 0;                 // (transport.now at the press: the late press's window counts from it)
 
 // An arrow held that switches screens when let go: into the menu, or out of it.
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0;
@@ -384,6 +387,17 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     nextSceneArmed = false;
     if (onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL && sceneNext())
       for (int i = 0; i < ROWS; i++) drawTrack(i);
+  }
+  // A (or B+A: resampling) on an empty track, once let go (nothing else
+  // pressed meanwhile; still empty then): a recording, from the next bar line.
+  if (recordArmed >= 0 && (pressed & ~(m8::BTN_EDIT | m8::BTN_OPT))) recordArmed = -1;   // (another key: not that)
+  if (recordArmed >= 0 && !(keys & m8::BTN_EDIT)) {
+    int t = recordArmed;
+    recordArmed = -1;
+    if (tracks[t].state == TrackState::Empty && !recordingOn(t) && recordQueued() != t &&
+        (!recordArmedResample || anyClipHeard()) && recordPress(t, recordArmedResample, transport.now - recordArmedAt) &&
+        selected == t)
+      selectedCell = WAVE_CELL;                      // (a new recording: its waveform cell selected)
   }
   // A on the status row's scene cell: as B+A (the panel); on the clock cell:
   // as START; on the tempo cell: tap tempo.
@@ -650,7 +664,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
                recordQueued() != selected && anyClipHeard()) {
       // An empty track resamples: records the app's output (queued behind a
       // recording, as A records), if there's anything to: a clip not muted.
-      if (recordPress(selected, true)) selectedCell = WAVE_CELL;   // (a new recording: its waveform cell selected)
+      // Once A is let go (above).
+      recordArmed = selected;
+      recordArmedResample = true;
+      recordArmedAt = transport.now;
     }
   }
   bool transportKey = pressed & m8::BTN_PLAY;
@@ -676,8 +693,12 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       if (hasClip(selected)) cutTrack(selected);
       else if (recordingOn(selected) || recordQueued() == selected) cancelRecording(selected);
       else pasteTrack(selected);
+    } else if (tr.state == TrackState::Empty && !recordingOn(selected) && recordQueued() != selected) {
+      recordArmed = selected;                        // a recording: once A is let go (above)
+      recordArmedResample = false;
+      recordArmedAt = transport.now;
     } else if (tr.state == TrackState::Empty || recordingOn(selected)) {
-      if (recordPress(selected)) selectedCell = WAVE_CELL;   // (a new recording: its waveform cell selected)
+      if (recordPress(selected)) selectedCell = WAVE_CELL;   // a recording's stop, its cancel, out of the queue: at once
     } else {
       setTrackMuted(selected, !trackMuted(selected));
     }

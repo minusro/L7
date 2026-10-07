@@ -2629,6 +2629,35 @@ for f in os.listdir("."):
     for (int i = 0; i < 4; i++) block();
   }
 
+  printf("recording once A is let go: the late press's window counted from the press\n");
+  {
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);
+    if (!transport.running) transportStart();
+    feedRamp = true;
+    const double fps = AUDIO_SAMPLE_RATE_EXACT / AUDIO_BLOCK_SAMPLES;
+    for (int pass = 0; pass < 2; pass++) {
+      for (int i = 0; i < 4000 && !(transport.beat % BEATS_PER_BAR == 1); i++) block();   // (into a bar)
+      for (int i = 0; i < 4000 && !(transport.beat % BEATS_PER_BAR == 0 && transport.sampleInBeat < AUDIO_BLOCK_SAMPLES); i++) block();
+      uint32_t bar = transport.lastBarSample;
+      for (int i = 0; i < (int)(0.2 * fps); i++) block();   // pressed 200 ms after the bar line
+      uint32_t pressAt = transport.now;
+      for (int i = 0; i < (int)(0.15 * fps); i++) block();  // let go 150 ms later
+      bool counted = pass == 0;
+      recordPress(3, false, counted ? transport.now - pressAt : 0);
+      char m11[200];
+      if (counted) {
+        snprintf(m11, sizeof m11, "pressed 200 ms after a bar line, let go 150 ms later: from that bar line (%s)",
+                 recording.mode == Recording::Running ? "running" : "waiting");
+        check(recording.mode == Recording::Running && recording.startSample == bar + recording.latency, m11);
+      } else {
+        check(recording.mode == Recording::WaitBar, "the same moment, the hold not counted: the next bar line (as a press 350 ms late)");
+      }
+      cancelRecording(3);
+      for (int i = 0; i < 20; i++) block();
+    }
+    feedRamp = false;
+  }
+
   printf("audio follow: the tempo and the beat heard in the input\n");
   {
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);

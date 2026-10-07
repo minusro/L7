@@ -79,7 +79,9 @@ void transportSnapToBar();
 // resample: record the app's output (everything heard) instead of the input;
 // it starts on a bar line (the next one, or bar 1 when stopped). When it's
 // stopped, the other tracks playing go quiet where its loop ends.
-bool recordPress(int t, bool resample = false);
+// heldFor: samples since A was pressed (it records once let go): the late
+// press's window counts from the press (as far as the input history allows).
+bool recordPress(int t, bool resample = false, uint32_t heldFor = 0);
 int recordQueued();                   // the track recording next, or -1
 bool recordQueuedResample();          // and it resamples
 // A resampling saved since the last call: its track (once), or -1. The other

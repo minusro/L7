@@ -38,13 +38,13 @@
 //                      filter: LEFT/RIGHT move the band, UP/DOWN widen/narrow it
 //                      volume: LEFT/RIGHT balance, UP/DOWN volume
 //                      tempo: LEFT/RIGHT -/+ 0.1 BPM, UP/DOWN +/- 1 BPM
-//   EDIT             empty track: record / stop recording; full track: mute/unmute
+//   EDIT             empty track: record (once let go) / stop recording; full track: mute/unmute
 //   SHIFT+LEFT/RIGHT the track's sample: previous / next by name (this project and
 //                      track's first, then its other tracks', then other projects';
 //                      empty track: its own last / first); keeps volume, filter, mute;
 //                      whole-loop range
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
-//   OPT+EDIT         empty track: resample (record the output, from the next bar line);
+//   OPT+EDIT         empty track: resample (record the output, from the next bar line; once EDIT is let go);
 //                      then it moves to a new scene after this one (on the same track);
 //                      tempo cell: audio follow on / off (the tempo and beat heard in the
 //                      input followed, audio_follow.h; the tempo flashes with the beat)
