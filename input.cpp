@@ -509,9 +509,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     int pos = rowPos(selected);
     if (pressed & m8::BTN_UP && pos > 0) selected = rowAtPos(pos - 1);              // no wrapping
     else if ((pressed & m8::BTN_UP) && !repeat) menuOnRelease = m8::BTN_UP;      // UP on track 1 (a fresh press): the menu, once let go
-    // DOWN: onto the status row only with a fresh press (a held DOWN stops at
-    // the last track); on the status row (a fresh press): the menu, once let go.
-    if (pressed & m8::BTN_DOWN && pos < ROWS - 1 && !(repeat && rowAtPos(pos + 1) == STATUS_ROW)) selected = rowAtPos(pos + 1);
+    // DOWN: on to the status row (a held DOWN stops there); on the status row
+    // (a fresh press): the menu, once let go.
+    if (pressed & m8::BTN_DOWN && pos < ROWS - 1) selected = rowAtPos(pos + 1);
     else if ((pressed & m8::BTN_DOWN) && pos == ROWS - 1 && !repeat) menuOnRelease = m8::BTN_DOWN;
     // To or from the status row: the cell below / above, the status row's having the menu cell to the left of the tracks' first.
     // (From an empty track, its one cell: the column kept for the rows with three, not that cell's.)
