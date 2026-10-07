@@ -52,6 +52,7 @@ static int actionIcon() {
     int slot = menuSlot();
     if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : menuListItem() == 1 ? ICON_USB : ICON_NONE;   // (the placeholders: none)
     if (shift) return projectFilled(slot) ? ICON_CUT : ICON_PASTE;
+    if (slot == projectCurrent()) return ICON_HOME;   // (the loaded one: back to the looper)
     return projectFilled(slot) ? ICON_LOAD : ICON_NEW;
   }
   if (board.keys() & m8::BTN_OPT) {                // B: adjusting the cell (B + arrows); with SHIFT, the scene

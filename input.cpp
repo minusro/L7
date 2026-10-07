@@ -108,20 +108,7 @@ bool arrowsMoved() { return moved; }
 static bool armed = false, shifted = false;          // SHIFT with it
 static int armedSlot = -1;                           // the slot it was pressed on (-1: a list item)
 static int armedItem = -1;                           // or the list item
-static uint32_t armedAt = 0;
-static bool longDone = false;                        // held long on a card: loaded already
-static constexpr uint32_t LONG_PRESS_MS = 600;
-
-// A or B held on a project card: its project loaded without leaving the
-// menu (not on an empty slot). Called every pass (pollKeys()).
-static void menuLongPress() {
-  if (!armed || longDone || shifted || armedSlot < 0 || !projectFilled(armedSlot) || !menuOpen() || menuOnStatus()) return;   // (not on an empty slot)
-  if (millis() - armedAt < LONG_PRESS_MS) return;
-  longDone = true;
-  if (armedSlot != projectCurrent() && projectLoad(armedSlot))
-    metronomeOn = metronomeWanted();               // (the selection stays as it is)
-  drawMenu();
-}
+static constexpr uint32_t LONG_PRESS_MS = 600;       // LEFT+RIGHT held this long: the other screen
 
 static bool nextSceneArmed = false;               // A pressed on the scene cell: the next scene once it's let go
 
@@ -242,10 +229,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // button's action once let go (on the item it was pressed on); START starts /
   // stops the clock, as in the looper's view. The menu doesn't
   // start or stop the clock.
-  // SHIFT+A on a project: cuts it when let go (no confirmation). A or B held
-  // on a card (LONG_PRESS_MS): its project loaded there and then, the menu
-  // staying open (menuLongPress()); letting go then does nothing more. A and
-  // B do the same everywhere in the menu.
+  // SHIFT+A on a project: cuts it when let go (no confirmation). A on a card:
+  // its project loaded (an empty slot: a new one made), the menu staying
+  // open; on the loaded project's card: the menu closes. A and B do the same
+  // everywhere in the menu.
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
     if (pressed & m8::BTN_PLAY) {                    // START: the clock, as in the looper's view (SHIFT: from 1.1.1)
@@ -260,15 +247,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       armedSlot = menuSlot();
       armedItem = menuListItem();
       shifted = shift;
-      armedAt = millis();
-      longDone = false;
     }
     if (armed && !(keys & (m8::BTN_EDIT | m8::BTN_OPT))) {   // all let go: act
       armed = false;
-      if (longDone) {                                // (held: already loaded)
-        longDone = false;
-        return;
-      }
       int slot = armedSlot;
       if (slot < 0) {                                // the list's items: export, storage mode
         if (armedItem == 0 && !shifted && projectCurrent() >= 0 && projectHasClips() && !menuExportShown()) exportToAbleton();
@@ -284,11 +265,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         else projectPaste(slot);
         drawMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
-      } else {                                       // load it (an empty slot: a new project), back to the looper
-        if (loadFromMenu(slot)) {                    // (the selection stays as it is; a new project: on track 1)
-          closeMenu();
-          for (int i = 0; i < ROWS; i++) drawTrack(i);
-        }
+      } else if (slot == projectCurrent()) {        // the loaded one: back to the looper
+        closeMenu();
+        for (int i = 0; i < ROWS; i++) drawTrack(i);
+      } else if (loadFromMenu(slot)) {               // another: loaded (an empty slot: a new project), the menu staying open
+        drawMenu();                                  // (the looper's selection stays as it is; a new project: on track 1)
       }
       return;
     }
@@ -668,7 +649,6 @@ void pollKeys() {
     repeatAt = millis() + REPEAT_PERIOD_MS;          // after a slow pass: no burst of catch-up repeats
     onKeys(prev, repeatKey, true);
   }
-  menuLongPress();
   switchHold();
 }
 
