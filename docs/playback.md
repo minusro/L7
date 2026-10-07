@@ -151,6 +151,16 @@ timer, each clock tick stamped with `micros()`. In `loop()` (`midiInService()`):
   about a beat, not over several each off pitch. A tick way off its predicted
   time (half a tick: their first after a Start often is) is taken as it is,
   the tempo left; three in a row: their tempo's another, measured afresh.
+* Their tempo remembered: their ticks timed over the stretch we've followed
+  them steadily (from the end of the catch-up after their start or a tempo
+  change to the latest tick, 48 ticks at least: their jitter only at its two
+  ends; a tempo change: afresh). On their Stop, or their clock gone, our tempo
+  becomes it (exactly: no beat nudge left in it; the tempo shown too: START
+  here then plays at it), and their next Start (or Continue) begins from it,
+  trackers included, unless their clock meanwhile is clearly at another
+  (0.6 % off: theirs, at once). The simulator: after their Stop, ours within
+  0.013 % of theirs; started again, within 0.01 % through the first beat; a
+  clock now at 130 instead of 120, taken at once.
 * Played ahead (`AHEAD_US`, per source: serial 0, USB 2.0 ms): our beat kept
   that much ahead of theirs, their clock's way in and our audio's way out, so
   L7's audio reaches the computer on their beat as a DAW's recording places

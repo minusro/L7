@@ -102,6 +102,7 @@ static int simTempoChanges = 0;
 void followTempo(uint32_t spb, float shownBpm) {
   if (spb != (transport.pendingSpb ? transport.pendingSpb : transport.spb)) transport.pendingSpb = spb, simTempoChanges++;
   simShownBpm = shownBpm;
+  bpm = shownBpm;                                  // (as the app's: the tempo shown, its no-flicker margin measured from it)
 }
 float bpm = 120.0f;
 static float simNewBpm = 120.0f;
@@ -2230,6 +2231,7 @@ for f in os.listdir("."):
             double off = fabs(simShownBpm - theirsShown) / theirsShown;
             worstOff = std::max(worstOff, off);
             shownMin = std::min(shownMin, simShownBpm);
+            if (getenv("TRACE_PLAY")) printf("    play k %d shown %.2f theirs %u applied %u\n", k, simShownBpm, midiTheirSpb(), transport.pendingSpb ? transport.pendingSpb : transport.spb);
             shownMax = std::max(shownMax, simShownBpm);
           }
         }
@@ -2260,16 +2262,16 @@ for f in os.listdir("."):
       };
       for (int k = 0; k < 24 * 8; k++) tick();
       usTick = 60e6 / 123 / 24;                      // 120 to 123
-      float want = 44100.0f * 60 / (float)expectSpb(123);
       int lockedAfter = -1;
       for (int k = 0; k < 24 * 4; k++) {
         tick();
         for (int b = 0; b < 2; b++) { block(); midiInService(); }
-        if (lockedAfter < 0 && fabsf(simShownBpm - want) <= 0.15f) lockedAfter = k + 1;
-        if (lockedAfter >= 0 && fabsf(simShownBpm - want) > 0.15f) lockedAfter = -1;   // (it has to stay)
+        double got = midiTheirSpb(), wantSpb = expectSpb(123);   // (their tempo as measured: within 0.2 %)
+        if (lockedAfter < 0 && fabs(got - wantSpb) / wantSpb <= 0.002) lockedAfter = k + 1;
+        if (lockedAfter >= 0 && fabs(got - wantSpb) / wantSpb > 0.002) lockedAfter = -1;   // (it has to stay)
       }
       char m4[160];
-      snprintf(m4, sizeof m4, "their tempo 120 to 123 while playing: locked onto (shown %.1f) after %d ticks", simShownBpm, lockedAfter);
+      snprintf(m4, sizeof m4, "their tempo 120 to 123 while playing: locked onto (measured within 0.2%%; shown %.1f) after %d ticks", simShownBpm, lockedAfter);
       check(lockedAfter > 0 && lockedAfter <= 24, m4);
       midiInByte(0xFC, simMicros, MIDI_USB);
       for (int i = 0; i < 400; i++) { block(); midiInService(); }
@@ -2330,6 +2332,48 @@ for f in os.listdir("."):
       snprintf(m5, sizeof m5, "and on their beat at each run's end: %.4f, %.4f, %.4f beats off", posOffEnd[1], posOffEnd[2], posOffEnd[3]);
       check(posOffEnd[1] < 0.02 && posOffEnd[2] < 0.02 && posOffEnd[3] < 0.02, m5);
       if (transport.running) transportStop();
+      for (int i = 0; i < 400; i++) { block(); midiInService(); }
+    }
+    // Their tempo remembered: our tempo after their Stop is its average (no nudge), and their next start
+    // begins from it; a clock clearly at another tempo taken at once.
+    {
+      double tAt = simMicros + 2000, usTick = 60e6 / 120 / 24;
+      auto tick = [&]() {
+        while (simMicros < tAt) { block(); midiInService(); }
+        midiInByte(0xF8, (uint32_t)(tAt + (rand() % 1601 - 800)), MIDI_USB);
+        tAt += usTick;
+      };
+      auto applied = [&]() { return (double)(transport.pendingSpb ? transport.pendingSpb : transport.spb); };
+      midiInByte(0xFA, simMicros, MIDI_USB);
+      for (int k = 0; k < 24 * 16; k++) tick();
+      midiInByte(0xFC, simMicros, MIDI_USB);
+      for (int i = 0; i < 4; i++) { block(); midiInService(); }
+      double want = expectSpb(120), after = applied();
+      char m8[200];
+      snprintf(m8, sizeof m8, "their Stop: our tempo their average (%.0f, theirs %.0f: %.3f%% off), no nudge left", after, want, fabs(after - want) / want * 100);
+      snprintf(m8 + strlen(m8), sizeof m8 - strlen(m8), " [running %d, theirs measured %u]", transport.running, midiTheirSpb());
+      check(!transport.running && fabs(after - want) / want < 0.0008 && abs((int)after - (int)midiTheirSpb()) <= 2, m8);
+      for (int i = 0; i < 400; i++) { block(); midiInService(); }   // (stopped, no clock: over a second)
+      tAt = simMicros + 2000;
+      midiInByte(0xFA, simMicros, MIDI_USB);
+      double worst = 0;
+      for (int k = 0; k < 24; k++) {
+        tick();
+        if (transport.running) worst = std::max(worst, fabs(applied() - want) / want);
+      }
+      snprintf(m8, sizeof m8, "started again: from the remembered tempo through the first beat (at most %.2f%% off theirs)", worst * 100);
+      check(worst < 0.006, m8);
+      for (int k = 0; k < 24 * 4; k++) tick();
+      midiInByte(0xFC, simMicros, MIDI_USB);
+      for (int i = 0; i < 4; i++) { block(); midiInService(); }
+      usTick = 60e6 / 130 / 24;                      // their clock now clearly at another tempo (sent while stopped)
+      for (int k = 0; k < 24 * 2; k++) tick();
+      midiInByte(0xFA, simMicros, MIDI_USB);
+      for (int k = 0; k < 24 * 2; k++) tick();
+      double now130 = applied(), want130 = expectSpb(130);
+      snprintf(m8, sizeof m8, "their clock clearly at another tempo: that one, not the remembered (%.0f, theirs %.0f)", now130, want130);
+      check(fabs(now130 - want130) / want130 < 0.006, m8);
+      midiInByte(0xFC, simMicros, MIDI_USB);
       for (int i = 0; i < 400; i++) { block(); midiInService(); }
     }
     // The clock out for USB too: Start, the ticks, Stop, as the serial one's.

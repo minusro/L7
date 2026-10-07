@@ -144,6 +144,16 @@ struct Tracker { double next, period; int wayOff; };  // the next tick's predict
 static Tracker slowT = {0, 0, 0}, fastT = {0, 0, 0};
 static uint32_t apart = 0, boost = 0;                 // ticks running the fast one's been HANDOVER off; fast gains left (BOOST_TICKS down)
 static uint32_t changing = 0;                         // ticks left since their tempo changed or they started (CHANGE_TICKS down)
+// Their tempo remembered: their ticks timed over the stretch we've followed
+// them steadily (from the end of the catch-up after their start or tempo
+// change: its first tick to the latest, AVG_MIN ticks at least; their jitter
+// only at its two ends; their tempo changing: afresh). On
+// their Stop (or their clock gone) our tempo becomes it (no nudge in it), and
+// their next start begins from it (the trackers too), unless their clock
+// meanwhile is clearly at another (HANDOVER off: theirs then).
+static constexpr uint32_t AVG_MIN = 48;
+static double avgSpb = 0;
+static uint32_t steadyTick = UINT32_MAX, steadyUs = 0;   // the stretch's first tick (UINT32_MAX: none)
 
 // Our beat position (beats from the transport's start) at micros() `us`.
 static double ourBeatAt(uint32_t us, const BlockStamp &s) {
@@ -171,10 +181,19 @@ static uint32_t pastStartingBeat() {
   return beats <= 0 ? 0 : (uint32_t)(beats * spb + 0.5);
 }
 
+// Their tempo remembered becomes ours (stopped following: no nudge in it).
+static void rememberTempo() {
+  if (!avgSpb) return;
+  theirSpb = (uint32_t)(avgSpb + 0.5);
+  slowT.period = fastT.period = theirSpb * usPerSample / 24;
+  followTempo(theirSpb, roundf(bpmForSpb(theirSpb) * 10) / 10);
+}
+
 // Theirs (from tick `tick`, at position pos16): our transport stopped, and
 // started again on their next whole beat (as Start, Continue or a jump).
 static void startWith(uint32_t tick, uint16_t pos16) {
   theirsRunning = true;
+  steadyTick = UINT32_MAX;
   changing = CHANGE_TICKS;
   startedUs = micros();
   refTick = (int32_t)tick;
@@ -183,7 +202,13 @@ static void startWith(uint32_t tick, uint16_t pos16) {
   errSum = 0;
   errCount = 0;
   if (transport.running) transportStop();
-  if (theirSpb) followTempo(theirSpb, roundf(bpmForSpb(theirSpb) * 10) / 10);   // (their tempo, timed while they were stopped: from the start)
+  // Their tempo from the start: the one remembered, unless their clock's
+  // clearly at another now (timed while they were stopped).
+  if (avgSpb && (!theirSpb || fabs((double)theirSpb - avgSpb) < HANDOVER * avgSpb)) {
+    theirSpb = (uint32_t)(avgSpb + 0.5);
+    slowT.period = fastT.period = theirSpb * usPerSample / 24;
+  }
+  if (theirSpb) followTempo(theirSpb, roundf(bpmForSpb(theirSpb) * 10) / 10);
 }
 
 void midiInService() {
@@ -230,6 +255,7 @@ void midiInService() {
         theirsRunning = false;                        // (the tempo free again)
         startAt = INT32_MIN;
         if (transport.running) transportStop();
+        rememberTempo();
         Serial.println("MIDI in: stop");
         break;
       case 0xF2:                                      // Song Position: where a Continue goes on from; while they run, a jump there
@@ -244,6 +270,7 @@ void midiInService() {
   if (theirsRunning && !alive()) {                    // (their clock gone)
     theirsRunning = false;
     startAt = INT32_MIN;
+    rememberTempo();
   }
   if (n - seenTicks > TICKS) seenTicks = n - TICKS;   // (fallen far behind: the last ones)
   bool running = transport.running && s.running;
@@ -251,6 +278,16 @@ void midiInService() {
   for (; seenTicks < n; seenTicks++) {
     uint32_t i = seenTicks, us = tickUs[i % TICKS];
     if (changing) changing--;
+    if (theirsRunning && !changing && running) {      // their tempo remembered: the steady stretch timed
+      if (steadyTick == UINT32_MAX) {
+        steadyTick = i;
+        steadyUs = us;
+      } else if (i - steadyTick >= AVG_MIN) {
+        avgSpb = (double)(uint32_t)(us - steadyUs) / (i - steadyTick) * 24 / usPerSample;
+      }
+    } else if (!theirsRunning) {
+      steadyTick = UINT32_MAX;                        // (stretches don't run across their stops)
+    }
     if (LOG_TICKS) Serial.printf("T %lu %lu\n", (unsigned long)i, (unsigned long)us);
     // After a pause (or another clock) tracked afresh, from the tick after the
     // first (often late after a Start), from the tempo known if any.
@@ -293,6 +330,8 @@ void midiInService() {
         apart = 0;
         boost = BOOST_TICKS;
         changing = CHANGE_TICKS;
+        avgSpb = 0;                                   // (another tempo: remembered afresh)
+        steadyTick = UINT32_MAX;
       }
       uint32_t spb = (uint32_t)(slowT.period * 24 / usPerSample + 0.5);
       if (spb >= spbForBpm(MAX_BPM) && spb <= spbForBpm(MIN_BPM) && i - trackFrom >= 3) theirSpb = spb;
