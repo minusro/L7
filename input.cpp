@@ -176,11 +176,9 @@ static bool loadFromMenu(int p) {
 // Out of the menu, back to the looper (as A on the loaded project's card);
 // with no project loaded, a new one is made in the first empty slot (its card
 // selected), as A there. False: nowhere to go.
-// key: the arrow it left with (the looper's selection where it lands,
-// menuLanding()); 0: the looper's selection as it was.
+// The looper's selection: as it was left (its row and cell).
 static bool leaveMenu(uint8_t key = 0) {
-  int row, cell;
-  bool land = menuLanding(key, row, cell);       // (from the item it left on, before a new project's card is selected)
+  (void)key;
   bool back = projectCurrent() >= 0;
   if (!back) {
     int slot = menuFirstEmptySlot();
@@ -189,7 +187,6 @@ static bool leaveMenu(uint8_t key = 0) {
     if (loadFromMenu(slot)) back = true;
   }
   if (back) {
-    if (land) setMainSelection(row, cell);
     closeMenu();
     for (int i = 0; i < ROWS; i++) drawTrack(i);
   }
@@ -285,8 +282,9 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (menuOnRelease && !(keys & menuOnRelease)) {
     uint8_t key = menuOnRelease;
     menuOnRelease = 0;
+    bool first = !menuVisited();
     openMenu();
-    menuLand(key);                                   // (its selection: the nearest item that way, as if wrapped)
+    if (first) menuLand(key);                        // (the first time: the nearest item that way, as if wrapped; then where it was left)
     return;
   }
   // RIGHT off the menu's right edge, LEFT off its left, UP off its top or
