@@ -254,8 +254,9 @@ comes first (audio follow listens on, but doesn't touch the clock meanwhile).
   4 % off (twice in a row unlocked, 6 times locked): afresh. Every 0.5 s,
   locked, the strongest phase at its period checked: 0.2 of a beat off three
   times in a row (an off-beat taken), moved there.
-* The clock, each beat found: stopped, the tempo theirs (`followTempo()`, as
-  the MIDI clock's; shown to a tenth); running, also nudged: their beat as
+* The clock: stopped, the tempo theirs as soon as one is found, then each
+  beat as the tracker refines it, locked or not (`followTempo()`, as the MIDI
+  clock's; shown to a tenth); running, once locked, each beat also nudged: their beat as
   heard (its rise found, else as expected), less the input's latency
   (`inputLatency()`: the line input's or USB's, as recordings), is where our
   beat should be; our position then from `beatLog` (the engine: each beat's
@@ -274,7 +275,9 @@ comes first (audio follow listens on, but doesn't touch the clock meanwhile).
   beat from the first (within 0.3 ms); running, within 0.2 ms of their kicks;
   their tempo rising to 132 over 8 s, followed (within ~16 ms meanwhile, a few
   ms after); silence: the beat lost, the tempo kept; 90 / 70 / 174 BPM found
-  from the tempo set. Real music, on the M8: to try.
+  from the tempo set; the drums over USB audio alone (the line input silent):
+  found, and running on their beat less USB's input latency (within 4 ms).
+  Real music, on the M8: to try.
 
 ## USB audio
 

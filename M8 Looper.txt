@@ -126,7 +126,7 @@ no dropouts or overruns
 - more usb midi sync work for latency V
 	- maybe some more testing later
 - multitrack usb audio V
-- audio in sync 
+- audio in sync V
 
 - clip warping :D
 

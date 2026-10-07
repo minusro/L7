@@ -11,8 +11,9 @@
 // looks for the sharpest rise near there, and moves its beat and its period a
 // little towards it (none: carried on). Its beats found often enough: locked.
 //
-// Locked, the clock follows: stopped, the tempo is theirs (shown as they're
-// played: ready to start); running, also nudged to their beat once a beat, as
+// The clock follows: stopped, the tempo is theirs as soon as it's found (and
+// as the tracker refines it, beat by beat: ready to start); running, once
+// their beat is found (locked), the tempo and nudged to their beat once a beat, as
 // an external MIDI clock's (midi_in.cpp): a little faster or slower for the next
 // beat, the beat as heard from them (the input's latency, inputLatency(),
 // taken off) on our beat. Beats only: the bars are where START put them. START

@@ -271,7 +271,7 @@ static void trackBeat(uint32_t count, uint32_t at) {
     locked = false;
     return;
   }
-  if (locked && audioFollowActive()) follow(transport.running, count, at);
+  if (audioFollowActive() && (locked || !transport.running)) follow(locked && transport.running, count, at);   // (stopped: the tempo, its beat found or not)
 }
 
 FLASHMEM void audioFollowBegin(bool o) {
@@ -318,6 +318,7 @@ void audioFollowService() {
     if (est > 0) {
       if (period <= 0) {
         restart(count, est);
+        if (period > 0 && !transport.running && audioFollowActive()) follow(false, count, at);   // (stopped: the tempo at once)
       } else if (fabs(est / period - 1) > 0.04) {    // another tempo (theirs changed, or the tracker's off)
         if (++disagree >= (locked ? 6 : 2)) restart(count, est);
       } else {

@@ -56,6 +56,7 @@ static bool feedNoise = false;                      // the line input: noise onl
 // snare on 2 and 4, a closed hat on the eighths, over a quiet pad; at drumBpm
 // (0: none), drumBeat its position in beats; each beat's kick (its input sample) in drumKicks.
 static double drumBpm = 0, drumBeat = 0;
+static bool drumsOverUsb = false;                    // (the drums from the computer, USB audio, the line input silent)
 static float drumLevel = 1;
 static std::vector<uint32_t> drumKicks;
 static uint32_t drumNoise = 12345;
@@ -167,7 +168,8 @@ static void audioBlock() {
   if (drumBpm > 0)
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
       int16_t v = (int16_t)constrain(lroundf(drumSample(inputIndex + i) * 32767), -32767L, 32767L);
-      inL.data[i] = inR.data[i] = v;
+      if (drumsOverUsb) usbIn[i] = (uint32_t)(uint16_t)v | (uint32_t)(uint16_t)v << 16, inL.data[i] = inR.data[i] = 0;
+      else inL.data[i] = inR.data[i] = v;
     }
   if (feedNoise)                                   // (the line input: a little noise, as with nothing plugged in)
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) inL.data[i] = inR.data[i] = (int16_t)(rand() % 21 - 10);
@@ -182,7 +184,7 @@ static void audioBlock() {
         if (in >= 0 && in < 300) usbIn[i] = both((int16_t)(20000 * exp(-in / 30.0) * (in % 2 ? -1 : 1)));
       }
   }
-  usbInOn = feedUsb || feedUsbClick >= 0;
+  usbInOn = feedUsb || feedUsbClick >= 0 || (drumsOverUsb && drumBpm > 0);
   engine.simOut[0] = &outL; engine.simOut[1] = &outR;
   engine.update();
   inputIndex += AUDIO_BLOCK_SAMPLES;
@@ -2666,10 +2668,17 @@ for f in os.listdir("."):
       return n;
     };
     drumBpm = 126; drumBeat = 0.37; drumKicks.clear();
+    char m9[260];
     audioFollowToggle();
     check(audioFollowOn() && onsetListen, "B+A: on, the input listened to");
-    run(10);
-    char m9[260];
+    float firstShown = 0;
+    double firstAt = 0;
+    for (int k = 0; k < (int)(10 * fps); k++) {     // stopped: the tempo theirs as soon as it's found (before the beat is)
+      run(1 / fps);
+      if (!firstShown && bpm != 120) { firstShown = bpm; firstAt = k / fps; }
+    }
+    snprintf(m9, sizeof m9, "stopped: the tempo theirs as soon as it's found (%.1f shown after %.1f s)", firstShown, firstAt);
+    check(fabs(firstShown - 126) < 0.5f && firstAt < 6.5, m9);
     snprintf(m9, sizeof m9, "drums at 126 BPM, stopped: their beat found (%d), the tempo theirs (%.1f shown, %.3f found)",
              audioFollowLocked(), bpm, audioFollowBpm());
     check(audioFollowLocked() && fabs(bpm - 126) <= 0.15f && fabs(audioFollowBpm() - 126) < 0.2f, m9);
@@ -2718,6 +2727,25 @@ for f in os.listdir("."):
       check(audioFollowLocked() && fabs(audioFollowBpm() - expect) < 0.3, m9);
       audioFollowToggle();
     }
+    // Over USB audio (a computer playing into L7), the line input silent: the same.
+    simSetTempo(120);
+    bpm = 120;
+    drumsOverUsb = true;
+    drumBpm = 104; drumBeat = 0.6; drumKicks.clear(); ours.clear(); lastLogged = INT32_MIN;
+    audioFollowToggle();
+    run(10);
+    snprintf(m9, sizeof m9, "drums at 104 BPM over USB audio: found (%.1f shown, %d)", bpm, audioFollowLocked());
+    check(audioFollowLocked() && fabs(bpm - 104) <= 0.15f, m9);
+    audioFollowStart();
+    for (int k = 0; k < 2000 && !transport.running; k++) block();
+    run(10);
+    n = offBy(inputIndex - (uint32_t)(6 * AUDIO_SAMPLE_RATE_EXACT), mean, worst);
+    snprintf(m9, sizeof m9, "running: on their beat less USB's input latency (%u samples; %d kicks, mean %+.1f ms, worst %.1f ms)",
+             (unsigned)inputLatency(), n, mean, worst);
+    check(n >= 8 && fabs(mean) < 3 && worst < 10, m9);
+    transportStop();
+    audioFollowToggle();
+    drumsOverUsb = false;
     drumBpm = 0;
     simSetTempo(120);
     run(0.2);
