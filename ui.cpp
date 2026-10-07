@@ -93,7 +93,60 @@ static void drawSpan(int i) {
   }
 }
 
+// ---- The tracks as the rows show them (ui.h).
+static ShownTrack shownTracks[NUM_TRACKS];
+const ShownTrack &shownTrack(int i) { return shownTracks[i]; }
+
+static void takeLooks(int t, ShownTrack &s) {
+  const Track &tr = tracks[t];
+  memset(&s, 0, sizeof s);                         // (padding too: compared with memcmp)
+  s.state = tr.state;
+  s.volume = tr.volume;
+  s.balance = tr.balance;
+  s.filterLo = tr.filterLo;
+  s.filterHi = tr.filterHi;
+  if (tr.state == TrackState::Empty) return;       // (an empty track: no clip to show)
+  s.overviewVersion = tr.overviewVersion;
+  s.loopBars = tr.loopBars;
+  trackRange(t, s.rs, s.rb);
+  s.rangeStartBeat = tr.rangeStartBeat;
+  s.rangeBeats = tr.rangeBeats;
+  s.rangeAnchorQ = tr.rangeAnchorQ;
+  memcpy(s.overview, tr.overview, OVERVIEW_COLS);
+}
+
+// Takes the tracks' looks (held ones as above); the rows that changed are
+// redrawn at once, together (their buttons too). drawTrack() calls it first.
+static void followTracks() {
+  static bool busy = false;                        // (drawing the changed rows: drawTrack() again)
+  static uint8_t held = 0;                         // tracks keeping their looks until every change is through
+  if (busy) return;
+  uint8_t onWay = 0;
+  for (int t = 0; t < NUM_TRACKS; t++)
+    if (trackChangeOnWay(t)) onWay |= 1 << t;
+  held = onWay ? held | onWay : 0;
+  uint8_t changed = 0;
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    if (held & (1 << t)) continue;
+    ShownTrack s;
+    takeLooks(t, s);
+    if (memcmp(&s, &shownTracks[t], sizeof s)) {
+      shownTracks[t] = s;
+      changed |= 1 << t;
+    }
+  }
+  if (!changed || menuOpen()) return;              // (the menu: redrawn in full when it closes)
+  busy = true;
+  for (int t = 0; t < NUM_TRACKS; t++)
+    if (changed & (1 << t)) {
+      drawCells(t);
+      drawTrack(t);
+    }
+  busy = false;
+}
+
 void drawTrack(int i) {
+  followTracks();
   if (i < 0 || i >= ROWS || (menuOpen() && i != STATUS_ROW)) return;   // (the menu: in the track rows' place)
   drawCells(i);
   if (i == STATUS_ROW) {
@@ -133,6 +186,7 @@ static void followProjectColor() {
 
 void uiRefresh() {
   followProjectColor();
+  followTracks();                                  // (a switch through: its rows at once)
   // Redraw a little at a time so SD streaming keeps going.
   static uint32_t lastDraw = 0;
   static int nextRow = 0;

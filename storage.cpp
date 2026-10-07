@@ -2289,6 +2289,8 @@ void clearTrack(int t) {
   trackChanged(t);
 }
 
+bool trackChangeOnWay(int t) { return changes[t].on || plans[t].on || tracks[t].sampleSwitch; }
+
 void trackRange(int t, uint32_t &startBeat, uint32_t &beats) {
   const Track &tr = tracks[t];
   startBeat = tr.rangePending ? tr.pendingStartBeat : tr.rangeStartBeat;

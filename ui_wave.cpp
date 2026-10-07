@@ -103,7 +103,7 @@ static bool startHere(const WaveView &v, int c) { return v.markOn && v.visible &
 // start position, the playhead) in blocks.
 static void drawColumn(int i, int bc) {
   if (bc < 0 || bc >= BLOCK_COLS) return;
-  const Track &tr = tracks[i];
+  const ShownTrack &tr = shownTrack(i);           // (as the row shows it: a switch all at once)
   const WaveView &v = views[i];
   static uint16_t px[CELL_H * PX];                 // PX pixels wide, CELL_H tall
   auto block = [&](int r, uint16_t color) {        // block row r, both pixel columns
@@ -152,10 +152,9 @@ static void drawColumn(int i, int bc) {
 }
 
 void drawWave(int i, bool recordingHere) {
-  const Track &tr = tracks[i];
+  const ShownTrack &tr = shownTrack(i);           // (as the row shows it: a switch all at once)
   WaveView &v = views[i];
-  uint32_t rs = 0, rb = 0;
-  if (tr.state != TrackState::Empty) trackRange(i, rs, rb);
+  uint32_t rs = tr.rs, rb = tr.rb;
   uint16_t bg = cellBackground(i, WAVE_CELL);
   uint64_t borders = bordersOf(i, WAVE_CELL);
   // The range: light grey, white on the selected track (all its cells look
@@ -273,7 +272,7 @@ void updatePlayheads() {
   double pos = transport.beat + (double)transport.sampleInBeat / transport.spb;   // in beats
   interrupts();
   for (int i = 0; i < NUM_TRACKS; i++) {
-    const Track &tr = tracks[i];
+    const ShownTrack &tr = shownTrack(i);         // (the range shown: the old clip's until a switch is through)
     WaveView &v = views[i];
     // Recording started or ended: redraw the row now (its cells change too),
     // not on its next turn.
@@ -283,7 +282,7 @@ void updatePlayheads() {
     // The accent colour (white on a range in the accent colour); muted: black.
     bool muted = tr.state == TrackState::Muted;
     int col = -1;
-    if (v.visible && running && tr.live) {
+    if (v.visible && running && tracks[i].live) {
       double inRange = fmod(pos - tr.rangeAnchorQ / 4.0, (double)tr.rangeBeats);
       if (inRange < 0) inRange += tr.rangeBeats;
       // Spread over the range's columns (as the range is drawn): never past its edges.

@@ -139,6 +139,10 @@ bool sampleExists(uint32_t n);
 // trackRange() reports the queued range if any.
 bool setRange(int t, uint32_t startBeat, uint32_t beats);
 void trackRange(int t, uint32_t &startBeat, uint32_t &beats);
+// A change on its way to track t (a scene's, a project's, a move): requested,
+// or its clip switch planned or under way in the stream, until the switch
+// point has passed and the track has taken it on.
+bool trackChangeOnWay(int t);
 // The range's start position (a beat of the loop): for a range of a beat,
 // its start; shorter than a bar, the first bar start or middle in it; a bar
 // or longer, the first bar start in it. The transport starting at 1.1.1

@@ -40,12 +40,31 @@ constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
 constexpr Cell MENU_BOX = {0, STATUS_H - 4 * PX}, SCENE_BOX = {18, 102}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
+// ---- What the rows show of each track (ui.cpp): a copy of its looks, taken
+// as they're drawn. While a change is on its way to any track (a scene's, a
+// project's, a move: from its request until its switch point has passed, the
+// stream having taken it on; some of a track's data changes ahead of that),
+// the tracks it's on its way to keep their copy; once none is on its way any
+// more, they all take theirs together and their rows are redrawn in the same
+// pass: the old scene's looks go and the new one's come at one moment (what's
+// the same in both stays). The other tracks follow at once.
+struct ShownTrack {
+  TrackState state;
+  int8_t volume, balance, filterLo, filterHi;
+  uint8_t overviewVersion;
+  uint32_t loopBars;
+  uint32_t rs, rb;                                 // the range shown (trackRange(): a queued one)
+  uint32_t rangeStartBeat, rangeBeats;             // the range playing (the playhead's)
+  int32_t rangeAnchorQ;
+  uint8_t overview[OVERVIEW_COLS];
+};
+const ShownTrack &shownTrack(int i);
 // An empty track (no clip, not recording) has one cell spanning the whole
 // row (SPAN: the cells' width; drawn by drawSpan()): its outline round all of
 // it. The column selected is kept for the rows with three.
 constexpr Cell SPAN = {0, CELL[CELLS - 1].x + CELL[CELLS - 1].w};
 inline bool spanRow(int i) {
-  return i >= 0 && i < NUM_TRACKS && tracks[i].state == TrackState::Empty &&
+  return i >= 0 && i < NUM_TRACKS && shownTrack(i).state == TrackState::Empty &&
          !(recording.track == i && recording.mode != Recording::Idle);
 }
 // The cells a row has (the status row's: as many as a track row's; an empty track's: one).
@@ -89,6 +108,8 @@ inline bool recordingOn(int i) { return recording.track == i && recording.mode !
 // The track has a finished clip: until its recording is completely done, its
 // cells and button show it as empty (and its controls don't act).
 inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !recordingOn(i); }
+// The same for what the row shows (shownTrack()).
+inline bool shownClip(int i) { return shownTrack(i).state != TrackState::Empty && !recordingOn(i); }
 
 // Something to resample: a clip on a track that isn't muted.
 inline bool anyClipHeard() {

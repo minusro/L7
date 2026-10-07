@@ -22,13 +22,13 @@ void drawFilter(int i) {
   struct Key { int8_t lo, hi; bool clip; uint16_t fill, line, ground; uint64_t borders; };
   static Key shown[NUM_TRACKS];
   static uint32_t drawn[NUM_TRACKS];               // uiGeneration when last drawn
-  const Track &tr = tracks[i];
+  const ShownTrack &tr = shownTrack(i);           // (as the row shows it: a switch all at once)
   Key k;
   memset(&k, 0, sizeof k);                         // padding too: compared with memcmp
   k.lo = tr.filterLo;
   k.hi = tr.filterHi;
   k.borders = bordersOf(i, FILTER_CELL);
-  k.clip = hasClip(i);                             // empty (or still recording): nothing
+  k.clip = shownClip(i);                             // empty (or still recording): nothing
   bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
   bool editing = here && editingCell(i, FILTER_CELL);
   k.ground = rowGround(i);

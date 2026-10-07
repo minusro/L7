@@ -123,8 +123,8 @@ enum : uint8_t { BADGE_NONE, BADGE_EMPTY, BADGE_MUTED, BADGE_PLAYING, BADGE_LABE
 
 static uint8_t trackBadge(int i) {
   if (i == STATUS_ROW || recordingOn(i) || recordQueued() == i) return BADGE_NONE;
-  if (!hasClip(i)) return BADGE_EMPTY;
-  return tracks[i].state == TrackState::Muted ? BADGE_MUTED : BADGE_PLAYING;
+  if (!shownClip(i)) return BADGE_EMPTY;          // (as the row shows it: a switch all at once)
+  return shownTrack(i).state == TrackState::Muted ? BADGE_MUTED : BADGE_PLAYING;
 }
 
 int trackNumber(int i) { return NUM_TRACKS - i; }

@@ -57,7 +57,7 @@ void drawMix(int i) {
   static float meterDb[NUM_TRACKS][2];
   static uint32_t lastMs[NUM_TRACKS];
 
-  const Track &tr = tracks[i];
+  const ShownTrack &tr = shownTrack(i);           // (as the row shows it: a switch all at once)
   // Meter: the newest peak, or the previous reading falling.
   float peak[2];
   takeTrackPeaks(i, peak[0], peak[1]);
@@ -79,7 +79,7 @@ void drawMix(int i) {
   for (int ch = 0; ch < 2; ch++) {
     int level = levels[ch], meter = arcsForDb(meterDb[i][ch]);   // (muted: none)
     for (int j = 0; j < MIX_ARCS; j++)
-      looks[ch * MIX_ARCS + j] = !hasClip(i) ? ground : j < meter ? INK : j < level ? levelInk : outerInk;
+      looks[ch * MIX_ARCS + j] = !shownClip(i) ? ground : j < meter ? INK : j < level ? levelInk : outerInk;
   }
 
   auto &t = board.tft();

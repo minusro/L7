@@ -69,6 +69,17 @@ with their neighbours (left, right, above and below; a cell only shares a
 side with one right next to it): the selection frame is drawn there (`borderAt()` in ui.cpp), so
 content uses the cell's full size.
 
+The rows draw the tracks from a copy of their looks (`shownTrack()`,
+`followTracks()` in ui.cpp), not the tracks themselves: while a change is on
+its way to any track (a scene's, a project's, a move; from its request until
+its switch point has passed: some of a track's data changes ahead of that, as
+the stream takes the new clip on), the tracks it's on its way to keep their
+looks; once none is on its way, they all take the new ones together and their
+rows (cells and buttons) are redrawn in that same pass. So the old scene's
+waveforms, filters, volumes and badges go and the new one's come at one
+moment; what's the same in both stays. The playheads follow the range shown
+(the old clip's until the switch).
+
 Style (after Elektron's screens): seven colours (`colors.h`) — black (`BG`),
 17% grey (`DARK`: background detail — outside the loop range, unlit volume lines, muted volume lines and filters), 44% grey
 (`DIM`: inactive — muted clips, idle icons and text; filter fills, the selection frame while B is held), light grey (`LIGHT`, 81%: unselected waveforms, labels, selected fills and lines, the selection frame), white (`INK`: active,
