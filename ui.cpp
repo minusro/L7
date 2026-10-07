@@ -116,7 +116,9 @@ void drawTrack(int i) {
 }
 
 // The accent colour: the loaded project's (ACCENT_DARK at half its
-// brightness). A change redraws everything.
+// brightness). A change redraws everything; in the menu, nothing: its cards,
+// list and logo follow by themselves (wiping it all and drawing it again
+// flickered), and closing it redraws the looper's view in full.
 static void followProjectColor() {
   static int shownProject = -1;
   int p = projectCurrent();
@@ -124,6 +126,7 @@ static void followProjectColor() {
   shownProject = p;
   ACCENT = p >= 0 ? PROJECT_COLORS[p] : LOGO_COLOR;   // (the dummy project: the splash's turquoise)
   ACCENT_DARK = blend565(ACCENT, BG, 128);
+  if (menuOpen()) return;
   uiGeneration++;
   for (int i = 0; i < ROWS; i++) drawTrack(i);
 }
