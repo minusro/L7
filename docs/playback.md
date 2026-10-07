@@ -268,8 +268,8 @@ comes first (audio follow listens on, but doesn't touch the clock meanwhile).
 * START (or A on the clock cell, SHIFT+START) while locked: on their beat
   (`audioFollowStart()`): in the first half of theirs, at once, that far into
   the beat (`transportStartAt(0, inBeat)`); in the second half, on their next.
-* The tempo cell's number flashes with the beat (the accent colour its first
-  half), whenever audio follow is on: the clock's while it runs; stopped,
+* The tempo cell's number flashes with the beat (its first half: black until
+  their beat is locked, then the accent colour), whenever audio follow is on: the clock's while it runs; stopped,
   theirs as the tracker has it (locked or not yet), or, nothing found yet, at
   the tempo shown.
 * The simulator (drums: a kick every beat, a snare on 2 and 4, hats on the
