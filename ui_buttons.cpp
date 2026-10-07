@@ -182,7 +182,7 @@ PROGMEM static const Icon ICONS[] = {
           "....#....", "#...#...#", ".........", "#.#.#.#.#"}},   // SCENE_DUP (a + in a checkered square, as SCENE_CUT / PASTE)
   {7, 5, {"#...#..", "##..##.", "###.###", "##..##.", "#...#.."}},   // NEXT (two small plays, a block apart: the next scene; a block right of centre)
   {0, 0, {}},                                                                  // METRO (drawn on its own: a metronome and the next setting)
-  {5, 7, {"..#..", ".###.", "#####", ".....", "#####", ".###.", "..#.."}},   // MOVE (a track's: up and down, a block apart: B + UP/DOWN moves the empty track)
+  {3, 5, {".#.", "###", "...", "###", ".#."}},   // MOVE (a track's: up and down, a block apart: B + UP/DOWN moves the empty track)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
