@@ -186,11 +186,11 @@ static void scrollList(int i, int dir) {
 static bool playPulse();
 
 // The card shown as the loaded project's (filled, its letter black, the play
-// icon): A or B held on another card (not with SHIFT; one that can be loaded
-// now), that one's; then, from letting go until the new project has really
-// come in (playing: its switch point, the next bar line), the two take turns
-// every beat (the new one on beats 1 and 3, the old one on 2 and 4); else the
-// loaded one's.
+// icon): the loaded one's; but from letting go of the A or B that loaded it
+// (loaded on the press: while it's held, steady) until the new project has
+// really come in (playing: its switch point, the next bar line), it and the
+// one before take turns every eighth (the new one on the first half of each
+// beat, the old one on the second).
 static int loadFrom = -1;                        // the project loaded before, while the new one's on its way
 
 void menuNoteLoad(int from) {
@@ -200,14 +200,11 @@ void menuNoteLoad(int from) {
 static int shownLoaded() {
   int now = projectCurrent();
   if (loadFrom >= 0 && !sceneChangeWaiting()) loadFrom = -1;   // (come in: as it is)
-  bool held = !onStatus && menuSel < CARDS && actionHeld() && !(board.keys() & m8::BTN_SHIFT);
-  if (held && menuSel != now && !projectCopying(menuSel) && recording.mode == Recording::Idle)   // (projectLoad(): not while recording)
-    return menuSel;
-  if (loadFrom >= 0) {
+  if (loadFrom >= 0 && !actionHeld()) {
     noInterrupts();
-    int32_t beat = transport.beat;
+    bool first = transport.sampleInBeat < transport.spb / 2;
     interrupts();
-    return ((beat % BEATS_PER_BAR) + BEATS_PER_BAR) % BEATS_PER_BAR % 2 == 0 ? now : loadFrom;
+    return first ? now : loadFrom;
   }
   return now;
 }

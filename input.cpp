@@ -108,6 +108,9 @@ bool arrowsMoved() { return moved; }
 static bool armed = false, shifted = false;          // SHIFT with it
 static int armedSlot = -1;                           // the slot it was pressed on (-1: a list item)
 static int armedItem = -1;                           // or the list item
+static bool loadedOnPress = false;                   // its press loaded the card's project: held on, the menu closes
+static uint32_t armedAt = 0;
+static constexpr uint32_t LONG_PRESS_MS = 600;
 
 static bool nextSceneArmed = false;               // A pressed on the scene cell: the next scene once it's let go
 
@@ -152,6 +155,16 @@ static bool leaveMenu(uint8_t key) {
   return back;
 }
 
+// A or B held on a card whose project its press loaded: after LONG_PRESS_MS,
+// the menu closes too. Called every pass (pollKeys()).
+static void menuHold() {
+  if (!armed || !loadedOnPress || !menuOpen() || millis() - armedAt < LONG_PRESS_MS) return;
+  loadedOnPress = false;
+  armed = false;                                     // (letting go: nothing more)
+  closeMenu();
+  for (int i = 0; i < ROWS; i++) drawTrack(i);
+}
+
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
@@ -188,11 +201,12 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // button's action once let go (on the item it was pressed on); START starts /
   // stops the clock, as in the looper's view. The menu doesn't
   // start or stop the clock.
-  // SHIFT+A on a project: cuts it when let go (no confirmation). A on a card:
-  // its project loaded, the menu staying open (the two cards taking turns as
-  // the loaded one until it comes in: menuNoteLoad()); on an empty slot: a
+  // SHIFT+A on a project: cuts it when let go (no confirmation). A on a card,
+  // at once on the press: its project loaded, the menu staying open (held
+  // LONG_PRESS_MS: it closes too, menuHold(); let go, the two cards take turns
+  // as the loaded one until it comes in: menuNoteLoad()); on an empty slot: a
   // new project made and opened, the menu closing; on the loaded project's
-  // card: the menu closes. A and B do the same
+  // card: the menu closes. The list's items act once let go. A and B do the same
   // everywhere in the menu.
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
@@ -208,6 +222,26 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       armedSlot = menuSlot();
       armedItem = menuListItem();
       shifted = shift;
+      armedAt = millis();
+      loadedOnPress = false;
+      int slot = armedSlot;
+      if (slot >= 0 && !shift) {                     // a card: at once, on the press
+        if (slot == projectCurrent()) {              // the loaded one: back to the looper
+          closeMenu();
+          for (int i = 0; i < ROWS; i++) drawTrack(i);
+          return;
+        }
+        bool fresh = !projectFilled(slot);
+        if (loadFromMenu(slot)) {                    // another: loaded (the looper's selection stays as it is)
+          if (fresh) {                               // an empty slot: a new project, opened at once (on track 1)
+            closeMenu();
+            for (int i = 0; i < ROWS; i++) drawTrack(i);
+            return;
+          }
+          loadedOnPress = true;                      // (held LONG_PRESS_MS: the menu closes too, menuHold())
+          drawMenu();
+        }
+      }
     }
     if (armed && !(keys & (m8::BTN_EDIT | m8::BTN_OPT))) {   // all let go: act
       armed = false;
@@ -226,20 +260,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         else projectPaste(slot);
         drawMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
-      } else if (slot == projectCurrent()) {        // the loaded one: back to the looper
-        closeMenu();
-        for (int i = 0; i < ROWS; i++) drawTrack(i);
-      } else {                                       // another: loaded, the menu staying open; an empty slot: a new project, opened at once
-        bool fresh = !projectFilled(slot);
-        if (loadFromMenu(slot)) {                    // (the looper's selection stays as it is; a new project: on track 1)
-          if (fresh) {
-            closeMenu();
-            for (int i = 0; i < ROWS; i++) drawTrack(i);
-          } else {
-            drawMenu();
-          }
-        }
-      }
+      }                                              // (a card without SHIFT: done on the press)
+      loadedOnPress = false;
       return;
     }
     if (!(pressed & (act | m8::BTN_PLAY))) {
@@ -619,6 +641,7 @@ void pollKeys() {
     repeatAt = millis() + REPEAT_PERIOD_MS;          // after a slow pass: no burst of catch-up repeats
     onKeys(prev, repeatKey, true);
   }
+  menuHold();
 }
 
 void followRecording() {

@@ -251,10 +251,6 @@ int main(int argc, char **argv) {
   simSwitchKey = m8::BTN_RIGHT;
   render(out + "/ui_menu_leaving.png");
   simSwitchKey = 0;
-  menuSelectSlot(2);                               // A held on another card: shown as the loaded one (the loaded one's an outline meanwhile)
-  board.heldKeys = m8::BTN_EDIT;
-  render(out + "/ui_menu_hold_load.png");
-  board.heldKeys = 0;
   closeMenu();
   return 0;
 }
