@@ -125,7 +125,12 @@ timer, each clock tick stamped with `micros()`. In `loop()` (`midiInService()`):
   about half the time). Their ticks while
   they're stopped (some send clock all the time) are timed but not followed:
   the tempo stays free to change by hand, and their Start takes theirs at
-  once. Their tempo: measured over their last 4 beats (whole beats, at least 1),
+  once. Their tempo: a straight line through their last ticks' times (least
+  squares, so each tick's jitter weighs little), up to their last 4 beats, at
+  least 1; after a pause counted afresh from the tick after the first (often
+  late after a Start), and over fewer than 4 beats the tempo known is kept
+  unless the new one is 2 % off it (a real change, not their start's jitter:
+  played again at the same tempo, the tempo shown doesn't move). Measured in
   `micros()` turned into samples by the ratio measured from the audio blocks'
   start times (`blockStamp`, written by the interrupt each block). Shown in the
   tempo cell to a tenth of a BPM; not the project's tempo, not saved as set by

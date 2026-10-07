@@ -10,6 +10,7 @@ static constexpr float NUDGE_GAIN = 0.5f;             // of the beat's differenc
 static constexpr float DEADBAND_BEATS = 0.003f;       // a difference this small: left (their jitter)
 static constexpr float MIN_CHANGE = 0.001f;           // a tempo change this small: not made (each one is a recording's tempo mark)
 static constexpr uint32_t SPAN = 96;                  // their tempo: over their last 4 beats (24 ticks at least)
+static constexpr float NEW_TEMPO = 0.02f;             // measured over fewer than SPAN ticks, a tempo this far off the one known: theirs changed
 
 static HardwareSerial *port = nullptr;
 
@@ -205,12 +206,24 @@ void midiInService() {
   if (!transport.running && startAt == INT32_MIN && refTick >= 0 && !theirsRunning) refTick = -1;   // (stopped: a later start here is ours)
   for (; seenTicks < n; seenTicks++) {
     uint32_t i = seenTicks, us = tickUs[i % TICKS];
-    if (i == 0 || (uint32_t)(us - tickUs[(i - 1) % TICKS]) > FOLLOW_TIMEOUT_MS * 1000) firstTick = i;   // (after a pause, or another clock: counted afresh)
-    uint32_t span = min(i - firstTick, SPAN) / 24 * 24;   // their tempo: over their last beats (whole ones)
+    // After a pause (or another clock) counted afresh, from the tick after the
+    // first (often a little late after a Start).
+    if (i == 0 || (uint32_t)(us - tickUs[(i - 1) % TICKS]) > FOLLOW_TIMEOUT_MS * 1000) firstTick = i + 1;
+    // Their tempo: a straight line through their last ticks' times (least
+    // squares: each tick's jitter weighs little), up to SPAN of them, 24 at
+    // least. Over fewer than SPAN, the tempo known is kept unless this one's
+    // NEW_TEMPO off it (theirs changed; not their start's jitter).
+    uint32_t span = i >= firstTick ? min(i - firstTick, SPAN) : 0;
     if (span >= 24 && n - (i - span) <= TICKS) {
-      uint32_t beatUs = (us - tickUs[(i - span) % TICKS]) / (span / 24);
-      uint32_t spb = (uint32_t)(beatUs / usPerSample + 0.5f);
-      if (spb >= spbForBpm(MAX_BPM) && spb <= spbForBpm(MIN_BPM)) theirSpb = spb;
+      double sx = 0, sy = 0, sxx = 0, sxy = 0, m = span + 1;
+      for (uint32_t k = 0; k <= span; k++) {
+        double y = (int32_t)(tickUs[(i - span + k) % TICKS] - tickUs[(i - span) % TICKS]);
+        sx += k; sy += y; sxx += (double)k * k; sxy += k * y;
+      }
+      double usPerTick = (m * sxy - sx * sy) / (m * sxx - sx * sx);
+      uint32_t spb = (uint32_t)(usPerTick * 24 / usPerSample + 0.5);
+      bool sure = span >= SPAN || !theirSpb || fabsf((float)spb - theirSpb) > NEW_TEMPO * theirSpb;
+      if (sure && spb >= spbForBpm(MAX_BPM) && spb <= spbForBpm(MIN_BPM)) theirSpb = spb;
     }
     // Their next whole beat reached: our transport from that beat (the clock
     // reads it; the tracks where they'd be).

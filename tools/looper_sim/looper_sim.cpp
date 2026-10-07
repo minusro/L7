@@ -2196,6 +2196,37 @@ for f in os.listdir("."):
       for (int i = 0; i < 4; i++) { block(); midiInService(); }
       for (int i = 0; i < 300; i++) { block(); midiInService(); }
     }
+    // Started again at the same tempo (no clock while stopped, the first tick a little late, the rest jittering):
+    // the tempo stays as it was through the first bars.
+    {
+      auto play = [&](int beats, double bpmTheirs, bool lateFirst, double &worstOff, float &shownMin, float &shownMax) {
+        midiInByte(0xFA, simMicros, MIDI_USB);
+        double usTick = 60e6 / bpmTheirs / 24, tAt = simMicros + 3000 + (lateFirst ? 2500 : 0);
+        for (int k = 0; k < beats * 24; k++) {
+          while (simMicros < tAt) { block(); midiInService(); }
+          midiInByte(0xF8, (uint32_t)(tAt + (rand() % 1601 - 800)), MIDI_USB);   // (USB: up to 0.8 ms either way)
+          if (k == 0 && lateFirst) tAt -= 2500;
+          tAt += usTick;
+          if (transport.running && k > 0) {
+            double theirsShown = 44100.0 * 60 / expectSpb(bpmTheirs);   // (their tempo in the simulator's samples)
+            double off = fabs(simShownBpm - theirsShown) / theirsShown;
+            worstOff = std::max(worstOff, off);
+            shownMin = std::min(shownMin, simShownBpm);
+            shownMax = std::max(shownMax, simShownBpm);
+          }
+        }
+        midiInByte(0xFC, simMicros, MIDI_USB);
+        for (int i = 0; i < 400; i++) { block(); midiInService(); }   // (stopped, no clock: over a second)
+      };
+      double off = 0;
+      float lo = 1e9f, hi = 0;
+      play(12, 120, false, off, lo, hi);             // a first play: its tempo learnt
+      off = 0; lo = 1e9f; hi = 0;
+      play(8, 120, true, off, lo, hi);               // played again, the same tempo
+      char m3[200];
+      snprintf(m3, sizeof m3, "played again at the same tempo: the tempo shown %.1f-%.1f, at most %.2f%% off theirs", lo, hi, off * 100);
+      check(hi - lo < 0.15f && off < 0.001, m3);
+    }
     // The clock out for USB too: Start, the ticks, Stop, as the serial one's.
     midiOutAttachUsb();
     uint8_t got[64];

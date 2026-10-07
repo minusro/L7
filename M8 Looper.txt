@@ -117,9 +117,12 @@ no dropouts or overruns
 6oct26
 - menu redesign V
 - startpoint checkerboard V
-
 - metronome settings V
 
+7oct26
+- sync in V
+- usb midi V
+- usb audio
 
 123456123456
 0x00x00x00x0
