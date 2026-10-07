@@ -744,11 +744,12 @@ int main(int argc, char **argv) {
     check(sceneDuplicate() && waitScene() && sceneCount() == 3 && sceneCurrent() == 3 && tracks[1].state == TrackState::Muted,
           "SHIFT+B twice: a copy as scene 3");
     check(sceneGoEnd() && waitScene() && sceneCurrent() == sceneCount() + 1, "SHIFT+UP twice: straight to N+1*");
-    check(sceneNext() && waitScene() && sceneCurrent() == 0, "the next scene action on N+1*: to 0*");
-    check(sceneNext() && waitScene() && sceneCurrent() == 1, "then: 1");
+    check(sceneNext() && waitScene() && sceneCurrent() == 1, "the next scene action on N+1*: to 1");
+    check(sceneNext() && waitScene() && sceneCurrent() == 2, "then: 2");
     while (sceneCurrent() < sceneCount()) sceneNext(), waitScene();
-    check(sceneCurrent() == sceneCount() && sceneNext() && waitScene() && sceneCurrent() == 0,
-          "on the last: round to 0* (N+1* left out)");
+    check(sceneCurrent() == sceneCount() && sceneNext() && waitScene() && sceneCurrent() == 1,
+          "on the last: round to 1 (N+1* and 0* left out)");
+    check(sceneGoEmpty() && waitScene() && sceneNext() && waitScene() && sceneCurrent() == 1, "on 0*: to 1");
     check(sceneGoEnd() && waitScene() && sceneCurrent() == sceneCount() + 1, "(back to N+1*)");
     check(sceneGoEmpty() && waitScene() && sceneCurrent() == 0 && empty(), "SHIFT+DOWN twice: straight to 0*");
     setTrackMix(6, 3, 0);                          // a change on 0*

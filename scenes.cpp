@@ -243,9 +243,10 @@ static void takeHeld() {
 bool sceneGoEmpty() { return go(0, true); }
 
 bool sceneNext() {
-  int from = sceneCurrent();
-  if (from >= (int)list.count) return list.count ? sceneGoEmpty() : false;   // the last, or N+1*: round to 0*
-  return sceneStep(1);
+  int from = sceneCurrent(), end = list.count + 1;
+  if (!list.count) return false;                   // (no scenes: only 0*)
+  if (from >= (int)list.count) return go(1, from == end);   // the last, or N+1*: round to 1 (from N+1*: quick, as a step from it)
+  return sceneStep(1);                             // (0*: to 1 too)
 }
 bool sceneGoEnd() { return go(list.count + 1, true); }
 
