@@ -26,6 +26,12 @@ constexpr uint32_t MAX_REC_FRAMES = 128u * 44118u;
 // (single writes of ~280 ms were seen on the M8's card).
 constexpr uint32_t RING_FRAMES = 16384;
 constexpr uint32_t CHUNK_FRAMES = 4096;            // 16 KB per SD call
+// Time stretching (engine.h Track::stretch): its grains read up to this far
+// behind the playhead, so the streamer leaves it there (fills STREAM_FRAMES ahead at most).
+constexpr uint32_t STRETCH_HISTORY = 1024;            // (a grain reads at most ~515 frames back at half speed, ~710 at an eighth)
+constexpr uint32_t STREAM_FRAMES = RING_FRAMES - STRETCH_HISTORY;
+constexpr bool STRETCH_DEFAULT = true;             // new tracks stretch (keep their pitch) rather than resample
+constexpr bool LOG_ENGINE_LOAD = true;             // the audio interrupt's CPU use on the serial log every 5 s
 // Input history: pre-roll for late record presses + slack for SD write stalls.
 constexpr uint32_t INPUT_FRAMES = 32768;           // 128 KB, ~740 ms
 constexpr uint32_t PREROLL_FRAMES = 11025;         // ~250 ms

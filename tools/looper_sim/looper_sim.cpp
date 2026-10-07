@@ -407,6 +407,7 @@ static int fuzz(int seconds, unsigned seed) {
 }
 
 int main(int argc, char **argv) {
+  for (auto &tr : tracks) tr.stretch = false;      // (the checks below count on exact frames: resampled; stretching has its own)
   usbAudioRead = [](uint32_t *frames) {
     if (usbInOn) memcpy(frames, usbIn, sizeof usbIn);
     return usbInOn;
@@ -2813,8 +2814,115 @@ for f in os.listdir("."):
     run(0.2);
   }
 
+  printf("time stretching: the clip at its own pitch whatever the tempo\n");
+  {
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);
+    if (transport.running) transportStop();
+    simSetTempo(120);
+    runBeats(0.1);
+    bool wasMonitor = engine.monitor;
+    feedRamp = false; feedSineHz = 440;
+    transportStart();
+    recordPress(2);                                  // a bar of a 440 Hz sine at 120 BPM
+    for (int i = 0; i < 4000 && recording.mode != Recording::Running; i++) block();
+    runBeats(3.5);
+    recordPress(2);
+    for (int i = 0; i < 200000 && recording.mode != Recording::Idle; i++) block();
+    feedSineHz = 0;
+    engine.monitor = false;                          // (the track alone)
+    // Its frequency, its level's spread and its biggest step over 40 blocks of the output.
+    auto measure = [&](double &hz, double &spread, double &step) {
+      std::vector<float> v;
+      for (int b = 0; b < 40; b++) { block(); for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) v.push_back(outL.data[i]); }
+      double first = -1, last = -1;
+      int crossings = 0;
+      for (size_t i = 1; i < v.size(); i++)
+        if (v[i - 1] < 0 && v[i] >= 0) {
+          double at = i - 1 + v[i - 1] / (v[i - 1] - v[i]);
+          if (first < 0) first = at; else crossings++;
+          last = at;
+        }
+      hz = crossings > 0 ? crossings * AUDIO_SAMPLE_RATE_EXACT / (last - first) : 0;
+      double lo = 1e9, hi = 0;
+      for (size_t k = 0; k + 441 <= v.size(); k += 441) {          // (10 ms windows' RMS)
+        double e = 0;
+        for (size_t i = k; i < k + 441; i++) e += v[i] * v[i];
+        e = sqrt(e / 441);
+        lo = std::min(lo, e);
+        hi = std::max(hi, e);
+      }
+      spread = hi > 0 ? (hi - lo) / hi : 1;
+      step = 0;
+      for (size_t i = 1; i < v.size(); i++) step = std::max(step, (double)fabsf(v[i] - v[i - 1]));
+    };
+    const double sineStep = 8000 * 0.7 * 2 * M_PI * 440 / AUDIO_SAMPLE_RATE_EXACT;   // (the loop's own biggest step, at the mix's headroom)
+    for (float tempo : {120.0f, 96.0f, 150.0f}) {
+      simSetTempo(tempo);
+      for (bool st : {false, true}) {
+        tracks[2].stretch = st;
+        runBeats(1);
+        double hz, spread, step;
+        measure(hz, spread, step);
+        double want = st ? 440 : 440 * tempo / 120;
+        char m12[220];
+        snprintf(m12, sizeof m12, "%.0f BPM (recorded at 120), %s: %.1f Hz (%.0f), level within %.1f%%, biggest step %.0f (the sine's %.0f)",
+                 tempo, st ? "stretched" : "resampled", hz, want, spread * 100, step, sineStep);
+        check(fabs(hz - want) < 1.5 && spread < 0.06 && step < 1.3 * sineStep * std::max(1.0f, tempo / 120), m12);
+      }
+    }
+    // Drums recorded at 120, played at 100: their kicks on our beats, stretched as resampled.
+    simSetTempo(120);
+    clearTrack(2);
+    runBeats(1);
+    drumBpm = 120;
+    drumBeat = transport.beat + (double)transport.sampleInBeat / transport.spb;
+    recordPress(4);
+    for (int i = 0; i < 4000 && recording.mode != Recording::Running; i++) block();
+    runBeats(3.5);
+    recordPress(4);
+    for (int i = 0; i < 200000 && recording.mode != Recording::Idle; i++) block();
+    drumBpm = 0;
+    feedNoise = false;
+    simSetTempo(100);
+    auto kicksOff = [&](double &mean, double &worst) {   // each of our beats: the kick's onset after it (ms)
+      runBeats(1.2);
+      std::vector<double> errs;
+      for (int k = 0; k < 8; k++) {
+        for (int i = 0; i < 4000 && transport.sampleInBeat >= AUDIO_BLOCK_SAMPLES; i++) block();   // (a beat's first block)
+        uint32_t beatAt = transport.now - transport.sampleInBeat;
+        std::vector<int16_t> v;
+        for (int b = 0; b < 40; b++) { block(); for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) v.push_back(outL.data[i]); }
+        int peak = 0;
+        for (int16_t x : v) peak = std::max(peak, abs((int)x));
+        uint32_t s0 = transport.now - (uint32_t)v.size();
+        for (size_t i = 0; i < v.size(); i++)
+          if (abs(v[i]) > peak / 3) { errs.push_back((double)(int32_t)(s0 + i - beatAt) * 1000 / AUDIO_SAMPLE_RATE_EXACT); break; }
+      }
+      mean = 0, worst = 0;
+      for (double e : errs) mean += e;
+      mean /= std::max<size_t>(1, errs.size());
+      for (double e : errs) worst = std::max(worst, fabs(e - mean));
+    };
+    double rMean, rWorst, sMean, sWorst;
+    tracks[4].stretch = false;
+    kicksOff(rMean, rWorst);
+    tracks[4].stretch = true;
+    kicksOff(sMean, sWorst);
+    char m13[220];
+    snprintf(m13, sizeof m13, "drums recorded at 120, played at 100: kicks %+.1f ms from our beats stretched (%+.1f resampled), spread %.1f ms",
+             sMean, rMean, sWorst);
+    check(fabs(sMean - rMean) < 8 && sWorst < 8, m13);
+    tracks[4].stretch = false;
+    engine.monitor = wasMonitor;
+    clearTrack(4);
+    simSetTempo(120);
+    runBeats(1);
+  }
+
   printf("random sessions\n");
   for (unsigned seed = 1; seed <= (argc > 1 ? atoi(argv[1]) : 5); seed++) fuzz(600, seed);
+  for (auto &tr : tracks) tr.stretch = true;       // and one with every track stretched
+  if (argc <= 1 || atoi(argv[1]) > 0) fuzz(600, 101);
 
   printf(failures ? "\n%d check(s) failed\n" : "\nall checks passed\n", failures);
   return failures ? 1 : 0;

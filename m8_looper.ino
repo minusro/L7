@@ -267,6 +267,18 @@ void loop() {
     }
   }
 #endif
+  if (LOG_ENGINE_LOAD) {                           // the audio interrupt's CPU use, every 5 s
+    static uint32_t loadAt = 0;
+    if (millis() - loadAt >= 5000) {
+      loadAt = millis();
+      float avg, most;
+      takeEngineLoad(avg, most);
+      int stretching = 0, playing = 0;
+      for (const auto &tr : tracks) if (tr.live) { playing++; stretching += tr.stretch; }
+      Serial.printf("engine: %.1f%% of the CPU on average, %.1f%% at most (%d tracks playing, %d stretched)\n",
+                    avg * 100, most * 100, playing, stretching);
+    }
+  }
   debugStage = "keys (I2C)";
   pollKeys();
   saveSessionWhenIdle();

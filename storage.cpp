@@ -1734,12 +1734,20 @@ static bool waitingForRecording(const Track &tr) {
          tr.fileFrame < tr.recordedFrames && tr.fileFrame >= recording.written;
 }
 
+// Room in the track's ring for more of its stream: up to STREAM_FRAMES ahead
+// of the playhead (STRETCH_HISTORY behind it kept; a recording just finished
+// can hold more: none then).
+static uint32_t streamRoom(const Track &tr) {
+  uint32_t fill = tr.head - tr.tail;
+  return fill >= STREAM_FRAMES ? 0 : STREAM_FRAMES - fill;
+}
+
 // One SD read (or one block of padding silence) into the track's ring.
 static void produce(Track &tr) {
   if (tr.rangePending && tr.head == tr.switchS) applyQueuedRange(tr);
   Plan &plan = plans[&tr - tracks];
   if (plan.on && tr.head == plan.switchS) applyPlan(&tr - tracks);
-  uint32_t free = RING_FRAMES - (tr.head - tr.tail);
+  uint32_t free = streamRoom(tr);
   // Up to the range's end or the loop's end, whichever comes first (a range
   // can run past the loop's end and carry on from its start).
   uint32_t toRangeEnd = tr.rangeFrames() - tr.rangeOffset(tr.fileFrame);
@@ -1810,7 +1818,7 @@ static void startTrack(int t, int32_t beat0, bool fillNow) {
   tr.head = tr.s0;
   tr.fileFrame = tr.rangeFrame(tr.s0);
   if (fillNow)
-    while (RING_FRAMES - (tr.head - tr.tail) >= CHUNK_FRAMES) produce(tr);
+    while (streamRoom(tr) >= CHUNK_FRAMES) produce(tr);
   tr.startBeat = beat0;
   tr.playSpb = tr.spbNative;
   tr.armed = true;
@@ -1831,7 +1839,7 @@ static void serviceStreams() {
     for (auto &tr : tracks) {
       if (!(tr.live || tr.armed) || waitingForRecording(tr)) continue;
       uint32_t fill = tr.head - tr.tail;
-      if (RING_FRAMES - fill >= refillThreshold() && fill < bestFill) { best = &tr; bestFill = fill; }
+      if (streamRoom(tr) >= refillThreshold() && fill < bestFill) { best = &tr; bestFill = fill; }
     }
     if (!best) return;
     produce(*best);
@@ -1842,7 +1850,7 @@ static void serviceStreams() {
 // with the most playback in reserve.
 static bool streamsTopped() {
   for (const auto &tr : tracks)
-    if ((tr.live || tr.armed) && RING_FRAMES - (tr.head - tr.tail) >= CHUNK_FRAMES / 2) return false;
+    if ((tr.live || tr.armed) && streamRoom(tr) >= CHUNK_FRAMES / 2) return false;
   return true;
 }
 

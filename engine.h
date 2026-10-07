@@ -86,6 +86,19 @@ struct Track {
   volatile bool sampleSwitch = false;
   uint32_t switchAt = 0, nextS0 = 0, nextSpb = 0;
   int32_t nextStartBeat = 0;
+  // Time stretching (loop() sets stretch): the clip at its own pitch whatever
+  // the tempo (else resampled: its pitch with the tempo). The playhead (tail,
+  // frac) moves as ever; the sound is made of grains (STRETCH_GRAIN frames,
+  // overlapping by half, Hann-windowed), each read at its own speed from
+  // around where the playhead says it should be, placed where it best
+  // continues the one before (WSOLA). Interrupt only: the two grains' stream
+  // frames (at their starts) and positions in them (-1: none), the samples to
+  // the next one; grainsOn false: set up afresh from the playhead.
+  bool stretch = STRETCH_DEFAULT;
+  bool grainsOn = false;
+  uint32_t grainSrc[2] = {0, 0};
+  int16_t grainPos[2] = {-1, -1};
+  int16_t toNextGrain = 0;
 
   // Producer side (loop() only)
   uint32_t sample = 0;             // the sample it plays (or records into), by id (storage.h); 0: none
@@ -244,6 +257,9 @@ extern void (*usbAudioWritten)();
 extern volatile int32_t clickFromBeat;
 int masterVolume();
 void takeOutputPeaks(float &left, float &right);
+// The audio interrupt's CPU use (the engine's update, its share of a block's
+// time) since loop() last took it: the average and the most; 0 where it can't be counted.
+void takeEngineLoad(float &avg, float &most);
 
 void midiBegin(HardwareSerial *port);   // port already started (Board::midiOutBegin)
 void midiSendNow(uint8_t status);        // transport start/stop messages (from loop() or the audio interrupt)

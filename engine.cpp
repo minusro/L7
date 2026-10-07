@@ -161,6 +161,122 @@ void takeTrackPeaks(int t, float &left, float &right) {
   interrupts();
 }
 
+// ---- Time stretching (engine.h Track::stretch): WSOLA. Grains of
+// STRETCH_GRAIN frames, a new one every STRETCH_HOP output samples (half a
+// grain: two overlap, their Hann windows summing to 1). Each new grain is read
+// from around the stream frame the playhead puts there (centred: its middle
+// where the playhead will be by then), within STRETCH_SEARCH either way, where
+// it best continues the grain before it (the normalised cross-correlation of
+// its first half with where the grain before would have gone on: on a mono
+// version at a quarter of the rate, then to the frame, nearest first; left and
+// right each). Played at
+// the tempo recorded (speed 1) that's where the grain before goes on: the
+// stream as it is.
+static constexpr int STRETCH_GRAIN = 1024, STRETCH_HOP = STRETCH_GRAIN / 2;
+static constexpr int STRETCH_SEARCH = 256, STRETCH_DECIM = 4, STRETCH_FINE = 3;
+static constexpr float STRETCH_NEAR = 0.95f;
+static float stretchWindow[STRETCH_HOP + 1];      // its first half (and the middle): w(n) = w(GRAIN - n)
+static inline float stretchW(int n) { return stretchWindow[n <= STRETCH_HOP ? n : STRETCH_GRAIN - n]; }
+static inline void frameAt(const uint32_t *ring, uint32_t f, float &l, float &r) {
+  uint32_t v = ring[f % RING_FRAMES];
+  l = (int16_t)(v & 0xFFFF);
+  r = (int16_t)(v >> 16);
+}
+
+// A new grain (when the one before is half way): its stream frame. (Both
+// channels compared, each on its own: a mono copy loses what's opposite in them.)
+static uint32_t placeGrain(const Track &tr, uint32_t natural, uint32_t target) {
+  // Coarse: every STRETCH_DECIM-th frame.
+  constexpr int REF = STRETCH_HOP / STRETCH_DECIM, LAGS = 2 * STRETCH_SEARCH / STRETCH_DECIM;
+  float refL[REF], refR[REF], candL[REF + LAGS], candR[REF + LAGS];
+  for (int j = 0; j < REF; j++) frameAt(tr.ring, natural + j * STRETCH_DECIM, refL[j], refR[j]);
+  const uint32_t from = target - STRETCH_SEARCH;
+  for (int j = 0; j < REF + LAGS; j++) frameAt(tr.ring, from + j * STRETCH_DECIM, candL[j], candR[j]);
+  auto score = [&](int lag) {                      // (lag: in decimated frames from `from`)
+    float c = 0, e = 1;
+    for (int j = 0; j < REF; j++) {
+      float l = candL[lag + j], r = candR[lag + j];
+      c += refL[j] * l + refR[j] * r;
+      e += l * l + r * r;
+    }
+    return c / sqrtf(e);
+  };
+  // The nearest lag scoring within STRETCH_NEAR of the best (a periodic sound
+  // matches as well a period further: the nearest keeps it where it belongs).
+  const int centre = LAGS / 2;
+  float scores[LAGS + 1], top = -1e30f;
+  for (int lag = 0; lag <= LAGS; lag++) top = max(top, scores[lag] = score(lag));
+  const float good = top > 0 ? top * STRETCH_NEAR : top;
+  int best = centre;
+  for (int d = 0; d <= centre; d++) {
+    if (scores[centre - d] >= good) { best = centre - d; break; }
+    if (scores[centre + d] >= good) { best = centre + d; break; }
+  }
+  // Fine: each frame round it, on the whole first half.
+  int32_t coarse = (best - centre) * STRETCH_DECIM, bestFine = coarse;
+  float bestF = -1e30f;
+  for (int d = 0; d <= 2 * STRETCH_FINE; d++) {
+    int32_t off = coarse + (d % 2 ? (d + 1) / 2 : -(d / 2));   // (0, +1, -1, +2, ...: nearest first)
+    float c = 0, e = 1;
+    for (int j = 0; j < STRETCH_HOP; j += 2) {     // (every other frame: plenty)
+      float nl, nr, l, r;
+      frameAt(tr.ring, natural + j, nl, nr);
+      frameAt(tr.ring, target + off + j, l, r);
+      c += nl * l + nr * r;
+      e += l * l + r * r;
+    }
+    float sc = c / sqrtf(e);
+    if (sc > bestF) { bestF = sc; bestFine = off; }
+  }
+  return target + bestFine;
+}
+
+// The track's sample now, stretched (its playhead at tail, moving at speed).
+static inline void stretchSample(Track &tr, uint32_t tail, double speed, float &sl, float &sr) {
+  if (!tr.grainsOn) {                              // afresh: a grain half way, from the playhead on
+    tr.grainSrc[0] = tail - STRETCH_HOP;
+    tr.grainPos[0] = STRETCH_HOP;
+    tr.grainPos[1] = -1;
+    tr.toNextGrain = 0;
+    tr.grainsOn = true;
+  }
+  if (tr.toNextGrain <= 0) {
+    int old = tr.grainPos[0] >= 0 ? 0 : 1, fresh = 1 - old;
+    uint32_t natural = tr.grainSrc[old] + tr.grainPos[old];   // (where the one playing would go on)
+    uint32_t target = tail + (int32_t)lround((speed - 1) * STRETCH_HOP);   // (centred: its middle on the playhead then)
+    tr.grainSrc[fresh] = placeGrain(tr, natural, target);
+    tr.grainPos[fresh] = 0;
+    tr.toNextGrain = STRETCH_HOP;
+  }
+  sl = sr = 0;
+  for (int g = 0; g < 2; g++) {
+    int pos = tr.grainPos[g];
+    if (pos < 0) continue;
+    uint32_t v = tr.ring[(tr.grainSrc[g] + pos) % RING_FRAMES];
+    float w = stretchW(pos);
+    sl += w * (int16_t)(v & 0xFFFF);
+    sr += w * (int16_t)(v >> 16);
+    tr.grainPos[g] = pos + 1 < STRETCH_GRAIN ? pos + 1 : -1;
+  }
+  tr.toNextGrain--;
+}
+
+// The engine's CPU use (takeEngineLoad()).
+static volatile uint32_t loadCycles = 0, loadMost = 0, loadBlocks = 0;
+void takeEngineLoad(float &avg, float &most) {
+#if defined(ARM_DWT_CYCCNT)
+  noInterrupts();
+  uint32_t c = loadCycles, m = loadMost, n = loadBlocks;
+  loadCycles = loadMost = loadBlocks = 0;
+  interrupts();
+  const float blockCycles = (float)F_CPU_ACTUAL * AUDIO_BLOCK_SAMPLES / AUDIO_SAMPLE_RATE_EXACT;
+  avg = n ? c / (float)n / blockCycles : 0;
+  most = m / blockCycles;
+#else
+  avg = most = 0;
+#endif
+}
+
 static inline float runBiquad(const Biquad &q, float *z, float x) {
   float y = q.b0 * x + z[0];
   z[0] = q.b1 * x - q.a1 * y + z[1];
@@ -366,6 +482,7 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
       tr.frac = 0;
       if (!tr.live) memset(tr.curMix, 0, sizeof tr.curMix);   // joining: glides in from silence
       tr.live = true;
+      tr.grainsOn = false;                           // (stretching: its grains from here)
       tr.armed = false;
     } else if (!tr.live) {
       tr.armed = false;                          // missed its start: loop() refills
@@ -375,6 +492,11 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
 }
 
 void LooperEngine::update() {
+#if defined(ARM_DWT_CYCCNT)
+  const uint32_t cyclesAt = ARM_DWT_CYCCNT;
+#endif
+  if (stretchWindow[STRETCH_HOP] == 0)             // (once: the window's first half)
+    for (int n = 0; n <= STRETCH_HOP; n++) stretchWindow[n] = 0.5f - 0.5f * cosf(2 * 3.14159265f * n / STRETCH_GRAIN);
   audio_block_t *inL = receiveReadOnly(0), *inR = receiveReadOnly(1);
   audio_block_t *outL = allocate(), *outR = allocate();
   if (!outL || !outR) {
@@ -427,6 +549,7 @@ void LooperEngine::update() {
         tr.frac = 0;
         memset(tr.curMix, 0, sizeof tr.curMix);    // (glides in from silence)
         tr.live = true;
+        tr.grainsOn = false;
         tr.armed = false;
       }
     }
@@ -535,11 +658,17 @@ void LooperEngine::update() {
           speed[t] = (double)tr.playSpb / spb;
         }
         if (tr.head - tail < 2) { tr.underruns++; continue; }
-        uint32_t a = tr.ring[tail % RING_FRAMES], b = tr.ring[(tail + 1) % RING_FRAMES];
-        float f = (float)tr.frac;
-        float al = (int16_t)(a & 0xFFFF), ar = (int16_t)(a >> 16);
-        float bl = (int16_t)(b & 0xFFFF), br = (int16_t)(b >> 16);
-        float sl = al + (bl - al) * f, sr = ar + (br - ar) * f;
+        float sl, sr;
+        if (tr.stretch) {
+          stretchSample(tr, tail, speed[t], sl, sr);
+        } else {
+          uint32_t a = tr.ring[tail % RING_FRAMES], b = tr.ring[(tail + 1) % RING_FRAMES];
+          float f = (float)tr.frac;
+          float al = (int16_t)(a & 0xFFFF), ar = (int16_t)(a >> 16);
+          float bl = (int16_t)(b & 0xFFFF), br = (int16_t)(b >> 16);
+          sl = al + (bl - al) * f;
+          sr = ar + (br - ar) * f;
+        }
         if (tr.hpOn) { sl = runBiquad(tr.hp, tr.filterZ[0][0], sl); sr = runBiquad(tr.hp, tr.filterZ[0][1], sr); }
         if (tr.lpOn) { sl = runBiquad(tr.lp, tr.filterZ[1][0], sl); sr = runBiquad(tr.lp, tr.filterZ[1][1], sr); }
         const float *m = mix[t];
@@ -628,6 +757,12 @@ void LooperEngine::update() {
   if (usbOut) usbAudioWritten();
   if (inL) release(inL);
   if (inR) release(inR);
+#if defined(ARM_DWT_CYCCNT)
+  uint32_t used = ARM_DWT_CYCCNT - cyclesAt;
+  loadCycles = loadCycles + used;
+  loadBlocks = loadBlocks + 1;
+  if (used > loadMost) loadMost = used;
+#endif
 }
 
 }  // namespace looper
