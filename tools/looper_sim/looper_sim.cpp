@@ -1655,6 +1655,19 @@ int main(int argc, char **argv) {
     int crc = cout ? pclose(cout) : -1;
     snprintf(m, sizeof m, "no scene named; the 7 tracks and every clip in Live colour %d, the nearest to the project's", colorIdx);
     check(crc == 0, m);
+    // Every clip's warp markers: one at every bar line of its sample (beat 0, 4, 8 ..., past its loop's end), later and later in it.
+    std::string wp = "python3 -c \"import gzip,sys,os,xml.etree.ElementTree as E\n"
+                     "d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read()); n=0; bad=0\n"
+                     "for c in r.iter('AudioClip'):\n"
+                     " w=c.find('WarpMarkers'); b=[float(x.get('BeatTime')) for x in w]; t=[float(x.get('SecTime')) for x in w]; n+=1\n"
+                     " if len(b)<2 or b!=[4.0*i for i in range(len(b))] or any(t[i+1]<=t[i] for i in range(len(t)-1)) or b[-1]<float(c.find('Loop/LoopEnd').get('Value')): bad+=1\n"
+                     "print(n,bad); sys.exit(0 if n and not bad else 1)\" '" + dir + "'";
+    FILE *wout = popen(wp.c_str(), "r");
+    int wclips = -1, wbad = -1;
+    if (wout) { if (fscanf(wout, "%d %d", &wclips, &wbad) != 2) wclips = -1; }
+    int wrc = wout ? pclose(wout) : -1;
+    snprintf(m, sizeof m, "each of the %d clip(s) has a warp marker at every bar line of its sample (%d wrong)", wclips, wbad);
+    check(wrc == 0, m);
     // Every clip's four envelopes (volume, pan, lowpass and highpass cutoff), pointing at its own track's parameters, values in range.
     std::string ep = "python3 -c \"import gzip,sys,os,xml.etree.ElementTree as E\n"
                      "d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read()); n=0; bad=0; dis=0; vals=set()\n"
@@ -1883,13 +1896,12 @@ for f in os.listdir("."):
     check(id > 0 && id < 10000 && ::stat((simRoot + path).c_str(), &st) == 0 && st.st_size < 10 * 1000 * 1000 && spaceFiles == 8, m);
   }
 
-  printf("tempo changes while recording: the clip stretched bar by bar to the tempo it started at\n");
+  printf("tempo changes while recording: written as it comes, at its average tempo, its bar lines kept\n");
   {
     if (!transport.running) transportStart();
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);
     simSetTempo(120);
     runBeats(1);
-    uint32_t spb0 = transport.spb;
     feedRamp = true;
     engine.monitor = true;
     recordPress(4);
@@ -1897,14 +1909,15 @@ for f in os.listdir("."):
     int32_t startBeat = recording.startBeat;
     std::vector<uint32_t> bars = {recording.startSample};   // each bar line's input sample
     int32_t seenBar = transport.lastBarBeat;
-    auto run = [&](double toBeat) {
-      for (int i = 0; i < 200000 && transport.beat + (double)transport.sampleInBeat / transport.spb < toBeat; i++) {
-        block();
-        if (transport.lastBarBeat != seenBar) {
-          seenBar = transport.lastBarBeat;
-          bars.push_back(transport.lastBarSample + LATENCY_FRAMES);
-        }
+    auto step = [&]() {
+      block();
+      if (transport.lastBarBeat != seenBar) {
+        seenBar = transport.lastBarBeat;
+        bars.push_back(transport.lastBarSample + LATENCY_FRAMES);
       }
+    };
+    auto run = [&](double toBeat) {
+      for (int i = 0; i < 200000 && transport.beat + (double)transport.sampleInBeat / transport.spb < toBeat; i++) step();
     };
     run(startBeat + 5.5);
     simSetTempo(100);                               // mid bar 2
@@ -1912,32 +1925,30 @@ for f in os.listdir("."):
     simSetTempo(140);                               // mid bar 3
     run(startBeat + 15.5);
     recordPress(4);                                 // half a beat before 4 bars: 4 bars
-    for (int i = 0; i < 200000 && recording.mode != Recording::Idle; i++) {
-      block();
-      if (transport.lastBarBeat != seenBar) {
-        seenBar = transport.lastBarBeat;
-        bars.push_back(transport.lastBarSample + LATENCY_FRAMES);
-      }
-    }
+    for (int i = 0; i < 200000 && recording.mode != Recording::Idle; i++) step();
     const Track &tr = tracks[4];
     char m[200];
-    snprintf(m, sizeof m, "4 bars (%u), at the starting tempo (%u vs %u samples a beat), %u frames", tr.loopBars, tr.spbNative, spb0, tr.recordedFrames);
-    check(tr.loopBars == 4 && tr.spbNative == spb0 && tr.recordedFrames == 4 * BEATS_PER_BAR * spb0, m);
+    uint32_t total = bars.size() > 4 ? bars[4] - bars[0] : 0, avg = total / 16;
+    snprintf(m, sizeof m, "4 bars (%u), at the average tempo (%u vs %u samples a beat), %u frames", tr.loopBars, tr.spbNative, avg, tr.recordedFrames);
+    check(tr.loopBars == 4 && total && tr.spbNative == avg && tr.recordedFrames == 16 * avg, m);
     int off = 0, checked = 0;
     for (int b = 0; b < 4 && b < (int)bars.size(); b++) {
       uint32_t in = bars[b];
       if (in % 20000 > 19990 || in % 20000 < 10) continue;   // (the ramp wraps there)
-      int16_t got = wavLeft(4, b * BEATS_PER_BAR * spb0), want = rampAt(in);
       checked++;
-      if (abs(got - want) > 1) off++;
+      if (wavLeft(4, in - bars[0]) != rampAt(in)) off++;
     }
-    snprintf(m, sizeof m, "every bar line of the clip is that bar line's input, tempo changes or not (%d of %d off)", off, checked);
+    snprintf(m, sizeof m, "written as it came: each bar line's input where it fell (%d of %d off)", off, checked);
     check(checked >= 3 && off == 0, m);
-    int16_t mid = wavLeft(4, (uint32_t)(1.5 * BEATS_PER_BAR * spb0));   // in bar 2: 100 BPM there, stretched
-    check(mid != INT16_MIN, "the stretched part is written");
+    SampleDetails d;
+    bool got = sampleDetails(tr.sample, d);
+    int wrong = 0;
+    for (int b = 1; b < 4; b++) if (!got || abs((int)d.bars[b - 1] - (int)(bars[b] - bars[0])) > 1) wrong++;
+    snprintf(m, sizeof m, "its bar lines kept in its header (%d of 3 off; the last: the clip's end, %u)", wrong, got ? d.bars[3] : 0);
+    check(got && wrong == 0 && d.bars[3] == tr.recordedFrames, m);
     simSetTempo(120);
     runBeats(8);
-    checkSync(4, "the stretched clip in step with the clock");
+    checkSync(4, "the clip at its average tempo in step with the clock");
   }
 
   printf("random sessions\n");

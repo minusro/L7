@@ -151,8 +151,10 @@ def main(src, dst):
     clip = re.sub(r'<OriginalCrc Value="[^"]*"', '<OriginalCrc Value="0"', clip)
     clip = re.sub(r'<DefaultSampleRate Value="[^"]*"', '<DefaultSampleRate Value="44100"', clip)
     clip = re.sub(r'<RelativePathType Value="[^"]*"', '<RelativePathType Value="3"', clip)
-    clip = field(clip, r'<WarpMarker Id="1" SecTime="([^"]*)"', 'w')
-    clip = field(clip, r'<WarpMarker Id="1" SecTime="[^"]*" BeatTime="([^"]*)"', 'W')
+    # The warp markers: one at every bar line of the sample (field K).
+    i = clip.index('<WarpMarkers>') + len('<WarpMarkers>')
+    j = clip.index('</WarpMarkers>', i)
+    clip = clip[:i] + '\n' + MARK + 'K' + clip[j:]
     inner = re.search(r'<Envelopes>\s*(<Envelopes />|<Envelopes>.*?</Envelopes>)\s*</Envelopes>', clip, re.S)
     clip = clip[:inner.start(1)] + MARK + 'E' + clip[inner.end(1):]
 

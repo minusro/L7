@@ -120,7 +120,9 @@ void sampleFile(uint32_t id, char *path, size_t size);   // its file now ("/L7/S
 bool moveFile(const char *from, const char *to);        // renames a file (an older card's layout) unless `to` exists; true: moved
 // For the Live Set export (ableton.cpp; stopped): sample n's details (its
 // name: "A30012", or "0012" for an older one) and a copy of its file.
-struct SampleDetails { uint32_t frames, spb, loopBars; uint64_t bytes; char name[12]; };
+// bars: each bar line's frame (bars 1 .. loopBars; the last the clip's end):
+// where they fell when the tempo changed while it recorded, else evenly.
+struct SampleDetails { uint32_t frames, spb, loopBars; uint64_t bytes; char name[12]; uint32_t bars[MAX_BARS]; };
 bool sampleDetails(uint32_t n, SampleDetails &d);
 bool copySample(uint32_t n, const char *to, void (*progress)() = nullptr);
 uint32_t sampleCount();

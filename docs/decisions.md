@@ -120,7 +120,8 @@ loaded or pasted to (a short stall if playing), so saving never allocates.
   with two Auto Filters, highpass then lowpass, fully open, and a Utility (as with no clip
   playing); a scene per project scene with clips (empty ones, like 0*, left
   out); each track's clip there: Re-Pitch warp
-  mode, the loop and start position as in the app (a range across the
+  mode, a warp marker at every bar line of its sample (evenly at its tempo,
+  or where the bars fell for a recording made while the tempo changed), the loop and start position as in the app (a range across the
   loop's end, which Live can't loop: the whole loop), deactivated where the
   track is muted; the current scene's clips saved as playing (triggered when
   the set opens).

@@ -240,10 +240,20 @@ static void field(char code) {
     case 'P': snprintf(b, sizeof b, "%s/Samples/Imported/%s.wav", x.dir, x.sample.name); gz.puts(b); break;
     case 'z': putNumber((double)x.sample.bytes); break;
     case 'u': putNumber(x.sample.frames); break;
-    // The second warp marker: the loop's end, so the sample plays at its own
-    // tempo (its frames per beat; the file says 44100 Hz).
-    case 'w': putNumber((double)x.sample.loopBars * BEATS_PER_BAR * x.sample.spb / 44100.0); break;
-    case 'W': putNumber(x.sample.loopBars * BEATS_PER_BAR); break;
+    // The warp markers: one at every bar line, where it fell in the sample
+    // (evenly at its tempo, or as kept when the tempo changed while it
+    // recorded), so each bar plays as a bar (the file says 44100 Hz).
+    case 'K':
+      for (uint32_t b = 0; b <= x.sample.loopBars && b <= MAX_BARS; b++) {
+        gz.puts("<WarpMarker Id=\"");
+        putNumber(b);
+        gz.puts("\" SecTime=\"");
+        putNumber(b ? x.sample.bars[b - 1] / 44100.0 : 0.0);
+        gz.puts("\" BeatTime=\"");
+        putNumber(b * BEATS_PER_BAR);
+        gz.puts("\" />\n");
+      }
+      break;
     case 'E': clipEnvelopes(); break;
     case 'g':                                    // the clip's gain: the track's volume (1: 0 dB)
       putNumber(x.unit.volume <= 0 ? 0.0 : pow(10.0, (x.unit.volume - VOLUME_UNITY) * VOLUME_STEP_DB / 20.0));

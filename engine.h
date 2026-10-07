@@ -129,10 +129,10 @@ struct Recording {
   volatile bool resample = false;
   // The clock while it records (the tempo may change meanwhile): from its
   // first bar line, a mark at every tempo change: the transport sample, the
-  // beat position there and the samples per beat from there on. marks[0]'s
-  // tempo is the recording's (the clip's spbNative): the recorder writes it
-  // stretched to it bar by bar, so every bar of the clip is a bar of the
-  // clock (storage.cpp). The interrupt adds the marks.
+  // beat position there and the samples per beat from there on. The clip is
+  // written as it comes; the marks give where its bars end (its length) and
+  // each bar line, kept in its header for the Ableton export's warp markers;
+  // it plays at its average tempo (storage.cpp). The interrupt adds the marks.
   struct TempoMark { uint32_t sample; double beat; uint32_t spb; };
   static constexpr int TEMPO_MARKS = 32;
   TempoMark marks[TEMPO_MARKS];
