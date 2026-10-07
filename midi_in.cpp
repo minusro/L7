@@ -29,7 +29,7 @@ void midiInSuspend(bool off) { suspended = off; }
 
 void midiInByte(uint8_t b, uint32_t us, MidiSource from) {
   if (suspended || b < 0xF8) return;                  // (realtime messages only)
-  bool active = sourceKnown && (uint32_t)(us - sourceUs) < FOLLOW_TIMEOUT_MS * 1000;
+  bool active = sourceKnown && (int32_t)(us - sourceUs) < (int32_t)(FOLLOW_TIMEOUT_MS * 1000);
   if (active && from != source) return;               // (another clock is followed)
   if (b == 0xF8) {
     source = from;
@@ -63,12 +63,16 @@ void midiInBegin(HardwareSerial *p) {
   midiInPollHook = poll;
 }
 
-bool midiClockFollowing() {
+static bool theirsRunning = false;                    // between their Start (or Continue) and Stop (loop()'s)
+
+static bool ticking() {
   noInterrupts();
   uint32_t n = tickCount, last = n ? tickUs[(n - 1) % TICKS] : 0;
   interrupts();
-  return n >= 2 && (uint32_t)(micros() - last) < FOLLOW_TIMEOUT_MS * 1000;
+  return n >= 2 && (int32_t)(micros() - last) < (int32_t)(FOLLOW_TIMEOUT_MS * 1000);   // (signed: a stamp a moment ahead counts too)
 }
+
+bool midiClockFollowing() { return theirsRunning && ticking(); }
 
 // The loop()'s side.
 static uint32_t seenTicks = 0, seenStarts = 0, seenStops = 0;
@@ -109,14 +113,18 @@ void midiInService() {
 
   if (sp != seenStops) {
     seenStops = sp;
+    theirsRunning = false;                            // (the tempo free again)
     if (transport.running) transportStop();
     Serial.println("MIDI in: stop");
   }
+  if (theirsRunning && !ticking()) theirsRunning = false;   // (their clock gone)
   if (st != seenStarts) {
     seenStarts = st;
+    theirsRunning = true;
     refTick = (int32_t)sTick;
     errSum = 0;
     errCount = 0;
+    if (theirSpb) followTempo(theirSpb, roundf(bpmForSpb(theirSpb) * 10) / 10);   // (their tempo, timed while they were stopped: from the start)
     if (transport.running) transportRestart();
     else transportStart();
     Serial.println("MIDI in: start");
@@ -145,7 +153,7 @@ void midiInService() {
     errSum += err;
     errCount++;
   }
-  if (!theirSpb) return;
+  if (!theirSpb || !theirsRunning) return;          // (their transport stopped: timed, not followed; the tempo's free)
   uint32_t shown = theirSpb;
   uint32_t want = theirSpb;
   if (running && errCount >= 24) {                    // once a beat: their tempo, nudged to their beat

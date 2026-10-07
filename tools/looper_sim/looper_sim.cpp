@@ -2028,12 +2028,16 @@ for f in os.listdir("."):
     };
     auto expectSpb = [&](double bpmTheirs) { return 60e6 / bpmTheirs / usPerSample; };
     char m[200];
-    run(3);                                          // stopped: the tempo only
-    snprintf(m, sizeof m, "stopped, the clock coming in: following (%d), its tempo taken on (%u samples a beat, theirs %.0f)",
-             midiClockFollowing(), transport.spb, expectSpb(128));
-    check(midiClockFollowing() && !transport.running && fabs(transport.spb - expectSpb(128)) < expectSpb(128) * 0.002, m);
+    uint32_t spbBefore = transport.spb;
+    run(3);                                          // their clock, their transport stopped: timed, not followed
+    snprintf(m, sizeof m, "their clock while they're stopped: not followed (%d), the tempo free (%u samples a beat, as before)",
+             midiClockFollowing(), transport.spb);
+    check(!midiClockFollowing() && !transport.running && transport.spb == spbBefore, m);
     midiInByte(0xFA, simMicros);                     // Start: the next tick is 1.1.1
     startedAt = 0;
+    for (int i = 0; i < 3; i++) { block(); midiInService(); }
+    snprintf(m, sizeof m, "Start: their tempo at once (%u samples a beat, theirs %.0f), following", transport.pendingSpb ? transport.pendingSpb : transport.spb, expectSpb(128));
+    check(midiClockFollowing() && fabs(transport.spb - expectSpb(128)) < expectSpb(128) * 0.002, m);
     run(1);
     check(transport.running, "Start: the transport runs");
     // (from here: ticks counted from the start)
@@ -2085,15 +2089,22 @@ for f in os.listdir("."):
       return us;
     };
     double at = feed(MIDI_SERIAL, simMicros + 1000, 72, 100);
+    midiInByte(0xFA, (uint32_t)at - 600, MIDI_SERIAL);   // (the serial one started)
+    at = feed(MIDI_SERIAL, at, 24, 100);
     midiInByte(0xF8, (uint32_t)at - 500, MIDI_USB);  // (USB's tick between: ignored)
-    midiInByte(0xFA, (uint32_t)at - 400, MIDI_USB);   // (and its start)
+    midiInByte(0xFC, (uint32_t)at - 400, MIDI_USB);   // (and its stop)
     for (int i = 0; i < 4; i++) { block(); midiInService(); }
-    snprintf(m, sizeof m, "two clocks: the serial one followed (%.1f shown), USB's ticks and start ignored (running: %d)", simShownBpm, transport.running);
-    check(midiClockFollowing() && !transport.running && fabs(simShownBpm - 100.5) < 1.5, m);
-    for (int i = 0; i < 300; i++) { block(); midiInService(); }   // the serial one stops
-    feed(MIDI_USB, simMicros + 1000, 72, 150);
-    snprintf(m, sizeof m, "the serial clock gone: USB's followed (%.1f shown)", simShownBpm);
-    check(midiClockFollowing() && fabs(simShownBpm - 150.7) < 2, m);
+    snprintf(m, sizeof m, "two clocks: the serial one followed (%.1f shown), USB's ticks and stop ignored (running: %d)", simShownBpm, transport.running);
+    check(midiClockFollowing() && transport.running && fabs(simShownBpm - 100.5) < 1.5, m);
+    for (int i = 0; i < 300; i++) { block(); midiInService(); }   // the serial one stops ticking
+    check(!midiClockFollowing(), "the serial clock gone: not following");
+    transportStop();
+    at = feed(MIDI_USB, simMicros + 1000, 48, 150);
+    midiInByte(0xFA, (uint32_t)at - 600, MIDI_USB);
+    feed(MIDI_USB, at, 24, 150);
+    snprintf(m, sizeof m, "then USB's clock, started: followed (%.1f shown)", simShownBpm);
+    check(midiClockFollowing() && transport.running && fabs(simShownBpm - 150.7) < 2, m);
+    transportStop();
     midiInSuspend(true);                             // storage mode: nothing taken in
     midiInByte(0xFA, simMicros, MIDI_USB);
     for (int i = 0; i < 4; i++) { block(); midiInService(); }

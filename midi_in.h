@@ -1,9 +1,11 @@
 // midi_in.h — following an external MIDI clock on the serial MIDI in
 // (config.h MIDI_IN_ENABLED; the port: M8Board.h midiIn).
 //
-// Clock (0xF8, 24 a beat): while ticks come in (one within the last
-// FOLLOW_TIMEOUT_MS), the tempo is theirs. Stopped, it's just taken on;
-// running, the transport is also kept on their beat: once a beat, the
+// Clock (0xF8, 24 a beat): while their transport runs (from their Start or
+// Continue until their Stop, or until no tick for FOLLOW_TIMEOUT_MS) the
+// tempo is theirs. Their ticks while they're stopped (some send clock all
+// the time) are timed but not followed: the tempo stays free to change, and
+// their Start takes theirs at once. Running, the transport is also kept on their beat: once a beat, the
 // difference (averaged over the beat's ticks) is taken out by running a
 // little faster or slower for the next one (half of it a beat, at most
 // MAX_NUDGE either way), on top of their tempo. Start (0xFA) and Continue
@@ -25,7 +27,7 @@ enum MidiSource : uint8_t { MIDI_SERIAL = 0, MIDI_USB = 1 };
 void midiInByte(uint8_t b, uint32_t us, MidiSource from = MIDI_SERIAL);   // a byte received at micros() us (from an interrupt; the simulator feeds it)
 void midiInSuspend(bool off);             // storage mode: nothing taken in meanwhile
 void midiInService();                     // loop(): start / stop, the tempo and the beat followed
-bool midiClockFollowing();                // an external clock is coming in
+bool midiClockFollowing();                // an external clock is running (its Start had, its ticks coming in)
 
 // From the app (app.cpp): the tempo shown, and an external clock's tempo
 // taken on (spb exactly, nudged to its beat; shownBpm the tempo shown).

@@ -116,14 +116,16 @@ Port 2 on variant B (Serial3, TX pin 14), port 1 on variant A.
 Serial1 RX pin 0, opened receive-only, its TX pin 1 given back as the early
 boot line, HIGH; variant A: Serial7 RX 28, unverified), read by the same 200 µs
 timer, each clock tick stamped with `micros()`. In `loop()` (`midiInService()`):
-* Following: a tick within the last 0.5 s (`midiClockFollowing()`). Their
-  tempo: measured over their last 4 beats (whole beats, at least 1),
+* Following: their transport running, from their Start (or Continue) until
+  their Stop or no tick for 0.5 s (`midiClockFollowing()`). Their ticks while
+  they're stopped (some send clock all the time) are timed but not followed:
+  the tempo stays free to change by hand, and their Start takes theirs at
+  once. Their tempo: measured over their last 4 beats (whole beats, at least 1),
   `micros()` turned into samples by the ratio measured from the audio blocks'
   start times (`blockStamp`, written by the interrupt each block). Shown in the
   tempo cell to a tenth of a BPM; not the project's tempo, not saved as set by
   hand; meanwhile `setTempo()` / a project's tempo do nothing (tap tempo,
   B + arrows: no effect).
-* Stopped: their tempo is taken on (`followTempo()`, exactly, not rounded).
 * Running: each tick, how far our beat is from theirs at that moment (our
   position from `blockStamp` and the tick's time); once a beat the average,
   and the next beat runs at their tempo nudged by half of it (at most ±2 %,
