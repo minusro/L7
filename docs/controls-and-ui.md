@@ -193,7 +193,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   While the clock runs, the playing project's card shows a small play icon right of its letter (both 2 blocks left of centre), in the letter's colour, on the first half of each beat (pulsing): the loaded one's, or while another is on its way in, the one still heard. An empty slot is a grey outline, its letter grey (selected too; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; a block
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
-  in the colour the action button had for the item (`actionRestColor()`). No mark for the
+  in the colour the action button had for the item (`actionRestColor()`). The bottom right
+  corner cut off at 45°, as high and wide as the logo (26 px, in full resolution: a pixel per
+  step), black (`drawCornerCut()`). No mark for the
   way out (any edge, `menuLeavesOn()`); while an arrow is held that leaves it once let go,
   the selection frame is hidden. Under them
   a list, "EXPORT ABLETON PROJECT", "ENTER STORAGE MODE" and "SETTINGS" (off for now: grey, as export with nothing to export, the action button grey with no icon; still selectable), up to three in view at a time (scrolling once it has more; the row level with the logo left clear). Export

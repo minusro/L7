@@ -323,6 +323,7 @@ void drawMenu() {
   if (all) {
     drawn = uiGeneration;
     t.fillRect(0, 0, 320, 240, MENU_BG);         // (the track rows' place and the status row's: no action button in the menu)
+    drawCornerCut(BG);                           // the bottom right corner cut off, black
   }
   // Scrolled: the items in view redraw over each other's places (their keys
   // hold the place), each label drawn the box's whole width; no clearing
@@ -495,6 +496,12 @@ void menuLand(uint8_t key) {
   if (!shown || !key) return;
   landInMenu(key);
   drawMenu();
+}
+
+void drawCornerCut(uint16_t color) {
+  auto &t = board.tft();
+  for (int r = 0; r < CORNER_LOGO_H; r++)        // from its tip at the top: a pixel wider each row down
+    t.fillRect(320 - (r + 1), 240 - CORNER_LOGO_H + r, r + 1, 1, color);
 }
 
 bool menuExportShown() {

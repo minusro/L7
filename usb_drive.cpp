@@ -32,7 +32,7 @@ static constexpr int STATE_Y = TITLE_Y + STATE_DY, HINT_Y = STATUS_TOP + (STATUS
 static int textX() { return menuListX(); }
 
 static void line(int y, const char *text, uint16_t ink) {
-  board.tft().fillRect(textX(), y, 320 - textX(), FONT_H, SCREEN);   // (from the texts' edge: the corner logo stays)
+  board.tft().fillRect(textX(), y, 320 - CORNER_LOGO_H - textX(), FONT_H, SCREEN);   // (from the texts' edge: the corner logo and the cut corner stay)
   drawText(textX(), y, text, ink, SCREEN);
 }
 
@@ -105,6 +105,7 @@ bool usbDriveMode() {
   t.fillScreen(SCREEN);
   line(TITLE_Y, "STORAGE MODE", LIGHT);
   drawSmallLogo(CORNER_LOGO_X, CORNER_LOGO_Y, LIGHT);
+  drawCornerCut(DARK);                              // the bottom right corner cut off, dark grey
   hint();
   uiGeneration++;
 
@@ -162,6 +163,7 @@ bool usbDriveMode() {
   t.fillScreen(SCREEN);
   line(TITLE_Y, "STORAGE MODE", LIGHT);
   drawSmallLogo(CORNER_LOGO_X, CORNER_LOGO_Y, LIGHT);
+  drawCornerCut(DARK);                              // the bottom right corner cut off, dark grey
   hint();
   uiGeneration++;
 
