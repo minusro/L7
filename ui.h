@@ -184,7 +184,8 @@ void openMenu();
 void closeMenu();
 int menuFirstEmptySlot();                // the first slot with no project (-1: none)
 void menuSelectSlot(int k);              // the menu's selection on card k
-void menuNoteLoad(int from);             // a project just loaded from the menu, `from` the one before: shown taking turns until it comes in
+void menuNoteLoad(int from);             // a project just loaded from the menu, `from` the one before: its card flashing until it comes in
+bool menuLoadPending();                  // a project loaded from the menu hasn't come in yet (playing: its switch point): the menu can't be left meanwhile
 // Switching screens off an edge (key: the arrow): the selection lands as if it
 // wrapped round, on the other screen's nearest place that way (back the way it
 // came: where it came from). menuLand(): just opened, the menu's selection;

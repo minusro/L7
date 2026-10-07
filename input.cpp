@@ -157,12 +157,27 @@ static bool leaveMenu(uint8_t key) {
 
 // A or B held on a card whose project its press loaded: after LONG_PRESS_MS,
 // the menu closes too. Called every pass (pollKeys()).
+// Back to the looper from the menu: at once, or, a project loaded from it
+// still on its way (menuLoadPending(): playing, until its switch point),
+// once it has come in (closeWhenIn, followed by menuHold()).
+static bool closeWhenIn = false;
+static void closeToLooper() {
+  if (menuLoadPending()) {
+    closeWhenIn = true;
+    return;
+  }
+  closeWhenIn = false;
+  closeMenu();
+  for (int i = 0; i < ROWS; i++) drawTrack(i);
+}
+
 static void menuHold() {
+  if (!menuOpen()) closeWhenIn = false;
+  if (closeWhenIn && !menuLoadPending()) closeToLooper();   // (come in: now)
   if (!armed || !loadedOnPress || !menuOpen() || millis() - armedAt < LONG_PRESS_MS) return;
   loadedOnPress = false;
   armed = false;                                     // (letting go: nothing more)
-  closeMenu();
-  for (int i = 0; i < ROWS; i++) drawTrack(i);
+  closeToLooper();
 }
 
 static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
@@ -206,7 +221,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // LONG_PRESS_MS: it closes too, menuHold(); let go, the two cards take turns
   // as the loaded one until it comes in: menuNoteLoad()); on an empty slot: a
   // new project made and opened, the menu closing; on the loaded project's
-  // card: the menu closes. The list's items act once let go. A and B do the same
+  // card: the menu closes. While a project loaded here is on its way (playing:
+  // until its switch point) the menu stays: closing waits for it
+  // (closeToLooper()), and no edge leads out (menuLeavesOn()). The list's
+  // items act once let go. A and B do the same
   // everywhere in the menu.
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
@@ -226,11 +244,11 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       loadedOnPress = false;
       int slot = armedSlot;
       if (slot >= 0 && !shift) {                     // a card: at once, on the press
-        if (slot == projectCurrent()) {              // the loaded one: back to the looper
-          closeMenu();
-          for (int i = 0; i < ROWS; i++) drawTrack(i);
+        if (slot == projectCurrent()) {              // the loaded one: back to the looper (one on its way: once it has come in)
+          closeToLooper();
           return;
         }
+        closeWhenIn = false;                         // (another one now: the menu stays)
         bool fresh = !projectFilled(slot);
         if (loadFromMenu(slot)) {                    // another: loaded (the looper's selection stays as it is)
           if (fresh) {                               // an empty slot: a new project, opened at once (on track 1)

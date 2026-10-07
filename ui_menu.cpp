@@ -198,9 +198,14 @@ void menuNoteLoad(int from) {
   loadFrom = from >= 0 && from != projectCurrent() && sceneChangeWaiting() ? from : -1;
 }
 
+bool menuLoadPending() {
+  if (loadFrom >= 0 && !sceneChangeWaiting()) loadFrom = -1;   // (come in: as it is)
+  return loadFrom >= 0;
+}
+
 static int shownLoaded() {
   int now = projectCurrent();
-  if (loadFrom >= 0 && !sceneChangeWaiting()) loadFrom = -1;   // (come in: as it is)
+  menuLoadPending();
   if (loadFrom >= 0 && !actionHeld()) {
     noInterrupts();
     bool first = transport.sampleInBeat < transport.spb / 2;
@@ -213,8 +218,7 @@ static int shownLoaded() {
 // The card with the play icon (the clock running; its letter 2 blocks left to
 // make room): the project heard, the one before until the new one comes in.
 static int playingCard() {
-  if (loadFrom >= 0 && !sceneChangeWaiting()) loadFrom = -1;
-  return loadFrom >= 0 ? loadFrom : projectCurrent();
+  return menuLoadPending() ? loadFrom : projectCurrent();
 }
 
 static void drawItem(int k) {
@@ -515,6 +519,7 @@ int menuFirstEmptySlot() {
 bool menuLeavesOn(uint8_t key) {
   // (No project loaded: leaving makes a new one in the first empty slot; with none, nowhere to go.)
   if (!shown || onStatus || (projectCurrent() < 0 && menuFirstEmptySlot() < 0)) return false;
+  if (menuLoadPending()) return false;           // (a project on its way: not until it has come in)
   // RIGHT off the screen's right edge (the looper's that way): off a card
   // row's right end, or a list item's side; UP off its top: the top card row
   // (A-D); DOWN off its bottom: the list's last item.
