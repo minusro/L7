@@ -431,9 +431,10 @@ static void trimSample(uint32_t id) {
   samplePath(id, path, sizeof path);
   FsFile f = SD.sdfs.open(path, O_RDWR);
   SampleInfo info;
-  if (f && readSampleHeader(f, info, nullptr) && playable(info)) {
+  uint64_t size = f && readSampleHeader(f, info, nullptr) && playable(info) ? WAV_DATA_OFFSET + (uint64_t)(info.frames + prerollOf(info)) * 4 : 0;
+  if (size && f.fileSize() > size) {             // (already its size: untouched, its modified date kept)
     debugStage = "SD trim (sample file)";
-    f.truncate(WAV_DATA_OFFSET + (uint64_t)(info.frames + prerollOf(info)) * 4);
+    f.truncate(size);
     poolBlocked = false;                         // (space freed)
   }
   f.close();
@@ -1397,7 +1398,9 @@ static void scanFolder(const char *folder, bool data) {
       }
       noteSample(id);
       lastOrder = max(lastOrder, info.version >= 2 && info.order ? info.order : n);
-      if ((size > WAV_DATA_OFFSET + (uint64_t)info.frames * 4 || unnamedIndex(id) >= 0) && untrimmedCount < 64)
+      // (longer than its frames and pre-roll: recording space left over; not
+      // the pre-roll itself, which made every sample "untrimmed" at every boot)
+      if ((size > WAV_DATA_OFFSET + (uint64_t)(info.frames + prerollOf(info)) * 4 || unnamedIndex(id) >= 0) && untrimmedCount < 64)
         untrimmed[untrimmedCount++] = id;
     } else if (data && space) {
       if (n <= POOL_SIZE && poolCount < POOL_SIZE) {

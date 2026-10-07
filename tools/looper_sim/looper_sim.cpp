@@ -23,7 +23,7 @@ void (*simDelayHook)(uint32_t us) = nullptr;
 std::string simRoot;
 SDClass SD;
 SerialStub Serial;
-int simFailIo = 0, simReinits = 0, simFsChanges = 0, simFileCreates = 0;
+int simFailIo = 0, simReinits = 0, simFsChanges = 0, simFileCreates = 0, simSampleTruncates = 0;
 void (*simSdLatency)(size_t, bool) = nullptr;
 void (*IntervalTimer::fn)() = nullptr;
 HardwareSerial midi;
@@ -1833,6 +1833,7 @@ for f in os.listdir("."):
     }
     char gonePath[64] = {};
     if (gone) sampleFile(gone, gonePath, sizeof gonePath);
+    char m0[120];
     std::string cmd = "rm -f " + simRoot + gonePath + " " + simRoot + "/L7/PROJECTS/" + std::string(1, (char)('A' + other)) + ".L7P; echo stray > " + simRoot + "/L7/STRAY.TXT";
     check(other >= 0 && gone && system(cmd.c_str()) == 0, "(the computer deleted another project's file and a sample, and added a file)");
     storageForget();
@@ -1840,7 +1841,10 @@ for f in os.listdir("."):
     bool forgot = true;
     for (int t = 0; t < NUM_TRACKS; t++) forgot &= tracks[t].state == TrackState::Empty && tracks[t].sample == 0;
     check(forgot && sampleCount() == 0, "dropped: every track empty, no samples known");
+    int truncatesBefore = simSampleTruncates;
     check(storageBegin([](const char *) {}), "the card read again");
+    snprintf(m0, sizeof m0, "the finished samples left as they are (%d cut down again: each one's modified date)", simSampleTruncates - truncatesBefore);
+    check(simSampleTruncates == truncatesBefore, m0);
     scenesBegin(simTempo, simSetTempo, loaded, simNewTempo);
     bool same = true;
     for (int t = 0; t < NUM_TRACKS; t++) same &= tracks[t].sample == sampleBefore[t] && tracks[t].state == stateBefore[t];

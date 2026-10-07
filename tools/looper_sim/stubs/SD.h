@@ -21,6 +21,7 @@ extern std::string simRoot;
 extern int simFailIo;      // > 0: that many reads/writes fail (card stopped responding)
 extern int simReinits;
 extern int simFsChanges;   // file creations/truncations/deletions/renames (counted by the test)
+extern int simSampleTruncates;   // truncations of SAMPLES' files (each one: its modified date)
 extern int simFileCreates; // files that didn't exist before
 // Optional: called for every transfer so the test can let time pass (and the
 // audio interrupt run) for as long as a real card would take.
@@ -89,7 +90,7 @@ public:
   uint64_t curPosition() { return f_ ? (uint64_t)ftell(f_) : 0; }
   uint64_t fileSize() { long c = ftell(f_); fseek(f_, 0, SEEK_END); long s = ftell(f_); fseek(f_, c, SEEK_SET); return s; }
   bool preAllocate(uint64_t) { return true; }
-  bool truncate(uint64_t len) { simFsChanges++; fflush(f_); return ftruncate(fileno(f_), len) == 0; }
+  bool truncate(uint64_t len) { simFsChanges++; if (path_.find("/SAMPLES/") != std::string::npos) simSampleTruncates++; fflush(f_); return ftruncate(fileno(f_), len) == 0; }
   int available() { long c = ftell(f_); return (int)(fileSize() - c); }
   int fgets(char *buf, int n) { return ::fgets(buf, n, f_) ? (int)strlen(buf) : 0; }
   void flush() { fflush(f_); }
