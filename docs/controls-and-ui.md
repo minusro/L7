@@ -10,7 +10,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 |---|---|
 | UP/DOWN | Select row: tracks 1 (top) to 7, then the status row (no wrapping); starts on track 1. A held DOWN (repeating) stops at track 7: only a fresh press goes on to the status row. UP on track 1 or DOWN on the status row (a fresh press) opens the menu once let go; in the menu, UP on the top card row (A–D) or DOWN on the list's last item goes back once let go (with no project loaded: a new one in the first empty slot, its card selected, as A there) |
 | LEFT/RIGHT | Select cell: waveform, filter, volume (status row: scene, clock, tempo; UP/DOWN between the rows keeps the column: the scene cell is below the waveform); LEFT on a row's first cell or RIGHT on its last (a fresh press, not a held arrow repeating) opens the menu, to the looper's left, once let go (the clock goes on); in the menu, RIGHT off its right edge (a card row's right end, or on a list item) goes back once let go (with no project loaded: a new one in the first empty slot) |
-| LEFT + RIGHT held (0.6 s) | Switch screens from anywhere: the menu opens, or closes as off its edge (with no project loaded: a new one in the first empty slot; with every slot full: nothing). Only the two arrows, nothing else held; the second one's press doesn't move the selection (it steps back where the first one moved it), and the edge arrow is lit and the selection frame hidden while they're held; once switched, they do nothing more until both are let go (`switchHold()` in input.cpp) |
+| LEFT + RIGHT held (0.6 s) | Switch screens from anywhere: the menu opens, or closes as off its edge (with no project loaded: a new one in the first empty slot; with every slot full: nothing). Only the two arrows, nothing else held; the second one's press doesn't move the selection (it steps back where the first one moved it), and the looper's edge mark is lit and the selection frame hidden while they're held; once switched, they do nothing more until both are let go (`switchHold()` in input.cpp) |
 | A | Empty track: record / stop (another track recording: stop it, queue this one; the waveform cell is selected). Full track: mute/unmute. Status row: the next scene on the scene cell, once A is let go (as SHIFT+UP: on the next bar line while playing; the clock isn't started; icon: two small play triangles a block apart), SHIFT+A there duplicates the scene (as SHIFT + B twice; icon: a + in a checkered square); play / stop on the clock cell (icon play or stop; SHIFT+A as SHIFT+START), tap tempo on the tempo cell (SHIFT+A: the metronome's next setting, of 0 off / A auto, in a silent scene only / 1 on: from 1 or A, 0 in a silent scene, else the other one; from 0, A in a silent scene, else 1 (it always changes what's heard); icon: a filled metronome, 10×10 blocks, crossed out while it would click with the clock running) |
 | B twice | Reset the current cell (whole loop / filter open / unity, centre; the clock cell: master volume 100%; the tempo cell: the tempo the project's last recording was made at, if it has one) |
 | SHIFT + B twice | Duplicate the scene |
@@ -129,10 +129,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
-  small square, not selectable, no frame, with the edge mark: a small solid triangle (3×5
-  blocks) pointing left, its tip 3 blocks from the left edge, dark grey on black (light grey while an arrow is held that opens the menu once let go: any of the four; the selection frame hidden meanwhile) (the selected status row's dark grey
+  small square, not selectable, no frame, with the edge mark: a small hamburger (3×5
+  blocks: three bars a block apart), 3 blocks from the left edge, dark grey on black (light grey while an arrow is held that opens the menu once let go: any of the four; the selection frame hidden meanwhile) (the selected status row's dark grey
   ground starts at the scene cell's left edge), in the space from the screen's left edge to 2 blocks short of the scene cell's
-  frame: the menu is the looper's other screen, to its left; grey while an arrow is held that goes there once let go, the menu's likewise), then the scene cell
+  frame: the menu, the looper's other screen), then the scene cell
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
@@ -183,12 +183,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   While the clock runs, the loaded project's card shows a small play icon right of its letter (both 2 blocks left of centre), black like it, on the first half of each beat (pulsing). An empty slot is a grey outline, its letter grey (selected too; in the slot's colour while an action button is held). In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; a block
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
-  in the colour the action button had for the item (`actionRestColor()`). At the top left,
-  the looper's edge mark mirrored top to bottom (a small solid triangle pointing left, as far from
-  the top edge as the looper's is from the bottom): the way out, on any edge (`menuLeavesOn()`).
-  Grey; while an arrow is held that leaves it once let go, the loaded project's colour (with
-  none: the first empty slot's, where leaving makes one) (the selection frame hidden meanwhile); none when there's nowhere
-  to go (no project loaded and every slot full). Under them
+  in the colour the action button had for the item (`actionRestColor()`). No mark for the
+  way out (any edge, `menuLeavesOn()`); while an arrow is held that leaves it once let go,
+  the selection frame is hidden. Under them
   a list, "EXPORT ABLETON PROJECT" and "ENTER STORAGE MODE". Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING

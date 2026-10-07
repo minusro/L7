@@ -17,7 +17,7 @@ void (*simDelayHook)(uint32_t us) = nullptr;
 std::string simRoot = "/tmp/m8_ui_preview_sd";
 SDClass SD;
 SerialStub Serial;
-int simFailIo = 0, simReinits = 0, simFsChanges = 0, simFileCreates = 0;
+int simFailIo = 0, simReinits = 0, simFsChanges = 0, simFileCreates = 0, simSampleTruncates = 0;
 void (*simSdLatency)(size_t, bool) = nullptr;
 void (*IntervalTimer::fn)() = nullptr;
 HardwareSerial midi;

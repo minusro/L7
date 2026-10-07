@@ -34,8 +34,8 @@ constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: four cells (to the volume cells' edge), left
-// to right: the menu's (a small square with the edge mark, a triangle left:
-// the menu's that way; not selectable), the scene (the widest), the clock
+// to right: the menu's (a small square with the edge mark, a hamburger: the
+// menu; not selectable), the scene (the widest), the clock
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
@@ -61,16 +61,13 @@ inline int selectedCellIn(int i) {
 }
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
-// The edge mark: where the other screen is (the menu to the looper's left,
-// the looper to the menu's right: LEFT off the looper's left edge, RIGHT off
-// the menu's right edge),
-// on the status row's line: a small solid triangle (3 x 5 blocks, its tip 3
-// blocks in) pointing left in the looper's view (its menu cell: the space
-// left of the scene cell, 2 blocks short of its frame), in ink on the ground
-// (the whole space), dark grey on black. (The menu has no arrow: a strip in
-// the project's colour along its right edge, ui_menu.cpp.)
+// The edge mark: the menu (an arrow off any edge of the looper opens it), on
+// the status row's line: a small hamburger (3 x 5 blocks: three bars a block
+// apart, 3 blocks in) in the looper's view (its menu cell: the space left of
+// the scene cell, 2 blocks short of its frame), in ink on the ground (the
+// whole space), dark grey on black. (The menu has none.)
 constexpr int EDGE_W = MENU_BOX.w - PX;          // (2 blocks short of the scene cell's frame)
-void drawEdgeMark(bool right, int x, int w, int y, uint16_t ink, uint16_t ground);   // (x, y, w: the space, the status row's height)
+void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground);   // (x, y, w: the space, the status row's height)
 
 inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
 // A row's place on the screen from the top (0: the first track row), and back.

@@ -6,8 +6,8 @@
 // row is selected:
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
-//   first cell: the edge mark (ui.h), a dark grey triangle pointing down
-//     (DOWN on the status row opens the menu); not selectable, no frame.
+//   first cell: the edge mark (ui.h), a dark grey hamburger (the menu);
+//     not selectable, no frame.
 //   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
@@ -29,20 +29,19 @@ static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
 // The edge mark (ui.h), built in a buffer and sent at once over the space
-// given (x, w): the looper's tip 3 blocks in from its left (right: centred).
-void drawEdgeMark(bool right, int x, int w, int y, uint16_t ink, uint16_t ground) {
-  // A solid triangle (3 x 5).
-  static const char *const ARROW_LEFT[5] = {"..#", ".##", "###", ".##", "..#"};
-  constexpr int ROWS = STATUS_H / PX, CW = 3, CH = 5, R0 = (ROWS - CH) / 2;
-  constexpr int MAX_W = EDGE_W;                    // (its space: the menu cell's; the menu's at the top left too)
+// given (x, w): 3 blocks in from its left.
+void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground) {
+  // A hamburger (3 x 5): three bars a block apart.
+  static const char *const MARK[5] = {"###", "...", "###", "...", "###"};
+  constexpr int ROWS = STATUS_H / PX, CW = 3, CH = 5, R0 = (ROWS - CH) / 2, C0 = 3;
+  constexpr int MAX_W = EDGE_W;                    // (its space: the menu cell's)
   w = min(w, MAX_W);
   const int cols = w / PX;
-  const int C0 = right ? (cols - CW) / 2 : 3;      // the looper's: its tip 3 blocks in; centred (right)
   static uint16_t px[STATUS_H * MAX_W];
   for (int r = 0; r < ROWS; r++)
     for (int c = 0; c < cols; c++) {
       int tr = r - R0, tc = c - C0;
-      bool on = tr >= 0 && tr < CH && tc >= 0 && tc < CW && ARROW_LEFT[tr][right ? CW - 1 - tc : tc] == '#';   // (right: mirrored)
+      bool on = tr >= 0 && tr < CH && tc >= 0 && tc < CW && MARK[tr][tc] == '#';
       for (int dy = 0; dy < PX; dy++)
         for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * w + c * PX + dx] = on ? ink : ground;
     }
@@ -152,12 +151,12 @@ void drawStatus() {
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
-    // The menu cell: the edge mark, pointing left, on black (the selected
+    // The menu cell: the edge mark, a hamburger, on black (the selected
     // row's ground starts after it): dark grey; light grey while an arrow is
     // held that goes to the menu once let go.
     static uint16_t markInk = 0;
     uint16_t ink = screenSwitchPending() ? LIGHT : DARK;   // (light grey: an arrow held that opens the menu)
-    if (cleared || ink != markInk) drawEdgeMark(false, 0, EDGE_W, top, ink, BG);
+    if (cleared || ink != markInk) drawEdgeMark(0, EDGE_W, top, ink, BG);
     markInk = ink;
   }
   {
