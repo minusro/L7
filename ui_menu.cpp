@@ -185,6 +185,33 @@ static void scrollList(int i, int dir) {
 
 static bool playPulse();
 
+// The card shown as the loaded project's (filled, its letter black, the play
+// icon): A or B held on another card (not with SHIFT; one that can be loaded
+// now), that one's; then, from letting go until the new project has really
+// come in (playing: its switch point, the next bar line), the two take turns
+// every beat (the new one on beats 1 and 3, the old one on 2 and 4); else the
+// loaded one's.
+static int loadFrom = -1;                        // the project loaded before, while the new one's on its way
+
+void menuNoteLoad(int from) {
+  loadFrom = from >= 0 && from != projectCurrent() && sceneChangeWaiting() ? from : -1;
+}
+
+static int shownLoaded() {
+  int now = projectCurrent();
+  if (loadFrom >= 0 && !sceneChangeWaiting()) loadFrom = -1;   // (come in: as it is)
+  bool held = !onStatus && menuSel < CARDS && actionHeld() && !(board.keys() & m8::BTN_SHIFT);
+  if (held && menuSel != now && !projectCopying(menuSel) && recording.mode == Recording::Idle)   // (projectLoad(): not while recording)
+    return menuSel;
+  if (loadFrom >= 0) {
+    noInterrupts();
+    int32_t beat = transport.beat;
+    interrupts();
+    return ((beat % BEATS_PER_BAR) + BEATS_PER_BAR) % BEATS_PER_BAR % 2 == 0 ? now : loadFrom;
+  }
+  return now;
+}
+
 static void drawItem(int k) {
   if (!listInView(k)) return;
   auto &t = board.tft();
@@ -201,7 +228,7 @@ static void drawItem(int k) {
       if (rowSpan(s, 2, r, c0, c1, true)) t.fillRect((c1 + 1) * PX, r * PX, PX, PX, frame);
     }
     uint16_t color = PROJECT_COLORS[k];
-    bool filled = projectFilled(k), loaded = k == projectCurrent();
+    bool filled = projectFilled(k), loaded = k == shownLoaded();
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
     uint16_t letter = loaded ? BG : filled || (sel && actionHeld()) ? color : DIM;   // (an empty slot's: grey, as its outline; its colour while an action button is held)
     if (loaded) {                                 // the loaded one: filled
@@ -270,10 +297,11 @@ static bool playPulse() {
 // What an item shows: redrawn when it changes.
 static uint32_t itemKey(int k) {
   bool sel = k == menuSel && !onStatus;
-  return sel | (k < CARDS && projectFilled(k)) << 1 | (k == projectCurrent()) << 2 | (k == CARDS && !projectHasClips()) << 3 |
+  int loaded = shownLoaded();
+  return sel | (k < CARDS && projectFilled(k)) << 1 | (k == loaded) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
          (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
-         (uint32_t)(k == projectCurrent() && transport.running) << 24 | (uint32_t)(k == projectCurrent() && playPulse()) << 25;
+         (uint32_t)(k == loaded && transport.running) << 24 | (uint32_t)(k == loaded && playPulse()) << 25;
 }
 
 void drawMenu() {

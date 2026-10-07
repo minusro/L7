@@ -121,7 +121,9 @@ uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease; }
 // another keeps the selection as it is.
 static bool loadFromMenu(int p) {
   bool fresh = !projectFilled(p);
+  int from = projectCurrent();
   if (!projectLoad(p)) return false;
+  menuNoteLoad(from);                              // (its card and the old one's take turns until it comes in)
   if (fresh) setMainSelection(NUM_TRACKS - 1, WAVE_CELL);
   metronomeOn = metronomeWanted();                 // (now: its first beat clicks too)
   return true;
@@ -187,8 +189,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // stops the clock, as in the looper's view. The menu doesn't
   // start or stop the clock.
   // SHIFT+A on a project: cuts it when let go (no confirmation). A on a card:
-  // its project loaded (an empty slot: a new one made), the menu staying
-  // open; on the loaded project's card: the menu closes. A and B do the same
+  // its project loaded, the menu staying open (the two cards taking turns as
+  // the loaded one until it comes in: menuNoteLoad()); on an empty slot: a
+  // new project made and opened, the menu closing; on the loaded project's
+  // card: the menu closes. A and B do the same
   // everywhere in the menu.
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
@@ -225,8 +229,16 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       } else if (slot == projectCurrent()) {        // the loaded one: back to the looper
         closeMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);
-      } else if (loadFromMenu(slot)) {               // another: loaded (an empty slot: a new project), the menu staying open
-        drawMenu();                                  // (the looper's selection stays as it is; a new project: on track 1)
+      } else {                                       // another: loaded, the menu staying open; an empty slot: a new project, opened at once
+        bool fresh = !projectFilled(slot);
+        if (loadFromMenu(slot)) {                    // (the looper's selection stays as it is; a new project: on track 1)
+          if (fresh) {
+            closeMenu();
+            for (int i = 0; i < ROWS; i++) drawTrack(i);
+          } else {
+            drawMenu();
+          }
+        }
       }
       return;
     }
