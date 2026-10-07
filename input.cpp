@@ -480,7 +480,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if (pressed & m8::BTN_DOWN && pos < ROWS - 1 && !(repeat && rowAtPos(pos + 1) == STATUS_ROW)) selected = rowAtPos(pos + 1);
     else if ((pressed & m8::BTN_DOWN) && pos == ROWS - 1 && !repeat) menuOnRelease = m8::BTN_DOWN;
     // To or from the status row: the cell below / above, the status row's having the menu cell to the left of the tracks' first.
-    if (selected == STATUS_ROW && row != STATUS_ROW) selectedCell = at + 1;
+    // (From an empty track, its one cell: the column kept for the rows with three, not that cell's.)
+    if (selected == STATUS_ROW && row != STATUS_ROW) selectedCell = min(selectedCell, CELLS - 1) + 1;
     else if (row == STATUS_ROW && selected != STATUS_ROW) selectedCell = max(at - 1, 0);
     // LEFT off a row's first cell (a fresh press): the menu, once let go (it's to the left).
     if (pressed & m8::BTN_LEFT && selectedCellIn(selected) > firstCellIn(selected)) selectedCell = selectedCellIn(selected) - 1;
