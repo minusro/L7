@@ -46,6 +46,9 @@ static void check(bool ok, const char *what) {
 
 // One audio interrupt only (runs while loop() is blocked in an SD transfer).
 static double pendingUs = 0;
+static int16_t feedUsb = 0;                         // USB audio in: this level (0: none coming in)
+static bool feedNoise = false;                      // the line input: noise only (overrides the feed below)
+static audio_block_t usbInL, usbInR;
 static void audioBlock();
 
 #include <deque>
@@ -129,8 +132,15 @@ static void audioBlock() {
     inL.data[i] = v;
     inR.data[i] = -v;
   }
+  if (feedNoise)                                   // (the line input: a little noise, as with nothing plugged in)
+    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) inL.data[i] = inR.data[i] = (int16_t)(rand() % 21 - 10);
   engine.simIn[0] = &inL; engine.simIn[1] = &inR;
   engine.simSetInput(0, &inL); engine.simSetInput(1, &inR);
+  if (feedUsb) {                                   // USB audio from a computer: a constant level, both channels
+    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) usbInL.data[i] = usbInR.data[i] = feedUsb;
+    engine.simIn[2] = &usbInL; engine.simIn[3] = &usbInR;
+    engine.simSetInput(2, &usbInL); engine.simSetInput(3, &usbInR);
+  }
   engine.simOut[0] = &outL; engine.simOut[1] = &outR;
   engine.update();
   inputIndex += AUDIO_BLOCK_SAMPLES;
@@ -2337,6 +2347,35 @@ for f in os.listdir("."):
     check(startSeen == 1 && ticks >= 48 && stopSeen == 1, m);
     simSetTempo(120);
     runBeats(1);
+  }
+
+  printf("USB audio in: mixed with the line input; the line input left out while it's only noise\n");
+  {
+    auto ringL = [&]() { return (int16_t)(inputRing[(transport.now - 1) % INPUT_FRAMES] & 0xFFFF); };
+    feedRamp = false; feedSineHz = 0;
+    feedUsb = 3000;
+    feedNoise = true;                                // nothing plugged into the line input
+    for (int i = 0; i < 40; i++) block();
+    int16_t early = ringL();
+    for (int i = 0; i < 1000; i++) block();          // (~3 s: quiet past the hold)
+    int16_t later = ringL();
+    char m6[200];
+    snprintf(m6, sizeof m6, "the line input's noise mixed in at first (%d), left out once quiet a while (%d: USB's alone, 3000)", early, later);
+    check(abs(early - 3000) <= 10 && later == 3000, m6);
+    feedNoise = false; feedSineHz = 440;             // a signal on the line input: in again at once
+    block(); block();
+    int16_t withLine = ringL();
+    int32_t sineNow = (int16_t)lround(8000 * sin(2 * M_PI * 440 * (inputIndex - 1) / AUDIO_SAMPLE_RATE_EXACT));
+    snprintf(m6, sizeof m6, "a signal on the line input: mixed in again at once (%d = USB's 3000 + the line's %d)", withLine, (int)sineNow);
+    check(abs(withLine - (3000 + sineNow)) <= 2, m6);
+    feedSineHz = 0; feedNoise = true;
+    for (int i = 0; i < 1000; i++) block();
+    feedUsb = 0;                                     // USB audio stops: the line input as ever
+    block(); block();
+    snprintf(m6, sizeof m6, "USB audio gone: the line input in again, noise and all (%d)", ringL());
+    check(abs(ringL()) <= 10, m6);
+    feedNoise = false;
+    for (int i = 0; i < 4; i++) block();
   }
 
   printf("random sessions\n");

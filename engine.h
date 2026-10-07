@@ -182,6 +182,14 @@ void setMasterVolume(int step);
 // bar's first beat. In the output, after the master volume; not in what a
 // resampling records.
 extern volatile bool metronomeOn;
+// The input: the line input and USB audio from a computer, mixed. While USB
+// audio comes in, the line input is left out once it has been quiet (peaks
+// under LINE_GATE_LEVEL) for LINE_GATE_HOLD_MS (nothing plugged in: its
+// noise not mixed in), and in again as soon as it isn't; each a fade over a
+// block. lineInPeak: its loudest block peak since loop() last took it, and
+// lineInFloor its quietest (0..1; the serial log, to set the level).
+extern volatile float lineInPeak, lineInFloor;
+extern volatile bool usbAudioIn;                     // USB audio coming in (its last block)
 // No click before this transport beat (loop(): while a scene or project
 // switch waits for its bar line, the switch's beat: silent meanwhile, the
 // new one's first beat clicks if it should).
@@ -198,13 +206,16 @@ int midiOutTakeUsb(uint32_t now, uint8_t *out, int max);
 
 class LooperEngine : public AudioStream {
 public:
-  LooperEngine() : AudioStream(2, inputQueue_) {}
+  // Inputs 0-1: the line input; 2-3: USB audio from a computer (mixed in).
+  LooperEngine() : AudioStream(4, inputQueue_) {}
   float masterGain = 0.7f;                         // the tracks' mix, before the master volume (headroom)
   bool monitor = true;
   void update() override;
 
 private:
-  audio_block_t *inputQueue_[2];
+  audio_block_t *inputQueue_[4];
+  float lineGain_ = 1;                              // the line input's level in the mix (the gate below)
+  uint32_t lineQuietBlocks_ = 0;
   int tickInBeat_ = 0;
   uint32_t nextTickAt_ = 0;
   void onBeat(uint32_t blockMicros, int sampleIndex);

@@ -94,6 +94,10 @@ void setTrackMix(int t, int volume, int balance) {
 static int masterStep = MASTER_VOLUME_UNITY;
 static volatile float outputGain = 1.0f;          // the master volume's
 volatile bool metronomeOn = false;
+volatile float lineInPeak = 0, lineInFloor = 1;
+volatile bool usbAudioIn = false;
+static constexpr float LINE_GATE_LEVEL = 0.0015f;   // ~ -56 dBFS (as measured on the M8: see the log)
+static constexpr uint32_t LINE_GATE_HOLD_MS = 2000;
 volatile int32_t clickFromBeat = INT32_MIN;
 
 // The metronome's wood block: two damped sines (its body and a harder upper
@@ -293,14 +297,32 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
 
 void LooperEngine::update() {
   audio_block_t *inL = receiveReadOnly(0), *inR = receiveReadOnly(1);
+  audio_block_t *usbL = receiveReadOnly(2), *usbR = receiveReadOnly(3);
   audio_block_t *outL = allocate(), *outR = allocate();
   if (!outL || !outR) {
     if (outL) release(outL);
     if (outR) release(outR);
     if (inL) release(inL);
     if (inR) release(inR);
+    if (usbL) release(usbL);
+    if (usbR) release(usbR);
     return;
   }
+  // The line input's gate (only while USB audio comes in): its peak this block.
+  int16_t linePeak = 0;
+  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+    int16_t a = inL ? abs(inL->data[i]) : 0, b = inR ? abs(inR->data[i]) : 0;
+    linePeak = max(linePeak, max(a, b));
+  }
+  float lp = linePeak / 32768.0f;
+  if (lp > lineInPeak) lineInPeak = lp;
+  if (lp < lineInFloor) lineInFloor = lp;
+  const bool usbIn = usbL || usbR;
+  usbAudioIn = usbIn;
+  const uint32_t holdBlocks = (uint32_t)(LINE_GATE_HOLD_MS * AUDIO_SAMPLE_RATE_EXACT / 1000 / AUDIO_BLOCK_SAMPLES);
+  lineQuietBlocks_ = lp < LINE_GATE_LEVEL ? lineQuietBlocks_ + 1 : 0;
+  const float lineFrom = lineGain_, lineTo = usbIn && lineQuietBlocks_ >= holdBlocks ? 0.0f : 1.0f;
+  lineGain_ = lineTo;
 
   uint32_t blockMicros = micros();
   const float usPerSample = 1e6f / AUDIO_SAMPLE_RATE_EXACT;
@@ -361,7 +383,11 @@ void LooperEngine::update() {
   const float outGain = outputGain;
   float outPeak[2] = {0, 0};
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-    int16_t l = inL ? inL->data[i] : 0, r = inR ? inR->data[i] : 0;
+    // The input: the line input (gated, faded over the block) and USB audio, mixed.
+    float g = lineFrom + (lineTo - lineFrom) * i / AUDIO_BLOCK_SAMPLES;
+    int32_t li = (int32_t)((inL ? inL->data[i] : 0) * g) + (usbL ? usbL->data[i] : 0);
+    int32_t ri = (int32_t)((inR ? inR->data[i] : 0) * g) + (usbR ? usbR->data[i] : 0);
+    int16_t l = (int16_t)constrain(li, -32768, 32767), r = (int16_t)constrain(ri, -32768, 32767);
     const uint32_t at = transport.now;
     inputRing[at % INPUT_FRAMES] = (uint16_t)l | ((uint32_t)(uint16_t)r << 16);
 
@@ -460,6 +486,8 @@ void LooperEngine::update() {
   release(outR);
   if (inL) release(inL);
   if (inR) release(inR);
+  if (usbL) release(usbL);
+  if (usbR) release(usbR);
 }
 
 }  // namespace looper

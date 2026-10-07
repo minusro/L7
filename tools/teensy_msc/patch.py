@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Adds a "Serial + MIDI + Mass Storage" USB type to the Teensyduino 1.62 core (Teensy 4.0),
+"""Adds a "Serial + MIDI + Audio + Mass Storage" USB type to the Teensyduino 1.62 core (Teensy 4.0),
 so the M8 can show its SD card to a computer as a disk (USB drive mode, usb_drive.cpp),
-and send and receive MIDI clock over USB (midi_usb.cpp).
+send and receive MIDI clock over USB (midi_usb.cpp), and stereo audio both ways
+(Teensyduino's USB audio, as its Serial + MIDI + Audio type: AudioInputUSB / AudioOutputUSB).
 
   python3 tools/teensy_msc/patch.py            # apply (safe to repeat)
   python3 tools/teensy_msc/patch.py --undo     # put the originals back
@@ -56,8 +57,8 @@ def edit(path, steps):
     return True
 
 
-MIDI_MARK = "L7_MIDI"
-MSC_TYPE = """#elif defined(USB_SERIAL_MSC) // L7_MSC L7_MIDI: Serial + MIDI + a mass-storage disk (tools/teensy_msc)
+MIDI_MARK = "L7_AUDIO"
+MSC_TYPE = """#elif defined(USB_SERIAL_MSC) // L7_MSC L7_MIDI L7_AUDIO: Serial + MIDI + Audio + a mass-storage disk (tools/teensy_msc)
   #define VENDOR_ID		0x16C0
   #define PRODUCT_ID		0x0483
   #define MANUFACTURER_NAME	{'T','e','e','n','s','y','d','u','i','n','o'}
@@ -65,8 +66,8 @@ MSC_TYPE = """#elif defined(USB_SERIAL_MSC) // L7_MSC L7_MIDI: Serial + MIDI + a
   #define PRODUCT_NAME		{'U','S','B',' ','S','e','r','i','a','l'}
   #define PRODUCT_NAME_LEN	10
   #define EP0_SIZE		64
-  #define NUM_ENDPOINTS         5
-  #define NUM_INTERFACE		4
+  #define NUM_ENDPOINTS         7
+  #define NUM_INTERFACE		7
   #define CDC_IAD_DESCRIPTOR	1
   #define CDC_STATUS_INTERFACE	0
   #define CDC_DATA_INTERFACE	1	// Serial
@@ -96,7 +97,15 @@ MSC_TYPE = """#elif defined(USB_SERIAL_MSC) // L7_MSC L7_MIDI: Serial + MIDI + a
   #define ENDPOINT2_CONFIG	ENDPOINT_RECEIVE_UNUSED + ENDPOINT_TRANSMIT_INTERRUPT
   #define ENDPOINT3_CONFIG	ENDPOINT_RECEIVE_BULK + ENDPOINT_TRANSMIT_BULK
   #define ENDPOINT4_CONFIG	ENDPOINT_RECEIVE_BULK + ENDPOINT_TRANSMIT_BULK
+  #define AUDIO_INTERFACE	4	// audio (3 interfaces; after mass storage, as the descriptors come)
+  #define AUDIO_TX_ENDPOINT     6
+  #define AUDIO_TX_SIZE         180
+  #define AUDIO_RX_ENDPOINT     6
+  #define AUDIO_RX_SIZE         180
+  #define AUDIO_SYNC_ENDPOINT	7
   #define ENDPOINT5_CONFIG	ENDPOINT_RECEIVE_BULK + ENDPOINT_TRANSMIT_BULK
+  #define ENDPOINT6_CONFIG	ENDPOINT_RECEIVE_ISOCHRONOUS + ENDPOINT_TRANSMIT_ISOCHRONOUS
+  #define ENDPOINT7_CONFIG	ENDPOINT_RECEIVE_UNUSED + ENDPOINT_TRANSMIT_ISOCHRONOUS
 
 #elif defined(USB_AUDIO)
 """
@@ -161,7 +170,7 @@ def apply():
     hdr = os.path.join(core, "usb_desc.h")
     if edit(hdr, [("#elif defined(USB_AUDIO)\n", MSC_TYPE)]):
         changed.append("usb_desc.h")
-    else:                                            # patched before MIDI was in it: its block replaced
+    else:                                            # patched before MIDI and audio were in it: its block replaced
         h = open(hdr).read()
         if MIDI_MARK not in h:
             i = h.index("#elif defined(USB_SERIAL_MSC)")
@@ -222,14 +231,16 @@ def apply():
             sys.exit("boards.txt: anchor not found")
         b = b.replace(anchor, anchor +
                       "# L7_MSC: tools/teensy_msc/patch.py\n"
-                      "teensy40.menu.usb.serialmsc=Serial + MIDI + Mass Storage (L7 patch)\n"
+                      "teensy40.menu.usb.serialmsc=Serial + MIDI + Audio + Mass Storage (L7 patch)\n"
                       "teensy40.menu.usb.serialmsc.build.usbtype=USB_SERIAL_MSC\n"
                       "teensy40.menu.usb.serialmsc.upload_port.usbtype=USB_SERIAL\n", 1)
         open(boards, "w").write(b)
         changed.append("boards.txt")
-    elif "serialmsc=Serial + Mass Storage (L7 patch)" in b:   # (its name from before MIDI)
-        open(boards, "w").write(b.replace("serialmsc=Serial + Mass Storage (L7 patch)", "serialmsc=Serial + MIDI + Mass Storage (L7 patch)"))
-        changed.append("boards.txt (name)")
+    else:                                            # (its name from before MIDI and audio)
+        for old in ("serialmsc=Serial + Mass Storage (L7 patch)", "serialmsc=Serial + MIDI + Mass Storage (L7 patch)"):
+            if old in b:
+                open(boards, "w").write(b.replace(old, "serialmsc=Serial + MIDI + Audio + Mass Storage (L7 patch)"))
+                changed.append("boards.txt (name)")
     print("patched:", ", ".join(changed) if changed else "nothing to do (already patched)", "-", plat)
 
 

@@ -43,11 +43,11 @@ protected:
   void transmit(audio_block_t *b, int ch) { memcpy(simOut[ch], b, sizeof *b); }
   void release(audio_block_t *b) { if (!isInput(b)) delete b; }
 private:
-  bool isInput(audio_block_t *b) { return b == simIn[0] || b == simIn[1]; }
+  bool isInput(audio_block_t *b) { return b == simIn[0] || b == simIn[1] || b == simIn[2] || b == simIn[3]; }
   audio_block_t **inputs_;
   int n_;
 public:
-  audio_block_t *simIn[2] = {};
+  audio_block_t *simIn[4] = {};
 };
 
 class HardwareSerial {

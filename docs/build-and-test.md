@@ -2,9 +2,9 @@
 
 ## Firmware
 
-Teensyduino 1.62, board `teensy:avr:teensy40`, **USB type "Serial + MIDI + Mass Storage
-(L7 patch)"** (`usb=serialmsc`, for storage mode, see usb_drive.h, and USB MIDI,
-midi_usb.h; with plain "Serial" the menu item does nothing and there's no USB
+Teensyduino 1.62, board `teensy:avr:teensy40`, **USB type "Serial + MIDI + Audio + Mass Storage
+(L7 patch)"** (`usb=serialmsc`, for storage mode, see usb_drive.h, USB MIDI,
+midi_usb.h, and USB audio, playback.md; with plain "Serial" the menu item does nothing and there's no USB
 MIDI; a core patched before MIDI was added gets it by running the patch again), 600 MHz. That type isn't in Teensyduino:
 run `python3 tools/teensy_msc/patch.py` once (and again after a Teensyduino
 update; `--undo` restores the originals) before building. Without the patch,

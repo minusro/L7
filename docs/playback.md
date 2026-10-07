@@ -196,3 +196,24 @@ the audio. Two clocks at once (serial and USB): the one that ticked first is
 followed until it stops; the other's ticks, starts and stops are ignored
 meanwhile. A pause (no tick for 0.5 s) starts the tempo's measurement afresh.
 In storage mode nothing is taken in (`midiInSuspend()`).
+
+## USB audio
+
+The patched USB type ("Serial + MIDI + Audio + Mass Storage",
+tools/teensy_msc/patch.py) adds Teensyduino's USB audio (as its Serial + MIDI +
+Audio type: stereo, 16-bit, 44.1 kHz both ways; interfaces 4-6, endpoints 6 and
+7, after mass storage's 3 and 5). The M8 shows up on a computer as an audio
+device, "L7", 2 in and 2 out (`AudioInputUSB` / `AudioOutputUSB`,
+m8_looper.ino, only with that type).
+* Out: the engine's output, as the line out and headphones get it (after the
+  master volume).
+* In: the engine's inputs 2-3, mixed into the input with the line input (what's
+  monitored and recorded, `inputRing`; clipped to 16 bits). While USB audio
+  comes in, the line input is left out once it has been quiet (block peaks
+  under `LINE_GATE_LEVEL`, ~-56 dBFS) for 2 s, as with nothing plugged in (the
+  M8 can't tell: no jack detection), and in again as soon as it isn't, each a
+  fade over a block; with no USB audio, the line input as ever. The serial log
+  shows the line input's quietest and loudest block every 5 s while USB audio
+  comes in ("USB audio in; line input: ..."), to set the level from the M8's
+  own noise floor. The simulator checks the mix and the gate.
+

@@ -85,6 +85,12 @@ LooperEngine         engine;
 AudioOutputI2S       i2sOut;
 AudioConnection      c1(i2sIn, 0, engine, 0), c2(i2sIn, 1, engine, 1);
 AudioConnection      c3(engine, 0, i2sOut, 0), c4(engine, 1, i2sOut, 1);
+#if defined(AUDIO_INTERFACE)                       // USB audio (the patched USB type): a computer's audio mixed into the input, the output to it too
+AudioInputUSB        usbInput;
+AudioOutputUSB       usbOutput;
+AudioConnection      c5(usbInput, 0, engine, 2), c6(usbInput, 1, engine, 3);
+AudioConnection      c7(engine, 0, usbOutput, 0), c8(engine, 1, usbOutput, 1);
+#endif
 AudioControlSGTL5000 codec;
 
 // ---- Freeze detector (debugging): loop() and the audio interrupt both count
@@ -155,7 +161,7 @@ static void reloadFromCard() {
 void setup() {
   Serial.begin(115200);
   if (CrashReport) Serial.print(CrashReport);
-  AudioMemory(12);
+  AudioMemory(24);                                 // (USB audio's blocks too)
   board.begin();
   board.powerButtonPressed();                        // the press that switched us on
   for (int i = 0; i < 6 && !codec.enable(); i++) delay(10);
@@ -215,6 +221,17 @@ void loop() {
 
   debugStage = "MIDI in";
   midiInService();                                 // an external clock: its start, stop, tempo and beat
+  // While USB audio comes in: the line input's levels on the serial log every
+  // 5 s (its gate's level is set from the quietest, nothing plugged in).
+  static uint32_t lineLogAt = 0;
+  if (usbAudioIn && millis() - lineLogAt >= 5000) {
+    lineLogAt = millis();
+    float peak = lineInPeak, floor = lineInFloor;
+    lineInPeak = 0;
+    lineInFloor = 1;
+    Serial.printf("USB audio in; line input: quietest block %.1f dBFS, loudest %.1f dBFS (gate %s)\n",
+                  20 * log10f(floor + 1e-9f), 20 * log10f(peak + 1e-9f), floor < 0.0015f ? "can close" : "open");
+  }
   debugStage = "keys (I2C)";
   pollKeys();
   saveSessionWhenIdle();
