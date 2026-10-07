@@ -241,6 +241,9 @@ int main(int argc, char **argv) {
   menuExportStatus("SAVED AS L7 A005", 9);          // the label after an export: the name in the project's colour
   render(out + "/ui_menu_exported.png");
   menuExportStatus(nullptr);
+  for (int i = 0; i < 7; i++) menuKeys(m8::BTN_DOWN);   // the list scrolled to its end: its last item
+  render(out + "/ui_menu_list_end.png");
+  for (int i = 0; i < 7; i++) menuKeys(m8::BTN_UP);     // (back to export)
   menuKeys(m8::BTN_LEFT);                          // a card with A held: its frame in the project's colour
   board.heldKeys = m8::BTN_EDIT;
   render(out + "/ui_menu_held.png");
