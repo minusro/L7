@@ -102,3 +102,16 @@ Serial (115200) logs worth asking for when something glitches:
 
 Measured on the hardware: round-trip latency 3.47 ms (153 samples); headphone
 sense ≈ 10 plugged / ≈ 580 unplugged on pin 22; speaker enable pin 9 HIGH = on.
+
+## User guide and cheatsheet
+
+`docs/user-guide/guide.html` (A4) and `docs/user-guide/cheatsheet.html` (one
+A5 page) are printed to `docs/L7 User Guide.pdf` and `docs/L7 Cheatsheet.pdf`;
+print both again after a change to either (the cheatsheet must stay one page):
+
+```sh
+for f in "guide:L7 User Guide" "cheatsheet:L7 Cheatsheet"; do
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu \
+    --no-pdf-header-footer --print-to-pdf="docs/${f#*:}.pdf" "file://$PWD/docs/user-guide/${f%%:*}.html"
+done
+```

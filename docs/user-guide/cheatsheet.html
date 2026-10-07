@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>L7 Cheatsheet</title>
+<style>
+  @page { size: A5; margin: 7mm 7mm 6mm 7mm; }
+  :root {
+    --ink: #1d1d1f;
+    --muted: #5d5d63;
+    --rule: #e1e1e6;
+    --accent: #1fa98a;
+    --tint: #eef7f4;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 7.1pt; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    line-height: 1.3;
+  }
+  header { display: flex; align-items: baseline; gap: 6pt; border-bottom: 1.6pt solid var(--accent); padding-bottom: 2.5pt; margin-bottom: 4pt; }
+  h1 { font-size: 17pt; margin: 0; letter-spacing: -0.4pt; line-height: 1; }
+  header .sub { color: var(--muted); font-size: 7.6pt; }
+  header .keys { margin-left: auto; color: var(--muted); font-size: 6.6pt; text-align: right; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 9pt; }
+  .col > section { margin-bottom: 4.5pt; }
+  h2 {
+    font-size: 7.6pt; text-transform: uppercase; letter-spacing: 0.5pt; color: var(--accent);
+    margin: 0 0 1.5pt; padding-bottom: 1pt; border-bottom: 0.6pt solid var(--rule);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  td { vertical-align: top; padding: 1.1pt 0; border-bottom: 0.4pt solid var(--rule); }
+  tr:last-child td { border-bottom: 0; }
+  td:first-child { white-space: nowrap; padding-right: 4pt; width: 1%; }
+  .key {
+    display: inline-block; padding: 0 2.2pt; border: 0.6pt solid #b8b8c0; border-radius: 2pt;
+    background: #f6f6f8; font-size: 6.1pt; font-weight: 650; line-height: 1.3;
+  }
+  .plus { color: var(--muted); padding: 0 0.6pt; }
+  .adj td:first-child { font-weight: 600; }
+  .adj th { font-size: 5.9pt; font-weight: 600; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0 0 1pt; border-bottom: 0.6pt solid var(--ink); }
+  .adj td + td { padding-right: 3pt; }
+  p { margin: 1.5pt 0 0; }
+  .note { color: var(--muted); }
+  .screen { display: flex; gap: 5pt; align-items: flex-start; }
+  .screen img { width: 42%; border: 0.5pt solid #000; border-radius: 2pt; image-rendering: pixelated; }
+  .screen ul { margin: 0; padding-left: 8pt; flex: 1; }
+  .screen li { margin-bottom: 0.8pt; }
+  footer { color: var(--muted); font-size: 6pt; border-top: 0.6pt solid var(--rule); padding-top: 2pt; margin-top: 1pt; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>L7</h1>
+  <span class="sub">7-track looper for the M8 · cheatsheet</span>
+  <span class="keys"><span class="key">A</span> = EDIT &nbsp; <span class="key">B</span> = OPT</span>
+</header>
+
+<section class="screen" style="margin-bottom:4.5pt">
+  <img src="img/screen.png" alt="The looper's screen">
+  <ul>
+    <li><b>Tracks 1–7</b>, top to bottom: <b>waveform</b> (bright part plays), <b>filter</b>, <b>volume</b> (level, balance, meter), then the track's button (filled: playing, outlined: muted).</li>
+    <li><b>Status row</b>: scene <code>SCN 3/7</code>, clock (bar.beat.step), tempo, and the <b>action button</b>, which shows what <span class="key">A</span> will do.</li>
+    <li>The small icon at the bottom left: the <b>menu</b> (projects, export, storage mode).</li>
+    <li>The selected cell has a light frame; colours follow the loaded project.</li>
+  </ul>
+</section>
+
+<div class="grid">
+<div class="col">
+
+<section>
+  <h2>Move</h2>
+  <table>
+    <tr><td><span class="key">▲</span><span class="key">▼</span> <span class="key">◀</span><span class="key">▶</span></td><td>Select a row / a cell</td></tr>
+    <tr><td>Off any edge</td><td>The menu, once you let go; back the same way (as if the screens wrapped round)</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Tracks</h2>
+  <table>
+    <tr><td><span class="key">A</span> empty track</td><td>Record from the next bar line (clock stopped: starts it, bar 1). Again: stop at the bar's end; within a beat after a bar line, there</td></tr>
+    <tr><td><span class="key">A</span> other track</td><td>While one records: stop it, the next starts where it ends</td></tr>
+    <tr><td><span class="key">A</span> full track</td><td>Mute / unmute</td></tr>
+    <tr><td><span class="key">SHIFT</span><span class="plus">+</span><span class="key">A</span></td><td>Cut clip / paste onto an empty track / cancel a recording</td></tr>
+    <tr><td><span class="key">SHIFT</span><span class="plus">+</span><span class="key">◀</span><span class="key">▶</span></td><td>Previous / next recording on the card</td></tr>
+    <tr><td><span class="key">B</span><span class="plus">+</span><span class="key">A</span> empty track</td><td>Resample: record what you hear (needs a clip playing)</td></tr>
+  </table>
+  <p class="note">Loops are whole bars, up to 32. A metronome clicks in a new project until the first loop is done.</p>
+</section>
+
+<section>
+  <h2>Status row with A</h2>
+  <table>
+    <tr><td>Scene cell</td><td><span class="key">A</span> next scene (on release) · <span class="key">SHIFT</span><span class="plus">+</span><span class="key">A</span> duplicate it</td></tr>
+    <tr><td>Clock cell</td><td><span class="key">A</span> play / stop</td></tr>
+    <tr><td>Tempo cell</td><td><span class="key">A</span> tap tempo · <span class="key">SHIFT</span><span class="plus">+</span><span class="key">A</span> metronome: <b>0</b> off, <b>A</b> auto (only with nothing playing), <b>1</b> on</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Clock</h2>
+  <table>
+    <tr><td><span class="key">START</span></td><td>Play from 1.1.1 / stop</td></tr>
+    <tr><td><span class="key">SHIFT</span><span class="plus">+</span><span class="key">START</span></td><td>Restart from 1.1.1</td></tr>
+  </table>
+</section>
+
+</div>
+<div class="col">
+
+<section>
+  <h2>Adjust: hold B + arrows</h2>
+  <table class="adj">
+    <tr><th>Cell</th><th>◀ ▶</th><th>▲ ▼</th></tr>
+    <tr><td>Waveform</td><td>Move the range (tap twice: by its length)</td><td>Range longer / shorter (twice: ×2 / ½)</td></tr>
+    <tr><td>Filter</td><td>Move the band</td><td>Wider / narrower</td></tr>
+    <tr><td>Volume</td><td>Balance</td><td>Volume (7.5 dB steps)</td></tr>
+    <tr><td>Scene</td><td></td><td>Next / previous scene</td></tr>
+    <tr><td>Clock</td><td colspan="2">Master volume (all projects)</td></tr>
+    <tr><td>Tempo</td><td>±0.1 BPM</td><td>±1 BPM</td></tr>
+  </table>
+  <p><span class="key">B</span> twice: reset the cell (whole loop, filter open, unity, centre; clock: master 100%; tempo: the last recording's).</p>
+</section>
+
+<section>
+  <h2>Scenes</h2>
+  <table>
+    <tr><td><span class="key">SHIFT</span><span class="plus">+</span><span class="key">▲</span><span class="key">▼</span></td><td>Next / previous scene, on the bar line after you let go of SHIFT</td></tr>
+    <tr><td>…twice, hold</td><td>To the copy of the last (N+1*) / the empty one (0*)</td></tr>
+    <tr><td><span class="key">SHIFT</span><span class="plus">+</span><span class="key">B</span> twice</td><td>Duplicate the scene</td></tr>
+    <tr><td><span class="key">SHIFT</span> <span class="key">B</span> <span class="key">A</span></td><td>Cut the scene (in that order)</td></tr>
+    <tr><td><span class="key">B</span> <span class="key">SHIFT</span> <span class="key">A</span></td><td>Paste it after this one</td></tr>
+  </table>
+  <p class="note">Changes save into the scene as you go.</p>
+</section>
+
+<section>
+  <h2>Menu</h2>
+  <table>
+    <tr><td><span class="key">A</span> on a card</td><td>Load it (playing: on the next bar line, its card flashes until then). Hold: back to the looper too</td></tr>
+    <tr><td><span class="key">A</span> empty card</td><td>New project, straight to the looper</td></tr>
+    <tr><td><span class="key">A</span> loaded card</td><td>Back to the looper</td></tr>
+    <tr><td><span class="key">SHIFT</span><span class="plus">+</span><span class="key">A</span></td><td>Cut project / paste into an empty slot</td></tr>
+    <tr><td>Export</td><td>Ableton Live set in <code>/L7/EXPORTS</code></td></tr>
+    <tr><td>Storage mode</td><td>The card as a USB drive; any key to exit</td></tr>
+  </table>
+  <p class="note"><span class="key">B</span> works as <span class="key">A</span> in the menu.</p>
+</section>
+
+</div>
+</div>
+
+<footer><span>Hold the power key to switch off: everything is saved first.</span><span>Full guide: L7 User Guide.pdf</span></footer>
+
+</body>
+</html>
