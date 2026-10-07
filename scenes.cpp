@@ -241,6 +241,12 @@ static void takeHeld() {
   go(pos, true);
 }
 bool sceneGoEmpty() { return go(0, true); }
+
+bool sceneNext() {
+  int from = sceneCurrent();
+  if (from >= (int)list.count) return list.count ? sceneGoEmpty() : false;   // the last, or N+1*: round to 0*
+  return sceneStep(1);
+}
 bool sceneGoEnd() { return go(list.count + 1, true); }
 
 bool sceneCut() {

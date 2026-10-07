@@ -43,6 +43,7 @@ void flushScenes();            // everything waiting saved now (power off)
 
 // Moving around (false: nothing to do, or a recording is in progress).
 bool sceneStep(int dir);       // -1: older; 1: newer, up to N+1* (none while there are no scenes)
+bool sceneNext();               // the "next scene" action: 0*, 1 ... N, then round to 0* (N+1* left out; from it: 0*)
 bool sceneGoEmpty();           // to 0*
 bool sceneGoEnd();             // to N+1*
 bool sceneCut();               // to the scene clipboard (not a scene with no clips: the clipboard keeps what it had); removed from the list, goes to the one before
