@@ -1,7 +1,7 @@
 // audio_follow.h — audio follow: the tempo and the beat heard in the input
 // (the line input and USB audio, as monitored), followed by the clock.
 //
-// On (B+A on the tempo cell; saved with the session), the interrupt measures
+// On (SHIFT+A on the tempo cell; saved with the session), the interrupt measures
 // how sharply the input gets louder, block by block (engine.h onsetRing).
 // From that, every half second, the tempo: the autocorrelation of the last
 // ~6 s, each candidate scored by its own lag and three multiples (a beat's

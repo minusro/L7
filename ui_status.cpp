@@ -24,7 +24,7 @@
 //     clock (as START; SHIFT+A as SHIFT+START).
 //   fourth cell: the tempo, followed by an inverted "BPM" tag (both in the
 //     accent colour while B alone is held there: B + arrows change it). With
-//     audio follow on (B+A there), the tempo flashes with the beat (black until
+//     audio follow on (SHIFT+A there), the tempo flashes with the beat (black until
 //     their beat is locked, then the accent colour; then as it was): the clock's
 //     while it runs, else the one heard (none found yet: at the tempo shown).
 // Text and tags are redrawn whole each pass (their boxes clear what was

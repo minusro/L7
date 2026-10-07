@@ -288,12 +288,14 @@ int main(int argc, char **argv) {
   render(out + "/ui_status_tap_held.png");
   board.heldKeys = 0;
   render(out + "/ui_status.png");
-  board.heldKeys = m8::BTN_OPT;                    // B held on the tempo: B + arrows change it; B+A, audio follow (an ear)
+  board.heldKeys = m8::BTN_OPT;                    // B held on the tempo: B + arrows change it; B+A, the metronome
   render(out + "/ui_status_tempo_edit.png");
-  audioFollowToggle();                             // following: the ear crossed out (B+A: off)
+  board.heldKeys = m8::BTN_SHIFT;                  // SHIFT held on the tempo: audio follow (an ear)
+  render(out + "/ui_status_follow.png");
+  audioFollowToggle();                             // following: the ear crossed out (SHIFT+A: off)
   render(out + "/ui_status_follow_on.png");
   audioFollowToggle();
-  board.heldKeys = m8::BTN_SHIFT;                  // SHIFT held on the tempo: the metronome
+  board.heldKeys = m8::BTN_OPT;                    // B held on the tempo: the metronome
   render(out + "/ui_status_metro.png");
   {
     bool wasRunning = transport.running;           // clicking: crossed out

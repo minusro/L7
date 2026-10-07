@@ -39,9 +39,9 @@ static void resetCell() {
 // least-squares fit of every tap in the run (tap n at beat n), so each tap
 // refines it: two taps give their interval, a long series evens out the
 // jitter of single taps. Taps further apart than TAP_TIMEOUT_MS start a new
-// run, and so does any other key press in between. Every 4th tap after the
-// first (the 5th, 9th, 13th ...) lands on a bar line: a stopped transport
-// starts there from 1.1.1; a running one snaps to the nearest bar start.
+// run, and so does any other key press in between. The 5th tap lands on a
+// bar line: a stopped clock starts there, from 1.1.1 (running, it's left as it
+// is: no snapping to the taps).
 static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // a little over a beat at the slowest tempo (30 BPM)
 
 static int tapCount = 0;                            // taps in this run (0: the next is the first)
@@ -69,10 +69,7 @@ static void tapTempo() {
     double msPerBeat = (n * sumIT - sumI * sumT) / (n * (double)n * ((double)n * n - 1) / 12);
     if (msPerBeat > 0) setTempo(60000.0f / msPerBeat);
   }
-  if (n > 1 && n % 4 == 1) {                        // 5th, 9th, ...: a bar line now
-    if (transport.running) transportSnapToBar();
-    else transportRestart();
-  }
+  if (n == 5 && !transport.running) transportStart();   // the 5th: a bar line now
 }
 
 // The clock started by hand (START, A on the clock cell; SHIFT: from 1.1.1
@@ -711,7 +708,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   // press, running or not. A on the status row: duplicate the scene (scene
   // cell), play / stop (clock cell), tap tempo (tempo cell); with SHIFT, on any of them: the same
   // as SHIFT+START.
-  // B+A on the tempo cell: audio follow on / off; on an empty track: resample (B otherwise adjusts cells). With SHIFT too, the order they were pressed in:
+  // B+A on the tempo cell: the metronome's next setting; on an empty track: resample (B otherwise adjusts cells). With SHIFT too, the order they were pressed in:
   // B then SHIFT, +A: paste the scene clipboard after the scene; SHIFT then
   // B, +A: cut the scene to it.
   if (pressed & m8::BTN_EDIT) noteActionPress();     // before it acts: the icon shows what it does
@@ -720,7 +717,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     if (shift) {
       sceneChanged = optFirst ? scenePaste() : sceneCut();
     } else if (onTempo) {
-      audioFollowToggle();                         // B+A on the tempo cell: audio follow on / off
+      setMetronomeMode(nextMetronomeMode());       // B+A on the tempo cell: the metronome's next setting
+      metronomeOn = metronomeWanted();             // (at once: the next beat too)
     } else if (!onStatus && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
                recordQueued() != selected && anyClipHeard()) {
       // An empty track resamples: records the app's output (queued behind a
@@ -734,10 +732,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
   if ((transportKey || (edit && onStatus && !onScene && !onTempo)) && shift) restartByHand();
-  if (edit && onStatus && shift && onTempo) {      // SHIFT+A on the tempo cell: the metronome's next setting
-    setMetronomeMode(nextMetronomeMode());
-    metronomeOn = metronomeWanted();               // (at once: the next beat too)
-  }
+  if (edit && onStatus && shift && onTempo) audioFollowToggle();   // SHIFT+A on the tempo cell: audio follow on / off
   if (edit && onStatus && shift && onScene) sceneChanged = sceneDuplicate();   // SHIFT+A on the scene cell: a copy of the scene after it, as SHIFT+B twice
   if (edit && onStatus && !shift) {
     if (onScene) nextSceneArmed = true;            // (acts once A is let go, below)

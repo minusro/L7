@@ -7,7 +7,7 @@
 // space. Rows of blocks (16 in the cell):
 //   0, 15   the border
 //   1, 14   space (the playheads reach into it)
-// A black line the waveform's height, a block wide, just before each bar's
+// A black line the waveform's height, two pixels wide, just before each bar's
 // start (but the first's), on every track, while recording too.
 //   2 - 13  the waveform, in pixels (the only part not in blocks): a 2-pixel
 //           line along the middle, the peaks reaching up to 11 pixels above
@@ -17,16 +17,18 @@
 // track) and 50% grey outside; on a muted clip the range is 50% grey and the
 // rest dark grey. While B is held on the selected waveform cell (other keys too; B +
 // arrows change the range), the range is in the accent colour, muted or not.
-// The start position: a checkerboard line of 1-pixel squares, a block wide and the
-// waveform's height, in the column a bar line there would take, white and
+// The start position: a checkerboard line of 1-pixel squares, two pixels wide and the
+// waveform's height, where a bar line there would be, white and
 // black (B held to edit the range too); on every track. The playhead is an accent-coloured line (white
 // while the range is in the accent colour); on a muted clip a black one
 // (cutting through its waveform).
 // A recording track's waveform area is in the accent colour (a block of black
 // round it, inside the border), its waveform growing in white (live view),
 // the bar lines in the dark accent, the record head inverting its column.
-// Full redraws only happen when something changes; the playhead moves by
-// redrawing just its columns.
+// Bar lines, range edges, the start position and the playhead are placed by
+// the pixel (180 across), not by the 2-pixel block; vertically they fill
+// whole block rows. Full redraws only happen when something changes; the
+// playhead moves by redrawing just the block columns it leaves and covers.
 
 static constexpr int BLOCK_COLS = WAVE_W / PX;                  // 94, the border's included
 static constexpr int WAVE_LEFT = 2;                            // the first waveform column (after the border and a space)
@@ -50,12 +52,9 @@ struct WaveView {
   uint16_t bg = BG;                                // behind the waveform (a recording's: the accent colour)
   uint16_t ground = BG;                            // round it (rowGround())
   uint64_t borders = 0;                            // the border's sides (bordersOf())
-  int rangeFirst = 0, rangeCols = 0;               // columns inside the loop range: rangeFirst on, wrapping
-  int rangeFirstPx = 0, rangePx = 0;               // and its pixel columns
-  int markCol = -1;                                // the start position's column; -1: none
-  bool markOn = false;                             // it's shown (every clip)
-  int markEdge = 0;                                // and its edge's column (the range's colour there)
-  int playCol = -1;                                // playhead / record head; -1: none
+  int rangeFirstPx = 0, rangePx = 0;               // pixel columns inside the loop range: rangeFirstPx on, wrapping
+  int markPx = -1;                                 // the start position's line: its first pixel column; -1: none
+  int playPx = -1;                                 // playhead / record head: its first pixel column; -1: none
   uint16_t headColor = 0;                          // a line this colour; INVERT_HEAD: the column inverted
   uint16_t rangeInk = INK;                         // the waveform inside the loop range
   uint16_t outInk = DARK;                          // the waveform outside the loop range
@@ -83,24 +82,27 @@ static uint8_t pixelLevel(const uint8_t *src, int p) {
   return m;
 }
 
-// The column edge nearest beat `beat` of a loop of loopBeats (0..WAVE_COLS;
-// past the loop's end for beats past it): column edge k is between columns
+// The pixel column edge nearest beat `beat` of a loop of loopBeats (0..PX_COLS;
+// past the loop's end for beats past it): edge k is between pixel columns
 // k - 1 and k. Range edges, bar starts and the start position all snap to
 // these, so they agree.
-static int edgeCol(uint32_t beat, uint32_t loopBeats) {
-  return (int)(((uint64_t)beat * WAVE_COLS + loopBeats / 2) / loopBeats);
+static constexpr int PX_COLS = WAVE_COLS * PX;                  // 180
+static constexpr int LINE_W = 2;                               // a bar line's, the start position's and the playhead's width, pixels
+static int edgePx(uint32_t beat, uint32_t loopBeats) {
+  return (int)(((uint64_t)beat * PX_COLS + loopBeats / 2) / loopBeats);
 }
+// A line LINE_W wide from pixel column `from` (wrapping) covers pixel column p.
+static bool covers(int from, int p) { return from >= 0 && (p - from + PX_COLS) % PX_COLS < LINE_W; }
 
 // The start position's line in waveform column c of view v: the waveform's
 // height (rows 2-13), a checkerboard of 1-pixel squares, white and black
 // (over the waveform; editing the range too); on every track.
 static constexpr int START_TOP = MID_ROW - WAVE_REACH, START_BOTTOM = MID_ROW + 1 + WAVE_REACH;   // rows 2-13
-static bool startHere(const WaveView &v, int c) { return v.markOn && v.visible && !v.live && c == v.markCol; }
 
 // Block column bc (0 and BLOCK_COLS - 1: the frame's), drawn whole: two
 // pixel columns. The waveform is drawn in pixels (each pixel column its own
-// peak, each pixel row a step); everything else (the frame, bar lines, the
-// start position, the playhead) in blocks.
+// peak, each pixel row a step), and so are the bar lines, the start position
+// and the playhead across (each pixel column checked); the frame in blocks.
 static void drawColumn(int i, int bc) {
   if (bc < 0 || bc >= BLOCK_COLS) return;
   const ShownTrack &tr = shownTrack(i);           // (as the row shows it: a switch all at once)
@@ -128,22 +130,24 @@ static void drawColumn(int i, int bc) {
       }
     }
     int bars = v.live ? (int)v.liveBars : (int)tr.loopBars;      // (recording: as it's shown so far)
-    for (int b = 1; b < bars; b++)                                // bars 2 on: a black line just before each start
-      if (edgeCol(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) == c + 1) {
-        for (int r = MID_ROW - WAVE_REACH; r <= MID_ROW + 1 + WAVE_REACH; r++) block(r, v.live ? ACCENT_DARK : v.bg);   // (recording: the dark accent)
-        break;
-      }
-    if (startHere(v, c))                                          // the start position: a checkerboard line, 1-pixel squares,
-      for (int y = START_TOP * PX; y < (START_BOTTOM + 1) * PX; y++)   // the waveform's height, white and black (B held too)
-        for (int x = 0; x < PX; x++) px[y * PX + x] = (x + y) % 2 == 0 ? INK : BG;
-    if (c == v.playCol) {                                         // on top: the playhead
-      int reach = v.live ? 0 : 1;                                 // (a block past the waveform each way; recording: within its backdrop)
-      for (int y = (MID_ROW - WAVE_REACH - reach) * PX; y < (MID_ROW + 2 + WAVE_REACH + reach) * PX; y++)
-        for (int x = 0; x < PX; x++) {
-          uint16_t &p = px[y * PX + x];
-          p = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
-            : p == v.bg ? (v.bg == BG ? INK : BG) : v.bg;
+    for (int sub = 0; sub < PX; sub++) {
+      const int p = c * PX + sub;                                 // (this pixel column)
+      for (int b = 1; b < bars; b++)                              // bars 2 on: a black line just before each start
+        if (covers(edgePx(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) - LINE_W, p)) {
+          for (int y = (MID_ROW - WAVE_REACH) * PX; y < (MID_ROW + 2 + WAVE_REACH) * PX; y++) px[y * PX + sub] = v.live ? ACCENT_DARK : v.bg;   // (recording: the dark accent)
+          break;
         }
+      if (!v.live && covers(v.markPx, p))                         // the start position: a checkerboard line, 1-pixel squares,
+        for (int y = START_TOP * PX; y < (START_BOTTOM + 1) * PX; y++)   // the waveform's height, white and black (B held too)
+          px[y * PX + sub] = (p + y) % 2 == 0 ? INK : BG;
+      if (covers(v.playPx, p)) {                                  // on top: the playhead
+        int reach = v.live ? 0 : 1;                               // (a block past the waveform each way; recording: within its backdrop)
+        for (int y = (MID_ROW - WAVE_REACH - reach) * PX; y < (MID_ROW + 2 + WAVE_REACH + reach) * PX; y++) {
+          uint16_t &q = px[y * PX + sub];
+          q = v.headColor != INVERT_HEAD ? v.headColor           // (on a coloured cell: black on it, it on black)
+            : q == v.bg ? (v.bg == BG ? INK : BG) : v.bg;
+        }
+      }
     }
   }
   auto &t = board.tft();
@@ -183,11 +187,8 @@ void drawWave(int i, bool recordingHere) {
   v.outInk = outInk;
   v.live = recordingHere;
   v.visible = recordingHere || tr.state != TrackState::Empty;
-  if (!v.visible || v.live) v.playCol = -1;
-  v.rangeFirst = 0;
-  v.rangeCols = 0;
-  v.markCol = -1;
-  v.markOn = true;                                 // (every track, muted or not)
+  if (!v.visible || v.live) v.playPx = -1;
+  v.markPx = -1;                                   // (every clip has one, muted or not)
   if (v.live) {
     v.liveBars = 0;                                // updatePlayheads() fills it in
     v.liveFilled = 0;
@@ -195,30 +196,32 @@ void drawWave(int i, bool recordingHere) {
     uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
     // (Range edges, bar starts and the start position all on the same column
     // edges: the range's colour stops exactly at the bar lines.)
-    int first = edgeCol(rs, loopBeats), end = edgeCol(rs + rb, loopBeats);   // (end unwrapped)
-    v.rangeFirst = first % WAVE_COLS;
-    v.rangeCols = constrain(end - first, 1, WAVE_COLS);
-    // In pixels: on the column edges (the bar lines take the column before an edge).
-    int firstPx = first * PX, endPx = end * PX;
-    v.rangeFirstPx = firstPx % (WAVE_COLS * PX);
-    v.rangePx = constrain(endPx - firstPx, 1, WAVE_COLS * PX);
-    int mark = edgeCol(startPosition(loopBeats, rs, rb), loopBeats) % WAVE_COLS;
-    v.markCol = mark == 0 ? 0 : mark - 1;          // (the column before its edge, as a bar line's: on the bar line at a bar start)
-    v.markEdge = mark;
+    int first = edgePx(rs, loopBeats), end = edgePx(rs + rb, loopBeats);   // (end unwrapped)
+    v.rangeFirstPx = first % PX_COLS;
+    v.rangePx = constrain(end - first, 1, PX_COLS);
+    int mark = edgePx(startPosition(loopBeats, rs, rb), loopBeats) % PX_COLS;
+    v.markPx = mark == 0 ? 0 : mark - LINE_W;      // (the pixels before its edge, as a bar line's: on the bar line at a bar start)
   }
   for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
 }
 
-// Moves a view's playhead (or record head) to col with the given look,
-// redrawing only the columns it leaves and covers.
-static void movePlayhead(int i, int col, uint16_t color) {
+// Moves a view's playhead (or record head) to pixel column at (its first;
+// -1: none) with the given look, redrawing only the block columns it leaves
+// and covers.
+static void movePlayhead(int i, int at, uint16_t color) {
   WaveView &v = views[i];
-  if (col == v.playCol && color == v.headColor) return;
-  int old = v.playCol;
-  v.playCol = col;
+  if (at == v.playPx && color == v.headColor) return;
+  int old = v.playPx;
+  v.playPx = at;
   v.headColor = color;
-  if (old >= 0 && old != col) drawColumn(i, old + WAVE_LEFT);
-  if (col >= 0) drawColumn(i, col + WAVE_LEFT);
+  auto redraw = [&](int from) {                    // (the block columns a line from pixel `from` covers)
+    if (from < 0) return;
+    int a = from / PX, b = ((from + LINE_W - 1) % PX_COLS) / PX;
+    drawColumn(i, a + WAVE_LEFT);
+    if (b != a) drawColumn(i, b + WAVE_LEFT);
+  };
+  if (old != at) redraw(old);
+  redraw(at);
 }
 
 // Live view of the recording: new columns as audio is written, a full
@@ -233,7 +236,7 @@ static void updateLive(int i) {
   noInterrupts();
   int32_t sofar = (int32_t)(transport.now - recording.startSample);
   interrupts();
-  int head = sofar < 0 ? -1 : min(WAVE_COLS - 1, (int)((uint64_t)sofar * WAVE_COLS / total));
+  int head = sofar < 0 ? -1 : min(PX_COLS - LINE_W, (int)((uint64_t)sofar * PX_COLS / total));   // (pixels)
   if (tracks[i].live) {
     // The loop already plays (the rest of the recording is still being
     // saved): its playhead instead of the record head.
@@ -242,13 +245,13 @@ static void updateLive(int i) {
     interrupts();
     double loopBeats = bars * BEATS_PER_BAR, beat = fmod(pos - recording.startBeat, loopBeats);
     if (beat < 0) beat += loopBeats;
-    head = min(WAVE_COLS - 1, (int)(beat * WAVE_COLS / loopBeats));
+    head = min(PX_COLS - LINE_W, (int)(beat * PX_COLS / loopBeats));
   }
   if (bars != v.liveBars) {                        // new scale: redraw everything
     v.liveBars = bars;
     v.liveFilled = filled;
     memcpy(v.liveData, cols, OVERVIEW_COLS);
-    v.playCol = head;
+    v.playPx = head;
     v.headColor = INVERT_HEAD;
     for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
     return;
@@ -281,16 +284,16 @@ void updatePlayheads() {
     if (spanRow(i)) continue;                      // (an empty track: one cell, no waveform)
     // The accent colour (white on a range in the accent colour); muted: black.
     bool muted = tr.state == TrackState::Muted;
-    int col = -1;
+    int at = -1;
     if (v.visible && running && tracks[i].live) {
       double inRange = fmod(pos - tr.rangeAnchorQ / 4.0, (double)tr.rangeBeats);
       if (inRange < 0) inRange += tr.rangeBeats;
-      // Spread over the range's columns (as the range is drawn): never past its edges.
+      // Spread over the range's pixels (as the range is drawn): never past its edges.
       uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
-      int first = edgeCol(tr.rangeStartBeat, loopBeats);
-      int cols = max(1, edgeCol(tr.rangeStartBeat + tr.rangeBeats, loopBeats) - first);
-      col = (first + min(cols - 1, (int)(inRange * cols / tr.rangeBeats))) % WAVE_COLS;
+      int first = edgePx(tr.rangeStartBeat, loopBeats);
+      int pxs = max(LINE_W, edgePx(tr.rangeStartBeat + tr.rangeBeats, loopBeats) - first);
+      at = (first + min(pxs - LINE_W, (int)(inRange * pxs / tr.rangeBeats))) % PX_COLS;
     }
-    movePlayhead(i, col, muted ? MUTED_HEAD : v.rangeInk == ACCENT ? INK : ACCENT);
+    movePlayhead(i, at, muted ? MUTED_HEAD : v.rangeInk == ACCENT ? INK : ACCENT);
   }
 }

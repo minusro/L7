@@ -49,8 +49,9 @@
 //   SHIFT+EDIT       cut the track's clip to the clipboard; on an empty track, paste it
 //   OPT+EDIT         empty track: resample (record the output, from the next bar line; once EDIT is let go);
 //                      then it moves to a new scene after this one (on the same track);
-//                      tempo cell: audio follow on / off (the tempo and beat heard in the
-//                      input followed, audio_follow.h; the tempo flashes with the beat)
+//                      tempo cell: the metronome's next setting
+//   SHIFT+EDIT (tempo cell) audio follow on / off (the tempo and beat heard in the input
+//                      followed, audio_follow.h; the tempo flashes with the beat)
 //   SHIFT+UP/DOWN    newer / older scene (0*: empty; after the last, a copy of it);
 //                    on the status row's scene cell B+UP/DOWN does the same
 //                    (while playing: on the next bar line after SHIFT is let go; SCN
@@ -69,8 +70,8 @@
 //   EDIT (menu cell, the hamburger) open the menu (on release)
 //   EDIT (scene cell) duplicate the scene (as SHIFT+OPT twice)
 //   EDIT (clock cell) play / stop (as PLAY)
-//   EDIT (tempo cell) tap tempo: the tempo follows the taps; the 5th, 9th, 13th...
-//                      tap starts from 1.1.1 (running: snaps to the nearest bar start)
+//   EDIT (tempo cell) tap tempo: the tempo follows the taps; stopped, the 5th tap
+//                      starts the clock from 1.1.1
 //   power (hold)     switch off
 //
 // Build: Teensyduino, board "Teensy 4.0", USB type "Serial", CPU speed 600 MHz.

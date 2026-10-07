@@ -19,7 +19,7 @@
 // held alone on a cell it adjusts: four small arrows round a + (B + arrows),
 // black on the accent colour; the pressed look (dark grey, the icon in the
 // accent colour) while an arrow is down; A does nothing then; on the tempo cell (no arrow
-// down): audio follow (an ear; crossed while it's on, B+A turning it off); on an empty track: resample
+// down): the metronome (B+A: its next setting; with SHIFT instead, audio follow: an ear, crossed while it's on); on an empty track: resample
 // (the record dot with a plus: B+A); with SHIFT too, paste a scene (B pressed
 // first) or cut it (SHIFT first): the track cut / paste icons in a checkered square (9 x 9, as the duplicate one).
 // While the menu is open (on its items A runs the action when let go; B does
@@ -65,13 +65,13 @@ static int actionIcon() {
     if (board.keys() & m8::BTN_PLAY) return ICON_NONE;
     const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
     if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == TEMPO_CELL && !(board.keys() & arrows))
-      return ICON_EAR;                               // the tempo cell: B+A turns audio follow on / off
+      return ICON_METRO;                             // the tempo cell: B+A, the metronome's next setting
     if (selected == STATUS_ROW) return ICON_ADJUST;
     return hasClip(selected) ? ICON_ADJUST : ICON_NONE;
   }
   if (selected == STATUS_ROW) {                    // restart / duplicate / play-stop / tap tempo
     int cell = selectedCellIn(STATUS_ROW);
-    if (shift) return cell == SCENE_CELL ? ICON_SCENE_DUP : cell == TEMPO_CELL ? ICON_METRO : ICON_RESTART;   // (SHIFT: the scene cell duplicates it; the tempo cell: the metronome)
+    if (shift) return cell == SCENE_CELL ? ICON_SCENE_DUP : cell == TEMPO_CELL ? ICON_EAR : ICON_RESTART;   // (SHIFT: the scene cell duplicates it; the tempo cell: audio follow)
     return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_NEXT;   // the scene cell: the next scene
   }
   const Track &tr = tracks[selected];
@@ -327,9 +327,9 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   } else if (icon == ICON_METRO || icon == ICON_EAR) {
     // A metronome, filled (a trapezoid; its pendulum a slit up through it and
     // out past the top), 10 x 10, a block of margin round it at least;
-    // crossed out while it would click with the clock running (what SHIFT+A
-    // will change). Or an ear (its rim, its inner fold, its lobe), the same
-    // size, crossed out while audio follow is on (what B+A will change). The
+    // crossed out while it would click with the clock running (what B+A will
+    // change). Or an ear (its rim, its inner fold, its lobe), the same size,
+    // crossed out while audio follow is on (what SHIFT+A will change). The
     // cross: a slash from the top right to the bottom left, cleared a block
     // either side.
     static const char *const METRONOME[10] = {

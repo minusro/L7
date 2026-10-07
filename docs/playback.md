@@ -139,7 +139,7 @@ sound is made differently (engine.cpp `stretchSample()`):
 
 ## Metronome
 
-A setting (the session's `metro=`; SHIFT+A on the tempo cell): 0 (off), A
+A setting (the session's `metro=`; B+A on the tempo cell): 0 (off), A
 (auto: only in a silent scene, no unmuted clip playing; the default) or 1
 (on). While the clock runs and it says so (never in the dummy project), the engine clicks on every beat: a
 small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
@@ -271,8 +271,8 @@ In storage mode nothing is taken in (`midiInSuspend()`).
 
 ## Audio follow
 
-`audio_follow.cpp` (its header has the outline). B+A on the tempo cell turns it
-on / off (the session's `follow=`); the button, B held there: an ear, crossed
+`audio_follow.cpp` (its header has the outline). SHIFT+A on the tempo cell turns it
+on / off (the session's `follow=`); the button, SHIFT held there: an ear, crossed
 out while it's on. On, the tempo can't be changed by hand or by a project
 (`changeTempo()`, tap tempo: nothing). An external MIDI clock being followed
 comes first (audio follow listens on, but doesn't touch the clock meanwhile).

@@ -27,7 +27,7 @@ float newProjectTempo();                 // the last tempo set by hand (saved wi
 void stepMasterVolume(int by);
 // The metronome (saved with the session): off (0), auto (A: only in a
 // silent scene, no unmuted clip playing) or on (1), while the clock runs;
-// never in the dummy project. SHIFT+A on the tempo cell goes to the next
+// never in the dummy project. B+A on the tempo cell goes to the next
 // setting: from on or auto, off in a silent scene, else the other one of
 // the two; from off, auto in a silent scene, else on (so it always changes
 // what's heard).
