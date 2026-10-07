@@ -109,7 +109,9 @@ the press until the switch (`clickFromBeat` = `sceneSwitchBeat()`, set by
 
 **Out** (`engine.cpp`, `MIDI_OUT_ENABLED`): 24 ticks a beat from the audio
 interrupt (each queued with the time it's due and sent by a 200 µs timer:
-<0.2 ms of jitter), Start on `transportStart()`, Stop on `transportStop()`.
+<0.2 ms of jitter), Start on `transportStart()` (started at another beat,
+following an external clock's song position: Song Position and Continue
+instead), Stop on `transportStop()`.
 Port 2 on variant B (Serial3, TX pin 14), port 1 on variant A.
 
 **In** (`midi_in.*`, `MIDI_IN_ENABLED`): the serial MIDI in (variant B: port 1,
@@ -133,10 +135,20 @@ timer, each clock tick stamped with `micros()`. In `loop()` (`midiInService()`):
   re-pitches the loops a little and is a recording's tempo mark). The
   simulator holds a clock jittering by ±0.6 ms within 0.003 beats, with 2
   small changes in 16 beats.
-* Start (0xFA) and Continue (0xFB): the transport from 1.1.1 (running:
-  restarted), the next tick its 1.1.1: bars in step (Continue's song position
-  is ignored). Stop (0xFC): the transport stops. Started with START instead,
-  only the beats are kept in step (not the bars).
+* Their transport's messages are queued in order with the tick each comes
+  before (a Stop, Song Position and Continue in one go keep their order).
+  Start (0xFA): the transport from 1.1.1 on their next tick. Continue (0xFB):
+  from their latest Song Position (0xF2, two data bytes, in 16ths; serial:
+  put together from the bytes, realtime ones may come between; USB: as
+  `usbMIDI` has it; none: 1.1.1), starting on their next whole beat
+  (`transportStartAt(beat)`: the clock reads that beat, each track where it'd
+  be then from its 1.1.1 alignment). A Song Position while they run: a jump
+  there, the same way (stopped, then started on their next whole beat).
+  Running already: stopped first. Stop (0xFC): the transport stops. Their
+  position known, our beat is kept on theirs bars and all (the error's taken
+  modulo a bar); started with START instead, only the beats are kept in step.
+  The simulator: Continue from 8.5 beats starts on beat 9, then within 0.0003
+  beats; a jump to beat 16 while running, within 0.0011.
 * Logged on the serial port: "MIDI in: start" / "stop".
 
 **USB** (`midi_usb.*`, `MIDI_USB_ENABLED`; the USB type "Serial + MIDI + Mass

@@ -8,9 +8,13 @@
 // their Start takes theirs at once. Running, the transport is also kept on their beat: once a beat, the
 // difference (averaged over the beat's ticks) is taken out by running a
 // little faster or slower for the next one (half of it a beat, at most
-// MAX_NUDGE either way), on top of their tempo. Start (0xFA) and Continue
-// (0xFB): the transport from 1.1.1 (running: again), the next tick its
-// 1.1.1, bars in step from there; Stop (0xFC): the transport stops.
+// MAX_NUDGE either way), on top of their tempo. Start (0xFA): the transport
+// from 1.1.1, on their next tick; Continue (0xFB): from their latest Song
+// Position (0xF2, in 16ths; none: 1.1.1), starting on their next whole beat
+// (transportStartAt(): the clock reads it, the tracks where they'd be then);
+// a Song Position while they run: a jump there, the same way. Running
+// already: stopped first. Stop (0xFC): the transport stops. Their position
+// known, our beat is kept on theirs bars and all.
 // Started here instead (START), only the beats are kept in step.
 // Meanwhile the tempo can't be changed by hand (tap tempo, B + arrows: no
 // effect), and a project's own tempo doesn't apply.
@@ -26,6 +30,7 @@ void midiInBegin(HardwareSerial *port);   // reads it from then on (the MIDI tim
 enum MidiSource : uint8_t { MIDI_SERIAL = 0, MIDI_USB = 1 };
 void midiInByte(uint8_t b, uint32_t us, MidiSource from = MIDI_SERIAL);   // a byte received at micros() us (from an interrupt; the simulator feeds it)
 void midiInSuspend(bool off);             // storage mode: nothing taken in meanwhile
+void midiInSongPosition(uint16_t pos16, uint32_t us, MidiSource from);   // a Song Position (0xF2; in 16ths): USB's, already put together
 void midiInService();                     // loop(): start / stop, the tempo and the beat followed
 bool midiClockFollowing();                // an external clock is running (its Start had, its ticks coming in)
 

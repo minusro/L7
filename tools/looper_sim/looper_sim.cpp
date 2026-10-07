@@ -2111,6 +2111,74 @@ for f in os.listdir("."):
     midiInSuspend(false);
     check(!transport.running, "storage mode: a start meanwhile ignored");
     for (int i = 0; i < 300; i++) { block(); midiInService(); }
+    // Song Position: Continue from it (on their next whole beat), a jump to another while they run.
+    {
+      double usTick = 60e6 / 120 / 24, tAt = simMicros + 1000, theirPos = 0;   // their position (beats) at the next tick
+      double worstPos = 0;
+      bool measurePos = false;
+      auto ticks = [&](int count) {
+        for (int k = 0; k < count; k++) {
+          while (simMicros < tAt) { block(); midiInService(); }
+          midiInByte(0xF8, (uint32_t)tAt, MIDI_SERIAL);
+          if (measurePos && transport.running) {
+            double ours = transport.beat + (transport.sampleInBeat + ((int32_t)((uint32_t)tAt - simMicros)) / usPerSample) / transport.spb;
+            worstPos = std::max(worstPos, fabs(ours - theirPos));
+          }
+          theirPos += 1.0 / 24;
+          tAt += usTick;
+        }
+      };
+      ticks(48);                                     // their clock, stopped
+      auto spp = [&](uint16_t pos16) {               // (as the serial in has it: 0xF2, then two data bytes)
+        midiInByte(0xF2, simMicros, MIDI_SERIAL);
+        midiInByte(pos16 & 0x7F, simMicros, MIDI_SERIAL);
+        midiInByte(pos16 >> 7, simMicros, MIDI_SERIAL);
+      };
+      spp(34);                                       // 8.5 beats in (bar 3, beat 1 and a half)
+      midiInByte(0xFB, simMicros, MIDI_SERIAL);     // Continue
+      theirPos = 8.5;
+      int32_t startedOn = INT32_MIN;
+      for (int k = 0; k < 24 && startedOn == INT32_MIN; k++) {
+        ticks(1);
+        for (int b = 0; b < 3; b++) { block(); midiInService(); }
+        if (transport.running) startedOn = transport.beat;
+      }
+      char m2[200];
+      snprintf(m2, sizeof m2, "Continue from Song Position 8.5 beats: started on their next whole beat, %d (their position %.2f)", (int)startedOn, theirPos);
+      check(startedOn == 9 && theirPos >= 9 && theirPos < 9.3, m2);
+      ticks(24 * 8);                                 // settling
+      measurePos = true; worstPos = 0;
+      ticks(24 * 8);
+      snprintf(m2, sizeof m2, "on their position, bars and all: at most %.4f beats off over 8 beats", worstPos);
+      check(worstPos < 0.01, m2);
+      measurePos = false;
+      spp(64);                                       // a jump while they run: to beat 16
+      theirPos = 16;
+      startedOn = INT32_MIN;
+      for (int k = 0; k < 30 && startedOn == INT32_MIN; k++) {
+        ticks(1);
+        for (int b = 0; b < 3; b++) { block(); midiInService(); }
+        if (transport.running && transport.beat >= 16) startedOn = transport.beat;
+      }
+      ticks(24 * 8);
+      measurePos = true; worstPos = 0;
+      ticks(24 * 6);
+      snprintf(m2, sizeof m2, "a Song Position while they run: a jump there (from beat %d), then at most %.4f beats off", (int)startedOn, worstPos);
+      check(startedOn == 16 && worstPos < 0.01, m2);
+      int before = midi.nmsg;
+      midiInByte(0xFC, simMicros, MIDI_SERIAL);
+      for (int b = 0; b < 4; b++) { block(); midiInService(); }
+      check(!transport.running, "Stop: stopped");
+      transportStartAt(12);                          // our own start mid-song: Song Position and Continue out
+      for (int b = 0; b < 4; b++) block();
+      bool sent = false;
+      for (int k = 0; k + 3 < 16; k++)
+        if (midi.msgs[k] == 0xF2 && midi.msgs[k + 1] == ((12 * 4) & 0x7F) && midi.msgs[k + 2] == 0 && midi.msgs[k + 3] == 0xFB) sent = true;
+      snprintf(m2, sizeof m2, "started at beat 12 here: Song Position 48 and Continue sent (%d message bytes)", midi.nmsg - before);
+      check(sent, m2);
+      transportStop();
+      for (int i = 0; i < 300; i++) { block(); midiInService(); }
+    }
     // The clock out for USB too: Start, the ticks, Stop, as the serial one's.
     midiOutAttachUsb();
     uint8_t got[64];

@@ -13,12 +13,25 @@ static constexpr uint32_t SPAN = 96;                  // their tempo: over their
 
 static HardwareSerial *port = nullptr;
 
-// Interrupt -> loop(): the ticks' times, and the starts and stops (counted).
+// Interrupt -> loop(): the ticks' times, and their transport's messages in
+// order (Start, Continue, Stop, Song Position), each with the tick it comes
+// before.
 static constexpr uint32_t TICKS = 128;
 static volatile uint32_t tickUs[TICKS];
 static volatile uint32_t tickCount = 0;               // ticks received
-static volatile uint32_t starts = 0, stops = 0;
-static volatile uint32_t startTick = 0;               // the tick that's 1.1.1 of the latest start
+struct Event { uint8_t type; uint16_t pos; uint32_t tick; };   // pos: a Song Position's, in 16ths
+static constexpr uint32_t EVENTS = 16;
+static volatile Event events[EVENTS];
+static volatile uint32_t eventHead = 0;
+static uint8_t sppHave = 0, sppLsb = 0;              // a Song Position on its way in (serial): its data bytes so far (interrupt only)
+
+static void pushEvent(uint8_t type, uint16_t pos = 0) {
+  volatile Event &e = events[eventHead % EVENTS];
+  e.type = type;
+  e.pos = pos;
+  e.tick = tickCount;
+  eventHead++;
+}
 
 static volatile bool suspended = false;
 static volatile uint8_t source = MIDI_SERIAL;         // the clock followed (its ticks the latest)
@@ -28,7 +41,14 @@ static volatile bool sourceKnown = false;
 void midiInSuspend(bool off) { suspended = off; }
 
 void midiInByte(uint8_t b, uint32_t us, MidiSource from) {
-  if (suspended || b < 0xF8) return;                  // (realtime messages only)
+  if (suspended) return;
+  if (b < 0xF8) {                                     // (not realtime: a Song Position, 0xF2 and two data bytes, from the serial in)
+    if (b == 0xF2) sppHave = 1;
+    else if (b >= 0x80) sppHave = 0;                  // (another message)
+    else if (sppHave == 1) { sppLsb = b; sppHave = 2; }
+    else if (sppHave == 2) { sppHave = 0; midiInSongPosition(sppLsb | b << 7, us, from); }
+    return;
+  }
   bool active = sourceKnown && (int32_t)(us - sourceUs) < (int32_t)(FOLLOW_TIMEOUT_MS * 1000);
   if (active && from != source) return;               // (another clock is followed)
   if (b == 0xF8) {
@@ -42,16 +62,20 @@ void midiInByte(uint8_t b, uint32_t us, MidiSource from) {
       tickCount++;
       break;
     case 0xFA:
-    case 0xFB:                                        // (Continue: as Start, from 1.1.1)
-      startTick = tickCount;                          // the next tick
-      starts++;
-      break;
+    case 0xFB:
     case 0xFC:
-      stops++;
+      pushEvent(b);
       break;
     default:                                          // (everything else: not for us)
       break;
   }
+}
+
+void midiInSongPosition(uint16_t pos16, uint32_t us, MidiSource from) {
+  if (suspended) return;
+  bool active = sourceKnown && (int32_t)(us - sourceUs) < (int32_t)(FOLLOW_TIMEOUT_MS * 1000);
+  if (active && from != source) return;               // (another clock is followed)
+  pushEvent(0xF2, pos16);
 }
 
 static void poll() {
@@ -75,8 +99,11 @@ static bool ticking() {
 bool midiClockFollowing() { return theirsRunning && ticking(); }
 
 // The loop()'s side.
-static uint32_t seenTicks = 0, seenStarts = 0, seenStops = 0;
-static int32_t refTick = -1;                          // the tick at the transport's 1.1.1 (-1: started here, beats only)
+static uint32_t seenTicks = 0, seenEvents = 0;
+static int32_t refTick = -1;                          // a tick of theirs whose position we know (-1: started here, beats only)
+static double refBeats = 0;                           // its position (beats from their 1.1.1)
+static uint16_t nextPos = 0;                          // where a Continue goes on from (their latest Song Position, 16ths)
+static int32_t startAt = INT32_MIN;                   // our transport starts on this beat of theirs, once they're there (INT32_MIN: no)
 static float usPerSample = 1e6f / AUDIO_SAMPLE_RATE_EXACT;   // micros() per audio sample, as measured
 static uint32_t lastStampUs = 0;
 static double errSum = 0;                             // this beat's ticks' differences (beats, ours less theirs)
@@ -90,6 +117,22 @@ static double ourBeatAt(uint32_t us, const BlockStamp &s) {
   return s.beat + (s.sampleInBeat + samples) / s.spb;
 }
 
+// Their position (beats) at tick i.
+static double theirBeatAt(uint32_t i) { return refBeats + (double)((int32_t)i - refTick) / 24; }
+
+// Theirs (from tick `tick`, at position pos16): our transport stopped, and
+// started again on their next whole beat (as Start, Continue or a jump).
+static void startWith(uint32_t tick, uint16_t pos16) {
+  theirsRunning = true;
+  refTick = (int32_t)tick;
+  refBeats = pos16 / 4.0;
+  startAt = (int32_t)ceil(refBeats - 1e-9);
+  errSum = 0;
+  errCount = 0;
+  if (transport.running) transportStop();
+  if (theirSpb) followTempo(theirSpb, roundf(bpmForSpb(theirSpb) * 10) / 10);   // (their tempo, timed while they were stopped: from the start)
+}
+
 void midiInService() {
   noInterrupts();
   BlockStamp s;
@@ -98,7 +141,7 @@ void midiInService() {
   s.sampleInBeat = blockStamp.sampleInBeat;
   s.spb = blockStamp.spb;
   s.running = blockStamp.running;
-  uint32_t n = tickCount, st = starts, sp = stops, sTick = startTick;
+  uint32_t n = tickCount, ne = eventHead;
   interrupts();
 
   // micros() per sample from the blocks (the audio clock and the CPU's may differ a little).
@@ -111,28 +154,47 @@ void midiInService() {
   }
   lastStampUs = s.us;
 
-  if (sp != seenStops) {
-    seenStops = sp;
-    theirsRunning = false;                            // (the tempo free again)
-    if (transport.running) transportStop();
-    Serial.println("MIDI in: stop");
+  // Their transport's messages, in order.
+  if (ne - seenEvents > EVENTS) seenEvents = ne - EVENTS;
+  for (; seenEvents < ne; seenEvents++) {
+    Event e;
+    noInterrupts();
+    e.type = events[seenEvents % EVENTS].type;
+    e.pos = events[seenEvents % EVENTS].pos;
+    e.tick = events[seenEvents % EVENTS].tick;
+    interrupts();
+    switch (e.type) {
+      case 0xFA:                                      // Start: from 1.1.1
+        nextPos = 0;
+        startWith(e.tick, 0);
+        Serial.println("MIDI in: start");
+        break;
+      case 0xFB:                                      // Continue: from their Song Position
+        startWith(e.tick, nextPos);
+        Serial.printf("MIDI in: continue from beat %.2f\n", nextPos / 4.0);
+        break;
+      case 0xFC:                                      // Stop
+        theirsRunning = false;                        // (the tempo free again)
+        startAt = INT32_MIN;
+        if (transport.running) transportStop();
+        Serial.println("MIDI in: stop");
+        break;
+      case 0xF2:                                      // Song Position: where a Continue goes on from; while they run, a jump there
+        nextPos = e.pos;
+        if (theirsRunning) {
+          startWith(e.tick, e.pos);
+          Serial.printf("MIDI in: jump to beat %.2f\n", e.pos / 4.0);
+        }
+        break;
+    }
   }
-  if (theirsRunning && !ticking()) theirsRunning = false;   // (their clock gone)
-  if (st != seenStarts) {
-    seenStarts = st;
-    theirsRunning = true;
-    refTick = (int32_t)sTick;
-    errSum = 0;
-    errCount = 0;
-    if (theirSpb) followTempo(theirSpb, roundf(bpmForSpb(theirSpb) * 10) / 10);   // (their tempo, timed while they were stopped: from the start)
-    if (transport.running) transportRestart();
-    else transportStart();
-    Serial.println("MIDI in: start");
-    return;                                           // (the clock's new start: from the next block)
+  if (theirsRunning && !ticking()) {                  // (their clock gone)
+    theirsRunning = false;
+    startAt = INT32_MIN;
   }
   if (n - seenTicks > TICKS) seenTicks = n - TICKS;   // (fallen far behind: the last ones)
   bool running = transport.running && s.running;
-  if (!running && refTick >= 0 && !transport.running) refTick = -1;   // (stopped here: a later start is ours)
+  if (!transport.running && startAt == INT32_MIN && refTick >= 0 && !theirsRunning) refTick = -1;   // (stopped: a later start here is ours)
   for (; seenTicks < n; seenTicks++) {
     uint32_t i = seenTicks, us = tickUs[i % TICKS];
     if (i == 0 || (uint32_t)(us - tickUs[(i - 1) % TICKS]) > FOLLOW_TIMEOUT_MS * 1000) firstTick = i;   // (after a pause, or another clock: counted afresh)
@@ -142,10 +204,18 @@ void midiInService() {
       uint32_t spb = (uint32_t)(beatUs / usPerSample + 0.5f);
       if (spb >= spbForBpm(MAX_BPM) && spb <= spbForBpm(MIN_BPM)) theirSpb = spb;
     }
+    // Their next whole beat reached: our transport from that beat (the clock
+    // reads it; the tracks where they'd be).
+    if (startAt != INT32_MIN && refTick >= 0 && (int32_t)i >= refTick && theirBeatAt(i) >= startAt - 1e-9) {
+      transportStartAt(startAt);
+      startAt = INT32_MIN;
+      seenTicks++;
+      return;                                         // (running from the next block)
+    }
     if (!running || !theirSpb) continue;
-    // How far we're off their beat at this tick: theirs counted from their
-    // start (bars too), else beats only.
-    double ours = ourBeatAt(us, s), theirs = refTick >= 0 ? (double)((int32_t)i - refTick) / 24 : 0;
+    // How far we're off their position at this tick: theirs known (bars too),
+    // else beats only.
+    double ours = ourBeatAt(us, s), theirs = refTick >= 0 ? theirBeatAt(i) : 0;
     double period = refTick >= 0 ? BEATS_PER_BAR : 1;
     double err = fmod(ours - theirs, period);
     if (err >= period / 2) err -= period;

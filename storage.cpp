@@ -2346,11 +2346,13 @@ bool setRange(int t, uint32_t startBeat, uint32_t beats) {
 }
 
 // ---- Transport
-void transportStart() {
+void transportStart() { transportStartAt(0); }
+
+void transportStartAt(int32_t beat) {
   if (transport.running) return;
   clockOrigin = 0;
   clockOriginNext = -1;
-  transport.beat = 0;
+  transport.beat = beat;
   transport.sampleInBeat = 0;
   for (int t = 0; t < NUM_TRACKS; t++) {
     // Each track plays from its start position at 1.1.1 (beat 0).
@@ -2360,9 +2362,17 @@ void transportStart() {
       trackRange(t, rs, rb);                     // a queued range: startTrack() takes it now
       tr.rangeAnchorQ = -4 * (int32_t)(startPosition(tr.loopBars * BEATS_PER_BAR, rs, rb) - rs);
     }
-    startTrack(t, 0, true);
+    startTrack(t, beat, true);                   // (from beat 0's alignment: where they'd be at `beat`)
   }
-  midiSendNow(0xFA);                             // MIDI Start
+  if (beat == 0) {
+    midiSendNow(0xFA);                           // MIDI Start
+  } else {                                       // MIDI Song Position (in 16ths) and Continue
+    uint32_t pos = (uint32_t)beat * 4 & 0x3FFF;
+    midiSendNow(0xF2);
+    midiSendNow(pos & 0x7F);
+    midiSendNow(pos >> 7);
+    midiSendNow(0xFB);
+  }
   transport.running = true;
 }
 
