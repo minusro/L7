@@ -104,13 +104,13 @@ static constexpr int TAG_PAD = PX;                 // around the text, inside th
 
 int tagWidth(const char *text) { return textWidth(text) + 2 * TAG_PAD + 2 * PX; }
 
-void drawTag(int x, int y, const char *text, TagStyle style, uint16_t ink, uint16_t bg, int width, uint8_t cut) {
+void drawTag(int x, int y, const char *text, TagStyle style, uint16_t ink, uint16_t bg, int width) {
   int w = max(tagWidth(text), width), h = TAG_H;
   if (w > 160) return;
   for (int py = 0; py < h; py++)
     for (int px = 0; px < w; px++) {
       bool edge = onFrame(px, py, w, h);
-      bool corner = py < PX && ((px < PX && (cut & TAG_CUT_LEFT)) || (px >= w - PX && (cut & TAG_CUT_RIGHT)));   // (top ones only)
+      bool corner = (px < PX || px >= w - PX) && (py < PX || py >= h - PX);
       box[py * w + px] = corner || style == TAG_PLAIN ? bg : style == TAG_INVERTED || edge ? ink : bg;
     }
   putText(w, (w / PX - textWidth(text) / PX) / 2, (TAG_PAD + PX) / PX, text, style == TAG_INVERTED ? bg : ink);
