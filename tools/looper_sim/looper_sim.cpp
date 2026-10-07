@@ -30,7 +30,9 @@ void (*IntervalTimer::fn)() = nullptr;
 HardwareSerial midi;
 
 static LooperEngine engine;
-static audio_block_t inL, inR, outL, outR, usbOutL, usbOutR;
+static audio_block_t inL, inR, outL, outR;
+static int16_t usbOut[AUDIO_BLOCK_SAMPLES * USB_OUT_CHANNELS];   // to the computer (the engine's usbAudioWrite)
+static bool usbStreaming = true;                    // (the computer taking it)
 static uint32_t inputIndex = 0;        // index of the next input sample (== transport.now)
 static bool feedRamp = true;
 static double feedSineHz = 0;                       // instead: a sine (declicking tests)
@@ -49,7 +51,8 @@ static double pendingUs = 0;
 static int16_t feedUsb = 0;                         // USB audio in: this level (0: none coming in)
 static int32_t feedUsbClick = -1;                   // USB audio in: a click this many samples after each beat line (-1: none)
 static bool feedNoise = false;                      // the line input: noise only (overrides the feed below)
-static audio_block_t usbInL, usbInR;
+static uint32_t usbIn[AUDIO_BLOCK_SAMPLES];        // from the computer this block (left | right << 16)
+static bool usbInOn = false;
 static void audioBlock();
 
 #include <deque>
@@ -140,17 +143,16 @@ static void audioBlock() {
   engine.simIn[0] = &inL; engine.simIn[1] = &inR;
   engine.simSetInput(0, &inL); engine.simSetInput(1, &inR);
   if (feedUsb || feedUsbClick >= 0) {             // USB audio from a computer: a constant level, both channels, or a click after each beat
-    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) usbInL.data[i] = usbInR.data[i] = feedUsb;
+    auto both = [](int16_t v) { return (uint32_t)(uint16_t)v | (uint32_t)(uint16_t)v << 16; };
+    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) usbIn[i] = both(feedUsb);
     if (feedUsbClick >= 0 && transport.running)
       for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
         int32_t in = (int32_t)((transport.sampleInBeat + i) % transport.spb) - feedUsbClick;   // (samples into the click)
-        if (in >= 0 && in < 300) usbInL.data[i] = usbInR.data[i] = (int16_t)(20000 * exp(-in / 30.0) * (in % 2 ? -1 : 1));
+        if (in >= 0 && in < 300) usbIn[i] = both((int16_t)(20000 * exp(-in / 30.0) * (in % 2 ? -1 : 1)));
       }
-    engine.simIn[2] = &usbInL; engine.simIn[3] = &usbInR;
-    engine.simSetInput(2, &usbInL); engine.simSetInput(3, &usbInR);
   }
+  usbInOn = feedUsb || feedUsbClick >= 0;
   engine.simOut[0] = &outL; engine.simOut[1] = &outR;
-  engine.simOut[2] = &usbOutL; engine.simOut[3] = &usbOutR;
   engine.update();
   inputIndex += AUDIO_BLOCK_SAMPLES;
   simMicros += (uint32_t)(AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT);
@@ -372,6 +374,12 @@ static int fuzz(int seconds, unsigned seed) {
 }
 
 int main(int argc, char **argv) {
+  usbAudioRead = [](uint32_t *frames) {
+    if (usbInOn) memcpy(frames, usbIn, sizeof usbIn);
+    return usbInOn;
+  };
+  usbAudioWrite = []() -> int16_t * { return usbStreaming ? usbOut : nullptr; };
+  usbAudioWritten = [] {};
   simDelayHook = [](uint32_t us) {                 // loop() waiting: the audio interrupt runs on
     pendingUs += us;
     const double blockUs = AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT;
@@ -2490,9 +2498,10 @@ for f in os.listdir("."):
     double ratioMin = 1e9, ratioMax = 0;
     int peakUsb = 0;
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-      peakUsb = std::max(peakUsb, abs(usbOutL.data[i]));
-      if (abs(usbOutL.data[i]) < 2000) continue;
-      double r = (double)outL.data[i] / usbOutL.data[i];
+      int16_t u = usbOut[i * USB_OUT_CHANNELS];
+      peakUsb = std::max(peakUsb, abs(u));
+      if (abs(u) < 2000) continue;
+      double r = (double)outL.data[i] / u;
       ratioMin = std::min(ratioMin, r);
       ratioMax = std::max(ratioMax, r);
     }
@@ -2502,6 +2511,74 @@ for f in os.listdir("."):
     setMasterVolume(vol);
     feedSineHz = 0;
     engine.monitor = wasMonitor;
+    for (int i = 0; i < 4; i++) block();
+  }
+
+  printf("USB audio out: each track as heard, beside the mix\n");
+  {
+    for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);
+    if (!transport.running) transportStart();
+    bool wasMonitor = engine.monitor;
+    engine.monitor = false;                          // (the mix: the tracks alone)
+    feedRamp = false; feedSineHz = 300;
+    for (int t : {1, 4}) {                           // two loops of the sine
+      recordPress(t);
+      for (int i = 0; i < 4000 && recording.mode != Recording::Running; i++) block();
+      runBeats(4.5);
+      recordPress(t);
+      for (int i = 0; i < 200000 && recording.mode != Recording::Idle; i++) block();
+    }
+    feedSineHz = 0;
+    auto stemPeaks = [](int *pk) {                   // each track's loudest on USB over 40 blocks (left, right)
+      for (int c = 0; c < 2 * NUM_TRACKS; c++) pk[c] = 0;
+      for (int b = 0; b < 40; b++) {
+        block();
+        for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
+          for (int c = 0; c < 2 * NUM_TRACKS; c++) pk[c] = std::max(pk[c], abs((int)usbOut[i * USB_OUT_CHANNELS + 2 + c]));
+      }
+    };
+    int before[2 * NUM_TRACKS], after[2 * NUM_TRACKS];
+    stemPeaks(before);
+    setTrackMix(1, VOLUME_UNITY, BALANCE_MAX);       // track 2: hard right (its left moved into its right; the test
+                                                     // input's right is its left inverted, so they cancel there too)
+    setTrackMix(4, VOLUME_UNITY - 1, 0);             // track 5: a step down
+    for (int b = 0; b < 20; b++) block();            // (the levels glide there)
+    stemPeaks(after);
+    int worst = 0, others = 0;
+    for (int b = 0; b < 40; b++) {
+      block();
+      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+        const int16_t *f = usbOut + i * USB_OUT_CHANNELS;
+        int sumL = 0, sumR = 0;
+        for (int t = 0; t < NUM_TRACKS; t++) { sumL += f[2 + 2 * t]; sumR += f[3 + 2 * t]; }
+        worst = std::max(worst, std::max(abs(sumL - f[0]), abs(sumR - f[1])));
+        for (int t = 0; t < NUM_TRACKS; t++) if (t != 1 && t != 4) others = std::max(others, abs((int)f[2 + 2 * t]) + abs((int)f[3 + 2 * t]));
+      }
+    }
+    char m8[260];
+    snprintf(m8, sizeof m8, "the tracks add up to the mix (within %d); track 2 there (%d), then hard right: its left silent (%d); "
+             "track 5 a step down: %d to %d; the empty ones silent (%d)", worst, before[2], after[2], before[8], after[8], others);
+    check(worst <= NUM_TRACKS && before[2] > 3000 && after[2] < 50 && before[8] > 3000 &&
+          after[8] > before[8] * 0.3 && after[8] < before[8] * 0.6 && others == 0, m8);
+    setTrackMuted(4, true);
+    for (int b = 0; b < 40; b++) block();
+    int muted = 0;
+    for (int b = 0; b < 10; b++) {
+      block();
+      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) muted = std::max(muted, abs((int)usbOut[i * USB_OUT_CHANNELS + 2 + 8]));
+    }
+    snprintf(m8, sizeof m8, "track 5 muted: silent on USB too (%d)", muted);
+    check(muted == 0, m8);
+    usbStreaming = false;                            // the computer not taking it: nothing written, all the same
+    std::fill(usbOut, usbOut + AUDIO_BLOCK_SAMPLES * USB_OUT_CHANNELS, 12345);
+    block();
+    check(usbOut[0] == 12345, "not streaming: nothing written");
+    usbStreaming = true;
+    setTrackMuted(4, false);
+    setTrackMix(1, VOLUME_UNITY, 0);
+    setTrackMix(4, VOLUME_UNITY, 0);
+    engine.monitor = wasMonitor;
+    for (int t : {1, 4}) clearTrack(t);
     for (int i = 0; i < 4; i++) block();
   }
 

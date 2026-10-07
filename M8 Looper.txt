@@ -123,7 +123,8 @@ no dropouts or overruns
 - sync in V
 - usb midi V
 - stereo usb audio V
-- more usb midi sync work for latency
+- more usb midi sync work for latency V
+	- maybe some more testing later
 - audio in sync 
 - midi clips page
 - mute played clips after finishing recording (?)

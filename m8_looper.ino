@@ -85,12 +85,6 @@ LooperEngine         engine;
 AudioOutputI2S       i2sOut;
 AudioConnection      c1(i2sIn, 0, engine, 0), c2(i2sIn, 1, engine, 1);
 AudioConnection      c3(engine, 0, i2sOut, 0), c4(engine, 1, i2sOut, 1);
-#if defined(AUDIO_INTERFACE)                       // USB audio (the patched USB type): a computer's audio mixed into the input, the output to it too
-AudioInputUSB        usbInput;
-AudioOutputUSB       usbOutput;
-AudioConnection      c5(usbInput, 0, engine, 2), c6(usbInput, 1, engine, 3);
-AudioConnection      c7(engine, 2, usbOutput, 0), c8(engine, 3, usbOutput, 1);   // (before the master volume)
-#endif
 AudioControlSGTL5000 codec;
 
 // ---- Freeze detector (debugging): loop() and the audio interrupt both count
@@ -161,7 +155,12 @@ static void reloadFromCard() {
 void setup() {
   Serial.begin(115200);
   if (CrashReport) Serial.print(CrashReport);
-  AudioMemory(24);                                 // (USB audio's blocks too)
+  AudioMemory(12);
+#if defined(AUDIO_UAC2)                            // USB audio (the patched USB type, usb_audio_l7): a computer's audio mixed into
+  usbAudioRead = [](uint32_t *frames) { return usb_audio_rx_block(frames) != 0; };   // the input, the mix and the tracks to it
+  usbAudioWrite = usb_audio_tx_block;
+  usbAudioWritten = usb_audio_tx_written;
+#endif
   board.begin();
   board.powerButtonPressed();                        // the press that switched us on
   for (int i = 0; i < 6 && !codec.enable(); i++) delay(10);
@@ -245,6 +244,22 @@ void loop() {
     Serial.printf("USB audio in; line input: quietest block %.1f dBFS, loudest %.1f dBFS (gate %s)\n",
                   20 * log10f(floor + 1e-9f), 20 * log10f(peak + 1e-9f), floor < 0.0015f ? "can close" : "open");
   }
+#if defined(AUDIO_UAC2)
+  // USB audio's rings on the serial log (checked every 5 s while streaming): when anything ran short.
+  static uint32_t usbLogAt = 0, usbLogged = UINT32_MAX;
+  if ((usb_audio_transmit_setting || usb_audio_receive_setting) && millis() - usbLogAt >= 5000) {
+    usbLogAt = millis();
+    usb_audio_l7_stats st;
+    usb_audio_l7_get_stats(&st);
+    uint32_t trouble = st.txUnderruns + st.txDropped + st.rxUnderruns + st.rxOverruns;
+    if (trouble != usbLogged) {                      // (and the first time)
+      usbLogged = trouble;
+      Serial.printf("USB audio: out %s (fill %.0f, %.1f Hz, %lu short, %lu dropped); in %s (fill %.0f, %.1f Hz, %lu short, %lu over)\n",
+                    usb_audio_transmit_setting ? "on" : "off", st.txFill, st.txRate, (unsigned long)st.txUnderruns, (unsigned long)st.txDropped,
+                    usb_audio_receive_setting ? "on" : "off", st.rxFill, st.rxRate, (unsigned long)st.rxUnderruns, (unsigned long)st.rxOverruns);
+    }
+  }
+#endif
   debugStage = "keys (I2C)";
   pollKeys();
   saveSessionWhenIdle();

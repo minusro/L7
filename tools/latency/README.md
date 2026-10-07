@@ -39,3 +39,14 @@ clang -O1 -o clocksync clocksync.c -framework CoreAudio -framework CoreFoundatio
 `midimon.c`: what L7 sends over USB MIDI while this sends it a Song Position
 and Continue (or Start: `./midimon -1`), 4 beats of clock and Stop: every
 non-clock byte, and the count of its ticks.
+
+`stems.c`: L7's USB audio channels (16 from it: the main mix, then each
+track) by name, then a few seconds recorded from all of them while a 440 Hz
+tone plays to L7: each channel's peak and the clicks in the main mix (jumps
+far bigger than the tone's own). First run (2026-10-07): the 16 names, the
+tone back at -12 dBFS, no clicks; the serial log's rings at their marks
+(170 / 169 frames, rates within 1.1 Hz of 44100).
+
+```sh
+clang -O1 -o stems stems.c -framework CoreAudio -framework CoreFoundation && ./stems 10
+```

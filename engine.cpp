@@ -96,6 +96,9 @@ static volatile float outputGain = 1.0f;          // the master volume's
 volatile bool metronomeOn = false;
 volatile float lineInPeak = 0, lineInFloor = 1;
 volatile bool usbAudioIn = false;
+bool (*usbAudioRead)(uint32_t *frames) = nullptr;
+int16_t *(*usbAudioWrite)() = nullptr;
+void (*usbAudioWritten)() = nullptr;
 // ---- USB's input latency (engine.h): sharp sounds near our beats, timed.
 static constexpr uint32_t USB_LATENCY_GUESS = LATENCY_FRAMES + AUDIO_BLOCK_SAMPLES;   // (L7's own USB buffering; a computer's not known yet)
 volatile uint32_t usbInputLatency = USB_LATENCY_GUESS;
@@ -361,20 +364,17 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
 
 void LooperEngine::update() {
   audio_block_t *inL = receiveReadOnly(0), *inR = receiveReadOnly(1);
-  audio_block_t *usbL = receiveReadOnly(2), *usbR = receiveReadOnly(3);
   audio_block_t *outL = allocate(), *outR = allocate();
-  audio_block_t *usbOutL = allocate(), *usbOutR = allocate();   // (outputs 2-3: to USB; none spare: not sent this block)
   if (!outL || !outR) {
-    if (usbOutL) release(usbOutL);
-    if (usbOutR) release(usbOutR);
     if (outL) release(outL);
     if (outR) release(outR);
     if (inL) release(inL);
     if (inR) release(inR);
-    if (usbL) release(usbL);
-    if (usbR) release(usbR);
     return;
   }
+  static uint32_t usbFrames[AUDIO_BLOCK_SAMPLES];    // from the computer (left | right << 16)
+  const bool usbIn = usbAudioRead && usbAudioRead(usbFrames);
+  int16_t *usbOut = usbAudioWrite ? usbAudioWrite() : nullptr;   // to it: the mix and the tracks (USB_OUT_CHANNELS a frame)
   // The line input's gate (only while USB audio comes in): its peak this block.
   int16_t linePeak = 0;
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
@@ -384,7 +384,6 @@ void LooperEngine::update() {
   float lp = linePeak / 32768.0f;
   if (lp > lineInPeak) lineInPeak = lp;
   if (lp < lineInFloor) lineInFloor = lp;
-  const bool usbIn = usbL || usbR;
   usbAudioIn = usbIn;
   const uint32_t holdBlocks = (uint32_t)(LINE_GATE_HOLD_MS * AUDIO_SAMPLE_RATE_EXACT / 1000 / AUDIO_BLOCK_SAMPLES);
   lineQuietBlocks_ = lp < LINE_GATE_LEVEL ? lineQuietBlocks_ + 1 : 0;
@@ -453,7 +452,7 @@ void LooperEngine::update() {
     // USB's latency: the first sharp sound after each beat line (well above the
     // input's average level), timed in the beat (loop() decides).
     if (usbIn && running) {
-      int32_t a = max(abs(usbL ? usbL->data[i] : 0), abs(usbR ? usbR->data[i] : 0));
+      int32_t a = max(abs((int16_t)(usbFrames[i] & 0xFFFF)), abs((int16_t)(usbFrames[i] >> 16)));
       if (transport.sampleInBeat == 0) usbOnsetArmed = true;
       if (usbOnsetArmed && a > 1500 && a > 8 * usbEnv) {
         usbOnsetArmed = false;
@@ -467,14 +466,16 @@ void LooperEngine::update() {
     }
     // The input: the line input (gated, faded over the block) and USB audio, mixed.
     float g = lineFrom + (lineTo - lineFrom) * i / AUDIO_BLOCK_SAMPLES;
-    int32_t li = (int32_t)((inL ? inL->data[i] : 0) * g) + (usbL ? usbL->data[i] : 0);
-    int32_t ri = (int32_t)((inR ? inR->data[i] : 0) * g) + (usbR ? usbR->data[i] : 0);
+    int32_t li = (int32_t)((inL ? inL->data[i] : 0) * g) + (usbIn ? (int16_t)(usbFrames[i] & 0xFFFF) : 0);
+    int32_t ri = (int32_t)((inR ? inR->data[i] : 0) * g) + (usbIn ? (int16_t)(usbFrames[i] >> 16) : 0);
     int16_t l = (int16_t)constrain(li, -32768, 32767), r = (int16_t)constrain(ri, -32768, 32767);
     const uint32_t at = transport.now;
     inputRing[at % INPUT_FRAMES] = (uint16_t)l | ((uint32_t)(uint16_t)r << 16);
 
     const float monL = monitor ? l : 0, monR = monitor ? r : 0;   // the input being monitored
     float mixL = 0, mixR = 0;                        // the tracks
+    int16_t *usbFrame = usbOut ? usbOut + i * USB_OUT_CHANNELS : nullptr;
+    if (usbFrame) memset(usbFrame + 2, 0, 2 * NUM_TRACKS * sizeof *usbFrame);   // (each track's: silent unless playing)
     if (running) {
       if (transport.sampleInBeat == 0) {
         if (transport.pendingSpb && transport.spbAtBeat >= 0 && transport.beat >= transport.spbAtBeat) {
@@ -517,8 +518,14 @@ void LooperEngine::update() {
         sr = orr;
         peakL[t] = max(peakL[t], fabsf(sl));
         peakR[t] = max(peakR[t], fabsf(sr));
-        mixL += sl * masterGain;
-        mixR += sr * masterGain;
+        sl *= masterGain;
+        sr *= masterGain;
+        mixL += sl;
+        mixR += sr;
+        if (usbFrame) {                              // to USB: the track as it is in the mix
+          usbFrame[2 + 2 * t] = (int16_t)constrain(sl, -32767.0f, 32767.0f);
+          usbFrame[3 + 2 * t] = (int16_t)constrain(sr, -32767.0f, 32767.0f);
+        }
         double fr = tr.frac + speed[t];
         while (fr >= 1.0) { fr -= 1.0; tail++; }
         tr.frac = fr;
@@ -538,10 +545,10 @@ void LooperEngine::update() {
       inputRing[at % INPUT_FRAMES] = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
     }
     float click = clickSample();
-    if (usbOutL && usbOutR) {                        // USB: the mix before the master volume (and without the metronome)
+    if (usbFrame) {                                  // USB: the mix before the master volume (and without the metronome)
       float uc = USB_OUT_CLICK ? click : 0.0f;
-      usbOutL->data[i] = (int16_t)constrain(mixL + monL + uc, -32767.0f, 32767.0f);
-      usbOutR->data[i] = (int16_t)constrain(mixR + monR + uc, -32767.0f, 32767.0f);
+      usbFrame[0] = (int16_t)constrain(mixL + monL + uc, -32767.0f, 32767.0f);
+      usbFrame[1] = (int16_t)constrain(mixR + monR + uc, -32767.0f, 32767.0f);
     }
     click *= outGain;
     mixL = (mixL + monL) * outGain + click;          // the master volume
@@ -572,16 +579,9 @@ void LooperEngine::update() {
   transmit(outR, 1);
   release(outL);
   release(outR);
-  if (usbOutL && usbOutR) {
-    transmit(usbOutL, 2);
-    transmit(usbOutR, 3);
-  }
-  if (usbOutL) release(usbOutL);
-  if (usbOutR) release(usbOutR);
+  if (usbOut) usbAudioWritten();
   if (inL) release(inL);
   if (inR) release(inR);
-  if (usbL) release(usbL);
-  if (usbR) release(usbR);
 }
 
 }  // namespace looper

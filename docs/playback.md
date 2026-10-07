@@ -225,19 +225,48 @@ In storage mode nothing is taken in (`midiInSuspend()`).
 ## USB audio
 
 The patched USB type ("Serial + MIDI + Audio + Mass Storage",
-tools/teensy_msc/patch.py) adds Teensyduino's USB audio (as its Serial + MIDI +
-Audio type: stereo, 16-bit, 44.1 kHz both ways; interfaces 4-6, endpoints 6 and
-7, after mass storage's 3 and 5). The M8 shows up on a computer as an audio
-device, "L7", 2 in and 2 out (`AudioInputUSB` / `AudioOutputUSB`,
-m8_looper.ino, only with that type).
-* Out: the engine's outputs 2-3: the mix before the master volume (the
+tools/teensy_msc/patch.py) has L7's own USB audio, USB Audio Class 2.0
+(usb_audio_l7.cpp, copied into the core; Teensyduino's UAC1 audio left out with
+it). The M8 shows up on a computer as an audio device, "L7", with 16 channels
+out and 2 in: 16-bit, 44.1 kHz, both streams asynchronous on L7's own clock.
+macOS and Windows 10 (1703) and later have the class driver built in.
+* Interfaces: CDC 0-1, mass storage 2, audio 3-5 (control, to the computer,
+  from it), MIDI 6 (numbered after the audio function's, as UAC2 hosts want;
+  its descriptor still comes first). Endpoints: audio 6 (both ways), the
+  feedback endpoint 7. One clock source (ID 9, fixed 44.1 kHz), no controls:
+  no volume on the computer's side.
+* Channels to the computer (named in the descriptors, "Main L" ... "Track 7 R",
+  string descriptors 0x10-0x1F): 1-2 the main mix, then 3-4 track 1 to 15-16
+  track 7. At full speed (through a USB 1.1 hub) only the main mix (2 channels).
+* Packets every microframe (125 us) both ways, 5-6 frames each (7 at most); the
+  feedback (frames a microframe, 16.16) every 1 ms. With data every microframe,
+  "frames a microframe" and "frames a packet" agree, whichever a host takes.
+* Rings: to the computer, 2 blocks of 16-channel frames (8 KB, RAM2): the
+  engine writes a whole block straight into it (`usbAudioWrite`, engine.h);
+  the USB interrupt sends from it, as many frames a packet as L7's rate makes,
+  trimmed by the ring's fill after each block written against its mark (a
+  block + 40 frames; a servo: 0.5 frames a second per frame off, at most
+  200 Hz either way). From the computer, 4 blocks of stereo frames (2 KB): the
+  engine reads a block (`usbAudioRead`) once the ring has a block + 40 frames;
+  the rate asked for in the feedback is trimmed by the fill before each read
+  the same way. A ring that runs dry: silence (to the computer) / no USB input
+  (from it) until it's at its mark again. Every 5 s while streaming, the
+  serial log shows the rings ("USB audio: out on (fill ..., ... Hz, ... short,
+  ... dropped); in ...") when anything ran short since.
+* Windows remembers a device's descriptors: a PC that saw an older L7 (with
+  Teensyduino's stereo audio) may need it removed once in Device Manager
+  (View > Show hidden devices, the "L7" entries: Uninstall device) before the
+  16 channels show up.
+* Out, channels 1-2: the mix before the master volume (the
   tracks and the monitored input; no metronome, as resampling), whatever the
-  master volume; the line out and headphones (outputs 0-1) have the master
+  master volume; channels 3-16: each track as heard in that mix (its volume,
+  balance, filters and mute, the mix's headroom `masterGain`; the tracks add up
+  to the main mix, without the monitored input; a track not playing: silent); the line out and headphones (outputs 0-1) have the master
   volume and the metronome. `USB_OUT_CLICK` (engine.cpp) puts the metronome on
   USB too, for measuring (tools/latency/clocksync.c). While a computer records
   it (its streaming interface selected, `usb_audio_transmit_setting`), the
   speaker is off (headphones as ever); the serial log says so.
-* In: the engine's inputs 2-3, mixed into the input with the line input (what's
+* In: mixed into the input with the line input (what's
   monitored and recorded, `inputRing`; clipped to 16 bits). While USB audio
   comes in, the line input is left out once it has been quiet (block peaks
   under `LINE_GATE_LEVEL`, ~-56 dBFS) for 2 s, as with nothing plugged in (the
@@ -264,9 +293,10 @@ m8_looper.ino, only with that type).
   difference (a delay line to match them: too much RAM). The simulator: a
   click 900 samples after each beat, measured 900, a loop of it with the
   click on frame 0.
-* Latency (tools/latency): a round trip through the M8 over USB measures
-  10.9 ms, of which CoreAudio reports 5.2 ms; the M8's own ~5.7 ms (USB in
-  filling a block, the engine's block, USB out's queue) isn't reported, and
-  can't be: macOS ignores the streams' bDelay (the patch sets it, 3 ms each
-  way; 10 made no difference). A DAW's offset for the device takes the rest.
+* Latency (tools/latency), measured with Teensyduino's UAC1 audio (to measure
+  again with UAC2's rings): a round trip through the M8 over USB 10.9 ms, of
+  which CoreAudio reported 5.2 ms; the M8's own ~5.7 ms wasn't reported, and
+  couldn't be: macOS ignored the streams' bDelay (UAC2 has no such field). A
+  DAW's offset for the device takes the rest. `AHEAD_US` (midi_in.cpp, 2 ms
+  over USB) was measured then too.
 

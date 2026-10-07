@@ -206,6 +206,19 @@ extern volatile bool metronomeOn;
 // lineInFloor its quietest (0..1; the serial log, to set the level).
 extern volatile float lineInPeak, lineInFloor;
 extern volatile bool usbAudioIn;                     // USB audio coming in (its last block)
+// USB audio with a computer (the sketch sets these to the M8's own, usb_audio_l7
+// in the patched core; the simulator to its own). Each called once a block:
+//   usbAudioRead: the computer's audio for this block (AUDIO_BLOCK_SAMPLES stereo
+//     frames, left | right << 16); false when none is coming in.
+//   usbAudioWrite: room for this block to the computer (AUDIO_BLOCK_SAMPLES frames of
+//     USB_OUT_CHANNELS samples, interleaved): the main mix (before the master volume,
+//     no metronome), then each track as heard in it (its volume, balance, filters,
+//     mute; the mix's headroom), left and right; nullptr when not streaming.
+//     usbAudioWritten() once written.
+constexpr int USB_OUT_CHANNELS = 2 + 2 * NUM_TRACKS;
+extern bool (*usbAudioRead)(uint32_t *frames);
+extern int16_t *(*usbAudioWrite)();
+extern void (*usbAudioWritten)();
 // No click before this transport beat (loop(): while a scene or project
 // switch waits for its bar line, the switch's beat: silent meanwhile, the
 // new one's first beat clicks if it should).
@@ -223,16 +236,16 @@ int midiOutTakeUsb(uint32_t now, uint8_t *out, int max);
 
 class LooperEngine : public AudioStream {
 public:
-  // Inputs 0-1: the line input; 2-3: USB audio from a computer (mixed in).
+  // Inputs 0-1: the line input (USB audio from a computer mixed in: usbAudioRead).
   // Outputs 0-1: the line out and headphones (after the master volume, the
-  // metronome in); 2-3: to USB (before the master volume, no metronome).
-  LooperEngine() : AudioStream(4, inputQueue_) {}
+  // metronome in; to USB: usbAudioWrite).
+  LooperEngine() : AudioStream(2, inputQueue_) {}
   float masterGain = 0.7f;                         // the tracks' mix, before the master volume (headroom)
   bool monitor = true;
   void update() override;
 
 private:
-  audio_block_t *inputQueue_[4];
+  audio_block_t *inputQueue_[2];
   float lineGain_ = 1;                              // the line input's level in the mix (the gate below)
   uint32_t lineQuietBlocks_ = 0;
   int tickInBeat_ = 0;
