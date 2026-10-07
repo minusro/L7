@@ -29,11 +29,11 @@ static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
 
 // The edge mark (ui.h), built in a buffer and sent at once over the space
-// given (x, w): 3 blocks in from its left.
+// given (x, w): from its left edge (the screen's).
 void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground) {
-  // A hamburger (3 x 5): three bars a block apart.
-  static const char *const MARK[5] = {"###", "...", "###", "...", "###"};
-  constexpr int ROWS = STATUS_H / PX, CW = 3, CH = 5, R0 = (ROWS - CH) / 2, C0 = 3;
+  // A hamburger (6 x 5): three bars a block apart.
+  static const char *const MARK[5] = {"######", "......", "######", "......", "######"};
+  constexpr int ROWS = STATUS_H / PX, CW = 6, CH = 5, R0 = (ROWS - CH) / 2, C0 = 0;
   constexpr int MAX_W = EDGE_W;                    // (its space: the menu cell's)
   w = min(w, MAX_W);
   const int cols = w / PX;

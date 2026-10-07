@@ -62,8 +62,8 @@ inline int selectedCellIn(int i) {
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // The edge mark: the menu (an arrow off any edge of the looper opens it), on
-// the status row's line: a small hamburger (3 x 5 blocks: three bars a block
-// apart, 3 blocks in) in the looper's view (its menu cell: the space left of
+// the status row's line: a small hamburger (6 x 5 blocks: three bars a block
+// apart, from the screen's left edge) in the looper's view (its menu cell: the space left of
 // the scene cell, 2 blocks short of its frame), in ink on the ground (the
 // whole space), dark grey on black. (The menu has none.)
 constexpr int EDGE_W = MENU_BOX.w - PX;          // (2 blocks short of the scene cell's frame)
