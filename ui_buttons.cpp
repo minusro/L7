@@ -315,8 +315,10 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
           if (on[r][c]) block(c0 + c, r0 + copy * (ROWS4 + 1) + r);
   } else if (icon == ICON_METRO) {
     // A metronome, filled (a trapezoid; its pendulum a slit up through it and
-    // out past the top), 10 x 10, a block of margin round it at least; crossed out while it would click with the clock running (what SHIFT+A will change):
-    // a diagonal cut through it, carried on outside it.
+    // out past the top), 10 x 10, a block of margin round it at least;
+    // crossed out while it would click with the clock running (what SHIFT+A
+    // will change): a slash from the top right to the bottom left, cleared a
+    // block either side.
     static const char *const METRONOME[10] = {
         ".......#..", "......#...", "...###....", "...###....", "..###.##..", "..###.##..",
         ".###.####.", ".###.####.", "####.#####", "##########"};
@@ -326,7 +328,11 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     for (int r = 0; r < H; r++)
       for (int c = 0; c < W; c++) {
         bool on = METRONOME[r][c] == '#';
-        if (crossed && c == r * (W - 1) / (H - 1)) on = !on;   // (the cross: a gap through the body, ink outside it)
+        if (crossed) {                             // the cross: a slash from the top right to the bottom left, a gap either side of it
+          int s = (W - 1) - r * (W - 1) / (H - 1);
+          if (c == s) on = true;
+          else if (c == s - 1 || c == s + 1) on = false;
+        }
         if (on) block(c0 + c, r0 + r);
       }
   } else if (icon != ICON_NONE) {
