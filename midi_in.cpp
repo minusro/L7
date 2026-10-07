@@ -89,14 +89,21 @@ void midiInBegin(HardwareSerial *p) {
 
 static bool theirsRunning = false;                    // between their Start (or Continue) and Stop (loop()'s)
 
-static bool ticking() {
+static uint32_t startedUs = 0;                        // their latest Start / Continue / jump (loop()'s)
+
+// Their clock's alive: a tick within FOLLOW_TIMEOUT_MS, or their Start (or
+// Continue, a jump) as recent: a source that sends no clock while stopped (a
+// DAW over USB) may send its first tick a moment after it, and the Start may
+// be taken in before that tick.
+static bool alive() {
   noInterrupts();
-  uint32_t n = tickCount, last = n ? tickUs[(n - 1) % TICKS] : 0;
+  uint32_t n = tickCount, latest = n ? tickUs[(n - 1) % TICKS] : startedUs;
   interrupts();
-  return n >= 2 && (int32_t)(micros() - last) < (int32_t)(FOLLOW_TIMEOUT_MS * 1000);   // (signed: a stamp a moment ahead counts too)
+  if (theirsRunning && (int32_t)(startedUs - latest) > 0) latest = startedUs;
+  return (n || theirsRunning) && (int32_t)(micros() - latest) < (int32_t)(FOLLOW_TIMEOUT_MS * 1000);   // (signed: a stamp a moment ahead counts too)
 }
 
-bool midiClockFollowing() { return theirsRunning && ticking(); }
+bool midiClockFollowing() { return theirsRunning && alive(); }
 
 // The loop()'s side.
 static uint32_t seenTicks = 0, seenEvents = 0;
@@ -124,6 +131,7 @@ static double theirBeatAt(uint32_t i) { return refBeats + (double)((int32_t)i - 
 // started again on their next whole beat (as Start, Continue or a jump).
 static void startWith(uint32_t tick, uint16_t pos16) {
   theirsRunning = true;
+  startedUs = micros();
   refTick = (int32_t)tick;
   refBeats = pos16 / 4.0;
   startAt = (int32_t)ceil(refBeats - 1e-9);
@@ -188,7 +196,7 @@ void midiInService() {
         break;
     }
   }
-  if (theirsRunning && !ticking()) {                  // (their clock gone)
+  if (theirsRunning && !alive()) {                    // (their clock gone)
     theirsRunning = false;
     startAt = INT32_MIN;
   }

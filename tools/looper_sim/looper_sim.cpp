@@ -2179,6 +2179,23 @@ for f in os.listdir("."):
       transportStop();
       for (int i = 0; i < 300; i++) { block(); midiInService(); }
     }
+    // A source that sends no clock while stopped: its Start handled before its first tick (which comes a moment later).
+    {
+      for (int i = 0; i < 400; i++) { block(); midiInService(); }   // (nothing for over a second)
+      midiInByte(0xFA, simMicros, MIDI_USB);
+      for (int i = 0; i < 8; i++) { block(); midiInService(); }     // (handled; no tick yet: ~23 ms)
+      double tAt = simMicros + 2000, usTick = 60e6 / 120 / 24;
+      for (int k = 0; k < 48; k++) {
+        while (simMicros < tAt) { block(); midiInService(); }
+        midiInByte(0xF8, (uint32_t)tAt, MIDI_USB);
+        tAt += usTick;
+      }
+      for (int i = 0; i < 4; i++) { block(); midiInService(); }
+      check(transport.running && midiClockFollowing(), "Start before their first tick (no clock while they were stopped): started all the same, following");
+      midiInByte(0xFC, simMicros, MIDI_USB);
+      for (int i = 0; i < 4; i++) { block(); midiInService(); }
+      for (int i = 0; i < 300; i++) { block(); midiInService(); }
+    }
     // The clock out for USB too: Start, the ticks, Stop, as the serial one's.
     midiOutAttachUsb();
     uint8_t got[64];

@@ -119,7 +119,10 @@ Serial1 RX pin 0, opened receive-only, its TX pin 1 given back as the early
 boot line, HIGH; variant A: Serial7 RX 28, unverified), read by the same 200 µs
 timer, each clock tick stamped with `micros()`. In `loop()` (`midiInService()`):
 * Following: their transport running, from their Start (or Continue) until
-  their Stop or no tick for 0.5 s (`midiClockFollowing()`). Their ticks while
+  their Stop or no tick for 0.5 s (`midiClockFollowing()`; their Start counts
+  as a tick for that: a DAW over USB sends no clock while stopped, and its
+  Start may be taken in before its first tick, which then cancelled the start
+  about half the time). Their ticks while
   they're stopped (some send clock all the time) are timed but not followed:
   the tempo stays free to change by hand, and their Start takes theirs at
   once. Their tempo: measured over their last 4 beats (whole beats, at least 1),
