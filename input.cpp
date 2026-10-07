@@ -127,6 +127,16 @@ static uint32_t armedAt = 0;
 static constexpr uint32_t LONG_PRESS_MS = 600;
 
 static bool nextSceneArmed = false;               // A pressed on the scene cell: the next scene once it's let go
+// Swipe to mute / solo: A pressed on a track with a clip mutes or unmutes it;
+// still held, UP / DOWN (each tap, and a held one's repeats) step a track up /
+// down (wrapping from the top track to the bottom one and back, not onto the
+// status row) and do the same to each track stepped onto: muting, each one
+// heard is muted but the last one heard, where it stops (a solo); unmuting,
+// each muted one is unmuted, and it stops back on the track it started from.
+// Empty tracks (and one recording) are stepped over as they are. Stopped,
+// UP / DOWN do nothing more until A is let go.
+static bool swipeOn = false, swipeMute = false, swipeDone = false;
+static int swipeFrom = -1;
 static int recordArmed = -1;                       // A (or B+A) pressed on an empty track: it records (resamples) once A is let go
 static bool recordArmedResample = false;
 static uint32_t recordArmedAt = 0;                 // (transport.now at the press: the late press's window counts from it)
@@ -387,6 +397,29 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     nextSceneArmed = false;
     if (onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL && sceneNext())
       for (int i = 0; i < ROWS; i++) drawTrack(i);
+  }
+  // Swipe to mute / solo (above): A still held, UP / DOWN step on.
+  if (swipeOn && !(keys & m8::BTN_EDIT)) swipeOn = false;
+  if (swipeOn && (pressed & (m8::BTN_UP | m8::BTN_DOWN))) {
+    if (!swipeDone && !shift && !opt) {
+      int t = (selected + ((pressed & m8::BTN_UP) ? 1 : NUM_TRACKS - 1)) % NUM_TRACKS;   // (UP: a row up; the top track's index is NUM_TRACKS - 1)
+      selected = t;
+      int heard = 0;
+      for (int k = 0; k < NUM_TRACKS; k++) heard += hasClip(k) && !trackMuted(k);
+      if (swipeMute) {
+        if (hasClip(t) && !trackMuted(t)) {
+          if (heard <= 1) swipeDone = true;          // the last one heard: kept (a solo)
+          else setTrackMuted(t, true);
+        } else if (t == swipeFrom) {
+          swipeDone = true;                          // (round again: none left to mute)
+        }
+      } else if (t == swipeFrom) {
+        swipeDone = true;                            // round again: stopped there
+      } else if (hasClip(t) && trackMuted(t)) {
+        setTrackMuted(t, false);
+      }
+    }
+    pressed &= ~(m8::BTN_UP | m8::BTN_DOWN);         // (nothing else: not the menu's edges either)
   }
   // A (or B+A: resampling) on an empty track, once let go (nothing else
   // pressed meanwhile; still empty then): a recording, from the next bar line.
@@ -701,6 +734,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
       if (recordPress(selected)) selectedCell = WAVE_CELL;   // a recording's stop, its cancel, out of the queue: at once
     } else {
       setTrackMuted(selected, !trackMuted(selected));
+      swipeOn = true;                                // (held: UP / DOWN carry it on, above)
+      swipeMute = trackMuted(selected);
+      swipeDone = false;
+      swipeFrom = selected;
     }
   }
   if (toggleTransport) {
