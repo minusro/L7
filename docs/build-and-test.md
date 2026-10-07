@@ -90,6 +90,11 @@ cd tools/ui_preview
 ./build.sh && ./ui_preview <out-dir>
 ```
 
+`./ui_preview <out-dir> showcase` renders instead eight varied screens (each
+its own project, colour, tempo, scenes and tracks: a groove, range and filter
+and volume edits, a recording, tap tempo, the menu, a new project waiting to
+record) as `show_*.png`; the last set is in `docs/design/showcase/`.
+
 ## On the device
 
 Serial (115200) logs worth asking for when something glitches:

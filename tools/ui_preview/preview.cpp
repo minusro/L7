@@ -4,6 +4,7 @@
 // writes each screen as a PNG (2x, via Python's PIL).
 //
 //   ./build.sh && ./ui_preview [out-dir]
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <string>
@@ -86,8 +87,142 @@ static void render(const std::string &path) {
   writePng(path);
 }
 
+// ---- Showcase (./ui_preview <out-dir> showcase): eight screens as varied
+// and plausible as can be, each its own project (and colour), tempo, scenes,
+// clock and tracks.
+namespace showcase {
+struct Clip { int t; TrackState state; uint32_t bars, rangeStart, rangeBeats; float density; int lo = 0, hi = FILTER_MAX, vol = VOLUME_UNITY, bal = 0; };
+
+static void clearAll() {
+  recording.mode = Recording::Idle;
+  recording.track = 0;
+  recording.resample = false;
+  board.heldKeys = 0;
+  for (int t = 0; t < NUM_TRACKS; t++) {
+    tracks[t].state = TrackState::Empty;
+    tracks[t].live = false;
+    tracks[t].sample = 0;
+    setTrackFilter(t, 0, FILTER_MAX);
+    setTrackMix(t, VOLUME_UNITY, 0);
+  }
+}
+
+// Project p loaded at tempo t, with these clips, `scenes` scenes, on scene `at`.
+static void setUp(int p, float tempo, std::initializer_list<Clip> clips, int scenes, int at, uint32_t seed) {
+  transport.running = false;
+  clearAll();
+  projectLoad(p);
+  ACCENT = PROJECT_COLORS[p];
+  ACCENT_DARK = blend565(ACCENT, BG, 128);
+  bpm = tempo;
+  transport.spb = spbForBpm(bpm);
+  for (const Clip &c : clips) {
+    setTrack(c.t, c.state, c.bars, c.rangeStart, c.rangeBeats, seed + c.t * 7, c.density);
+    tracks[c.t].sample = 1000 + p * 16 + c.t;      // (a clip: the project has clips)
+    setTrackFilter(c.t, c.lo, c.hi);
+    setTrackMix(c.t, c.vol, c.bal);
+  }
+  if (scenes > 0) {
+    sceneStateChanged();
+    for (int i = 0; i < std::max(1, scenes - 1); i++) sceneDuplicate();   // (the first: 0* becomes scene 1, and a copy after it)
+    while (sceneCurrent() > at) sceneStep(-1);
+  }
+}
+
+// The screen, its meters at these levels (left, right per track).
+static void shot(const std::string &path, int32_t beat, float phase, std::initializer_list<float> peaks) {
+  transport.running = true;
+  transport.beat = beat;
+  transport.sampleInBeat = (uint32_t)(transport.spb * phase);
+  int t = 0;
+  for (float pk : peaks) {
+    if (t >= NUM_TRACKS) break;
+    tracks[t].peakL = pk;
+    tracks[t].peakR = pk * 0.85f;
+    t++;
+  }
+  simMicros += 5000000;
+  board.tft().fillScreen(BG);
+  uiGeneration++;
+  for (int i = 0; i < ROWS; i++) drawTrack(i);
+  if (menuOpen()) drawMenu();
+  else updatePlayheads();
+  writePng(path);
+}
+
+static void run(const std::string &out) {
+  std::system(("rm -rf " + simRoot + " && mkdir -p " + simRoot + "/L7/PROJECTS " + simRoot + "/L7/DATA " + simRoot + "/L7/SAMPLES").c_str());
+  scenesBegin([] { return bpm; }, loadTempo, 0, newProjectTempo);
+  using TS = TrackState;
+  // 1. A groove in full swing: five clips of different lengths, one muted, a filtered pad.
+  setUp(0, 124.0f, {{6, TS::Playing, 1, 0, 4, 1.4f}, {5, TS::Playing, 2, 0, 8, 0.9f}, {4, TS::Playing, 4, 0, 16, 0.5f, 4, 20},
+                    {3, TS::Muted, 2, 4, 4, 1.8f}, {1, TS::Playing, 8, 8, 16, 0.35f, 0, 18, 3, -1}}, 5, 3, 11);
+  selected = 5; selectedCell = WAVE_CELL;
+  shot(out + "/show_1_groove.png", 4 * 16 + 2, 0.4f, {0, 0.18f, 0, 0.25f, 0.4f, 0.55f, 0.7f});
+  // 2. Shortening a loop's range: B held on a waveform (the range in the accent colour).
+  setUp(2, 98.0f, {{6, TS::Playing, 2, 0, 8, 1.1f}, {5, TS::Playing, 4, 6, 6, 0.7f}, {4, TS::Playing, 1, 0, 4, 2.2f, 0, 26},
+                   {2, TS::Playing, 8, 20, 12, 0.4f, 6, 30, 4, 2}}, 4, 2, 23);
+  selected = 5; selectedCell = WAVE_CELL;
+  board.heldKeys = m8::BTN_OPT;
+  shot(out + "/show_2_range.png", 4 * 9 + 1, 0.7f, {0, 0, 0.3f, 0, 0.35f, 0.5f, 0.6f});
+  // 3. Recording a third loop over two others: the live view in the accent colour.
+  setUp(4, 86.5f, {{6, TS::Playing, 4, 0, 16, 0.6f}, {5, TS::Playing, 2, 0, 8, 1.3f, 0, 22}}, 2, 2, 37);
+  recording.track = 4;
+  recording.mode = Recording::Running;
+  transport.now = 30 * transport.spb;
+  recording.startSample = transport.now - 11 * transport.spb;
+  transport.beat = 4 * 6 + 3;
+  recording.startBeat = transport.beat - 11;
+  selected = 4; selectedCell = WAVE_CELL;
+  shot(out + "/show_3_recording.png", 4 * 6 + 3, 0.2f, {0, 0, 0, 0, 0, 0.45f, 0.6f});
+  // 4. Sweeping a filter: B held on track 3's filter, a narrow band.
+  setUp(6, 140.0f, {{6, TS::Playing, 1, 0, 4, 2.0f, 0, 30}, {5, TS::Playing, 2, 0, 8, 1.0f}, {4, TS::Playing, 2, 0, 8, 0.8f, 9, 17},
+                    {3, TS::Playing, 4, 0, 16, 0.45f, 0, 12}, {2, TS::Muted, 1, 0, 4, 1.6f}, {0, TS::Playing, 8, 0, 32, 0.3f, 14, 36, 2}}, 9, 6, 51);
+  selected = 4; selectedCell = FILTER_CELL;
+  board.heldKeys = m8::BTN_OPT;
+  shot(out + "/show_4_filter.png", 4 * 41 + 2, 0.55f, {0.2f, 0, 0, 0.3f, 0.22f, 0.5f, 0.65f});
+  // 5. Mixing: B held on a volume cell, the meters running, one track panned.
+  setUp(8, 110.5f, {{6, TS::Playing, 2, 0, 8, 1.2f}, {5, TS::Playing, 2, 0, 8, 0.7f, 0, 24, 3, 2}, {4, TS::Playing, 4, 0, 16, 0.5f, 0, 36, 4, -3},
+                    {3, TS::Playing, 1, 0, 4, 2.4f, 5, 36, 2}, {1, TS::Muted, 4, 0, 16, 0.4f}}, 4, 1, 67);
+  selected = 4; selectedCell = MIX_CELL;
+  board.heldKeys = m8::BTN_OPT;
+  shot(out + "/show_5_mix.png", 4 * 3 + 1, 0.15f, {0, 0, 0, 0.6f, 0.5f, 0.32f, 0.75f});
+  // 6. Tapping the tempo: A held on the tempo cell (TAP pressed), a fast set.
+  setUp(10, 172.0f, {{6, TS::Playing, 2, 0, 8, 1.5f}, {5, TS::Playing, 4, 0, 16, 0.9f, 0, 20}, {4, TS::Playing, 2, 0, 8, 1.1f},
+                     {3, TS::Playing, 1, 0, 4, 2.5f, 12, 36}, {2, TS::Playing, 8, 0, 32, 0.3f}, {1, TS::Muted, 2, 0, 8, 1.2f},
+                     {0, TS::Playing, 4, 8, 8, 0.6f, 0, 28}}, 4, 4, 83);
+  selected = STATUS_ROW; selectedCell = TEMPO_CELL;
+  board.heldKeys = m8::BTN_EDIT;
+  noteActionPress();
+  shot(out + "/show_6_tap.png", 4 * 32, 0.05f, {0.4f, 0, 0.55f, 0.35f, 0.5f, 0.45f, 0.7f});
+  board.heldKeys = 0;
+  // 7. The menu: five projects on the card, G loaded and playing, C selected.
+  for (int p : {0, 2, 4, 10}) {
+    setUp(p, 120.0f, {{6, TS::Playing, 2, 0, 8, 1.0f}}, 1, 1, 90 + p);
+  }
+  setUp(6, 128.0f, {{6, TS::Playing, 2, 0, 8, 1.0f}, {5, TS::Playing, 4, 0, 16, 0.6f}}, 3, 2, 101);
+  openMenu();
+  menuSelectSlot(2);
+  shot(out + "/show_7_menu.png", 4 * 12 + 1, 0.2f, {0, 0, 0, 0, 0, 0.4f, 0.6f});
+  closeMenu();
+  // 8. A new project: waiting for the bar line to record its first loop, the metronome clicking.
+  setUp(3, 120.0f, {}, 0, 0, 0);
+  recording.track = 6;
+  recording.mode = Recording::WaitBar;
+  metronomeOn = true;
+  selected = 6; selectedCell = WAVE_CELL;
+  shot(out + "/show_8_new.png", 3, 0.1f, {0, 0, 0, 0, 0, 0, 0});
+  metronomeOn = false;
+  clearAll();
+}
+}  // namespace showcase
+
 int main(int argc, char **argv) {
   std::string out = argc > 1 ? argv[1] : ".";
+  if (argc > 2 && std::string(argv[2]) == "showcase") {
+    showcase::run(out);
+    return 0;
+  }
   showSplash();                                    // the splash: the L and the 7 sliding in
   simMicros += 400000;
   splashTick();
