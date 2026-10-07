@@ -124,7 +124,7 @@ static uint8_t menuOnRelease = 0, leaveOnRelease = 0;
 static bool lrHeld = false, lrDone = false;
 static uint32_t lrAt = 0, leftAt = 0, rightAt = 0;   // (the combo's start; each arrow's last fresh press)
 static constexpr uint8_t LR = m8::BTN_LEFT | m8::BTN_RIGHT;
-static constexpr uint32_t LR_WINDOW_MS = 100, LR_HOLD_MS = 300;
+static constexpr uint32_t LR_WINDOW_MS = 200, LR_HOLD_MS = 300;
 bool screenSwitchPending() { return menuOnRelease || leaveOnRelease || (lrHeld && !lrDone); }
 uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease | (lrHeld && !lrDone ? LR : 0); }
 
