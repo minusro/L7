@@ -167,13 +167,12 @@ void takeTrackPeaks(int t, float &left, float &right) {
 // from around the stream frame the playhead puts there (centred: its middle
 // where the playhead will be by then), within STRETCH_SEARCH either way, where
 // it best continues the grain before it (the normalised cross-correlation of
-// its first half with where the grain before would have gone on: on a mono
-// version at a quarter of the rate, then to the frame, nearest first; left and
-// right each). Played at
+// its first half with where the grain before would have gone on: at an eighth
+// of the rate, then to the frame, nearest first). Played at
 // the tempo recorded (speed 1) that's where the grain before goes on: the
 // stream as it is.
 static constexpr int STRETCH_GRAIN = 1024, STRETCH_HOP = STRETCH_GRAIN / 2;
-static constexpr int STRETCH_SEARCH = 256, STRETCH_DECIM = 4, STRETCH_FINE = 3;
+static constexpr int STRETCH_SEARCH = 256, STRETCH_DECIM = 8, STRETCH_FINE = 5;
 static constexpr float STRETCH_NEAR = 0.95f;
 static float stretchWindow[STRETCH_HOP + 1];      // its first half (and the middle): w(n) = w(GRAIN - n)
 static inline float stretchW(int n) { return stretchWindow[n <= STRETCH_HOP ? n : STRETCH_GRAIN - n]; }
@@ -183,64 +182,82 @@ static inline void frameAt(const uint32_t *ring, uint32_t f, float &l, float &r)
   r = (int16_t)(v >> 16);
 }
 
-// A new grain (when the one before is half way): its stream frame. (Both
-// channels compared, each on its own: a mono copy loses what's opposite in them.)
+// A new grain (when the one before is half way): its stream frame. Compared
+// on one signal: left + right, or left - right where that's the louder (a mono
+// sum would lose what's opposite in the channels).
 static uint32_t placeGrain(const Track &tr, uint32_t natural, uint32_t target) {
-  // Coarse: every STRETCH_DECIM-th frame.
+  // The signal: from where the grain before would go on.
   constexpr int REF = STRETCH_HOP / STRETCH_DECIM, LAGS = 2 * STRETCH_SEARCH / STRETCH_DECIM;
-  float refL[REF], refR[REF], candL[REF + LAGS], candR[REF + LAGS];
-  for (int j = 0; j < REF; j++) frameAt(tr.ring, natural + j * STRETCH_DECIM, refL[j], refR[j]);
+  float refL[REF], refR[REF];
+  float mid = 0, side = 0;
+  for (int j = 0; j < REF; j++) {
+    frameAt(tr.ring, natural + j * STRETCH_DECIM, refL[j], refR[j]);
+    float m = refL[j] + refR[j], d = refL[j] - refR[j];
+    mid += m * m;
+    side += d * d;
+  }
+  const float sgn = side > mid ? -1.0f : 1.0f;
+  float ref[REF];
+  for (int j = 0; j < REF; j++) ref[j] = refL[j] + sgn * refR[j];
+  // Coarse: every STRETCH_DECIM-th frame; each lag's energy from running sums.
   const uint32_t from = target - STRETCH_SEARCH;
-  for (int j = 0; j < REF + LAGS; j++) frameAt(tr.ring, from + j * STRETCH_DECIM, candL[j], candR[j]);
-  auto score = [&](int lag) {                      // (lag: in decimated frames from `from`)
-    float c = 0, e = 1;
-    for (int j = 0; j < REF; j++) {
-      float l = candL[lag + j], r = candR[lag + j];
-      c += refL[j] * l + refR[j] * r;
-      e += l * l + r * r;
-    }
-    return c / sqrtf(e);
-  };
+  float cand[REF + LAGS], energy[REF + LAGS + 1];
+  energy[0] = 0;
+  for (int j = 0; j < REF + LAGS; j++) {
+    float l, r;
+    frameAt(tr.ring, from + j * STRETCH_DECIM, l, r);
+    cand[j] = l + sgn * r;
+    energy[j + 1] = energy[j] + cand[j] * cand[j];
+  }
   // The nearest lag scoring within STRETCH_NEAR of the best (a periodic sound
   // matches as well a period further: the nearest keeps it where it belongs).
-  const int centre = LAGS / 2;
   float scores[LAGS + 1], top = -1e30f;
-  for (int lag = 0; lag <= LAGS; lag++) top = max(top, scores[lag] = score(lag));
+  for (int lag = 0; lag <= LAGS; lag++) {
+    float c = 0;
+    const float *x = cand + lag;
+    for (int j = 0; j < REF; j++) c += ref[j] * x[j];
+    scores[lag] = c / sqrtf(energy[lag + REF] - energy[lag] + 1);
+    top = max(top, scores[lag]);
+  }
+  const int centre = LAGS / 2;
   const float good = top > 0 ? top * STRETCH_NEAR : top;
   int best = centre;
   for (int d = 0; d <= centre; d++) {
     if (scores[centre - d] >= good) { best = centre - d; break; }
     if (scores[centre + d] >= good) { best = centre + d; break; }
   }
-  // Fine: each frame round it, on the whole first half.
-  int32_t coarse = (best - centre) * STRETCH_DECIM, bestFine = coarse;
+  // Fine: each frame round it, on the first FINE_LEN frames.
+  constexpr int FINE_LEN = STRETCH_HOP / 2, SPAN = 2 * STRETCH_FINE;
+  const int32_t coarse = (best - centre) * STRETCH_DECIM;
+  float nat[FINE_LEN], at[FINE_LEN + SPAN];
+  for (int j = 0; j < FINE_LEN; j++) { float l, r; frameAt(tr.ring, natural + j, l, r); nat[j] = l + sgn * r; }
+  for (int j = 0; j < FINE_LEN + SPAN; j++) { float l, r; frameAt(tr.ring, target + coarse - STRETCH_FINE + j, l, r); at[j] = l + sgn * r; }
+  int bestK = STRETCH_FINE;
   float bestF = -1e30f;
-  for (int d = 0; d <= 2 * STRETCH_FINE; d++) {
-    int32_t off = coarse + (d % 2 ? (d + 1) / 2 : -(d / 2));   // (0, +1, -1, +2, ...: nearest first)
+  for (int d = 0; d <= SPAN; d++) {
+    int k = STRETCH_FINE + (d % 2 ? (d + 1) / 2 : -(d / 2));   // (the middle, +1, -1, +2, ...: nearest first)
     float c = 0, e = 1;
-    for (int j = 0; j < STRETCH_HOP; j += 2) {     // (every other frame: plenty)
-      float nl, nr, l, r;
-      frameAt(tr.ring, natural + j, nl, nr);
-      frameAt(tr.ring, target + off + j, l, r);
-      c += nl * l + nr * r;
-      e += l * l + r * r;
-    }
+    for (int j = 0; j < FINE_LEN; j++) { c += nat[j] * at[k + j]; e += at[k + j] * at[k + j]; }
     float sc = c / sqrtf(e);
-    if (sc > bestF) { bestF = sc; bestFine = off; }
+    if (sc > bestF) { bestF = sc; bestK = k; }
   }
-  return target + bestFine;
+  return target + coarse - STRETCH_FINE + bestK;
 }
 
 // The track's sample now, stretched (its playhead at tail, moving at speed).
 static inline void stretchSample(Track &tr, uint32_t tail, double speed, float &sl, float &sr) {
-  if (!tr.grainsOn) {                              // afresh: a grain half way, from the playhead on
-    tr.grainSrc[0] = tail - STRETCH_HOP;
-    tr.grainPos[0] = STRETCH_HOP;
-    tr.grainPos[1] = -1;
-    tr.toNextGrain = 0;
+  if (!tr.grainsOn) {                              // afresh: two grains, both from the playhead on (their
+    // windows summing to 1), the next one due part way through (each track at
+    // another point of the hop: their searches spread over the blocks).
+    const int o = (int)((&tr - tracks) * STRETCH_HOP / NUM_TRACKS);
+    tr.grainPos[0] = STRETCH_HOP + o;
+    tr.grainSrc[0] = tail - tr.grainPos[0];
+    tr.grainPos[1] = o;
+    tr.grainSrc[1] = tail - o;
+    tr.toNextGrain = STRETCH_HOP - o;
     tr.grainsOn = true;
   }
-  if (tr.toNextGrain <= 0) {
+  if (tr.toNextGrain <= 0) {                       // (the older one has just ended)
     int old = tr.grainPos[0] >= 0 ? 0 : 1, fresh = 1 - old;
     uint32_t natural = tr.grainSrc[old] + tr.grainPos[old];   // (where the one playing would go on)
     uint32_t target = tail + (int32_t)lround((speed - 1) * STRETCH_HOP);   // (centred: its middle on the playhead then)
