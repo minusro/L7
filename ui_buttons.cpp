@@ -32,7 +32,7 @@
 // start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_METRO };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_METRO, ICON_MOVE };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -112,6 +112,9 @@ static int trackIcon(int i) {
       default:                 return flashOn() ? ICON_PLAY : ICON_NONE;
     }
   }
+  // B held on the selected empty track (B + UP/DOWN moves it): up and down
+  // arrows instead of its number.
+  if (i == selected && bAlone() && unitOf(i).sample == 0) return ICON_MOVE;
   return ICON_NONE;                                // (the track's number shows its state)
 }
 
@@ -122,7 +125,7 @@ static int trackIcon(int i) {
 enum : uint8_t { BADGE_NONE, BADGE_EMPTY, BADGE_MUTED, BADGE_PLAYING, BADGE_LABEL };   // LABEL: the number alone, black
 
 static uint8_t trackBadge(int i) {
-  if (i == STATUS_ROW || recordingOn(i) || recordQueued() == i) return BADGE_NONE;
+  if (i == STATUS_ROW || recordingOn(i) || recordQueued() == i || trackIcon(i) == ICON_MOVE) return BADGE_NONE;   // (its icons instead)
   if (!shownClip(i)) return BADGE_EMPTY;          // (as the row shows it: a switch all at once)
   return shownTrack(i).state == TrackState::Muted ? BADGE_MUTED : BADGE_PLAYING;
 }
@@ -179,6 +182,7 @@ PROGMEM static const Icon ICONS[] = {
           "....#....", "#...#...#", ".........", "#.#.#.#.#"}},   // SCENE_DUP (a + in a checkered square, as SCENE_CUT / PASTE)
   {7, 5, {"#...#..", "##..##.", "###.###", "##..##.", "#...#.."}},   // NEXT (two small plays, a block apart: the next scene; a block right of centre)
   {0, 0, {}},                                                                  // METRO (drawn on its own: a metronome and the next setting)
+  {5, 7, {"..#..", ".###.", "#####", ".....", "#####", ".###.", "..#.."}},   // MOVE (a track's: up and down, a block apart: B + UP/DOWN moves the empty track)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
@@ -232,6 +236,7 @@ static uint16_t iconColor(int i, int icon) {
     return heldAction >= 0 ? actionColor(icon) : BG;
   }
   if (unavailable(i, icon)) return DARK;
+  if (icon == ICON_MOVE) return ACCENT;            // (on the selected track's grey panel)
   if (bg != BG) return BG;
   if (recordingOn(i) || recordQueued() == i) return ACCENT;
   return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white

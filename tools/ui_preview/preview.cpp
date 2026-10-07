@@ -136,6 +136,14 @@ int main(int argc, char **argv) {
   selected = LAST_TRACK_ROW;                       // track 7: its ground stops at its button's bottom (none above the action button)
   selectedCell = MIX_CELL;
   render(out + "/ui_track7.png");
+  for (int t = 0; t < NUM_TRACKS; t++)             // B held on an empty track: up and down arrows for its number (B + UP/DOWN moves it)
+    if (tracks[t].state == TrackState::Empty) {
+      selected = t;
+      board.heldKeys = m8::BTN_OPT;
+      render(out + "/ui_move.png");
+      board.heldKeys = 0;
+      break;
+    }
   selected = STATUS_ROW;
   selectedCell = TEMPO_CELL;
   render(out + "/ui_status.png");
