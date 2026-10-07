@@ -132,7 +132,8 @@ static bool nextSceneArmed = false;               // A pressed on the scene cell
 // down (wrapping from the top track to the bottom one and back, not onto the
 // status row) and do the same to each track stepped onto: muting, each one
 // heard is muted but the last one heard, where it stops (a solo); unmuting,
-// each muted one is unmuted, and it stops back on the track it started from.
+// each muted one is unmuted, and it stops on the track before the one it
+// started from (round again).
 // Empty tracks (and one recording) are stepped over as they are. Stopped,
 // UP / DOWN do nothing more until A is let go.
 static bool swipeOn = false, swipeMute = false, swipeDone = false;
@@ -403,6 +404,10 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
   if (swipeOn && (pressed & (m8::BTN_UP | m8::BTN_DOWN))) {
     if (!swipeDone && !shift && !opt) {
       int t = (selected + ((pressed & m8::BTN_UP) ? 1 : NUM_TRACKS - 1)) % NUM_TRACKS;   // (UP: a row up; the top track's index is NUM_TRACKS - 1)
+      if (!swipeMute && t == swipeFrom) {
+        swipeDone = true;                            // unmuting, round again: stopped on the track before it
+        t = selected;
+      }
       selected = t;
       int heard = 0;
       for (int k = 0; k < NUM_TRACKS; k++) heard += hasClip(k) && !trackMuted(k);
@@ -413,9 +418,7 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
         } else if (t == swipeFrom) {
           swipeDone = true;                          // (round again: none left to mute)
         }
-      } else if (t == swipeFrom) {
-        swipeDone = true;                            // round again: stopped there
-      } else if (hasClip(t) && trackMuted(t)) {
+      } else if (!swipeDone && hasClip(t) && trackMuted(t)) {
         setTrackMuted(t, false);
       }
     }

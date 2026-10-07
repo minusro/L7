@@ -41,7 +41,7 @@
 //   EDIT             empty track: record (once let go) / stop recording; full track: mute/unmute
 //   EDIT held+UP/DOWN after a mute / unmute: swipe, the same to each track stepped onto
 //                      (wrapping; muting stops on the last one heard: a solo; unmuting,
-//                      back on the first)
+//                      on the one before the first)
 //   SHIFT+LEFT/RIGHT the track's sample: previous / next by name (this project and
 //                      track's first, then its other tracks', then other projects';
 //                      empty track: its own last / first); keeps volume, filter, mute;
