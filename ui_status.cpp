@@ -202,11 +202,12 @@ void drawStatus() {
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
   // Stopped: as the scene's and tempo's labels (grey; light grey selected). Running: grey, light grey on each
-  // beat's first step (x.y.1) (selected: light grey, white on x.y.1); the
-  // accent colour on 1.1.1.
+  // beat's first step (x.y.1) (selected: light grey, white on x.y.1; while the
+  // metronome clicks, the accent colour instead); the accent colour on 1.1.1.
   bool first = beat % (BEATS_PER_BAR * CLOCK_BARS) == 0 && step == 0, here = cell == CLOCK_CELL;
+  bool clicking = metronomeOn && transport.beat >= clickFromBeat;   // (silent while a switch waits for its bar line)
   uint16_t clockInk = !running ? labelInk(CLOCK_CELL) : first ? ACCENT
-                    : step == 0 ? (here ? INK : LIGHT) : (here ? LIGHT : DIM);
+                    : step == 0 ? (clicking ? ACCENT : here ? INK : LIGHT) : (here ? LIGHT : DIM);
   if (!volume) {
     // A small play icon (in the accent colour while the clock runs), then the
     // text, centred together (on the block grid); what longer text left
