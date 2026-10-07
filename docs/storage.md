@@ -1,6 +1,6 @@
 # Storage and recording
 
-SdFat through `SD.sdfs` (SDIO, DMA mode). Everything lives in `/L7` (an
+SdFat through `SD.sdfs` (SDIO, DMA mode; `sdBegin()`, which also has files stamped with the Teensy's clock, as `SD.begin()` would: set by the Teensy Loader at every upload, kept through power-off only if the board's RTC is battery-backed; before 1980: no date). Everything lives in `/L7` (an
 older card's `/looper` is renamed to it at boot), in four folders:
 
 * `SAMPLES`: all the samples the tracks use; recordings end up here.

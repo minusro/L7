@@ -105,6 +105,7 @@ private:
 #define DMA_SDIO 1
 #define FIFO_SDIO 0
 struct SdioConfig { explicit SdioConfig(int) {} };
+struct FsDateTime { static void setCallback(void (*)(uint16_t *, uint16_t *)) {} };
 struct SdCard { uint8_t errorCode() { return 0; } uint32_t errorData() { return 0; } };
 
 class SdFs {
@@ -132,5 +133,6 @@ class SDClass {
 public:
   bool begin(int) { return true; }
   SdFs sdfs;
+  static void dateTime(uint16_t *date, uint16_t *time) { *date = *time = 0; }
 };
 extern SDClass SD;

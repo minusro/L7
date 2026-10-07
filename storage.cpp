@@ -1509,12 +1509,20 @@ static void ensureFolder(const char *path) {
   if (SD.sdfs.rename(path, tmp)) SD.sdfs.rename(tmp, path);
 }
 
+// The card started. DMA mode: every read/write is one self-contained transfer
+// done by the SD controller. The default FIFO mode leaves a multi-sector
+// transfer open between calls and has the CPU poll the FIFO; on the M8 it
+// stalled for seconds at a time (1 s timeouts, retried) with the audio engine
+// running. Files are stamped with the Teensy's clock (SD.begin() would set
+// that up, bypassed here; set at every upload by the Teensy Loader; before
+// 1980: no date).
+static bool sdBegin() {
+  FsDateTime::setCallback(SDClass::dateTime);
+  return SD.sdfs.begin(SdioConfig(DMA_SDIO));
+}
+
 bool storageBegin(void (*progress)(const char *)) {
-  // DMA mode: every read/write is one self-contained transfer done by the SD
-  // controller. The default FIFO mode leaves a multi-sector transfer open
-  // between calls and has the CPU poll the FIFO; on the M8 it stalled for
-  // seconds at a time (1 s timeouts, retried) with the audio engine running.
-  if (!SD.sdfs.begin(SdioConfig(DMA_SDIO))) return false;
+  if (!sdBegin()) return false;
   if (!SD.sdfs.exists("/L7") && SD.sdfs.exists("/looper")) SD.sdfs.rename("/looper", "/L7");   // (the app's folder, renamed)
   SD.sdfs.mkdir("/L7");
   if (!SD.sdfs.exists("/L7/EXPORTS") && SD.sdfs.exists("/Ableton")) SD.sdfs.rename("/Ableton", "/L7/EXPORTS");   // (the exports' folder, moved)
@@ -1583,7 +1591,7 @@ static void recoverSd() {
   Serial.println("SD card stopped responding: re-initialising it");
   // Drop the handles without closing them: closing would talk to the card.
   for (auto &tr : tracks) { tr.file = FsFile(); tr.unitFile = FsFile(); }
-  if (!SD.sdfs.begin(SdioConfig(DMA_SDIO))) {
+  if (!sdBegin()) {
     Serial.println("SD re-init failed, retrying");
     lastTryFailed = true;
     lastFailedTry = millis();
