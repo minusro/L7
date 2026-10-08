@@ -25,6 +25,7 @@ void followTempo(uint32_t spb, float shownBpm);
 float newProjectTempo();                 // the last tempo set by hand (saved with the session; first 120)
 // The master volume a step up (by 1) or down (-1); saved with the session.
 void stepMasterVolume(int by);
+void stepMasterBalance(int by);                  // the master balance a step right (1) or left (-1); saved too
 // The metronome (saved with the session): off (0), auto (A: only in a
 // silent scene: no clip on any track, muted or not) or on (1), while the clock runs;
 // never in the dummy project. B+A on the tempo cell goes to the next

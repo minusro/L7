@@ -14,7 +14,8 @@ static constexpr uint32_t EDGE_HOLD_MS = 350;       // SHIFT+UP/DOWN's second ta
 // the range, the filter open, volume at unity and balance centred.
 static void resetCell() {
   if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == CLOCK_CELL) {   // the master volume: back to 100%
-    stepMasterVolume(MASTER_VOLUME_UNITY - masterVolume());
+    stepMasterVolume(MASTER_VOLUME_UNITY - masterVolume());   // (and the balance centred)
+    stepMasterBalance(-masterBalance());
     return;
   }
   if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == TEMPO_CELL) {   // the tempo: the scene's saved one
@@ -607,9 +608,11 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         long tenths = lroundf(bpm * 10);
         if (pressed & m8::BTN_UP) setTempo(tenths / 10 + 1);
         if (pressed & m8::BTN_DOWN) setTempo((tenths + 9) / 10 - 1);
-      } else if (onClock) {                          // the master volume, a step either way
-        if (pressed & (m8::BTN_LEFT | m8::BTN_DOWN)) stepMasterVolume(-1);
-        if (pressed & (m8::BTN_RIGHT | m8::BTN_UP)) stepMasterVolume(1);
+      } else if (onClock) {                          // the master volume (UP/DOWN) and balance (LEFT/RIGHT), a step at a time
+        if (pressed & m8::BTN_DOWN) stepMasterVolume(-1);
+        if (pressed & m8::BTN_UP) stepMasterVolume(1);
+        if (pressed & m8::BTN_LEFT) stepMasterBalance(-1);
+        if (pressed & m8::BTN_RIGHT) stepMasterBalance(1);
       }
     } else if ((pressed & (m8::BTN_UP | m8::BTN_DOWN)) && unitOf(selected).sample == 0 && !recordingOn(selected) &&
                recordQueued() != selected) {

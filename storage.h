@@ -164,7 +164,7 @@ uint32_t startGrid(uint32_t loopBeats, uint32_t rangeBeats);
 // playing: the clock was running (when last saved: at power-off, or stopped).
 struct Session {
   float bpm = 120.0f, newBpm = 120.0f;
-  int row = -1, cell = -1, master = MASTER_VOLUME_UNITY, project = 0, menu = -1;
+  int row = -1, cell = -1, master = MASTER_VOLUME_UNITY, balance = 0, project = 0, menu = -1;
   bool playing = false;
   int metro = 1;                                   // the metronome: 0 off, 1 auto, 2 on (app.h)
   bool follow = false;                             // audio follow (audio_follow.h)

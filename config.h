@@ -81,14 +81,6 @@ constexpr uint32_t PEAK_BIN_FRAMES = 4096;
 constexpr int FILTER_MAX = 32;
 constexpr float FILTER_MIN_HZ = 20.0f, FILTER_OCTAVES = 10.0f;
 
-// Master volume: the final output (tracks and monitored input), steps
-// 0..MASTER_VOLUME_MAX, one per line of the clock cell's volume control
-// (ui_status.cpp). Step v is (v - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB:
-// MASTER_VOLUME_UNITY is 100% (the default), the top step 200% (four steps of
-// 1.5 dB above), 0 is off. Its meter has the same scale: line
-// MASTER_VOLUME_UNITY is 0 dBFS (the ones above: clipping).
-constexpr int MASTER_VOLUME_MAX = 21, MASTER_VOLUME_UNITY = 17;
-constexpr float MASTER_STEP_DB = 1.5051500f;       // 20 log10(2) / 4
 
 // Per-track volume and balance. The volume cell has 5 lines per channel, each
 // two 1-pixel halves: volume lights a half per step, balance takes a half
@@ -100,6 +92,12 @@ constexpr float MASTER_STEP_DB = 1.5051500f;       // 20 log10(2) / 4
 constexpr int VOLUME_MAX = 10, VOLUME_UNITY = 8;
 constexpr float VOLUME_STEP_DB = 3.75f;
 constexpr int BALANCE_MAX = 10;
+// Master volume and balance: the final output (tracks and monitored input), on
+// the tracks' scale (the clock cell's control has the volume cell's shape,
+// ui_status.cpp): volume 0..MASTER_VOLUME_MAX, MASTER_VOLUME_UNITY 100% (the
+// default), balance -BALANCE_MAX..BALANCE_MAX. Its meter: the same scale.
+constexpr int MASTER_VOLUME_MAX = VOLUME_MAX, MASTER_VOLUME_UNITY = VOLUME_UNITY;
+constexpr float MASTER_STEP_DB = VOLUME_STEP_DB;
 
 // Declicking: loop and range edges, and clip switches, are crossfaded over
 // this many frames (~3 ms); track levels (mute, volume, start, stop) glide

@@ -235,9 +235,12 @@ float filterResponseDb(int lo, int hi, float hz);   // magnitude of the pair (an
 void setTrackMix(int t, int volume, int balance);   // steps (config.h), clamped
 float volumeGain(int volume);                       // linear gain of a volume step
 void takeTrackPeaks(int t, float &left, float &right);   // and start the next measurement
-// Master volume (config.h, steps 0..MASTER_VOLUME_MAX) on the final output,
-// and that output's peaks (full scale 1) since the last call.
+// Master volume (config.h, steps 0..MASTER_VOLUME_MAX) and balance
+// (-BALANCE_MAX..BALANCE_MAX, as a track's) on the final output (the click:
+// the volume only), and that output's peaks (full scale 1) since the last call.
 void setMasterVolume(int step);
+void setMasterBalance(int balance);
+int masterBalance();
 // A metronome click on every beat while on (set from loop(): the clock
 // running in a project without clips): a small wood block, higher on the
 // bar's first beat. In the output, after the master volume; not in what a

@@ -12,7 +12,7 @@ int selectedCell = 0;                       // cell in the row (0: the waveform,
 static uint32_t changedMs = 0;                // when the tempo or the selection last changed
 static bool tempoDirty = false;
 static int savedRow = -1, savedCell = -1;      // the selection session.txt holds
-static int savedMaster = MASTER_VOLUME_UNITY;   // the master volume session.txt holds
+static int savedMaster = MASTER_VOLUME_UNITY, savedBalance = 0;   // the master volume and balance session.txt holds
 static int savedProject = 0;                    // and the loaded project
 static int savedMenu = -1, bootMenu = -1;       // and the menu (its selection, + 1000 open)
 static int bootProject = 0;
@@ -60,6 +60,10 @@ void stepMasterVolume(int by) {
   setMasterVolume(masterVolume() + by);
   changedMs = millis();
 }
+void stepMasterBalance(int by) {
+  setMasterBalance(masterBalance() + by);
+  changedMs = millis();
+}
 
 
 // ---- Metronome (app.h)
@@ -102,6 +106,8 @@ void beginSession() {
   savedCell = selectedCell;
   setMasterVolume(s.master);
   savedMaster = s.master;
+  setMasterBalance(s.balance);
+  savedBalance = s.balance;
   savedProject = bootProject = s.project;
   savedPlaying = bootPlaying = s.playing;
   savedMenu = bootMenu = s.menu;
@@ -117,7 +123,7 @@ bool sessionPlaying() { return bootPlaying; }
 static bool sessionDirty() {
   int row, cell;
   mainSelection(row, cell);                        // (the looper's, not the menu's)
-  return tempoDirty || masterVolume() != savedMaster || projectCurrent() != savedProject ||
+  return tempoDirty || masterVolume() != savedMaster || masterBalance() != savedBalance || projectCurrent() != savedProject ||
          menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell ||
          metroMode != savedMetro || audioFollowOn() != savedFollow;
 }
@@ -127,6 +133,7 @@ static void writeSession() {
   s.bpm = bpm;
   s.newBpm = newBpm;
   s.master = masterVolume();
+  s.balance = masterBalance();
   s.project = projectCurrent();
   s.menu = menuState();
   s.playing = transport.running;
@@ -141,6 +148,7 @@ static void writeSession() {
   savedMenu = s.menu;
   savedPlaying = s.playing;
   savedMaster = s.master;
+  savedBalance = s.balance;
   savedProject = s.project;
   tempoDirty = false;
 }

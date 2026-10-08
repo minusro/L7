@@ -33,6 +33,8 @@ public:
     if (x >= 0 && x < W && y >= 0 && y < H) px[y * W + x] = c;
   }
   void setOrigin(int x = 0, int y = 0) { ox_ = x; oy_ = y; }
+  void setClipRect(int, int, int, int) {}           // (the device's clipping: not modelled)
+  void setClipRect() {}
   void fillRect(int x, int y, int w, int h, uint16_t c) {
     for (int j = 0; j < h; j++) for (int i = 0; i < w; i++) drawPixel(x + i, y + j, c);
   }

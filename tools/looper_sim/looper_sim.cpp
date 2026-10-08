@@ -1702,17 +1702,17 @@ int main(int argc, char **argv) {
     check(sceneGoEmpty() && at(133, U - 2), "the empty scene too");
     check(projectLoad(3) && sceneCount() == 0 && at(133, U - 2), "a new project (slot 4): the tempo last set by hand, the volume unchanged");
     tempoByHand(97);
-    volumeByHand(U + 3);
-    check(projectLoad(2) && at(133, U + 3), "project 3 again: its own tempo, the volume as it is (100% + 3 steps)");
-    check(projectLoad(4) && at(97, U + 3), "another new project (slot 5): 97, the last set by hand (loading project 3 didn't count)");
-    check(projectLoad(2) && at(133, U + 3), "and project 3");
+    volumeByHand(U + 2);
+    check(projectLoad(2) && at(133, U + 2), "project 3 again: its own tempo, the volume as it is (100% + 2 steps)");
+    check(projectLoad(4) && at(97, U + 2), "another new project (slot 5): 97, the last set by hand (loading project 3 didn't count)");
+    check(projectLoad(2) && at(133, U + 2), "and project 3");
     for (int i = 0; i < 20; i++) serviceScenes();
     simSetTempo(120);                              // (power off: the tempo forgotten; the volume comes back from the session, not tested here)
     for (int i = 0; i < 5; i++) block();
     storageBegin([](const char *) {});
     scenesBegin(simTempo, simSetTempo, 2, simNewTempo);
     for (int i = 0; i < 5; i++) block();
-    check(projectCurrent() == 2 && at(133, U + 3), "after a power cycle: project 3's tempo, the volume not changed by loading it");
+    check(projectCurrent() == 2 && at(133, U + 2), "after a power cycle: project 3's tempo, the volume not changed by loading it");
     volumeByHand(U);                               // (the rest at 100%)
     check(projectDelete(3) && projectDelete(4), "(the new ones deleted)");
   }
@@ -2533,7 +2533,7 @@ for f in os.listdir("."):
     feedSineHz = 440;
     if (!transport.running) transportStart();
     int vol = masterVolume();
-    setMasterVolume(MASTER_VOLUME_UNITY - 4);        // turned down
+    setMasterVolume(MASTER_VOLUME_UNITY - 2);        // turned down
     auto lineMinusUsb = [](int blocks, int &usbPeak) {   // the line out's left less USB's main left, at most
       int worst = 0;
       usbPeak = 0;
@@ -2558,6 +2558,25 @@ for f in os.listdir("."):
     snprintf(m7, sizeof m7, "master volume turned down: USB's mix follows it (peak %d of the sine's 8000), the line out's same (within %d); "
              "the metronome on: only on the line out (%d off USB)", peakUsb, off, on);
     check(peakUsb > 2000 && peakUsb < 7000 && off <= 1 && on > 1000, m7);
+    {                                                // the master balance (the input: a sine left, its inverse right)
+      auto peaks = [](int bal, int &pl, int &pr) {
+        setMasterBalance(bal);
+        for (int i = 0; i < 8; i++) block();
+        pl = pr = 0;
+        for (int b = 0; b < 16; b++) {
+          block();
+          for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) { pl = std::max(pl, abs((int)outL.data[i])); pr = std::max(pr, abs((int)outR.data[i])); }
+        }
+      };
+      int l0, r0, lh, rh, lf, rf;
+      peaks(0, l0, r0);
+      peaks(BALANCE_MAX / 2, lh, rh);
+      peaks(BALANCE_MAX, lf, rf);
+      setMasterBalance(0);
+      snprintf(m7, sizeof m7, "master balance: centred %d / %d; half right %d / %d (half the left moved right: both halved); right: the left silent (%d)",
+               l0, r0, lh, rh, lf);
+      check(l0 > 2000 && abs(l0 - r0) < 50 && abs(2 * lh - l0) < 60 && abs(2 * rh - r0) < 60 && lf < 50, m7);
+    }
     setMasterVolume(vol);
     feedSineHz = 0;
     engine.monitor = wasMonitor;

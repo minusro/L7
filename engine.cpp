@@ -91,8 +91,9 @@ void setTrackMix(int t, int volume, int balance) {
   interrupts();
 }
 
-static int masterStep = MASTER_VOLUME_UNITY;
+static int masterStep = MASTER_VOLUME_UNITY, masterBal = 0;
 static volatile float outputGain = 1.0f;          // the master volume's
+static volatile float outLL = 1, outLR = 0, outRL = 0, outRR = 1;   // and with its balance (as a track's: setTrackMix())
 volatile bool metronomeOn = false;
 volatile float lineInPeak = 0, lineInFloor = 1;
 volatile bool usbAudioIn = false;
@@ -138,11 +139,27 @@ static float clickSample() {
   return s;
 }
 static volatile float outPeakL = 0, outPeakR = 0;
+static void setOutputMix() {
+  float g = masterStep ? powf(10.0f, (masterStep - MASTER_VOLUME_UNITY) * MASTER_STEP_DB / 20) : 0.0f;
+  float toL = masterBal < 0 ? -(float)masterBal / BALANCE_MAX : 0, toR = masterBal > 0 ? (float)masterBal / BALANCE_MAX : 0;
+  noInterrupts();
+  outputGain = g;
+  outLL = g * (1 - toR);
+  outLR = g * toL;
+  outRL = g * toR;
+  outRR = g * (1 - toL);
+  interrupts();
+}
 void setMasterVolume(int step) {
   masterStep = constrain(step, 0, MASTER_VOLUME_MAX);
-  outputGain = masterStep ? powf(10.0f, (masterStep - MASTER_VOLUME_UNITY) * MASTER_STEP_DB / 20) : 0.0f;
+  setOutputMix();
 }
 int masterVolume() { return masterStep; }
+void setMasterBalance(int balance) {
+  masterBal = constrain(balance, -BALANCE_MAX, BALANCE_MAX);
+  setOutputMix();
+}
+int masterBalance() { return masterBal; }
 void takeOutputPeaks(float &left, float &right) {
   noInterrupts();
   left = outPeakL;
@@ -706,7 +723,7 @@ void LooperEngine::update() {
   const uint32_t blockNow = transport.now;
   // Resampling: the output goes in the input history (what's recorded) instead.
   const bool captureOutput = recording.resample && recording.mode != Recording::Idle;
-  const float outGain = outputGain;
+  const float outGain = outputGain, oLL = outLL, oLR = outLR, oRL = outRL, oRR = outRR;
   float outPeak[2] = {0, 0};
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
     // USB's latency: the first sharp sound after each beat line (well above the
@@ -827,8 +844,11 @@ void LooperEngine::update() {
       inputRing[at % INPUT_FRAMES] = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
     }
     float click = clickSample() * outGain;
-    mixL = (mixL + monL) * outGain;                  // the master volume
-    mixR = (mixR + monR) * outGain;
+    {                                                // the master volume and balance
+      float l = mixL + monL, r = mixR + monR;
+      mixL = l * oLL + r * oLR;
+      mixR = l * oRL + r * oRR;
+    }
     if (usbFrame) {                                  // USB: the mix as the line out has it, without the metronome
       float uc = USB_OUT_CLICK ? click : 0.0f;
       usbFrame[0] = (int16_t)constrain(mixL + uc, -32767.0f, 32767.0f);
