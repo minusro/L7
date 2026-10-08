@@ -158,8 +158,8 @@ static uint32_t recordArmedAt = 0;                 // (transport.now at the pres
 // off its bottom).
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
 // Or held on SWITCH_HOLD_MS (from when it stopped at the edge): it switches
-// then, still held (pollKeys()); held on, it goes on repeating on the other
-// screen (after REPEAT_DELAY_MS), stopping at its next edge as ever.
+// then, still held (pollKeys()); held on, it does nothing more (no repeats)
+// until let go.
 static constexpr uint32_t SWITCH_HOLD_MS = 300;
 static uint32_t switchWaitAt = 0;                        // (when the switch began waiting)
 static bool edgeHeldLong = false;                  // (this pass: held that long, it switches now)
@@ -875,7 +875,7 @@ void pollKeys() {
     onKeys(prev, repeatKey, true);
   }
   // An arrow held off an edge (a switch waiting): SWITCH_HOLD_MS on, the switch
-  // now; the repeats go on after REPEAT_DELAY_MS from there (on the other screen).
+  // now; it doesn't repeat on the other screen (until pressed again).
   static bool edgeWaiting = false;
   bool waiting = menuOnRelease || leaveOnRelease || flipOnRelease;
   if (waiting && !edgeWaiting) switchWaitAt = millis();
@@ -886,7 +886,7 @@ void pollKeys() {
     onKeys(prev, 0, true);
     edgeHeldLong = false;
     edgeWaiting = false;
-    repeatAt = millis() + REPEAT_DELAY_MS;
+    repeatKey = 0;
   }
   menuHold();
   switchHold();
