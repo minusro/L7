@@ -132,7 +132,9 @@ void drawStatus() {
   bool tempoWaiting = transport.pendingSpb && transport.spbAtBeat >= 0;
   uint32_t playingSpb = transport.spb;
   interrupts();
-  float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
+  uint32_t nowSpb = transport.pendingSpb ? transport.pendingSpb : playingSpb;
+  float shown = tempoNudging() ? roundf(bpmForSpb(nowSpb) * 10) / 10            // (nudged: the tempo it plays at meanwhile)
+              : tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
   snprintf(text, sizeof text, "%.1f", shown);
   // B+LEFT/RIGHT held on the tempo cell following an external clock: its
   // offset instead (ms, "MS" in the tag's place), in the accent colour.
