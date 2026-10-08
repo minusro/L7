@@ -2767,6 +2767,29 @@ for f in os.listdir("."):
     n = offBy(inputIndex - (uint32_t)(15 * AUDIO_SAMPLE_RATE_EXACT), mean, worst);
     snprintf(m9, sizeof m9, "running: kept on their beat (the last 15 s: %d kicks, mean %+.1f ms, worst %.1f ms; %.2f BPM shown)", n, mean, worst, bpm);
     check(n >= 25 && fabs(mean) < 3 && worst < 10 && fabs(bpm - 126) <= 0.15f, m9);
+    {                                                // B+arrows: halved, then doubled back; 252 out of range
+      check(audioFollowScale(-1), "B+DOWN: halved");
+      run(16);
+      int on = 0, all = 0;
+      uint32_t from = inputIndex - (uint32_t)(6 * AUDIO_SAMPLE_RATE_EXACT);
+      for (uint32_t k : drumKicks) {
+        if ((int32_t)(k - from) < 0) continue;
+        uint32_t want = k - inputLatency();
+        double nearest = 1e9;
+        for (uint32_t o : ours) if (fabs((double)(int32_t)(o - want)) < fabs(nearest)) nearest = (double)(int32_t)(o - want);
+        all++;
+        if (getenv("FOLLOW_TRACE")) printf("    kick off by %.1f ms\n", nearest * 1000 / AUDIO_SAMPLE_RATE_EXACT);
+        if (fabs(nearest) * 1000 / AUDIO_SAMPLE_RATE_EXACT < 10) on++;
+      }
+      snprintf(m9, sizeof m9, "halved: %.2f BPM shown, every other kick of theirs on our beat (%d of %d)", bpm, on, all);
+      check(fabs(bpm - 63) <= 0.15f && all >= 10 && on >= all / 2 - 1 && on <= (all + 1) / 2, m9);
+      check(audioFollowScale(1), "B+UP: doubled back");
+      run(16);
+      n = offBy(inputIndex - (uint32_t)(6 * AUDIO_SAMPLE_RATE_EXACT), mean, worst);
+      snprintf(m9, sizeof m9, "doubled back: on their beat again (the last 6 s: %d kicks, worst %.1f ms; %.2f BPM)", n, worst, bpm);
+      check(n >= 10 && worst < 10 && fabs(bpm - 126) <= 0.15f, m9);
+      check(!audioFollowScale(1) && fabs(bpm - 126) <= 0.15f, "doubled again (252): out of the clock's range, refused");
+    }
     for (int k = 0; k < 8 * (int)fps; k++) {        // their tempo rising to 132 over 8 s
       drumBpm = 126 + 6.0 * k / (8 * fps);
       run(1 / fps);

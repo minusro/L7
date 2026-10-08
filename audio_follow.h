@@ -20,7 +20,8 @@
 // while locked starts on their beat: pressed in the first half of their beat,
 // at once, that far into it; in the second half, on their next beat.
 //
-// Meanwhile the tempo can't be changed by hand, nor by a project. A MIDI clock
+// Meanwhile the tempo can't be changed by hand, nor by a project: B+arrows only
+// halve or double it (audioFollowScale()), the beat staying theirs. A MIDI clock
 // being followed comes first (audio follow waits, its tempo theirs).
 #pragma once
 #include <stdint.h>
@@ -36,4 +37,8 @@ bool audioFollowStart();                 // START pressed: true if it starts (no
 // ours; stopped: theirs, found or still being looked for; nothing found yet:
 // the tempo shown's); false when not active.
 bool audioFollowFlash();
-float audioFollowBpm();                  // their tempo as found (0: none yet)
+float audioFollowBpm();                  // their tempo as found, halved or doubled as set (0: none yet)
+// B+arrows on the tempo cell while on: the clock at their tempo doubled (by > 0)
+// or halved (by < 0), again and again (within the clock's range; 0 again when
+// turned on). False: not on, or out of range.
+bool audioFollowScale(int by);

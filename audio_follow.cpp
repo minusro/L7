@@ -71,6 +71,10 @@ static bool resuming = false;                       // sound again after silence
 static uint32_t resumeFrom = 0;                     // RESUME_BEATS are heard from this frame on (the tempo kept meanwhile)
 static constexpr int RESUME_BEATS = 3;
 static double pendingFrom = 0;                      // their phase when START was pressed
+// The clock at their tempo times 2^octave (B+arrows on the tempo cell: halved
+// or doubled; 0 again when turned on). Halved, our beat on every other one of theirs.
+static int octave = 0;
+static double ratio() { return ldexp(1.0, octave); }
 
 static inline float osf(uint32_t n) { return onsetRing[n % ONSET_FRAMES] * (1.0f / ONSET_SCALE); }
 static float osfAt(double f) {                      // (between frames: linear)
@@ -212,17 +216,20 @@ static double theirPhase() {                         // how far into their beat 
   double ph = fmod(since / (period * AUDIO_BLOCK_SAMPLES), 1.0);
   return ph < 0 ? ph + 1 : ph;
 }
+static double ourPhase() { return fmod(theirPhase() * ratio(), 1.0); }   // (stopped: how far into our beat, theirs scaled)
 static uint32_t inBeatNow() {                        // (transportStartAt(): samples into our first beat)
-  return (uint32_t)min(theirPhase() * transport.spb, transport.spb - 1.0);
+  return (uint32_t)min(ourPhase() * transport.spb, transport.spb - 1.0);
 }
 
 static void follow(bool nudged, uint32_t count, uint32_t at) {
-  double theirSpb = period * AUDIO_BLOCK_SAMPLES;
+  double theirSpb = period * AUDIO_BLOCK_SAMPLES / ratio();   // (our beat's: theirs halved or doubled)
   double want = theirSpb;
   if (nudged) {
     double ours;
     if (!ourBeatAt(theirBeatNow(count, at, heardBeat), ours)) return;
-    float err = (float)(ours - floor(ours + 0.5));   // ahead of them: slower
+    // Their beat on one of ours (ours halved: on a half of ours, every other one of theirs on a whole one).
+    double g = min(ratio(), 1.0), x = ours / g;
+    float err = (float)((x - floor(x + 0.5)) * g);   // ahead of them: slower
     bool catching = catchBeats > 0 || fabsf(err) >= CATCH_BEATS_OFF;
     if (catchBeats > 0) catchBeats--;
     float most = catching ? CATCH_NUDGE : MAX_NUDGE, gain = catching ? CATCH_GAIN : GAIN;
@@ -311,6 +318,7 @@ FLASHMEM void audioFollowToggle() {
   lastBeat = -1;
   locked = false;
   startPending = false;
+  octave = 0;
   estimateAt = millis();
   loudAt = millis();
   silent = false;
@@ -319,7 +327,24 @@ FLASHMEM void audioFollowToggle() {
 
 bool audioFollowActive() { return on && !midiClockFollowing(); }
 bool audioFollowLocked() { return audioFollowActive() && locked && !silent; }
-float audioFollowBpm() { return period > 0 ? bpmOfFrames(period) : 0; }
+float audioFollowBpm() { return period > 0 ? bpmOfFrames(period) * (float)ratio() : 0; }
+
+FLASHMEM bool audioFollowScale(int by) {
+  if (!on || !by) return false;
+  int o = octave + (by > 0 ? 1 : -1);
+  if (o < -3 || o > 3) return false;
+  float heard = period > 0 ? bpmOfFrames(period) : 0;
+  if (heard > 0 && (heard * ldexpf(1, o) < MIN_BPM || heard * ldexpf(1, o) > MAX_BPM)) return false;   // (the clock's range)
+  octave = o;
+  Serial.printf("audio follow: x%g\n", ratio());
+  if (heard > 0 && audioFollowActive() && !silent && (locked || !transport.running)) {   // (the clock: at once)
+    uint32_t count, at;
+    snapshot(count, at);
+    catchBeats = CATCH_BEATS;
+    follow(false, count, at);
+  }
+  return true;
+}
 
 void audioFollowService() {
   if (!on) return;
@@ -352,7 +377,7 @@ void audioFollowService() {
   if (millis() - estimateAt >= ESTIMATE_MS && !silent && !resuming) {   // the tempo, afresh (not in silence)
     estimateAt = millis();
     float strength;
-    double est = estimate(count, bpm, strength);    // (towards the tempo shown: the one set, or theirs once followed)
+    double est = estimate(count, bpm / (float)ratio(), strength);   // (towards the tempo shown: the one set, or theirs once followed; halved or doubled: theirs)
     if (est > 0) {
       if (period <= 0) {
         restart(count, est);
@@ -418,7 +443,7 @@ bool audioFollowFlash() {
     interrupts();
     return first;
   }
-  if (period > 0 && lastBeat >= 0) return theirPhase() < 0.5;   // stopped: their beat, as the tracker has it (locked or not yet)
+  if (period > 0 && lastBeat >= 0) return ourPhase() < 0.5;   // stopped: their beat (halved or doubled), as the tracker has it (locked or not yet)
   uint32_t msPerBeat = (uint32_t)(60000 / bpm);    // (nothing found yet: the tempo shown, still listening)
   return millis() % msPerBeat < msPerBeat / 2;
 }

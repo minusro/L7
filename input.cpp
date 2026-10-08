@@ -593,6 +593,9 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     if (onStatus) {
       if (selectedCellIn(STATUS_ROW) == SCENE_CELL) {   // scene: UP/DOWN as SHIFT+UP/DOWN
         sceneKeys();
+      } else if (onTempo && audioFollowOn()) {       // audio follow: halved (LEFT, DOWN) or doubled (RIGHT, UP), fresh presses only
+        if (!repeat && (pressed & (m8::BTN_LEFT | m8::BTN_DOWN))) audioFollowScale(-1);
+        if (!repeat && (pressed & (m8::BTN_RIGHT | m8::BTN_UP))) audioFollowScale(1);
       } else if (onTempo) {                          // tempo: 0.1 BPM steps, or 1 BPM
         if (pressed & m8::BTN_LEFT) setTempo(bpm - 0.1f);
         if (pressed & m8::BTN_RIGHT) setTempo(bpm + 0.1f);
