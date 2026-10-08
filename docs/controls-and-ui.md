@@ -160,13 +160,13 @@ A recording track's waveform area is in the accent colour (a block of black betw
   first step; while the metronome clicks, the accent colour on each beat's first
   step instead), the accent colour on 1.1.1; before it a small play icon, in
   the accent colour while it runs. While B alone is held on the clock
-  cell it shows the master volume and balance instead, in the volume cell's shape
-  with twice its lines (10 a side, 1 to 9 blocks tall in pairs from the inside out,
-  centred, across the cell; volume 0–20, 1.875 dB a step, 16 100% — the default —,
-  20 +7.5 dB; balance ±20): each channel's halves
-  from the inside out in the accent colour up to its level (volume less the balance
-  away from it), grey after; its meter white over them on the same scale, from
-  silence each time it shows (`drawMasterVolume()` in ui_status.cpp).
+  cell it shows the master volume and balance instead: 21 vertical lines across the
+  cell (one per step 0–20, 1.875 dB apart: 0 off, 16 100% — the default —, 20 +7.5 dB;
+  balance ±20), their upper halves the left channel's, the lower halves the right's:
+  in the accent colour up to that channel's level (the volume less the balance away
+  from it; none at 0), black after it; each half meters its channel (white, line 16
+  0 dBFS — the ones above it clipping —, falling back from peaks), from silence each
+  time it shows (`drawMasterVolume()` in ui_status.cpp).
 * Track buttons: the track's number (tracks count from the top: 1 is
   the first row, 7 just above the status row) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent

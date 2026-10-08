@@ -37,28 +37,27 @@ static const Cell &statusCell(int cell) {
 }
 
 // ---- The master volume and balance: in the clock cell while B alone is held
-// on it (B + UP/DOWN: the volume, LEFT/RIGHT: the balance). The volume cell's
-// shape (ui_mix.cpp) with twice its lines, centred, shorter to fit the status
-// row (1 to 9 blocks tall, two of each, from the inside out): MV_ARCS a channel, the left one's
-// to the left, each two 1-pixel halves (HALVES a channel). A channel's level
-// lights its halves from the inside out in the accent colour, one per volume
-// step, less one per balance step away from that side; the outer ones grey.
-// Its meter (the output's level, falling at MV_FALL_DB_PER_S) lights them white
-// on the same scale: half h at volume step h + 1's level. Shown again, it
-// starts from silence. A half is only redrawn when its colour changes.
+// on it (B + UP/DOWN: the volume, LEFT/RIGHT: the balance). A vertical line
+// per step in every other column, centred across the cell inside the border's
+// block of space: each line's upper half the left channel's, its lower half
+// the right's, lit in the accent colour up to that channel's level (the
+// volume less the balance away from that side; none at 0), black after it.
+// Each half meters its channel's output over them: white up to its level, on
+// the same scale (line MASTER_VOLUME_UNITY: 0 dBFS), falling at
+// MV_FALL_DB_PER_S. Shown again, it starts from silence.
 static constexpr int MV_COLS = CLOCK_BOX.w / PX, MV_ROWS = STATUS_H / PX;   // 47 x 13, the border's included
-static constexpr int MV_ARCS = 10, MV_HALVES = 2 * MV_ARCS;                 // 20 a channel (columns 3-21, 25-43)
-static_assert(MV_HALVES == MASTER_VOLUME_MAX && MV_HALVES == MASTER_BALANCE_MAX, "a half per volume step, and per balance step");
-static constexpr int MV_INNER = MV_COLS / 2 - 2;                             // the left channel's innermost column (21; the right's: 25)
+static constexpr int MV_LINES = MASTER_VOLUME_MAX + 1;                      // (0 included)
+static constexpr int MV_LEFT = (MV_COLS - (2 * MV_LINES - 1)) / 2;          // the first line's column (centred: 3 ... 43)
+static constexpr int MV_HALF = (MV_ROWS - 4 - 1) / 2;                       // rows 2-5 left, 7-10 right
+static_assert(MV_LEFT >= 2, "the lines inside the border's block of space");
 static constexpr float MV_FALL_DB_PER_S = 24;
 
 static void drawMasterVolume(bool full) {
-  static uint16_t shown[2 * MV_HALVES];
+  static uint16_t shown[MV_LINES][2];
   static float meterDb[2] = {-200, -200};
   static uint32_t lastMs = 0;
   auto &t = board.tft();
   const int top = rowTop(STATUS_ROW);
-  const uint16_t ground = rowGround(STATUS_ROW);
   float peak[2];
   takeOutputPeaks(peak[0], peak[1]);
   if (full) peak[0] = peak[1] = 0;                 // (what played while hidden: not shown)
@@ -66,24 +65,22 @@ static void drawMasterVolume(bool full) {
   float fall = (now - lastMs) * (MV_FALL_DB_PER_S / 1000);
   lastMs = now;
   if (full) {
-    t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, ground);   // (inside the border)
+    t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, rowGround(STATUS_ROW));   // (inside the border)
     meterDb[0] = meterDb[1] = -200;
   }
   const int vol = masterVolume(), bal = masterBalance();
-  const int levels[2] = {vol - max(0, bal), vol - max(0, -bal)};   // halves lit
+  const int levels[2] = {vol - max(0, bal), vol - max(0, -bal)};
   for (int ch = 0; ch < 2; ch++) {
     float db = peak[ch] > 0 ? 20 * log10f(peak[ch]) : -200.0f;
     meterDb[ch] = max(db, meterDb[ch] - fall);
-    int meter = constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f), 0, MV_HALVES);
-    for (int h = 0; h < MV_HALVES; h++) {
-      uint16_t color = h < meter ? INK : h < levels[ch] ? ACCENT : DIM;
-      uint16_t &was = shown[ch * MV_HALVES + h];
-      if (!full && color == was) continue;
-      was = color;
-      int arc = h / 2, dx = ch ? h % 2 : 1 - h % 2;   // (from the inside out: a line's inner pixel column first)
-      int col = ch ? MV_COLS - 1 - MV_INNER + 2 * arc : MV_INNER - 2 * arc;
-      int height = 1 + 2 * (arc / 2), row = (MV_ROWS - height) / 2;   // (1, 1, 3, 3 ... 9, 9: centred)
-      t.fillRect(CLOCK_BOX.x + col * PX + dx, top + row * PX, 1, height * PX, color);
+    // (Line j: step j's level, (j - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB.)
+    int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f) + 1, 0, MV_LINES);
+    for (int j = 0; j < MV_LINES; j++) {
+      bool inLevel = levels[ch] > 0 && j <= levels[ch];   // (0: none)
+      uint16_t color = j < lit && inLevel ? INK : inLevel ? ACCENT : BG;
+      if (!full && color == shown[j][ch]) continue;
+      shown[j][ch] = color;
+      t.fillRect(CLOCK_BOX.x + (MV_LEFT + 2 * j) * PX, top + (2 + ch * (MV_HALF + 1)) * PX, PX, MV_HALF * PX, color);
     }
   }
 }
