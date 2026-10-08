@@ -160,6 +160,7 @@ bool menuOpen();
 bool menuOnStatus();
 bool arrowsMoved();                      // input.cpp: the last arrow press moved the selection
 bool screenSwitchPending();               // (input.cpp) an arrow held that switches screens once let go
+bool tempoNudging();                      // (input.cpp) SHIFT+LEFT/RIGHT held on the status row: the tempo nudged
 // While an arrow is held off an edge that switches screens once let go: a
 // line 4 blocks thick (dark grey; in the menu, black), a light grey
 // block-wide one inside it, then a black block-wide one, along that edge of the screen (on top of
@@ -170,6 +171,8 @@ inline uint16_t cellFrame(int i, int cell) {
   if (screenSwitchPending()) return BG;            // (going to the other screen: no frame meanwhile, the edge arrow bright)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
+  if ((k & m8::BTN_SHIFT) && !(k & m8::BTN_OPT) && i != STATUS_ROW && cell == WAVE_CELL && !recordingOn(i))
+    return ACCENT;                                 // (SHIFT held on a waveform cell or an empty track: LEFT/RIGHT step its sample)
   return k & m8::BTN_OPT ? DIM : k && !(k & ~arrows) && arrowsMoved() ? INK : LIGHT;
 }
 // B held as a modifier on its own (no SHIFT, A or START; arrows may be down).

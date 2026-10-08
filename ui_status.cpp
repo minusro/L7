@@ -2,6 +2,7 @@
 #include "ui.h"
 #include "input.h"
 #include "audio_follow.h"
+#include "midi_in.h"
 
 // Status row, in the pixel font, each cell framed like the tracks' when the
 // row is selected:
@@ -133,6 +134,13 @@ void drawStatus() {
   interrupts();
   float shown = tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
   snprintf(text, sizeof text, "%.1f", shown);
+  // SHIFT+LEFT/RIGHT held on the status row following an external clock: its
+  // offset instead (ms, "MS" in the tag's place), in the accent colour.
+  const uint8_t k = board.keys();
+  const int src = syncSource();
+  const bool offsetShown = selected == STATUS_ROW && !menuOpen() && src != SYNC_NONE && (k & m8::BTN_SHIFT) &&
+                           (k & (m8::BTN_LEFT | m8::BTN_RIGHT)) && !(k & (m8::BTN_OPT | m8::BTN_EDIT));
+  if (offsetShown) snprintf(text, sizeof text, "%+d", syncOffsetMs[src]);
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) ? selectedCellIn(STATUS_ROW) : -1;
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
@@ -142,16 +150,17 @@ void drawStatus() {
     // cell (B + arrows change the tempo).
     const Cell &box = TEMPO_BOX;
     int right = box.x + box.w - INSET;
-    uint16_t ink = cell == TEMPO_CELL && bAlone() ? ACCENT : labelInk(TEMPO_CELL);
+    uint16_t ink = (cell == TEMPO_CELL && bAlone()) || offsetShown ? ACCENT : labelInk(TEMPO_CELL);
     int tagX = right - tagWidth("BPM");
-    drawTag(tagX, tagY, "BPM", TAG_INVERTED, ink, G);
+    drawTag(tagX, tagY, offsetShown ? "MS" : "BPM", TAG_INVERTED, ink, G, tagWidth("BPM"));
     static const int tempoW = textWidth("888.8");  // the widest tempo: its box clears any other
     int numRight = tagX - PX, numLeft = numRight - tempoW, w = textWidth(text);
     t.fillRect(numLeft, tagY, numRight - numLeft + PX, textY - tagY, G);   // round the text: what was there
     t.fillRect(numLeft, textY + FONT_H, numRight - numLeft + PX, tagY + TAG_H - textY - FONT_H, G);
     t.fillRect(numLeft, textY, tempoW - w, FONT_H, G);
     t.fillRect(numRight, textY, PX, FONT_H, G);
-    uint16_t numInk = audioFollowFlash() ? (audioFollowLocked() ? ACCENT : BG) : ink;   // (audio follow: the beat; black until locked)
+    uint16_t numInk = offsetShown || tempoNudging() ? ACCENT                                // (nudged, or the offset: the accent colour)
+                    : audioFollowFlash() ? (audioFollowLocked() ? ACCENT : BG) : ink;   // (audio follow: the beat; black until locked)
     drawText(numRight - w, textY, text, numInk, G);
   }
 

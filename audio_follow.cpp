@@ -206,7 +206,8 @@ static bool ourBeatAt(uint32_t t, double &pos) {
 
 // Their latest beat on our timeline (transport.now: as heard, less the input's latency).
 static uint32_t theirBeatNow(uint32_t count, uint32_t at, double beat = lastBeat) {
-  double rel = (beat - ONSET_DELAY - (count - 1)) * AUDIO_BLOCK_SAMPLES - inputLatency();
+  double rel = (beat - ONSET_DELAY - (count - 1)) * AUDIO_BLOCK_SAMPLES - inputLatency() +
+               syncOffsetMs[SYNC_AUDIO] * (AUDIO_SAMPLE_RATE_EXACT / 1000.0);   // (the offset set by hand: our beat that much later)
   return at + (uint32_t)(int32_t)floor(rel);
 }
 static double theirPhase() {                         // how far into their beat we are now (0-1)
@@ -326,6 +327,8 @@ FLASHMEM void audioFollowToggle() {
 }
 
 bool audioFollowActive() { return on && !midiClockFollowing(); }
+void audioFollowOffsetChanged() { catchBeats = CATCH_BEATS; }
+int syncSource() { return midiClockFollowing() ? midiFollowSource() : audioFollowActive() ? SYNC_AUDIO : SYNC_NONE; }
 bool audioFollowLocked() { return audioFollowActive() && locked && !silent; }
 float audioFollowBpm() { return period > 0 ? bpmOfFrames(period) * (float)ratio() : 0; }
 

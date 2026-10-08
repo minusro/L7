@@ -2,6 +2,7 @@
 #include "midi_in.h"
 #include "engine.h"
 #include "storage.h"
+#include "audio_follow.h"
 using namespace looper;
 
 static constexpr uint32_t FOLLOW_TIMEOUT_MS = 500;
@@ -34,6 +35,7 @@ static constexpr int32_t AHEAD_US[2] = {0, 2000};    // (USB: 1.7-2.1 ms late wi
 static constexpr bool LOG_TICKS = false;              // (diagnosing: each tick's time and each tempo applied, on the serial log; data/daw_clock_usb.txt came from it)
 
 static HardwareSerial *port = nullptr;
+int16_t syncOffsetMs[SYNC_SOURCES] = {0, 0, 0};
 
 // Interrupt -> loop(): the ticks' times, and their transport's messages in
 // order (Start, Continue, Stop, Song Position), each with the tick it comes
@@ -126,6 +128,7 @@ static bool alive() {
 }
 
 bool midiClockFollowing() { return theirsRunning && alive(); }
+int midiFollowSource() { return source; }
 
 // The loop()'s side.
 static uint32_t seenTicks = 0, seenEvents = 0;
@@ -163,8 +166,13 @@ static double ourBeatAt(uint32_t us, const BlockStamp &s) {
 
 uint32_t midiTheirSpb() { return theirSpb; }
 
-static double aheadBeats() {                          // (at their tempo)
-  return theirSpb ? AHEAD_US[source & 1] / (theirSpb * usPerSample) : 0;
+static double aheadBeats() {                          // (at their tempo; the offset set by hand: later)
+  return theirSpb ? (AHEAD_US[source & 1] - 1000.0 * syncOffsetMs[source & 1]) / (theirSpb * usPerSample) : 0;
+}
+
+void syncOffsetChanged(int src) {
+  if (src == SYNC_SERIAL || src == SYNC_USB) changing = CHANGE_TICKS;   // (caught up as after a start: within a few beats)
+  else audioFollowOffsetChanged();
 }
 
 // Their position (beats) at tick i.

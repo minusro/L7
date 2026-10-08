@@ -40,6 +40,7 @@
 //   * tracks joining mid-play fill their buffer through the normal streaming
 //     instead of a blocking burst of reads
 #include "storage.h"
+#include "midi_in.h"
 #include <utility>
 #include <inttypes.h>
 
@@ -1429,12 +1430,16 @@ Session loadSession() {
     else if (!strncmp(line, "playing=", 8)) s.playing = strtol(line + 8, nullptr, 10) != 0;
     else if (!strncmp(line, "metro=", 6)) s.metro = (int)strtol(line + 6, nullptr, 10);
     else if (!strncmp(line, "follow=", 7)) s.follow = strtol(line + 7, nullptr, 10) != 0;
+    else if (!strncmp(line, "offmidi=", 8)) s.offsets[0] = (int)strtol(line + 8, nullptr, 10);
+    else if (!strncmp(line, "offusb=", 7)) s.offsets[1] = (int)strtol(line + 7, nullptr, 10);
+    else if (!strncmp(line, "offaudio=", 9)) s.offsets[2] = (int)strtol(line + 9, nullptr, 10);
   }
   f.close();
   s.bpm = constrain(s.bpm, MIN_BPM, MAX_BPM);
   s.newBpm = constrain(s.newBpm, MIN_BPM, MAX_BPM);
   s.master = constrain(s.master, 0, MASTER_VOLUME_MAX);
   s.balance = constrain(s.balance, -MASTER_BALANCE_MAX, MASTER_BALANCE_MAX);
+  for (int &o : s.offsets) o = constrain(o, -SYNC_OFFSET_MAX_MS, SYNC_OFFSET_MAX_MS);
   s.project = constrain(s.project, -1, PROJECTS - 1);   // (-1, "project=0": the dummy project)
   return s;
 }
@@ -1442,8 +1447,8 @@ Session loadSession() {
 void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nnewbpm=%.2f\nout=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
-           s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro, s.follow ? 1 : 0);
+  f.printf("bpm=%.2f\nnewbpm=%.2f\nout=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\noffmidi=%d\noffusb=%d\noffaudio=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
+           s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro, s.follow ? 1 : 0, s.offsets[0], s.offsets[1], s.offsets[2]);
   f.close();
 }
 

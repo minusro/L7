@@ -12,7 +12,8 @@ int selectedCell = 0;                       // cell in the row (0: the waveform,
 static uint32_t changedMs = 0;                // when the tempo or the selection last changed
 static bool tempoDirty = false;
 static int savedRow = -1, savedCell = -1;      // the selection session.txt holds
-static int savedMaster = MASTER_VOLUME_UNITY, savedBalance = 0;   // the master volume and balance session.txt holds
+static int savedMaster = MASTER_VOLUME_UNITY, savedBalance = 0;
+static int16_t savedOffsets[SYNC_SOURCES] = {};       // the external clocks' offsets session.txt holds   // the master volume and balance session.txt holds
 static int savedProject = 0;                    // and the loaded project
 static int savedMenu = -1, bootMenu = -1;       // and the menu (its selection, + 1000 open)
 static int bootProject = 0;
@@ -114,6 +115,7 @@ void beginSession() {
   if (s.metro >= METRO_OFF && s.metro <= METRO_ON) metroMode = savedMetro = s.metro;
   audioFollowBegin(s.follow);
   savedFollow = s.follow;
+  for (int i = 0; i < SYNC_SOURCES; i++) syncOffsetMs[i] = savedOffsets[i] = (int16_t)s.offsets[i];
 }
 
 int sessionProject() { return bootProject; }
@@ -125,7 +127,8 @@ static bool sessionDirty() {
   mainSelection(row, cell);                        // (the looper's, not the menu's)
   return tempoDirty || masterVolume() != savedMaster || masterBalance() != savedBalance || projectCurrent() != savedProject ||
          menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell ||
-         metroMode != savedMetro || audioFollowOn() != savedFollow;
+         metroMode != savedMetro || audioFollowOn() != savedFollow ||
+         memcmp(syncOffsetMs, savedOffsets, sizeof savedOffsets);
 }
 
 static void writeSession() {
@@ -140,6 +143,7 @@ static void writeSession() {
   mainSelection(s.row, s.cell);
   s.metro = metroMode;
   s.follow = audioFollowOn();
+  for (int i = 0; i < SYNC_SOURCES; i++) s.offsets[i] = savedOffsets[i] = syncOffsetMs[i];
   saveSession(s);
   savedMetro = s.metro;
   savedFollow = s.follow;

@@ -33,6 +33,16 @@ void midiInSuspend(bool off);             // storage mode: nothing taken in mean
 void midiInSongPosition(uint16_t pos16, uint32_t us, MidiSource from);   // a Song Position (0xF2; in 16ths): USB's, already put together
 void midiInService();                     // loop(): start / stop, the tempo and the beat followed
 bool midiClockFollowing();                // an external clock is running (its Start had, its ticks coming in)
+int midiFollowSource();                   // the clock followed (MidiSource; meaningful while midiClockFollowing())
+// External tempo sources (audio_follow.h syncSource()): each one's offset of
+// our clock from theirs, in ms (positive: L7 plays later; 0 by default),
+// SYNC_OFFSET_STEP_MS a press of SHIFT+RIGHT / LEFT on the status row,
+// within +-SYNC_OFFSET_MAX_MS; saved with the session. syncOffsetChanged():
+// after a change, the follower catches it up quickly.
+enum SyncSource : int8_t { SYNC_NONE = -1, SYNC_SERIAL = 0, SYNC_USB = 1, SYNC_AUDIO = 2 };
+constexpr int SYNC_SOURCES = 3, SYNC_OFFSET_MAX_MS = 250, SYNC_OFFSET_STEP_MS = 10;
+extern int16_t syncOffsetMs[SYNC_SOURCES];
+void syncOffsetChanged(int source);
 uint32_t midiTheirSpb();                  // their tempo as measured (samples a beat; 0: none yet)
 
 // From the app (app.cpp): the tempo shown, and an external clock's tempo

@@ -748,8 +748,21 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
   } else if (shift) {
     sceneKeys();
-    // SHIFT+LEFT/RIGHT on a track: its sample, the previous / next on the card.
-    if (!onStatus && !recordingOn(selected)) {
+    // SHIFT+LEFT/RIGHT on the status row, following an external clock: our
+    // clock's offset from it (midi_in.h syncOffsetMs: RIGHT later, LEFT
+    // earlier, a step a press or repeat); both together: back to 0. (Not
+    // following one: the tempo nudged while held, nudgeService().)
+    const uint8_t LRK = m8::BTN_LEFT | m8::BTN_RIGHT;
+    int src = syncSource();
+    if (onStatus && src != SYNC_NONE && (pressed & LRK)) {
+      int16_t &o = syncOffsetMs[src];
+      if ((keys & LRK) == LRK) o = 0;
+      else o = constrain(o + ((pressed & m8::BTN_RIGHT) ? SYNC_OFFSET_STEP_MS : -SYNC_OFFSET_STEP_MS), -SYNC_OFFSET_MAX_MS, SYNC_OFFSET_MAX_MS);
+      syncOffsetChanged(src);
+    }
+    // SHIFT+LEFT/RIGHT on a track's waveform cell, or an empty track: its
+    // sample, the previous / next on the card.
+    if (!onStatus && !recordingOn(selected) && (selectedCellIn(selected) == WAVE_CELL || !hasClip(selected))) {
       // (another sample: the waveform cell selected, to see it)
       if ((pressed & m8::BTN_LEFT) && stepSample(selected, -1)) selectedCell = WAVE_CELL;
       if ((pressed & m8::BTN_RIGHT) && stepSample(selected, 1)) selectedCell = WAVE_CELL;
@@ -884,6 +897,40 @@ static void selectAfterRecording(int t) {
   }
 }
 
+// SHIFT+LEFT or RIGHT held on the status row, no external clock followed,
+// playing: the clock nudged faster (RIGHT) or slower (LEFT), as Live's nudge
+// buttons, more the longer it's held (NUDGE_START, then NUDGE_RATE a second,
+// at most NUDGE_MAX; in NUDGE_STEP steps); let go, the tempo set again. The
+// tempo shown stays the one set (its number in the accent colour meanwhile).
+static constexpr float NUDGE_START = 0.01f, NUDGE_RATE = 0.03f, NUDGE_MAX = 0.08f, NUDGE_STEP = 0.0025f;
+static bool nudging = false;
+static int nudgeDir = 0;
+static uint32_t nudgeAt = 0;
+bool tempoNudging() { return nudging; }
+static void nudgeService() {
+  uint8_t k = board.keys();
+  int dir = ((k & m8::BTN_RIGHT) ? 1 : 0) - ((k & m8::BTN_LEFT) ? 1 : 0);
+  bool want = (k & m8::BTN_SHIFT) && dir && !(k & (m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY)) && selected == STATUS_ROW &&
+              !menuOpen() && transport.running && syncSource() == SYNC_NONE;
+  if (!want) {
+    if (nudging) {                                   // let go: the tempo set
+      nudging = false;
+      transport.pendingSpb = spbForBpm(bpm);
+    }
+    return;
+  }
+  if (!nudging || dir != nudgeDir) {
+    nudging = true;
+    nudgeDir = dir;
+    nudgeAt = millis();
+  }
+  float amt = min(NUDGE_MAX, NUDGE_START + NUDGE_RATE * (millis() - nudgeAt) / 1000.0f);
+  amt = roundf(amt / NUDGE_STEP) * NUDGE_STEP;       // (steps: few tempo changes, each a recording's tempo mark)
+  uint32_t spb = (uint32_t)lroundf(spbForBpm(bpm) / (1 + dir * amt));
+  uint32_t now = transport.pendingSpb ? transport.pendingSpb : transport.spb;
+  if (spb != now) transport.pendingSpb = spb;
+}
+
 void pollKeys() {
   // Arrows repeat while held: the press acts at once, then again after
   // REPEAT_DELAY_MS and every REPEAT_PERIOD_MS (the most recently pressed one).
@@ -923,6 +970,7 @@ void pollKeys() {
   }
   menuHold();
   switchHold();
+  nudgeService();
 }
 
 void followRecording() {

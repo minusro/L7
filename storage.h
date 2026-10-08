@@ -171,6 +171,7 @@ struct Session {
   bool playing = false;
   int metro = 1;                                   // the metronome: 0 off, 1 auto, 2 on (app.h)
   bool follow = false;                             // audio follow (audio_follow.h)
+  int offsets[3] = {0, 0, 0};                      // the external clocks' offsets, ms (midi_in.h syncOffsetMs: serial MIDI, USB MIDI, audio)
 };
 Session loadSession();
 void saveSession(const Session &s);  // creates/rewrites a file: only while stopped

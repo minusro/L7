@@ -2838,6 +2838,20 @@ for f in os.listdir("."):
     n = offBy(inputIndex - (uint32_t)(15 * AUDIO_SAMPLE_RATE_EXACT), mean, worst);
     snprintf(m9, sizeof m9, "running: kept on their beat (the last 15 s: %d kicks, mean %+.1f ms, worst %.1f ms; %.2f BPM shown)", n, mean, worst, bpm);
     check(n >= 25 && fabs(mean) < 3 && worst < 10 && fabs(bpm - 126) <= 0.15f, m9);
+    {                                                // SHIFT+RIGHT x5 on the status row: our beat 50 ms after theirs
+      syncOffsetMs[SYNC_AUDIO] = 50;
+      syncOffsetChanged(SYNC_AUDIO);
+      run(12);
+      n = offBy(inputIndex - (uint32_t)(5 * AUDIO_SAMPLE_RATE_EXACT), mean, worst);
+      snprintf(m9, sizeof m9, "offset +50 ms: our beats that much after theirs (the last 5 s: %d kicks, mean %+.1f ms)", n, mean);
+      check(syncSource() == SYNC_AUDIO && n >= 8 && fabs(mean - 50) < 4, m9);
+      syncOffsetMs[SYNC_AUDIO] = 0;
+      syncOffsetChanged(SYNC_AUDIO);
+      run(12);
+      n = offBy(inputIndex - (uint32_t)(5 * AUDIO_SAMPLE_RATE_EXACT), mean, worst);
+      snprintf(m9, sizeof m9, "back to 0: on their beat again (mean %+.1f ms)", mean);
+      check(n >= 8 && fabs(mean) < 3, m9);
+    }
     {                                                // B+arrows: halved, then doubled back; 252 out of range
       check(audioFollowScale(-1), "B+DOWN: halved");
       run(16);
