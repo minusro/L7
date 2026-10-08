@@ -593,6 +593,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
   };
 
+  if (opt && shift && onStatus) pressed &= ~(m8::BTN_LEFT | m8::BTN_RIGHT);   // (SHIFT+B+LEFT/RIGHT on the status row: the nudge, nudgeService())
   if (opt) {
     // OPT (B) + arrows: the current cell's parameters (none on empty tracks).
     if (onStatus) {
@@ -761,12 +762,11 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
   } else if (shift) {
     sceneKeys();
-    // SHIFT+LEFT/RIGHT on the status row, following an external clock: the
-    // clock jumps a beat back / on (a fresh press; storage.h transportJump(),
-    // the MIDI follower keeping it). (Not following one: the tempo nudged
-    // while held, nudgeService().)
+    // SHIFT+LEFT/RIGHT on the status row: the clock jumps a beat back / on
+    // (a fresh press; storage.h transportJump(); a MIDI clock's follower
+    // keeping it). (SHIFT+B+LEFT/RIGHT: nudged, nudgeService().)
     int src = syncSource();
-    if (onStatus && src != SYNC_NONE && !repeat && (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) && !((keys & m8::BTN_LEFT) && (keys & m8::BTN_RIGHT))) {
+    if (onStatus && !repeat && (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) && !((keys & m8::BTN_LEFT) && (keys & m8::BTN_RIGHT))) {
       int by = (pressed & m8::BTN_RIGHT) ? 1 : -1;
       if (transportJump(by) && (src == SYNC_SERIAL || src == SYNC_USB)) midiJumped(by);
     }
@@ -907,11 +907,14 @@ static void selectAfterRecording(int t) {
   }
 }
 
-// SHIFT+LEFT or RIGHT held on the status row, no external clock followed,
-// playing: the clock nudged faster (RIGHT) or slower (LEFT), as Live's nudge
-// buttons, more the longer it's held (NUDGE_START, then NUDGE_RATE a second,
-// at most NUDGE_MAX; in NUDGE_STEP steps); let go, the tempo set again. The
-// tempo shown stays the one set (its number in the accent colour meanwhile).
+// SHIFT+B+LEFT or RIGHT held on the status row, playing: the clock nudged
+// faster (RIGHT) or slower (LEFT), as Live's nudge buttons, more the longer
+// it's held (NUDGE_START, then NUDGE_RATE a second, at most NUDGE_MAX; in
+// NUDGE_STEP steps); let go, the tempo set again. The tempo shown stays the
+// one set (its number in the accent colour meanwhile). Following an external
+// clock (whose tempo it is): its offset moved instead, as far as the nudge
+// would have moved the clock (earlier: RIGHT, the clock ahead), the follower
+// taking ours there; let go, it stays (as a nudge's shift does).
 static constexpr float NUDGE_START = 0.01f, NUDGE_RATE = 0.03f, NUDGE_MAX = 0.08f, NUDGE_STEP = 0.0025f;
 static bool nudging = false;
 static int nudgeDir = 0;
@@ -920,21 +923,35 @@ bool tempoNudging() { return nudging; }
 static void nudgeService() {
   uint8_t k = board.keys();
   int dir = ((k & m8::BTN_RIGHT) ? 1 : 0) - ((k & m8::BTN_LEFT) ? 1 : 0);
-  bool want = (k & m8::BTN_SHIFT) && dir && !(k & (m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY)) && selected == STATUS_ROW &&
-              !menuOpen() && transport.running && syncSource() == SYNC_NONE;
-  if (!want) {
-    if (nudging) {                                   // let go: the tempo set
-      nudging = false;
-      transport.pendingSpb = spbForBpm(bpm);
-    }
-    return;
+  int src = syncSource();
+  bool want = (k & m8::BTN_SHIFT) && (k & m8::BTN_OPT) && dir && !(k & (m8::BTN_EDIT | m8::BTN_PLAY)) && selected == STATUS_ROW &&
+              !menuOpen() && transport.running;
+  static int nudgeSrc = SYNC_NONE;
+  static uint32_t lastMs = 0;
+  static float offsetMs = 0;                        // (following: the offset, nudged, unrounded)
+  if (!want || (nudging && src != nudgeSrc)) {
+    if (nudging && nudgeSrc == SYNC_NONE) transport.pendingSpb = spbForBpm(bpm);   // let go: the tempo set
+    nudging = false;
+    if (!want) return;
   }
   if (!nudging || dir != nudgeDir) {
     nudging = true;
     nudgeDir = dir;
-    nudgeAt = millis();
+    nudgeAt = lastMs = millis();
+    nudgeSrc = src;
+    if (src != SYNC_NONE) offsetMs = syncOffsetMs[src];
   }
   float amt = min(NUDGE_MAX, NUDGE_START + NUDGE_RATE * (millis() - nudgeAt) / 1000.0f);
+  if (src != SYNC_NONE) {                            // following: the offset (ms) moved as the clock would have been
+    offsetMs = constrain(offsetMs - dir * amt * (millis() - lastMs), (float)-SYNC_OFFSET_MAX_MS, (float)SYNC_OFFSET_MAX_MS);
+    lastMs = millis();
+    int16_t o = (int16_t)lroundf(offsetMs);
+    if (o != syncOffsetMs[src]) {
+      syncOffsetMs[src] = o;
+      syncOffsetChanged(src);
+    }
+    return;
+  }
   amt = roundf(amt / NUDGE_STEP) * NUDGE_STEP;       // (steps: few tempo changes, each a recording's tempo mark)
   uint32_t spb = (uint32_t)lroundf(spbForBpm(bpm) / (1 + dir * amt));
   uint32_t now = transport.pendingSpb ? transport.pendingSpb : transport.spb;
