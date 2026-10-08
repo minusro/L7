@@ -71,6 +71,9 @@ void transportRestart();             // from bar 1 again, running or not
 // Running (and not recording): jump to the nearest bar start (the playheads
 // follow, in phase); the bar count carries on from there.
 void transportSnapToBar();
+// Running (and not recording): the clock and the playheads `beats` beats on
+// (back, negative), as far into the beat as before. false: not done.
+bool transportJump(int beats);
 
 // Record button for track t: start (or arm until the next bar), then stop.
 // Returns false if the track already holds a loop. Pressed on another track

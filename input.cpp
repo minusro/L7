@@ -599,11 +599,13 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       if (selectedCellIn(STATUS_ROW) == SCENE_CELL) {   // scene: UP/DOWN as SHIFT+UP/DOWN
         sceneKeys();
       } else if (onTempo && (audioFollowOn() || syncSource() != SYNC_NONE)) {
-        // Following: UP/DOWN double / halve audio follow's tempo (fresh
-        // presses only); LEFT/RIGHT the clock's offset from the external
-        // one, as SHIFT+LEFT/RIGHT on the status row (both: back to 0).
-        if (audioFollowOn() && !repeat && (pressed & m8::BTN_DOWN)) audioFollowScale(-1);
-        if (audioFollowOn() && !repeat && (pressed & m8::BTN_UP)) audioFollowScale(1);
+        // Following: UP/DOWN double / halve the tempo (fresh presses only;
+        // a MIDI clock's: ours theirs times that, audio_follow.h, midi_in.h);
+        // LEFT/RIGHT the clock's offset from the external one, 10 ms a
+        // press (both: back to 0).
+        int scaleBy = !repeat && (pressed & m8::BTN_UP) ? 1 : !repeat && (pressed & m8::BTN_DOWN) ? -1 : 0;
+        if (scaleBy && (syncSource() == SYNC_SERIAL || syncSource() == SYNC_USB)) midiScale(scaleBy);
+        else if (scaleBy && audioFollowOn()) audioFollowScale(scaleBy);
         const uint8_t LRK = m8::BTN_LEFT | m8::BTN_RIGHT;
         int src = syncSource();
         if (src != SYNC_NONE && (pressed & LRK)) {
@@ -759,17 +761,14 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
   } else if (shift) {
     sceneKeys();
-    // SHIFT+LEFT/RIGHT on the status row, following an external clock: our
-    // clock's offset from it (midi_in.h syncOffsetMs: RIGHT later, LEFT
-    // earlier, a step a press or repeat); both together: back to 0. (Not
-    // following one: the tempo nudged while held, nudgeService().)
-    const uint8_t LRK = m8::BTN_LEFT | m8::BTN_RIGHT;
+    // SHIFT+LEFT/RIGHT on the status row, following an external clock: the
+    // clock jumps a beat back / on (a fresh press; storage.h transportJump(),
+    // the MIDI follower keeping it). (Not following one: the tempo nudged
+    // while held, nudgeService().)
     int src = syncSource();
-    if (onStatus && src != SYNC_NONE && (pressed & LRK)) {
-      int16_t &o = syncOffsetMs[src];
-      if ((keys & LRK) == LRK) o = 0;
-      else o = constrain(o + ((pressed & m8::BTN_RIGHT) ? SYNC_OFFSET_STEP_MS : -SYNC_OFFSET_STEP_MS), -SYNC_OFFSET_MAX_MS, SYNC_OFFSET_MAX_MS);
-      syncOffsetChanged(src);
+    if (onStatus && src != SYNC_NONE && !repeat && (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) && !((keys & m8::BTN_LEFT) && (keys & m8::BTN_RIGHT))) {
+      int by = (pressed & m8::BTN_RIGHT) ? 1 : -1;
+      if (transportJump(by) && (src == SYNC_SERIAL || src == SYNC_USB)) midiJumped(by);
     }
     // SHIFT+LEFT/RIGHT on a track's waveform cell, or an empty track: its
     // sample, the previous / next on the card.

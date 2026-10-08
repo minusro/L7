@@ -43,6 +43,13 @@ enum SyncSource : int8_t { SYNC_NONE = -1, SYNC_SERIAL = 0, SYNC_USB = 1, SYNC_A
 constexpr int SYNC_SOURCES = 3, SYNC_OFFSET_MAX_MS = 250, SYNC_OFFSET_STEP_MS = 10;
 extern int16_t syncOffsetMs[SYNC_SOURCES];
 void syncOffsetChanged(int source);
+// B+UP/DOWN on the tempo cell following a MIDI clock: our tempo theirs doubled
+// (by > 0) or halved, again and again (within the clock's range); ours starts
+// again from their next beat that fits. False: not following, or out of range.
+bool midiScale(int by);
+// Our transport jumped `beats` (transportJump(), SHIFT+LEFT/RIGHT): kept that
+// far from their position (till their next start).
+void midiJumped(int beats);
 uint32_t midiTheirSpb();                  // their tempo as measured (samples a beat; 0: none yet)
 
 // From the app (app.cpp): the tempo shown, and an external clock's tempo

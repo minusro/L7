@@ -36,6 +36,12 @@ static constexpr bool LOG_TICKS = false;              // (diagnosing: each tick'
 
 static HardwareSerial *port = nullptr;
 int16_t syncOffsetMs[SYNC_SOURCES] = {0, 0, 0};
+// Our tempo their times 2^octave (B+UP/DOWN on the tempo cell; each MIDI
+// source its own), and whole beats jumped (SHIFT+LEFT/RIGHT on the status
+// row: transportJump(); till their next start): our position their position
+// times the ratio, plus those beats, plus the offset.
+static int octaveOf[2] = {0, 0};
+static int32_t jumpBeats = 0;
 
 // Interrupt -> loop(): the ticks' times, and their transport's messages in
 // order (Start, Continue, Stop, Song Position), each with the tick it comes
@@ -166,17 +172,47 @@ static double ourBeatAt(uint32_t us, const BlockStamp &s) {
 
 uint32_t midiTheirSpb() { return theirSpb; }
 
+static double ratio() { return ldexp(1.0, octaveOf[source & 1]); }
+static uint32_t oursOf(double spb) { return (uint32_t)(spb / ratio() + 0.5); }   // (our spb for theirs)
+static float shownOf(double spb) { return roundf(bpmForSpb((uint32_t)(spb + 0.5)) * (float)ratio() * 10) / 10; }
+// Their beat to start ours on: whole, and halved (or less) one of every 2
+// (4, 8) of theirs, so ours is whole too.
+static int32_t startBeatFrom(double theirs) {
+  int32_t sb = (int32_t)ceil(theirs - 1e-9), k = ratio() < 1 ? (int32_t)lround(1 / ratio()) : 1;
+  return sb + (k - ((sb % k) + k) % k) % k;          // (up to a multiple of k)
+}
+static int32_t ourBeatOf(int32_t theirs) { return (int32_t)lround(theirs * ratio()) + jumpBeats; }
+
 static double aheadBeats() {                          // (at their tempo; the offset set by hand: later)
   return theirSpb ? (AHEAD_US[source & 1] - 1000.0 * syncOffsetMs[source & 1]) / (theirSpb * usPerSample) : 0;
 }
+
+// Their position (beats) at tick i.
+static double theirBeatAt(uint32_t i) { return refBeats + (double)((int32_t)i - refTick) / 24; }
+
+bool midiScale(int by) {
+  if (!midiClockFollowing() || !theirSpb || !by) return false;
+  int &o = octaveOf[source & 1], to = o + (by > 0 ? 1 : -1);
+  float b = bpmForSpb(theirSpb) * ldexpf(1, to);
+  if (to < -3 || to > 3 || b < MIN_BPM || b > MAX_BPM) return false;   // (the clock's range)
+  o = to;
+  Serial.printf("MIDI in: x%g\n", ratio());
+  followTempo(oursOf(theirSpb), shownOf(theirSpb));
+  if (refTick >= 0 && seenTicks) {                    // running: ours again from their next beat that fits (as a start)
+    if (transport.running) transportStop();
+    startAt = startBeatFrom(theirBeatAt(seenTicks - 1));
+    changing = CHANGE_TICKS;
+  }
+  return true;
+}
+
+void midiJumped(int beats) { jumpBeats += beats; }
 
 void syncOffsetChanged(int src) {
   if (src == SYNC_SERIAL || src == SYNC_USB) changing = CHANGE_TICKS;   // (caught up as after a start: within a few beats)
   else audioFollowOffsetChanged();
 }
 
-// Their position (beats) at tick i.
-static double theirBeatAt(uint32_t i) { return refBeats + (double)((int32_t)i - refTick) / 24; }
 
 // Starting: how far they are past the beat we start on, now (samples at our
 // tempo): from the tick that got there, at their tempo since.
@@ -184,9 +220,9 @@ static uint32_t startTickAt = 0;
 static int32_t startingBeat = 0;
 static uint32_t pastStartingBeat() {
   uint32_t spb = transport.pendingSpb ? transport.pendingSpb : transport.spb;
-  double usPerBeat = (theirSpb ? theirSpb : spb) * usPerSample;
+  double theirs = theirSpb ? theirSpb : spb * ratio(), usPerBeat = theirs * usPerSample;   // (their beats: samples since, at their tempo)
   double beats = theirBeatAt(startTickAt) + aheadBeats() - startingBeat + (int32_t)(micros() - tickUs[startTickAt % TICKS]) / usPerBeat;
-  return beats <= 0 ? 0 : (uint32_t)(beats * spb + 0.5);
+  return beats <= 0 ? 0 : (uint32_t)(beats * theirs + 0.5);
 }
 
 // Their tempo remembered becomes ours (stopped following: no nudge in it).
@@ -194,7 +230,7 @@ static void rememberTempo() {
   if (!avgSpb) return;
   theirSpb = (uint32_t)(avgSpb + 0.5);
   slowT.period = fastT.period = theirSpb * usPerSample / 24;
-  followTempo(theirSpb, roundf(bpmForSpb(theirSpb) * 10) / 10);
+  followTempo(oursOf(theirSpb), shownOf(theirSpb));
 }
 
 // Theirs (from tick `tick`, at position pos16): our transport stopped, and
@@ -206,7 +242,8 @@ static void startWith(uint32_t tick, uint16_t pos16) {
   startedUs = micros();
   refTick = (int32_t)tick;
   refBeats = pos16 / 4.0;
-  startAt = (int32_t)ceil(refBeats - 1e-9);
+  jumpBeats = 0;
+  startAt = startBeatFrom(refBeats);
   errSum = 0;
   errCount = 0;
   if (transport.running) transportStop();
@@ -216,7 +253,7 @@ static void startWith(uint32_t tick, uint16_t pos16) {
     theirSpb = (uint32_t)(avgSpb + 0.5);
     slowT.period = fastT.period = theirSpb * usPerSample / 24;
   }
-  if (theirSpb) followTempo(theirSpb, roundf(bpmForSpb(theirSpb) * 10) / 10);
+  if (theirSpb) followTempo(oursOf(theirSpb), shownOf(theirSpb));
 }
 
 void midiInService() {
@@ -349,7 +386,7 @@ void midiInService() {
     if (startAt != INT32_MIN && refTick >= 0 && (int32_t)i >= refTick && theirBeatAt(i) >= startAt - 1e-9) {
       startTickAt = i;                                // (started exactly where they are: no catching up)
       startingBeat = startAt;
-      transportStartAt(startAt, pastStartingBeat);
+      transportStartAt(ourBeatOf(startAt), pastStartingBeat);
       startAt = INT32_MIN;
       seenTicks++;
       return;                                         // (running from the next block)
@@ -357,7 +394,8 @@ void midiInService() {
     if (!running || !theirSpb) continue;
     // How far we're off their position at this tick: theirs known (bars too),
     // else beats only.
-    double ours = ourBeatAt(us, s), theirs = (refTick >= 0 ? theirBeatAt(i) : 0) + aheadBeats();   // (where we should be: ahead of them)
+    double ours = ourBeatAt(us, s),                   // (where we should be: ahead of them; their beats times the ratio, plus the beats jumped)
+           theirs = ((refTick >= 0 ? theirBeatAt(i) : 0) + aheadBeats()) * ratio() + jumpBeats;
     double period = refTick >= 0 ? BEATS_PER_BAR : 1;
     double err = fmod(ours - theirs, period);
     if (err >= period / 2) err -= period;
@@ -366,20 +404,19 @@ void midiInService() {
     errCount++;
   }
   if (!theirSpb || !theirsRunning) return;          // (their transport stopped: timed, not followed; the tempo's free)
-  uint32_t shown = theirSpb;
-  uint32_t want = theirSpb;
+  uint32_t want = oursOf(theirSpb);
   if (running && errCount >= (int)APPLY_TICKS) {      // every quarter beat: their tempo, nudged to their beat
     float err = errSum / errCount;
     errSum = 0;
     errCount = 0;
     float most = changing ? CHANGE_NUDGE : MAX_NUDGE, gain = changing ? CHANGE_GAIN : NUDGE_GAIN;
     float nudge = fabsf(err) < DEADBAND_BEATS ? 0 : constrain(err * gain, -most, most);   // (ahead: slower)
-    want = (uint32_t)(theirSpb * (1 + nudge) + 0.5f);
+    want = (uint32_t)(theirSpb * (1 + nudge) / ratio() + 0.5);
   } else if (running) {
     return;                                           // (between: as it is)
   }
   uint32_t now = transport.pendingSpb ? transport.pendingSpb : transport.spb;
-  float raw = bpmForSpb(shown), shownBpm = fabsf(raw - bpm) < 0.08f ? bpm : roundf(raw * 10) / 10;   // (shown: a tenth's change only when clear, no flicker)
+  float raw = bpmForSpb(theirSpb) * (float)ratio(), shownBpm = fabsf(raw - bpm) < 0.08f ? bpm : roundf(raw * 10) / 10;   // (shown: a tenth's change only when clear, no flicker)
   if (LOG_TICKS) Serial.printf("E %lu %lu %lu\n", (unsigned long)theirSpb, (unsigned long)want, (unsigned long)now);
   if (fabsf((float)want - now) > MIN_CHANGE * now) followTempo(want, shownBpm);
   else if (shownBpm != bpm) followTempo(now, shownBpm);   // (the tempo shown only)

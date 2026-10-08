@@ -2180,6 +2180,7 @@ for f in os.listdir("."):
     check(transport.running, "Start: the transport runs");
     // (from here: ticks counted from the start)
     int32_t total = 24;
+    double mult = 1, plus = 0;                       // ours: theirs times this, plus this (B+UP/DOWN, a jump)
     auto runCounted = [&](int beats) {
       for (int i = 0; i < 400000 && beats > 0; i++) {
         block();
@@ -2187,7 +2188,8 @@ for f in os.listdir("."):
           midiInByte(0xF8, (uint32_t)(tickAt + (rand() % 1201 - 600)));   // (their jitter: up to 0.6 ms)
           if (measure && transport.running) {
             double ours = transport.beat + (transport.sampleInBeat + ((int32_t)((uint32_t)tickAt - simMicros)) / usPerSample) / transport.spb;
-            double theirs = total / 24.0, err = ours - theirs;
+            double theirs = total / 24.0 * mult + plus, err = ours - theirs;
+            err = fmod(err + 1000.5 * BEATS_PER_BAR, BEATS_PER_BAR) - BEATS_PER_BAR / 2.0;
             worst = std::max(worst, fabs(err));
           }
           total++;
@@ -2211,6 +2213,30 @@ for f in os.listdir("."):
     runCounted(8);
     snprintf(m, sizeof m, "their tempo up to 133.5: followed, at most %.4f beats off, shown %.1f", worst, simShownBpm);
     check(worst < 0.01 && fabs(transport.spb - expectSpb(133.5)) < expectSpb(133.5) * 0.003, m);
+    {                                                // B+UP: ours theirs doubled, from their next beat; back; SHIFT+RIGHT: a beat on
+      measure = false;
+      check(!midiScale(1), "B+UP following MIDI at 133.5: refused (267, over the clock's range)");
+      check(midiScale(-1), "B+DOWN following MIDI: halved");
+      mult = 0.5;
+      runCounted(4);
+      measure = true; worst = 0;
+      runCounted(8);
+      snprintf(m, sizeof m, "halved: half their tempo (%u, theirs %.0f), one of our beats to two of theirs, at most %.4f beats off", transport.spb, expectSpb(133.5), worst);
+      check(transport.running && fabs(transport.spb - expectSpb(133.5) * 2) < expectSpb(133.5) * 0.006 && worst < 0.02, m);
+      measure = false;
+      check(midiScale(1), "B+UP: back");
+      mult = 1;
+      runCounted(4);
+      check(transportJump(1), "SHIFT+RIGHT: a beat on");
+      midiJumped(1);
+      plus = 1;
+      runCounted(4);
+      measure = true; worst = 0;
+      runCounted(8);
+      snprintf(m, sizeof m, "jumped a beat: kept a beat on from theirs, at most %.4f beats off", worst);
+      check(transport.running && worst < 0.02 && fabs(transport.spb - expectSpb(133.5)) < expectSpb(133.5) * 0.003, m);
+      measure = false;
+    }
     midiInByte(0xFC, simMicros);
     runCounted(1);
     check(!transport.running, "Stop: the transport stops");
