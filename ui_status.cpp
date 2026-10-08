@@ -40,13 +40,13 @@ static const Cell &statusCell(int cell) {
 // on it (B + UP/DOWN: the volume, LEFT/RIGHT: the balance). A vertical line
 // per step in every other column, centred across the cell inside the border's
 // block of space: each line's upper half the left channel's, its lower half
-// the right's, lit in the accent colour up to that channel's level (the
-// volume less the balance away from that side; none at 0), black after it.
+// the right's, lit in the accent colour as many as that channel's level (the
+// volume less the balance away from that side; none at 0), black after them.
 // Each half meters its channel's output over them: white up to its level, on
-// the same scale (line MASTER_VOLUME_UNITY: 0 dBFS), falling at
+// the same scale (MASTER_VOLUME_UNITY lines: 0 dBFS), falling at
 // MV_FALL_DB_PER_S. Shown again, it starts from silence.
 static constexpr int MV_COLS = CLOCK_BOX.w / PX, MV_ROWS = STATUS_H / PX;   // 47 x 13, the border's included
-static constexpr int MV_LINES = MASTER_VOLUME_MAX + 1;                      // (0 included)
+static constexpr int MV_LINES = MASTER_VOLUME_MAX;                          // (a line per step above 0)
 static constexpr int MV_LEFT = (MV_COLS - (2 * MV_LINES - 1)) / 2;          // the first line's column (centred: 2 ... 44)
 static constexpr int MV_HALF = (MV_ROWS - 4 - 1) / 2;                       // rows 2-5 left, 7-10 right
 static_assert(MV_LEFT >= 2, "the lines inside the border's block of space");
@@ -73,10 +73,10 @@ static void drawMasterVolume(bool full) {
   for (int ch = 0; ch < 2; ch++) {
     float db = peak[ch] > 0 ? 20 * log10f(peak[ch]) : -200.0f;
     meterDb[ch] = max(db, meterDb[ch] - fall);
-    // (Line j: step j's level, (j - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB.)
-    int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f) + 1, 0, MV_LINES);
+    // (Line j: step j + 1's level, (j + 1 - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB.)
+    int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f), 0, MV_LINES);
     for (int j = 0; j < MV_LINES; j++) {
-      bool inLevel = levels[ch] > 0 && j <= levels[ch];   // (0: none)
+      bool inLevel = j < levels[ch];                 // (0: none)
       uint16_t color = j < lit && inLevel ? INK : inLevel ? ACCENT : BG;
       if (!full && color == shown[j][ch]) continue;
       shown[j][ch] = color;

@@ -59,7 +59,7 @@ recorded. Its meter: the top half at 0 dBFS. `volumeStepOf()` in engine.cpp; the
 clip's peak is kept in its WAV header, older ones' taken from their overview) and balance (LEFT/RIGHT: ±10; each step moves the
 other channel's level by a half line, so every press shows),
 tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–240 BPM),
-the clock cell: the master volume and balance, one for all projects (UP/DOWN the volume a step, LEFT/RIGHT the balance; B twice: back to 100% and centred, as B twice resets any cell; saved in the session as `gain=` and `pan=`, older `level=`/`balance=` and `volume=` converted).
+the clock cell: the master volume and balance, one for all projects (UP/DOWN the volume a step, LEFT/RIGHT the balance; B twice: back to 100% and centred, as B twice resets any cell; saved in the session as `out=` and `pan=`, older `gain=`, `level=`/`balance=` and `volume=` converted).
 
 Timing constants (input.cpp): key repeat after 200 ms, every 50 ms;
 double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
@@ -161,10 +161,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   step instead), the accent colour on 1.1.1; before it a small play icon, in
   the accent colour while it runs. While B alone is held on the clock
   cell it shows the master volume and balance instead: 22 vertical lines across the
-  cell (one per step 0–21, 1.875 dB apart: 0 off, 16 100% — the default —, 21 +9.375 dB;
+  cell (one per step 1–22, 1.875 dB apart: 0 off, 17 100% — the default —, 22 +9.375 dB;
   balance ±20), their upper halves the left channel's, the lower halves the right's:
-  in the accent colour up to that channel's level (the volume less the balance away
-  from it; none at 0), black after it; each half meters its channel (white, line 16
+  in the accent colour, as many as that channel's level (the volume less the balance away
+  from it; none at 0), black after it; each half meters its channel (white, line 17
   0 dBFS — the ones above it clipping —, falling back from peaks), from silence each
   time it shows (`drawMasterVolume()` in ui_status.cpp).
 * Track buttons: the track's number (tracks count from the top: 1 is

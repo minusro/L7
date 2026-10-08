@@ -1405,10 +1405,15 @@ Session loadSession() {
     else if (!strncmp(line, "newbpm=", 7)) s.newBpm = strtof(line + 7, nullptr);   // (new projects' tempo)
     else if (!strncmp(line, "row=", 4)) s.row = (int)strtol(line + 4, nullptr, 10);
     else if (!strncmp(line, "cell=", 5)) s.cell = (int)strtol(line + 5, nullptr, 10);
-    // ("gain=" / "pan=": the master volume and balance on today's scale; older:
-    // "level=" (10 steps of 3.75 dB, 8: 100%) and "balance=" (+-10), "volume="
-    // (21 steps of 1.5 dB, 17: 100%), converted; "master=" left: 100% again)
-    else if (!strncmp(line, "gain=", 5)) s.master = (int)strtol(line + 5, nullptr, 10);
+    // ("out=" / "pan=": the master volume and balance on today's scale; older:
+    // "gain=" (1.875 dB steps, 16: 100%), "level=" (10 steps of 3.75 dB, 8:
+    // 100%) and "balance=" (+-10), "volume=" (21 steps of 1.5 dB, 17: 100%),
+    // converted; "master=" left: 100% again)
+    else if (!strncmp(line, "out=", 4)) s.master = (int)strtol(line + 4, nullptr, 10);
+    else if (!strncmp(line, "gain=", 5)) {
+      int v = (int)strtol(line + 5, nullptr, 10);
+      s.master = v <= 0 ? 0 : v + MASTER_VOLUME_UNITY - 16;
+    }
     else if (!strncmp(line, "pan=", 4)) s.balance = (int)strtol(line + 4, nullptr, 10);
     else if (!strncmp(line, "level=", 6)) {
       int v = (int)strtol(line + 6, nullptr, 10);
@@ -1437,7 +1442,7 @@ Session loadSession() {
 void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nnewbpm=%.2f\ngain=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
+  f.printf("bpm=%.2f\nnewbpm=%.2f\nout=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
            s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro, s.follow ? 1 : 0);
   f.close();
 }

@@ -116,7 +116,7 @@ constexpr int BALANCE_MAX = 10;
 // default; the top +9.375 dB), balance
 // -MASTER_BALANCE_MAX..MASTER_BALANCE_MAX (as a track's). Its meter: the same
 // scale (the unity step's half: 0 dBFS).
-constexpr int MASTER_VOLUME_MAX = 21, MASTER_VOLUME_UNITY = 16, MASTER_BALANCE_MAX = 20;
+constexpr int MASTER_VOLUME_MAX = 22, MASTER_VOLUME_UNITY = 17, MASTER_BALANCE_MAX = 20;
 constexpr float MASTER_STEP_DB = 1.875f;
 
 // Declicking: loop and range edges, and clip switches, are crossfaded over
