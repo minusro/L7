@@ -2213,7 +2213,7 @@ for f in os.listdir("."):
     runCounted(8);
     snprintf(m, sizeof m, "their tempo up to 133.5: followed, at most %.4f beats off, shown %.1f", worst, simShownBpm);
     check(worst < 0.01 && fabs(transport.spb - expectSpb(133.5)) < expectSpb(133.5) * 0.003, m);
-    {                                                // B+UP: ours theirs doubled, from their next beat; back; SHIFT+RIGHT: a beat on
+    {                                                // B+DOWN: ours theirs halved, from their next beat; B+UP: back
       measure = false;
       check(!midiScale(1), "B+UP following MIDI at 133.5: refused (267, over the clock's range)");
       check(midiScale(-1), "B+DOWN following MIDI: halved");
@@ -2227,13 +2227,9 @@ for f in os.listdir("."):
       check(midiScale(1), "B+UP: back");
       mult = 1;
       runCounted(4);
-      check(transportJump(1), "SHIFT+RIGHT: a beat on");
-      midiJumped(1);
-      plus = 1;
-      runCounted(4);
       measure = true; worst = 0;
       runCounted(8);
-      snprintf(m, sizeof m, "jumped a beat: kept a beat on from theirs, at most %.4f beats off", worst);
+      snprintf(m, sizeof m, "back: on their beat (and bar) again, at most %.4f beats off", worst);
       check(transport.running && worst < 0.02 && fabs(transport.spb - expectSpb(133.5)) < expectSpb(133.5) * 0.003, m);
       measure = false;
     }

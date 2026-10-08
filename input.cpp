@@ -593,7 +593,6 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
   };
 
-  if (opt && shift && onStatus) pressed &= ~(m8::BTN_LEFT | m8::BTN_RIGHT);   // (SHIFT+B+LEFT/RIGHT on the status row: the nudge, nudgeService())
   if (opt) {
     // OPT (B) + arrows: the current cell's parameters (none on empty tracks).
     if (onStatus) {
@@ -762,14 +761,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
   } else if (shift) {
     sceneKeys();
-    // SHIFT+LEFT/RIGHT on the status row: the clock jumps a beat back / on
-    // (a fresh press; storage.h transportJump(); a MIDI clock's follower
-    // keeping it). (SHIFT+B+LEFT/RIGHT: nudged, nudgeService().)
-    int src = syncSource();
-    if (onStatus && !repeat && (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) && !((keys & m8::BTN_LEFT) && (keys & m8::BTN_RIGHT))) {
-      int by = (pressed & m8::BTN_RIGHT) ? 1 : -1;
-      if (transportJump(by) && (src == SYNC_SERIAL || src == SYNC_USB)) midiJumped(by);
-    }
+    // (SHIFT+LEFT/RIGHT on the status row: the tempo nudged while held, nudgeService().)
     // SHIFT+LEFT/RIGHT on a track's waveform cell, or an empty track: its
     // sample, the previous / next on the card.
     if (!onStatus && !recordingOn(selected) && (selectedCellIn(selected) == WAVE_CELL || !hasClip(selected))) {
@@ -907,7 +899,7 @@ static void selectAfterRecording(int t) {
   }
 }
 
-// SHIFT+B+LEFT or RIGHT held on the status row, playing: the clock nudged
+// SHIFT+LEFT or RIGHT held on the status row, playing: the clock nudged
 // faster (RIGHT) or slower (LEFT), as Live's nudge buttons, more the longer
 // it's held (NUDGE_START, then NUDGE_RATE a second, at most NUDGE_MAX; in
 // NUDGE_STEP steps); let go, the tempo set again. The tempo shown stays the
@@ -924,7 +916,7 @@ static void nudgeService() {
   uint8_t k = board.keys();
   int dir = ((k & m8::BTN_RIGHT) ? 1 : 0) - ((k & m8::BTN_LEFT) ? 1 : 0);
   int src = syncSource();
-  bool want = (k & m8::BTN_SHIFT) && (k & m8::BTN_OPT) && dir && !(k & (m8::BTN_EDIT | m8::BTN_PLAY)) && selected == STATUS_ROW &&
+  bool want = (k & m8::BTN_SHIFT) && dir && !(k & (m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY)) && selected == STATUS_ROW &&
               !menuOpen() && transport.running;
   static int nudgeSrc = SYNC_NONE;
   static uint32_t lastMs = 0;

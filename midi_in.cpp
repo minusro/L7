@@ -37,11 +37,8 @@ static constexpr bool LOG_TICKS = false;              // (diagnosing: each tick'
 static HardwareSerial *port = nullptr;
 int16_t syncOffsetMs[SYNC_SOURCES] = {0, 0, 0};
 // Our tempo their times 2^octave (B+UP/DOWN on the tempo cell; each MIDI
-// source its own), and whole beats jumped (SHIFT+LEFT/RIGHT on the status
-// row: transportJump(); till their next start): our position their position
-// times the ratio, plus those beats, plus the offset.
+// source its own): our position their position times the ratio, plus the offset.
 static int octaveOf[2] = {0, 0};
-static int32_t jumpBeats = 0;
 
 // Interrupt -> loop(): the ticks' times, and their transport's messages in
 // order (Start, Continue, Stop, Song Position), each with the tick it comes
@@ -181,7 +178,7 @@ static int32_t startBeatFrom(double theirs) {
   int32_t sb = (int32_t)ceil(theirs - 1e-9), k = ratio() < 1 ? (int32_t)lround(1 / ratio()) : 1;
   return sb + (k - ((sb % k) + k) % k) % k;          // (up to a multiple of k)
 }
-static int32_t ourBeatOf(int32_t theirs) { return (int32_t)lround(theirs * ratio()) + jumpBeats; }
+static int32_t ourBeatOf(int32_t theirs) { return (int32_t)lround(theirs * ratio()); }
 
 static double aheadBeats() {                          // (at their tempo; the offset set by hand: later)
   return theirSpb ? (AHEAD_US[source & 1] - 1000.0 * syncOffsetMs[source & 1]) / (theirSpb * usPerSample) : 0;
@@ -205,8 +202,6 @@ bool midiScale(int by) {
   }
   return true;
 }
-
-void midiJumped(int beats) { jumpBeats += beats; }
 
 void syncOffsetChanged(int src) {
   if (src == SYNC_SERIAL || src == SYNC_USB) changing = CHANGE_TICKS;   // (caught up as after a start: within a few beats)
@@ -242,7 +237,6 @@ static void startWith(uint32_t tick, uint16_t pos16) {
   startedUs = micros();
   refTick = (int32_t)tick;
   refBeats = pos16 / 4.0;
-  jumpBeats = 0;
   startAt = startBeatFrom(refBeats);
   errSum = 0;
   errCount = 0;
@@ -394,8 +388,8 @@ void midiInService() {
     if (!running || !theirSpb) continue;
     // How far we're off their position at this tick: theirs known (bars too),
     // else beats only.
-    double ours = ourBeatAt(us, s),                   // (where we should be: ahead of them; their beats times the ratio, plus the beats jumped)
-           theirs = ((refTick >= 0 ? theirBeatAt(i) : 0) + aheadBeats()) * ratio() + jumpBeats;
+    double ours = ourBeatAt(us, s),                   // (where we should be: ahead of them; their beats times the ratio)
+           theirs = ((refTick >= 0 ? theirBeatAt(i) : 0) + aheadBeats()) * ratio();
     double period = refTick >= 0 ? BEATS_PER_BAR : 1;
     double err = fmod(ours - theirs, period);
     if (err >= period / 2) err -= period;

@@ -139,8 +139,9 @@ void drawStatus() {
   const uint8_t k = board.keys();
   const int src = syncSource();
   const bool offsetShown = selected == STATUS_ROW && !menuOpen() && src != SYNC_NONE && (k & (m8::BTN_LEFT | m8::BTN_RIGHT)) &&
-                           (k & m8::BTN_OPT) && !(k & m8::BTN_EDIT) &&
-                           ((!(k & m8::BTN_SHIFT) && selectedCellIn(STATUS_ROW) == TEMPO_CELL) || (k & m8::BTN_SHIFT));   // (B+LEFT/RIGHT on the tempo cell; SHIFT+B+LEFT/RIGHT: nudged)
+                           !(k & m8::BTN_EDIT) &&
+                           (((k & m8::BTN_OPT) && !(k & m8::BTN_SHIFT) && selectedCellIn(STATUS_ROW) == TEMPO_CELL) ||   // (B+LEFT/RIGHT on the tempo cell;
+                            ((k & m8::BTN_SHIFT) && !(k & m8::BTN_OPT)));                                                    //  SHIFT+LEFT/RIGHT: nudged)
   if (offsetShown) snprintf(text, sizeof text, "%+d", syncOffsetMs[src]);
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) ? selectedCellIn(STATUS_ROW) : -1;
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)

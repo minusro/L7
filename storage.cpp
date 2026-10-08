@@ -2547,27 +2547,6 @@ void transportSnapToBar() {
   transport.running = true;
 }
 
-bool transportJump(int beats) {
-  if (!transport.running || recording.mode != Recording::Idle || !beats) return false;   // a recording keeps its timing
-  noInterrupts();
-  int32_t target = transport.beat + beats;
-  uint32_t in = transport.sampleInBeat;
-  interrupts();
-  for (int t = 0; t < NUM_TRACKS; t++) settleNow(t);   // changes on their way: now
-  silenceTracks(0xFF);                           // faded out, then in again at the new position
-  transport.running = false;
-  transport.beat = target;
-  transport.sampleInBeat = 0;
-  for (int t = 0; t < NUM_TRACKS; t++) startTrack(t, target, true);
-  transport.sampleInBeat = in;                   // (as far into the beat as before: the tracks join there)
-  transport.joinMidBeat = true;
-  midiSendNow(0xFC);                             // MIDI followers: there too (Stop, Song Position, Continue)
-  midiSendPosition(target - transportOrigin());
-  midiSendNow(0xFB);
-  transport.running = true;
-  return true;
-}
-
 void transportRestart() {
   transportStop();                               // ends a recording as stopping would
   transportStart();
