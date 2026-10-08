@@ -164,7 +164,11 @@ static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
 static constexpr uint32_t SWITCH_HOLD_MS = 300;
 static uint32_t switchWaitAt = 0;                        // (when the switch began waiting)
 static bool edgeHeldLong = false;                  // (this pass: held that long, it switches now)
-static bool edgeDue(uint8_t keys, uint8_t key) { return key && (!(keys & key) || edgeHeldLong); }
+static bool edgeDue(uint8_t keys, uint8_t key) {
+  if (!key || ((keys & key) && !edgeHeldLong)) return false;
+  board.tft().setClipRect();                       // (the edge line's clip off: the other screen drawn whole, ui.cpp drawEdgeLine())
+  return true;
+}
 // LEFT+RIGHT pressed together (the second within LR_WINDOW_MS of the first,
 // nothing else held) and held LR_HOLD_MS: the other screen (switchHold()).
 // From the second one's press until both are let go, they don't move the

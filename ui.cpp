@@ -187,6 +187,7 @@ void drawEdgeLine() {
   if (key != m8::BTN_LEFT && key != m8::BTN_RIGHT && key != m8::BTN_UP && key != m8::BTN_DOWN) key = 0;   // (LEFT+RIGHT held: no one edge)
   auto &t = board.tft();
   if (!key) {
+    t.setClipRect();                               // (the whole screen drawn to again)
     if (shownKey && shownGen == uiGeneration) {    // let go without switching: what was under it
       uiGeneration++;
       if (menuOpen()) {
@@ -200,6 +201,11 @@ void drawEdgeLine() {
     shownKey = 0;
     return;
   }
+  // Drawn once (and again after a full redraw), then everything else is
+  // clipped to the rest of the screen meanwhile: nothing drawn over it (no
+  // flicker). (A switch clears the clip first: input.cpp, edgeDue().)
+  if (key == shownKey && shownGen == uiGeneration) return;
+  t.setClipRect();
   // 4 blocks along the edge (the looper's dark grey, the menu's black), then
   // a block of light grey, then one of black.
   auto strip = [&](int from, int w, uint16_t c) {  // (from: blocks in from the edge)
@@ -213,6 +219,11 @@ void drawEdgeLine() {
   strip(0, 4, menu ? BG : DARK);
   strip(4, 1, LIGHT);
   strip(5, 1, BG);
+  constexpr int D = 6 * PX;                        // (the clip: the screen less the line)
+  if (key == m8::BTN_LEFT) t.setClipRect(D, 0, 320 - D, 240);
+  else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - D, 240);
+  else if (key == m8::BTN_UP) t.setClipRect(0, D, 320, 240 - D);
+  else t.setClipRect(0, 0, 320, 240 - D);
   shownKey = key;
   shownGen = uiGeneration;
 }
