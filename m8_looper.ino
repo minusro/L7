@@ -206,10 +206,11 @@ void setup() {
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();
-  restoreMenu(sessionMenu());                      // its selection, and open if it was
-  if (sessionMenu() < 0 || projectCurrent() < 0) openMenu();   // (the first start, or no project loaded: the menu)
-  if (sessionPlaying()) transportStart();          // the clock as it was (from 1.1.1)
-                                                   // (already loaded: its tracks ready to play)
+  // The app starts in the menu, on the loaded project's card (the dummy
+  // project loaded: the first card).
+  restoreMenu(1000 + max(projectCurrent(), 0));
+  // (The clock stopped, whatever it was: START starts it, the project's tracks
+  // already loaded and ready to play.)
 }
 
 void loop() {

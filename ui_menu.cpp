@@ -444,8 +444,10 @@ bool menuLeavesOn(uint8_t key) {
   if (!shown || onStatus || (projectCurrent() < 0 && menuFirstEmptySlot() < 0)) return false;
   if (menuLoadPending()) return false;           // (a project on its way: not until it has come in)
   // RIGHT off the screen's right edge (the looper's that way): off a card
-  // row's right end, or a list item's side; LEFT off its left edge. (UP / DOWN
-  // don't leave it: the looper's own two screens are above and below each other.)
+  // row's right end, or a list item's side; LEFT off its left edge; UP off its
+  // top: the top card row (A-D); DOWN off its bottom: the list's last item.
+  if (key == m8::BTN_UP) return menuSel < COLS;
+  if (key == m8::BTN_DOWN) return menuSel == ITEMS - 1;
   if (key == m8::BTN_LEFT) return menuSel >= CARDS || menuSel % COLS == 0;   // (LEFT off its left edge too)
   return key == m8::BTN_RIGHT && (menuSel >= CARDS || menuSel % COLS == COLS - 1);
 }

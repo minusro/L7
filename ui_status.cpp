@@ -7,7 +7,7 @@
 // row is selected:
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
-//   first cell: the edge mark (ui.h), a dark grey triangle pointing to the corner (the menu);
+//   first cell: the edge mark (ui.h), a dark grey triangle pointing left (the menu);
 //     not selectable, no frame.
 //   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
@@ -35,11 +35,10 @@ static constexpr int INSET = 2 * PX;               // text from the cell's edges
 // The edge mark (ui.h), built in a buffer and sent at once over the space
 // given (x, w): from its left edge (the screen's).
 void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground) {
-  // A right triangle (4 x 4), its right angle at its bottom left, 2 blocks
-  // from the screen's left and bottom edges.
-  // (Notes, its status row on top: the right angle at its top left, 2 blocks from the top.)
-  static const char *const MARK[4] = {"#...", "##..", "###.", "####"};
-  constexpr int ROWS = STATUS_H / PX, CW = 4, CH = 4, C0 = 2;
+  // A small triangle pointing left (3 x 5), 2 blocks from the screen's left
+  // and bottom edges. (Notes, its status row on top: 2 blocks from the top.)
+  static const char *const MARK[5] = {"..#", ".##", "###", ".##", "..#"};
+  constexpr int ROWS = STATUS_H / PX, CW = 3, CH = 5, C0 = 2;
   const int R0 = notesLayout ? 2 : ROWS - 2 - CH;
   constexpr int MAX_W = EDGE_W;                    // (its space: the menu cell's)
   w = min(w, MAX_W);

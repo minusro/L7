@@ -81,10 +81,9 @@ inline int selectedCellIn(int i) {
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // The edge mark: the menu (an arrow off the looper's sides opens it), on
-// the status row's line: a right triangle (4 x 4 blocks, its right angle at
-// its bottom left: pointing to the screen's bottom left corner, 2 blocks from
-// its left and bottom edges; on the notes screen, its status row on top: at
-// its top left, pointing to the top left corner) in the looper's view (its menu cell: the space left of
+// the status row's line: a small triangle pointing left (3 x 5 blocks, 2
+// blocks from the screen's left and bottom edges; on the notes screen, its
+// status row on top: 2 blocks from the top) in the looper's view (its menu cell: the space left of
 // the scene cell, up to its frame), in ink on the ground (the
 // whole space), dark grey on black. (The menu has none.)
 constexpr int EDGE_W = MENU_BOX.w;               // (up to the scene cell's frame)
@@ -237,7 +236,7 @@ bool menuLoadPending();                  // a project loaded from the menu hasn'
 // edge (UP: its bottom item; DOWN: its top card row, at its own column;
 // LEFT/RIGHT: its right / left side, in its own row).
 void menuLand(uint8_t key);
-bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: RIGHT off its right edge (a card row's right end, a list item) or UP off its top (the top card row); a project loaded
+bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: RIGHT / LEFT off its sides (a card row's end, a list item), UP off its top (the top card row) or DOWN off its bottom (the list's last item); a project loaded
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)
 bool menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items (true: it moved)
 bool menuOnStatus();                     // open, its selection on the status row (selected = STATUS_ROW)

@@ -137,8 +137,10 @@ no dropouts or overruns
 8oct26
 
 - midi clips page ...
-	- mute played clips after finishing recording
+	- mute played midi clips after finishing audio recording
+	- mute played midi and audio clips after finishing resampling
 	- midi resampling
+- adjusting the tempo during audio in follow halves or doubles it
 - more audio testing and fixes
 - track ms offset
 - clip ms fine rotate
