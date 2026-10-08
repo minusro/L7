@@ -28,9 +28,8 @@ void stepMasterVolume(int by);
 // The metronome (saved with the session): off (0), auto (A: only in a
 // silent scene: no clip on any track, muted or not) or on (1), while the clock runs;
 // never in the dummy project. B+A on the tempo cell goes to the next
-// setting: from on or auto, off in a silent scene, else the other one of
-// the two; from off, auto in a silent scene, else on (so it always changes
-// what's heard).
+// setting: from on, off; from auto, off in a silent scene, else on; from
+// off, auto in a silent scene, else on (so it always changes what's heard).
 enum { METRO_OFF, METRO_AUTO, METRO_ON };
 int metronomeMode();
 int nextMetronomeMode();

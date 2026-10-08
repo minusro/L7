@@ -78,7 +78,7 @@ bool silentScene() {
 int nextMetronomeMode() {
   bool silent = silentScene();
   switch (metroMode) {
-    case METRO_ON: return silent ? METRO_OFF : METRO_AUTO;
+    case METRO_ON: return METRO_OFF;
     case METRO_AUTO: return silent ? METRO_OFF : METRO_ON;
     default: return silent ? METRO_AUTO : METRO_ON;
   }
