@@ -81,7 +81,7 @@ inline int selectedCellIn(int i) {
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // The edge mark: the menu (an arrow off any edge of the looper opens it), on
-// the status row's line: a right triangle (7 x 7 blocks, its right angle at
+// the status row's line: a right triangle (5 x 5 blocks, its right angle at
 // its bottom left: pointing to the screen's bottom left corner, 2 blocks from
 // its left and bottom edges) in the looper's view (its menu cell: the space left of
 // the scene cell, up to its frame), in ink on the ground (the
@@ -127,7 +127,7 @@ inline bool anyClipHeard() {
 // border; the row above's bottom border is its top; the status row's cells'
 // height), the screen's whole width (under the button too, round its panel;
 // the status row's from the scene cell's left edge to the tempo cell's right
-// one, its top corners cut a block: not under the menu cell or the button).
+// one, all its corners cut a block: not under the menu cell or the button).
 // Black elsewhere.
 bool menuOpen();
 inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() ? DARK : BG; }

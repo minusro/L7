@@ -97,7 +97,7 @@ with three (borders shared with the rows above and below are drawn by place on t
 (the frame stays on the selected one, and B's editing look too), on a dark grey ground
 (`rowGround()`): a rectangle as tall as the frame (its band and the block below; shared border
 rows go dark grey when either row is selected), the screen's whole width, under the button
-too (round its panel and badges); the status row's ground the same when it's selected (from the scene cell's left edge to the tempo cell's right one, its top corners cut a block; the selection frame's bottom corners not cut there, at the screen's edge; but only its
+too (round its panel and badges); the status row's ground the same when it's selected (from the scene cell's left edge to the tempo cell's right one, all its corners cut a block, the selection frame's too; but only its
 selected cell takes the selected look); anything dark grey on it is drawn black instead (a
 muted clip's filter fill and volume level, its waveform outside the range). The selected track's button gets a 50% grey panel behind its number (from a block in to a block short of the screen's right edge,
 the button's height: two blocks of border above, left and below the 7×9
@@ -143,7 +143,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
-  small square, not selectable, no frame, with the edge mark: a right triangle (7×7
+  small square, not selectable, no frame, with the edge mark: a right triangle (5×5
   blocks, its right angle at its bottom left, pointing to the screen's corner, 2 blocks from the left and bottom edges), dark grey on black (light grey while an arrow is held that opens the menu once let go: any of the four; the selection frame hidden meanwhile) (the selected status row's dark grey
   ground starts at the scene cell's left edge), in the space from the screen's left edge to the scene cell's
   frame: the menu, the looper's other screen), then the scene cell
