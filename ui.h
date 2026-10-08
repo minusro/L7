@@ -161,7 +161,7 @@ bool menuOnStatus();
 bool arrowsMoved();                      // input.cpp: the last arrow press moved the selection
 bool screenSwitchPending();               // (input.cpp) an arrow held that switches screens once let go
 // While an arrow is held off an edge that switches screens once let go: a
-// line 3 blocks thick and a block-wide one inside it (the looper: dark grey,
+// line 6 blocks thick and a block-wide one inside it (the looper: dark grey,
 // then black; the menu: black, then dark grey), then a light grey block-wide one, along that edge of the screen (on top of
 // everything; let go without switching, what was under it again).
 void drawEdgeLine();
