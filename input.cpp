@@ -200,8 +200,8 @@ static bool loadFromMenu(int p) {
 }
 
 // Out of the menu, back to the looper (as A on the loaded project's card);
-// with no project loaded, a new one is made in the first empty slot (its card
-// selected), as A there. False: nowhere to go.
+// with no project loaded, a new one is made in the first empty slot (the
+// menu's selection staying where it was), as A there. False: nowhere to go.
 // The looper's selection: as it was left (its row and cell); off the menu's
 // edge with arrow `key`, on the looper's far edge: UP off the menu's top, its
 // bottom row (the status row), DOWN off its bottom, its top one (track 1), at
@@ -213,8 +213,7 @@ static bool leaveMenu(uint8_t key = 0) {
   if (!back) {
     int slot = menuFirstEmptySlot();
     if (slot < 0) return false;
-    menuSelectSlot(slot);
-    if (loadFromMenu(slot)) back = true;
+    if (loadFromMenu(slot)) back = true;             // (the menu's selection stays where it was: its column kept)
   }
   if (back) {
     closeMenu(false);                                // (drawn below, where it lands)
@@ -362,7 +361,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // Any arrow off the menu's edge (menuLeavesOn()):
   // back to the looper (the screen it came from) once that key is let go, as A on the
   // loaded project's card; with no project loaded, a new one is made in the
-  // first empty slot (its card selected), as A there.
+  // first empty slot (the menu's selection staying where it was), as A there.
   // (leaveOnRelease: likewise)
   if (edgeDue(keys, leaveOnRelease)) {
     uint8_t key = leaveOnRelease;
