@@ -137,8 +137,8 @@ no dropouts or overruns
 8oct26
 
 - midi clips page ...
-	- mute played clips after finishing recording (?)
-
+	- mute played clips after finishing recording
+	- midi resampling
 - more audio testing and fixes
 - track ms offset
 - clip ms fine rotate

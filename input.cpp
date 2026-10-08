@@ -293,7 +293,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   if (lrDone && !(keys & LR)) lrDone = false;
   // UP off the looper's top row, DOWN off its bottom one (a fresh press, not
   // a held arrow repeating): its other screen (ui.h) once that key is let go,
-  // on its far edge's row (UP: its bottom one, DOWN: its top), the column kept
+  // on its far edge's row (UP: its bottom one, DOWN: its top; from a status
+  // row, the track next to the other's), the column kept
   // (the tracks' and the status rows' each their own, both screens' status
   // rows the same).
   if (flipOnRelease && !(keys & flipOnRelease)) {
@@ -302,7 +303,10 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     int from = selected, at = selectedCellIn(selected);
     notesScreen = !notesScreen;
     notesLayout = notesScreen;
-    selected = rowAtPos(key == m8::BTN_UP ? ROWS - 1 : 0);   // (in its layout)
+    // (From a status row, the two status rows meeting: the track next to it,
+    // DOWN into notes its first, UP into main its last.)
+    int edge = from == STATUS_ROW ? 1 : 0;
+    selected = rowAtPos(key == m8::BTN_UP ? ROWS - 1 - edge : edge);   // (in its layout)
     keepColumns(from, at);
     board.tft().fillScreen(BG);
     uiGeneration++;                                  // (everything in full)
