@@ -201,7 +201,7 @@ static bool leaveMenu(uint8_t key = 0) {
     if (loadFromMenu(slot)) back = true;
   }
   if (back) {
-    closeMenu();
+    closeMenu(false);                                // (drawn below, where it lands)
     if (key == m8::BTN_UP || key == m8::BTN_DOWN) {
       int from = selected, at = selectedCellIn(selected);
       selected = rowAtPos(key == m8::BTN_UP ? ROWS - 1 : 0);
@@ -327,8 +327,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   if (menuOnRelease && !(keys & menuOnRelease)) {
     uint8_t key = menuOnRelease;
     menuOnRelease = 0;
-    openMenu();
-    menuLand(key);                                   // (on its far edge: its own column or row)
+    openMenu(key);                                   // (on its far edge: its own column or row)
     return;
   }
   // Any arrow off the menu's edge (menuLeavesOn()):

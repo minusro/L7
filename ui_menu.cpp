@@ -458,7 +458,7 @@ void menuSelectSlot(int k) {
   cardCol = k % COLS;
 }
 
-void openMenu() {
+void openMenu(uint8_t key) {
   if (shown) return;
   // A project with no clips at all (none recorded since it was made): gone,
   // the dummy project instead (one has to be chosen before leaving the menu).
@@ -473,12 +473,13 @@ void openMenu() {
     selected = STATUS_ROW;
     selectedCell = statusCell;
   }
+  if (key) landInMenu(key);                      // (before it's drawn: once, where it lands)
   uiGeneration++;                                // the menu in full; the status row redraws too
   drawMenu();
   drawTrack(STATUS_ROW);
 }
 
-void closeMenu() {
+void closeMenu(bool draw) {
   if (!shown) return;
   if (exportNameAt <= 0) exportText[0] = 0;      // ("EXPORT FAILED" goes with the menu: exporting can be tried again)
   if (onStatus) statusCell = selectedCellIn(STATUS_ROW);
@@ -488,7 +489,8 @@ void closeMenu() {
   notesLayout = notesScreen;                     // (back to the screen it came from: notes, or main)
   board.tft().fillScreen(BG);                    // (the menu's ground everywhere: the gap before the action button too)
   uiGeneration++;                                // everything redraws in full
-  for (int i = 0; i < ROWS; i++) drawTrack(i);
+  if (draw)
+    for (int i = 0; i < ROWS; i++) drawTrack(i);
 }
 
 void restoreMenu(int state) {

@@ -229,8 +229,11 @@ extern uint32_t uiGeneration;
 // Its ground: dark grey (the whole screen).
 constexpr uint16_t MENU_BG = GREY_17;                // (the menu: always the normal greys)
 bool menuOpen();
-void openMenu();
-void closeMenu();
+// (Off an edge with arrow `key`: landing on its far edge before it's first
+// drawn, menuLand(); closeMenu(false): the looper's rows not drawn yet, the
+// caller moves the selection first. Drawn once, at the landing place: no flicker.)
+void openMenu(uint8_t key = 0);
+void closeMenu(bool draw = true);
 int menuFirstEmptySlot();                // the first slot with no project (-1: none)
 void menuSelectSlot(int k);              // the menu's selection on card k
 void menuNoteLoad(int from);             // a project just loaded from the menu, `from` the one before: its card flashing until it comes in
