@@ -183,6 +183,8 @@ static void followProjectColor() {
 void drawEdgeLine() {
   static uint8_t shownKey = 0;                     // the edge shown (its arrow), 0: none
   static uint32_t shownGen = 0;                    // (uiGeneration then: since redrawn whole, it's gone already)
+  static uint32_t shownAt = 0;                     // (when it appeared: white for its first EDGE_FLASH_MS)
+  constexpr uint32_t EDGE_FLASH_MS = 100;
   uint8_t key = screenSwitchPending() ? screenSwitchKey() : 0;
   if (key != m8::BTN_LEFT && key != m8::BTN_RIGHT && key != m8::BTN_UP && key != m8::BTN_DOWN) key = 0;   // (LEFT+RIGHT held: no one edge)
   auto &t = board.tft();
@@ -200,10 +202,12 @@ void drawEdgeLine() {
     shownKey = 0;
     return;
   }
-  if (key == m8::BTN_LEFT) t.fillRect(0, 0, PX, 240, LIGHT);
-  else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX, 0, PX, 240, LIGHT);
-  else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, PX, LIGHT);
-  else t.fillRect(0, 240 - PX, 320, PX, LIGHT);
+  if (key != shownKey) shownAt = millis();
+  uint16_t ink = millis() - shownAt < EDGE_FLASH_MS ? INK : LIGHT;
+  if (key == m8::BTN_LEFT) t.fillRect(0, 0, PX, 240, ink);
+  else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX, 0, PX, 240, ink);
+  else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, PX, ink);
+  else t.fillRect(0, 240 - PX, 320, PX, ink);
   shownKey = key;
   shownGen = uiGeneration;
 }
