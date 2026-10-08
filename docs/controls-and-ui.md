@@ -144,7 +144,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the splash's lower case and ©) and tags (plain / outlined / inverted).
   Status row (labels 50% grey, light grey on the selected cell): the menu cell (a
   small square, not selectable, no frame, with the edge mark: a small triangle
-  pointing left (3×5 blocks, 2 blocks from the left and bottom edges), dark grey on black (light grey while an arrow is held that opens the menu once let go: any of the four; the selection frame hidden meanwhile) (the selected status row's dark grey
+  pointing left (3×5 blocks, 2 blocks from the left and bottom edges), dark grey on black (light grey while an arrow is held that opens the menu once let go: any of the four; the selection frame hidden meanwhile, and a light grey line a block wide drawn along the screen's edge that way, in the menu too: gone again if let go without switching; `drawEdgeLine()`, ui.cpp) (the selected status row's dark grey
   ground starts at the scene cell's left edge), in the space from the screen's left edge to the scene cell's
   frame: the menu, the looper's other screen), then the scene cell
   (an inverted SCN tag with the scene position,

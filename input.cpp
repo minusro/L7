@@ -813,6 +813,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     for (int r : {rowAbove(selected), rowBelow(selected), rowAbove(prevSel), rowBelow(prevSel)})   // (sharing a border row with them: the ground there)
       if (r >= 0 && r < NUM_TRACKS) drawTrack(r);
   }
+  drawEdgeLine();                                  // (a switch waiting: its edge lit; let go without one: gone)
 }
 
 // After a recording finishes on the selected track, move on: to the next

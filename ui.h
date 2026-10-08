@@ -168,6 +168,10 @@ bool menuOpen();
 bool menuOnStatus();
 bool arrowsMoved();                      // input.cpp: the last arrow press moved the selection
 bool screenSwitchPending();               // (input.cpp) an arrow held that switches screens once let go
+// While an arrow is held off an edge that switches screens once let go: a
+// light grey line a block wide along that edge of the screen (on top of
+// everything; let go without switching, what was under it again).
+void drawEdgeLine();
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != selectedCellIn(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
   if (screenSwitchPending()) return BG;            // (going to the other screen: no frame meanwhile, the edge arrow bright)

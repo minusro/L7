@@ -180,6 +180,34 @@ static void followProjectColor() {
   for (int i = 0; i < ROWS; i++) drawTrack(i);
 }
 
+void drawEdgeLine() {
+  static uint8_t shownKey = 0;                     // the edge shown (its arrow), 0: none
+  static uint32_t shownGen = 0;                    // (uiGeneration then: since redrawn whole, it's gone already)
+  uint8_t key = screenSwitchPending() ? screenSwitchKey() : 0;
+  if (key != m8::BTN_LEFT && key != m8::BTN_RIGHT && key != m8::BTN_UP && key != m8::BTN_DOWN) key = 0;   // (LEFT+RIGHT held: no one edge)
+  auto &t = board.tft();
+  if (!key) {
+    if (shownKey && shownGen == uiGeneration) {    // let go without switching: what was under it
+      uiGeneration++;
+      if (menuOpen()) {
+        drawMenu();
+        drawTrack(STATUS_ROW);
+      } else {
+        t.fillScreen(BG);
+        for (int i = 0; i < ROWS; i++) drawTrack(i);
+      }
+    }
+    shownKey = 0;
+    return;
+  }
+  if (key == m8::BTN_LEFT) t.fillRect(0, 0, PX, 240, LIGHT);
+  else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX, 0, PX, 240, LIGHT);
+  else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, PX, LIGHT);
+  else t.fillRect(0, 240 - PX, 320, PX, LIGHT);
+  shownKey = key;
+  shownGen = uiGeneration;
+}
+
 void uiRefresh() {
   followProjectColor();
   followTracks();                                  // (a switch through: its rows at once)
@@ -192,6 +220,7 @@ void uiRefresh() {
       drawCells(STATUS_ROW);
       drawStatus();
       drawMenu();
+      drawEdgeLine();
       return;
     }
     // Every pass, all rows' buttons (only what changed is redrawn): the
@@ -203,5 +232,6 @@ void uiRefresh() {
     for (int i = 0; i < NUM_TRACKS; i++) drawMix(i);   // the meters
     drawTrack(nextRow);
     if (++nextRow >= ROWS) nextRow = 0;
+    drawEdgeLine();                                  // (on top)
   }
 }
