@@ -172,10 +172,19 @@ uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease | flipOnReleas
 // Loads project slot p from the menu; a new project (an empty slot) opens
 // with the selection on track 1 (the looper's, for when the menu closes);
 // another keeps the selection as it is.
+// A project with no clips (a new one too) comes in at once, not on the next
+// bar line: the clock (running) stopped, the project loaded (at once, the
+// clock stopped), and started again from 1.1.1 (as a load restarts it anyway).
 static bool loadFromMenu(int p) {
   bool fresh = !projectFilled(p);
   int from = projectCurrent();
-  if (!projectLoad(p)) return false;
+  bool now = p != from && transport.running && recording.mode == Recording::Idle && !projectHasClipsIn(p);
+  if (now) transportStop();
+  if (!projectLoad(p)) {
+    if (now) transportStart();
+    return false;
+  }
+  if (now) startByHand();
   menuNoteLoad(from);                              // (its card and the old one's take turns until it comes in)
   if (fresh) setMainSelection(NUM_TRACKS - 1, WAVE_CELL);
   metronomeOn = metronomeWanted();                 // (now: its first beat clicks too)

@@ -95,6 +95,9 @@ bool projectsMayCopy();
 // The loaded project holds a clip somewhere (on the tracks or in a scene);
 // false for the dummy project.
 bool projectHasClips();
+// Slot p's project has a clip somewhere (its scenes; the loaded one's tracks
+// too); false for an empty slot.
+bool projectHasClipsIn(int p);
 bool projectCut(int p);
 bool projectPaste(int p);
 bool projectClipboardFull();

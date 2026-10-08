@@ -624,6 +624,13 @@ bool projectLoad(int p) {
   return openAs(p, true);
 }
 
+bool projectHasClipsIn(int p) {
+  if (p == project) return projectHasClips();
+  if (!projectFilled(p)) return false;
+  FsFile f = openProject(p);
+  return fileHasClips(f);
+}
+
 bool projectCut(int p) {
   if (!projectsMayCopy() || !projectFilled(p)) return false;
   bool clips = p == project;
