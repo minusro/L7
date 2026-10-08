@@ -371,11 +371,8 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   }
   const uint16_t round = i == STATUS_ROW ? (menuOpen() ? MENU_BG : BG) : rowGround(i);   // (round the button: the menu's ground while it's open; a selected track's; the status row's highlight ends at the tempo cell)
   if (i == STATUS_ROW && bg != round)              // the action button: from a block in (as the
-    for (int y = 0; y < height; y++) {             // tracks' panels), its top left, top right and bottom left corners cut
+    for (int y = 0; y < height; y++)               // tracks' panels), its top left and bottom left corners cut
       for (int x = 0; x < (PANEL_LEFT + (y < PX || y >= height - PX)) * PX; x++) px[y * BUTTON_W + x] = round;
-      if (y < PX)
-        for (int x = BUTTON_W - PX; x < BUTTON_W; x++) px[y * BUTTON_W + x] = round;
-    }
   auto &t = board.tft();
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(BUTTON_X, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin
