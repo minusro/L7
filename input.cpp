@@ -120,6 +120,7 @@ static bool armed = false, shifted = false;          // SHIFT with it
 static int armedSlot = -1;                           // the slot it was pressed on (-1: a list item)
 static int armedItem = -1;                           // or the list item
 static bool loadedOnPress = false;                   // its press loaded the card's project: held on, the menu closes
+static bool openOnLetGo = false;                     // pressed on the loaded project's card or an empty slot: to the looper once let go or held
 static uint32_t armedAt = 0;
 static constexpr uint32_t LONG_PRESS_MS = 600;
 
@@ -245,20 +246,31 @@ static void closeToLooper() {
   for (int i = 0; i < ROWS; i++) drawTrack(i);
 }
 
+// A or B let go (or held) on the loaded project's card: back to the looper
+// (one on its way: once it has come in); on an empty slot: a new project there,
+// opened (on track 1). False: nothing done.
+static bool openCard(int slot) {
+  openOnLetGo = false;
+  if (slot == projectCurrent()) {
+    closeToLooper();
+    return true;
+  }
+  if (projectFilled(slot) || !loadFromMenu(slot)) return false;
+  closeMenu();
+  return true;
+}
+
 // A or B held on a card whose project its press loaded: after LONG_PRESS_MS,
 // the menu closes too, and the clock starts if it was stopped (from 1.1.1,
 // as START). Called every pass (pollKeys()).
-// On the loaded project's card or an empty slot the press goes to the looper
-// at once; held on there LONG_PRESS_MS, the clock starts the same way
-// (startOnHold: from that press, until let go).
-static bool startOnHold = false;
+// On the loaded project's card or an empty slot (openOnLetGo): nothing on the
+// press; let go, to the looper (openCard()); held LONG_PRESS_MS, to the looper
+// and the clock started the same way.
 static void menuHold() {
-  if (startOnHold) {
-    if (!(board.keys() & (m8::BTN_EDIT | m8::BTN_OPT))) startOnHold = false;
-    else if (millis() - armedAt >= LONG_PRESS_MS) {
-      startOnHold = false;
-      if (!transport.running) startByHand();
-    }
+  if (armed && openOnLetGo && menuOpen() && millis() - armedAt >= LONG_PRESS_MS) {
+    armed = false;                                   // (letting go: nothing more)
+    if (openCard(armedSlot) && !transport.running) startByHand();
+    return;
   }
   if (!menuOpen()) closeWhenIn = false;
   if (closeWhenIn && !menuLoadPending()) closeToLooper();   // (come in: now)
@@ -381,9 +393,10 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // SHIFT+A on a project: cuts it when let go (no confirmation). A on a card,
   // at once on the press: its project loaded, the menu staying open (held
   // LONG_PRESS_MS: it closes too, menuHold(); let go, the two cards take turns
-  // as the loaded one until it comes in: menuNoteLoad()); on an empty slot: a
-  // new project made and opened, the menu closing; on the loaded project's
-  // card: the menu closes. While a project loaded here is on its way (playing:
+  // as the loaded one until it comes in: menuNoteLoad()); on an empty slot (once
+  // let go, or held LONG_PRESS_MS: the clock started too): a new project made
+  // and opened, the menu closing; on the loaded project's card (likewise):
+  // the menu closes. While a project loaded here is on its way (playing:
   // until its switch point) the menu stays: closing waits for it
   // (closeToLooper()), and no edge leads out (menuLeavesOn()). The list's
   // items act once let go. A and B do the same
@@ -404,22 +417,13 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       shifted = shift;
       armedAt = millis();
       loadedOnPress = false;
+      openOnLetGo = false;
       int slot = armedSlot;
       if (slot >= 0 && !shift) {                     // a card: at once, on the press
-        if (slot == projectCurrent()) {              // the loaded one: back to the looper (one on its way: once it has come in)
-          closeToLooper();
-          startOnHold = true;                        // (held on: the clock too)
-          return;
-        }
+        openOnLetGo = slot == projectCurrent() || !projectFilled(slot);
+        if (openOnLetGo) return;                     // the loaded one, an empty slot: once let go, or held (menuHold())
         closeWhenIn = false;                         // (another one now: the menu stays)
-        bool fresh = !projectFilled(slot);
         if (loadFromMenu(slot)) {                    // another: loaded (the looper's selection stays as it is)
-          if (fresh) {                               // an empty slot: a new project, opened at once (on track 1)
-            closeMenu();
-            for (int i = 0; i < ROWS; i++) drawTrack(i);
-            startOnHold = true;                      // (held on: the clock too)
-            return;
-          }
           loadedOnPress = true;                      // (held LONG_PRESS_MS: the menu closes too, menuHold())
           drawMenu();
         }
@@ -440,6 +444,10 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
             if (wasRunning) transportStart();        // (running before: again, from 1.1.1)
           }
         }
+      } else if (openOnLetGo && !shifted) {          // the loaded one, an empty slot: to the looper
+        openOnLetGo = false;
+        openCard(slot);
+        return;
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
         if (projectFilled(slot)) projectCut(slot);
         else projectPaste(slot);
