@@ -142,7 +142,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the line; the scene versions the same with a checkered square right round them.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  An arrow held that switches screens once let go (any of the four, off an edge): the selection frame hidden meanwhile, and a line 3 blocks thick (dark grey; in the menu, black) with a dark grey block-wide line on its inner side drawn along the screen's edge that way, in the menu too (over its corner logo): gone again if let go without switching (`drawEdgeLine()`, ui.cpp).
+  An arrow held that switches screens once let go (any of the four, off an edge): the selection frame hidden meanwhile, and a band 4 blocks thick, black at the edge and dark grey towards the middle (the looper: 1 block black, 3 dark grey; the menu: 3 black, 1 dark grey) drawn along the screen's edge that way, in the menu too (over its corner logo): gone again if let go without switching (`drawEdgeLine()`, ui.cpp).
   Status row (labels 50% grey, light grey on the selected cell): the scene cell, from the screen's left edge
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock

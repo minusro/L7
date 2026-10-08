@@ -200,12 +200,18 @@ void drawEdgeLine() {
     shownKey = 0;
     return;
   }
-  const uint16_t ink = menuOpen() ? BG : DARK;     // (dark grey on the looper; black on the menu's dark grey)
-  constexpr int W = 3 * PX;                        // (3 blocks thick, then a block of dark grey on its inner side)
-  if (key == m8::BTN_LEFT) t.fillRect(0, 0, W, 240, ink), t.fillRect(W, 0, PX, 240, DARK);
-  else if (key == m8::BTN_RIGHT) t.fillRect(320 - W, 0, W, 240, ink), t.fillRect(320 - W - PX, 0, PX, 240, DARK);
-  else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, W, ink), t.fillRect(0, W, 320, PX, DARK);
-  else t.fillRect(0, 240 - W, 320, W, ink), t.fillRect(0, 240 - W - PX, 320, PX, DARK);
+  // Black along the edge, dark grey next to it towards the middle: the
+  // looper's a block of black, 3 of dark grey; the menu's 3 of black, a block of dark grey.
+  auto strip = [&](int from, int w, uint16_t c) {  // (from: blocks in from the edge)
+    from *= PX, w *= PX;
+    if (key == m8::BTN_LEFT) t.fillRect(from, 0, w, 240, c);
+    else if (key == m8::BTN_RIGHT) t.fillRect(320 - from - w, 0, w, 240, c);
+    else if (key == m8::BTN_UP) t.fillRect(0, from, 320, w, c);
+    else t.fillRect(0, 240 - from - w, 320, w, c);
+  };
+  const int edge = menuOpen() ? 3 : 1;
+  strip(0, edge, BG);
+  strip(edge, 4 - edge, DARK);
   shownKey = key;
   shownGen = uiGeneration;
 }
