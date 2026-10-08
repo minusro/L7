@@ -272,7 +272,8 @@ In storage mode nothing is taken in (`midiInSuspend()`).
 ## Audio follow
 
 `audio_follow.cpp` (its header has the outline). SHIFT+A on the tempo cell turns it
-on / off (the session's `follow=`); the button, SHIFT held there: an ear, crossed
+on / off (the session's `follow=`); the button, SHIFT held there: a jack plug
+coming in from the right under an arrow pointing in, crossed
 out while it's on. On, the tempo can't be changed by hand or by a project
 (`changeTempo()`, tap tempo: nothing); B+UP/DOWN on the tempo cell only halve
 (DOWN) or double (UP) it (B+LEFT/RIGHT: the offset from the external clock), fresh presses only, again and again
