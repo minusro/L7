@@ -247,7 +247,8 @@ static void closeToLooper() {
 }
 
 // A or B held on a card whose project its press loaded: after LONG_PRESS_MS,
-// the menu closes too. Called every pass (pollKeys()).
+// the menu closes too, and the clock starts if it was stopped (from 1.1.1,
+// as START). Called every pass (pollKeys()).
 static void menuHold() {
   if (!menuOpen()) closeWhenIn = false;
   if (closeWhenIn && !menuLoadPending()) closeToLooper();   // (come in: now)
@@ -255,6 +256,7 @@ static void menuHold() {
   loadedOnPress = false;
   armed = false;                                     // (letting go: nothing more)
   closeToLooper();
+  if (!transport.running) startByHand();
 }
 
 // The selected row and the rows sharing its borders redrawn (the frame hidden
