@@ -37,8 +37,10 @@ static constexpr int INSET = 2 * PX;               // text from the cell's edges
 void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground) {
   // A right triangle (5 x 5), its right angle at its bottom left, 2 blocks
   // from the screen's left and bottom edges.
+  // (Notes, its status row on top: the right angle at its top left, 2 blocks from the top.)
   static const char *const MARK[5] = {"#....", "##...", "###..", "####.", "#####"};
-  constexpr int ROWS = STATUS_H / PX, CW = 5, CH = 5, R0 = ROWS - 2 - CH, C0 = 2;
+  constexpr int ROWS = STATUS_H / PX, CW = 5, CH = 5, C0 = 2;
+  const int R0 = notesLayout ? 2 : ROWS - 2 - CH;
   constexpr int MAX_W = EDGE_W;                    // (its space: the menu cell's)
   w = min(w, MAX_W);
   const int cols = w / PX;
@@ -46,7 +48,7 @@ void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground) {
   for (int r = 0; r < ROWS; r++)
     for (int c = 0; c < cols; c++) {
       int tr = r - R0, tc = c - C0;
-      bool on = tr >= 0 && tr < CH && tc >= 0 && tc < CW && MARK[tr][tc] == '#';
+      bool on = tr >= 0 && tr < CH && tc >= 0 && tc < CW && MARK[notesLayout ? CH - 1 - tr : tr][tc] == '#';
       for (int dy = 0; dy < PX; dy++)
         for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * w + c * PX + dx] = on ? ink : ground;
     }
@@ -134,7 +136,7 @@ void drawStatus() {
     drawn = uiGeneration;
     shownGround = G;
     for (int c = 0; c < STATUS_CELLS; c++)        // (the ground from the scene cell's left edge: not under the menu cell)
-      t.fillRect(statusCell(c).x, top, statusCell(c).w, 240 - top, c == MENU_CELL ? BG : G);
+      t.fillRect(statusCell(c).x, top, statusCell(c).w, bgHeight(STATUS_ROW), c == MENU_CELL ? BG : G);
     shownBorders = ~0ull;
   }
   uint64_t borders = 0;

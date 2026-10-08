@@ -426,7 +426,7 @@ static void reopenSample(uint32_t n);
 
 // Cuts a finished sample down to its recording, and names it after the
 // project and track it was recorded in (changes the file system).
-static void trimSample(uint32_t id) {
+FLASHMEM static void trimSample(uint32_t id) {
   char path[40];
   samplePath(id, path, sizeof path);
   FsFile f = SD.sdfs.open(path, O_RDWR);
@@ -1374,7 +1374,7 @@ static int moveCount = 0;
 static uint16_t surplus[MAX_MOVES], orphans[MAX_MOVES];   // DATA's recording space to bring into the pool's numbers; samples with no name
 static int surplusCount = 0, orphanCount = 0;
 
-static void scanFolder(const char *folder, bool data) {
+FLASHMEM static void scanFolder(const char *folder, bool data) {
   FsFile dir = SD.sdfs.open(folder, O_RDONLY);
   FsFile f;
   char name[32];

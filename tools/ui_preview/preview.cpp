@@ -283,6 +283,16 @@ int main(int argc, char **argv) {
   selected = STATUS_ROW;
   selectedCell = TEMPO_CELL;
   render(out + "/ui_status.png");
+  notesScreen = notesLayout = true;                // the notes screen: the status row on top, the greys inverted
+  setGreysInverted(true);
+  uiGeneration++;
+  render(out + "/ui_notes_status.png");
+  selected = 3;
+  render(out + "/ui_notes.png");
+  selected = STATUS_ROW;
+  notesScreen = notesLayout = false;
+  setGreysInverted(false);
+  uiGeneration++;
   board.heldKeys = m8::BTN_EDIT;                   // A held on the tempo: TAP pressed, a block lower
   noteActionPress();
   render(out + "/ui_status_tap_held.png");

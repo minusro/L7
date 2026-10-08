@@ -14,12 +14,24 @@ constexpr uint16_t blend565(uint16_t a, uint16_t b, uint8_t w) {
 constexpr uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) { return (uint16_t)((r >> 3) << 11 | (g >> 2) << 5 | b >> 3); }
 
 // The palette: black, three greys, white, and the accent colour (and its dark version).
-constexpr uint16_t BG = rgb565(0, 0, 0);            // black: the background
-constexpr uint16_t DARK = rgb565(44, 44, 44);       // 17% grey: in the background (outside the loop range,
+// The greys by role, as the main screen and the menu have them; the notes
+// screen (ui.h) has them the other way round (setGreysInverted(): black and
+// white swapped, and the dark and light greys; the middle one as it is).
+constexpr uint16_t GREY_0 = rgb565(0, 0, 0), GREY_17 = rgb565(44, 44, 44), GREY_44 = rgb565(112, 112, 112),
+                   GREY_81 = rgb565(208, 208, 208), GREY_100 = rgb565(255, 255, 255);
+inline uint16_t BG = GREY_0;                        // black: the background
+inline uint16_t DARK = GREY_17;                     // 17% grey: in the background (outside the loop range,
                                                     //   muted volume lines and filters)
-constexpr uint16_t DIM = rgb565(112, 112, 112);     // 44% grey: inactive (muted clips, idle icons and text)
-constexpr uint16_t LIGHT = rgb565(208, 208, 208);   // 81% grey: light grey (unselected waveforms, labels, the selected filter)
-constexpr uint16_t INK = rgb565(255, 255, 255);     // white: what's active, selected, playing
+inline uint16_t DIM = GREY_44;                      // 44% grey: inactive (muted clips, idle icons and text)
+inline uint16_t LIGHT = GREY_81;                    // 81% grey: light grey (unselected waveforms, labels, the selected filter)
+inline uint16_t INK = GREY_100;                     // white: what's active, selected, playing
+inline void setGreysInverted(bool inverted) {
+  BG = inverted ? GREY_100 : GREY_0;
+  DARK = inverted ? GREY_81 : GREY_17;
+  DIM = GREY_44;
+  LIGHT = inverted ? GREY_17 : GREY_81;
+  INK = inverted ? GREY_0 : GREY_100;
+}
 // The accent colour: the loaded project's (setAccent(), ui.cpp); green
 // turquoise until one is loaded (the splash screen). Recording, a scene change
 // on its way, the action button, playheads. ACCENT_DARK: at half brightness
@@ -35,10 +47,10 @@ constexpr uint16_t PROJECT_COLORS[12] = {
     rgb565(0xCD, 0xB8, 0xEE), rgb565(0xB7, 0xC4, 0xF0), rgb565(0xA9, 0xD6, 0xEE), rgb565(0xA8, 0xE0, 0xD8)};
 
 // ---- Roles
-constexpr uint16_t MUTED_HEAD = BG;          // the selected muted clip (a cut through its waveform)
+#define MUTED_HEAD BG                        // the selected muted clip (a cut through its waveform: the background's)
 
 // ---- Boot / errors
 constexpr uint16_t TEXT_PROGRESS = 0xFFE0;   // yellow: startup messages
 constexpr uint16_t LOGO_COLOR = rgb565(48, 230, 170);   // the splash screen's logo (the accent before a project is loaded)
-constexpr uint16_t SPLASH_TEXT = LIGHT;      // and its copyright line
+constexpr uint16_t SPLASH_TEXT = GREY_81;    // and its copyright line
 constexpr uint16_t TEXT_ERROR = 0xF800;      // red: fatal errors

@@ -18,7 +18,7 @@ void (*usbDriveReload)() = nullptr;
 // cycle), the connection's state under it white, the hint (and the messages
 // that replace it) black; all left-aligned with the menu's list, the hint
 // on the bottom line ("PRESS ANY KEY TO EXIT").
-static constexpr uint16_t SCREEN = DIM;
+static constexpr uint16_t SCREEN = GREY_44;               // (from the menu: the normal greys)
 static const char HINT[] = "PRESS ANY KEY TO EXIT";
 // The lines: the title, the connection's state 32 px under it (placed as
 // when a two-line hint was 56 px under that and the three were together a

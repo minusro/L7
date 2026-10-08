@@ -153,8 +153,10 @@ static int recordArmed = -1;                       // A (or B+A) pressed on an e
 static bool recordArmedResample = false;
 static uint32_t recordArmedAt = 0;                 // (transport.now at the press: the late press's window counts from it)
 
-// An arrow held that switches screens when let go: into the menu, or out of it.
-static uint8_t menuOnRelease = 0, leaveOnRelease = 0;
+// An arrow held that switches screens when let go: into the menu, or out of
+// it; or between the looper's two (main and notes, ui.h: UP off its top, DOWN
+// off its bottom).
+static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
 // LEFT+RIGHT pressed together (the second within LR_WINDOW_MS of the first,
 // nothing else held) and held LR_HOLD_MS: the other screen (switchHold()).
 // From the second one's press until both are let go, they don't move the
@@ -164,8 +166,8 @@ static bool lrHeld = false, lrDone = false;
 static uint32_t lrAt = 0, leftAt = 0, rightAt = 0;   // (the combo's start; each arrow's last fresh press)
 static constexpr uint8_t LR = m8::BTN_LEFT | m8::BTN_RIGHT;
 static constexpr uint32_t LR_WINDOW_MS = 200, LR_HOLD_MS = 300;
-bool screenSwitchPending() { return menuOnRelease || leaveOnRelease || (lrHeld && !lrDone); }
-uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease | (lrHeld && !lrDone ? LR : 0); }
+bool screenSwitchPending() { return menuOnRelease || leaveOnRelease || flipOnRelease || (lrHeld && !lrDone); }
+uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease | flipOnRelease | (lrHeld && !lrDone ? LR : 0); }
 
 // Loads project slot p from the menu; a new project (an empty slot) opens
 // with the selection on track 1 (the looper's, for when the menu closes);
@@ -185,11 +187,9 @@ static bool loadFromMenu(int p) {
 // with no project loaded, a new one is made in the first empty slot (its card
 // selected), as A there. False: nowhere to go.
 // The looper's selection: as it was left (its row and cell); off the menu's
-// edge with arrow `key`, on the looper's far edge: UP off the menu's top, its
-// bottom row (the status row), DOWN off its bottom, its top one (track 1), at
-// the column that row was left on; RIGHT off the menu's right side, the
-// looper's left edge (its row's first cell), LEFT, its right edge (its last),
-// in the row it was left on.
+// side with arrow `key`, on the looper's far side, in the row it was left on:
+// RIGHT off the menu's right side, the looper's left edge (its row's first
+// cell), LEFT, its right edge (its last).
 static bool leaveMenu(uint8_t key = 0) {
   bool back = projectCurrent() >= 0;
   if (!back) {
@@ -200,11 +200,7 @@ static bool leaveMenu(uint8_t key = 0) {
   }
   if (back) {
     closeMenu();
-    if (key == m8::BTN_UP || key == m8::BTN_DOWN) {
-      int from = selected, at = selectedCellIn(selected);
-      selected = key == m8::BTN_UP ? STATUS_ROW : NUM_TRACKS - 1;
-      keepColumns(from, at);
-    } else if (key == m8::BTN_RIGHT) {
+    if (key == m8::BTN_RIGHT) {
       selectedCell = firstCellIn(selected);
     } else if (key == m8::BTN_LEFT) {
       selectedCell = maxCells(selected) - 1;        // (an empty track: the column kept as on a full one)
@@ -267,7 +263,7 @@ static void switchHold() {
   }
 }
 
-static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
+FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (flash: on key presses only; RAM1 is full)
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
@@ -286,8 +282,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     lrDone = false;
     lrAt = millis();
     bool stepped = moved;                            // (the first one moved the selection: this one steps back)
-    if (menuOnRelease || leaveOnRelease) stepped = false;   // (it stopped at an edge, a switch waiting: that's off)
-    menuOnRelease = leaveOnRelease = 0;
+    if (menuOnRelease || leaveOnRelease || flipOnRelease) stepped = false;   // (it stopped at an edge, a switch waiting: that's off)
+    menuOnRelease = leaveOnRelease = flipOnRelease = 0;
     if (!stepped) pressed &= ~LR;
     else repeat = true;                              // (stepping back: no switch off this edge)
     drawPending();
@@ -295,8 +291,26 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     pressed &= ~LR;
   }
   if (lrDone && !(keys & LR)) lrDone = false;
-  // Any arrow off the looper's edge (LEFT off a row's first cell, RIGHT off
-  // its last, UP on track 1, DOWN on the status row; a fresh press, not a
+  // UP off the looper's top row, DOWN off its bottom one (a fresh press, not
+  // a held arrow repeating): its other screen (ui.h) once that key is let go,
+  // on its far edge's row (UP: its bottom one, DOWN: its top), the column kept
+  // (the tracks' and the status rows' each their own, both screens' status
+  // rows the same).
+  if (flipOnRelease && !(keys & flipOnRelease)) {
+    uint8_t key = flipOnRelease;
+    flipOnRelease = 0;
+    int from = selected, at = selectedCellIn(selected);
+    notesScreen = !notesScreen;
+    notesLayout = notesScreen;
+    setGreysInverted(notesScreen);
+    selected = rowAtPos(key == m8::BTN_UP ? ROWS - 1 : 0);   // (in its layout)
+    keepColumns(from, at);
+    board.tft().fillScreen(BG);
+    uiGeneration++;                                  // (everything in full)
+    for (int i = 0; i < ROWS; i++) drawTrack(i);
+    return;
+  }
+  // LEFT off a row's first cell or RIGHT off its last (a fresh press, not a
   // held arrow repeating): the menu opens once that key is let go (the clock
   // goes on).
   // (menuOnRelease: the key to wait for, file scope: screenSwitchPending())
@@ -307,8 +321,8 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     menuLand(key);                                   // (on its far edge: its own column or row)
     return;
   }
-  // RIGHT off the menu's right edge, LEFT off its left, UP off its top or
-  // DOWN off its bottom (menuLeavesOn()): back to the looper once that key is let go, as A on the
+  // RIGHT off the menu's right edge or LEFT off its left (menuLeavesOn()):
+  // back to the looper (the screen it came from) once that key is let go, as A on the
   // loaded project's card; with no project loaded, a new one is made in the
   // first empty slot (its card selected), as A there.
   // (leaveOnRelease: likewise)
@@ -683,14 +697,14 @@ static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {
     }
   } else {
     int row = selected, at = selectedCellIn(selected);
-    // (By place on the screen: track 1 at the top, the status row at the bottom.)
+    // (By place on the screen: main, track 1 at the top, the status row at the
+    // bottom; notes, the status row at the top.) Off its top or bottom row (a
+    // fresh press; a held arrow stops there): the other screen, once let go.
     int pos = rowPos(selected);
-    if (pressed & m8::BTN_UP && pos > 0) selected = rowAtPos(pos - 1);              // no wrapping
-    else if ((pressed & m8::BTN_UP) && !repeat) menuOnRelease = m8::BTN_UP;      // UP on track 1 (a fresh press): the menu, once let go
-    // DOWN: on to the status row (a held DOWN stops there); on the status row
-    // (a fresh press): the menu, once let go.
+    if (pressed & m8::BTN_UP && pos > 0) selected = rowAtPos(pos - 1);
+    else if ((pressed & m8::BTN_UP) && !repeat) flipOnRelease = m8::BTN_UP;
     if (pressed & m8::BTN_DOWN && pos < ROWS - 1) selected = rowAtPos(pos + 1);
-    else if ((pressed & m8::BTN_DOWN) && pos == ROWS - 1 && !repeat) menuOnRelease = m8::BTN_DOWN;
+    else if ((pressed & m8::BTN_DOWN) && pos == ROWS - 1 && !repeat) flipOnRelease = m8::BTN_DOWN;
     // To or from the status row: the column that row was last left on (the
     // tracks' and the status row's each their own); the first time, the cell
     // below / above, the status row's having the menu cell to the left of the tracks' first.

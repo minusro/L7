@@ -444,10 +444,8 @@ bool menuLeavesOn(uint8_t key) {
   if (!shown || onStatus || (projectCurrent() < 0 && menuFirstEmptySlot() < 0)) return false;
   if (menuLoadPending()) return false;           // (a project on its way: not until it has come in)
   // RIGHT off the screen's right edge (the looper's that way): off a card
-  // row's right end, or a list item's side; UP off its top: the top card row
-  // (A-D); DOWN off its bottom: the list's last item.
-  if (key == m8::BTN_UP) return menuSel < COLS;
-  if (key == m8::BTN_DOWN) return menuSel == ITEMS - 1;
+  // row's right end, or a list item's side; LEFT off its left edge. (UP / DOWN
+  // don't leave it: the looper's own two screens are above and below each other.)
   if (key == m8::BTN_LEFT) return menuSel >= CARDS || menuSel % COLS == 0;   // (LEFT off its left edge too)
   return key == m8::BTN_RIGHT && (menuSel >= CARDS || menuSel % COLS == COLS - 1);
 }
@@ -466,6 +464,8 @@ void openMenu() {
     projectDelete(projectCurrent());
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();   // recordings no project uses: gone
   shown = true;                                  // (where it was last left: an item, or its status row)
+  notesLayout = false;                           // (the menu: main's layout and greys, whichever screen it came from)
+  setGreysInverted(false);
   mainRow = selected;
   mainCell = selectedCell;
   if (onStatus) {                                // (where it was last time)
@@ -484,6 +484,8 @@ void closeMenu() {
   selected = mainRow;
   selectedCell = mainCell;
   shown = false;
+  notesLayout = notesScreen;                     // (back to the screen it came from: notes, or main)
+  setGreysInverted(notesScreen);
   board.tft().fillScreen(BG);                    // (the menu's ground everywhere: the gap before the action button too)
   uiGeneration++;                                // everything redraws in full
   for (int i = 0; i < ROWS; i++) drawTrack(i);

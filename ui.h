@@ -80,27 +80,51 @@ inline int selectedCellIn(int i) {
 }
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
-// The edge mark: the menu (an arrow off any edge of the looper opens it), on
+// The edge mark: the menu (an arrow off the looper's sides opens it), on
 // the status row's line: a right triangle (5 x 5 blocks, its right angle at
 // its bottom left: pointing to the screen's bottom left corner, 2 blocks from
-// its left and bottom edges) in the looper's view (its menu cell: the space left of
+// its left and bottom edges; on the notes screen, its status row on top: at
+// its top left, pointing to the top left corner) in the looper's view (its menu cell: the space left of
 // the scene cell, up to its frame), in ink on the ground (the
 // whole space), dark grey on black. (The menu has none.)
 constexpr int EDGE_W = MENU_BOX.w;               // (up to the scene cell's frame)
 void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground);   // (x, y, w: the space, the status row's height)
 
-inline int rowTop(int i) { return i == STATUS_ROW ? STATUS_TOP : (NUM_TRACKS - 1 - i) * ROW_BAND; }
-// A row's place on the screen from the top (0: the first track row), and back.
-inline int rowPos(int i) { return i == STATUS_ROW ? NUM_TRACKS : NUM_TRACKS - 1 - i; }
-inline int rowAtPos(int p) { return p == NUM_TRACKS ? STATUS_ROW : NUM_TRACKS - 1 - p; }
-// The row above / below row i on the screen (-1: none; the status row has a gap above it).
+// ---- The looper's two screens, the same rows: main (the tracks from the top
+// of the screen, the status row below them) and notes (the status row at the
+// top, the tracks below it, a block lower so track 7's bottom border is the
+// screen's bottom edge; the greys inverted: colors.h setGreysInverted()).
+// UP / DOWN off one's top or bottom edge goes to the other, as if they were
+// stacked in a loop: main's status row and notes' meet, and main's track 1 and
+// notes' track 7 (input.cpp). LEFT / RIGHT off its sides: the menu, which goes
+// back to whichever it came from. notesScreen: notes is the looper's screen
+// (the menu open or not); notesLayout: and it's what's shown (the menu
+// closed): the rows' places follow it.
+inline bool notesScreen = false, notesLayout = false;
+inline int rowTop(int i) {
+  if (i == STATUS_ROW) return notesLayout ? 0 : STATUS_TOP;
+  return (notesLayout ? STATUS_H + PX : 0) + (NUM_TRACKS - 1 - i) * ROW_BAND;
+}
+// A row's place on the screen from the top (0: the top row), and back.
+inline int rowPos(int i) {
+  if (notesLayout) return i == STATUS_ROW ? 0 : NUM_TRACKS - i;
+  return i == STATUS_ROW ? NUM_TRACKS : NUM_TRACKS - 1 - i;
+}
+inline int rowAtPos(int p) {
+  if (notesLayout) return p == 0 ? STATUS_ROW : NUM_TRACKS - p;
+  return p == NUM_TRACKS ? STATUS_ROW : NUM_TRACKS - 1 - p;
+}
+// The row above / below row i on the screen (-1: none; the status row has a gap next to it).
 inline int rowAbove(int i) { return i < NUM_TRACKS - 1 ? i + 1 : -1; }
 inline int rowBelow(int i) { return i > 0 && i != STATUS_ROW ? i - 1 : -1; }
-// A row's backgrounds: its band; the track row above the status row's out to it,
-// the status row's out to the screen's bottom edge.
+// A row's backgrounds: its band; main: the track row above the status row's
+// out to it, the status row's out to the screen's bottom edge; notes: the
+// first track row's from the status row's bottom, the last's to the screen's
+// bottom edge.
 constexpr int LAST_TRACK_ROW = 0;
-inline int bgTop(int i) { return rowTop(i); }
+inline int bgTop(int i) { return notesLayout && i == NUM_TRACKS - 1 ? STATUS_H : rowTop(i); }
 inline int bgHeight(int i) {
+  if (notesLayout) return (i == STATUS_ROW ? STATUS_H : i == LAST_TRACK_ROW ? 240 : rowTop(i) + ROW_BAND) - bgTop(i);
   return (i == STATUS_ROW ? 240 : i == LAST_TRACK_ROW ? STATUS_TOP : rowTop(i) + ROW_BAND) - bgTop(i);
 }
 
@@ -200,7 +224,7 @@ extern uint32_t uiGeneration;
 // own right edge, or UP off its top); the arrows move its
 // selection. While it's open the track rows aren't drawn.
 // Its ground: dark grey (the whole screen).
-constexpr uint16_t MENU_BG = DARK;
+constexpr uint16_t MENU_BG = GREY_17;                // (the menu: always the normal greys)
 bool menuOpen();
 void openMenu();
 void closeMenu();

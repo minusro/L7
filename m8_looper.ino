@@ -23,8 +23,9 @@
 //
 // Keys:
 //   UP/DOWN          select a row: tracks 1 (top) to 7 (just above the status row),
-//                      DOWN on the status row or UP on track 1 (a fresh press): open the menu (on release)
-//                      then the status row; it starts on track 1
+//                      then the status row; it starts on track 1. Off the top or bottom row
+//                      (a fresh press): the other screen (main / notes, its status row on top;
+//                      on release); LEFT/RIGHT off a row's ends: the menu
 //   LEFT/RIGHT       select a cell: waveform, filter, volume (on the status row: scene, tempo)
 //   OPT twice        reset the current cell (waveform: whole loop; filter: open;
 //                      volume: unity, balance centred)
