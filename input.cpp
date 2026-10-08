@@ -731,13 +731,15 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     } else if (selectedCell == MIX_CELL && hasClip(selected)) {
       // Volume and balance: UP/DOWN louder/quieter, RIGHT/LEFT towards the
       // right/left channel.
+      // (A step on the clip's scale, engine.h: the track keeps steps from unity.)
       const Track &tr = tracks[selected];
-      int volume = tr.volume, balance = tr.balance;
-      if (pressed & m8::BTN_UP) volume++;
-      if (pressed & m8::BTN_DOWN) volume--;
+      float d = headroomDbOf(tr.overview);
+      int step = volumeStepOf(tr.volume, d), balance = tr.balance;
+      if (pressed & m8::BTN_UP) step++;
+      if (pressed & m8::BTN_DOWN) step--;
       if (pressed & m8::BTN_RIGHT) balance++;
       if (pressed & m8::BTN_LEFT) balance--;
-      volume = constrain(volume, 0, VOLUME_MAX);
+      int volume = volumeStoredOf(constrain(step, 0, VOLUME_MAX), d);
       balance = constrain(balance, -BALANCE_MAX, BALANCE_MAX);
       if (volume != tr.volume || balance != tr.balance) {
         setTrackMix(selected, volume, balance);
@@ -751,6 +753,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       // (another sample: the waveform cell selected, to see it)
       if ((pressed & m8::BTN_LEFT) && stepSample(selected, -1)) selectedCell = WAVE_CELL;
       if ((pressed & m8::BTN_RIGHT) && stepSample(selected, 1)) selectedCell = WAVE_CELL;
+      if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) deleteEmptySamples();   // (empty ones stepped over: gone if unused, stopped)
     }
   } else {
     int row = selected, at = selectedCellIn(selected);

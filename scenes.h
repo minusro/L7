@@ -110,6 +110,9 @@ bool projectDelete(int p);
 // Stopped only. Not called automatically while DELETE_UNUSED_SAMPLES (config.h)
 // is off. Returns how many.
 int deleteUnusedSamples();
+// Of the recordings stepSample() stepped over as empty (storage.h), deletes
+// those nothing uses (as above). Stopped only (else left for next time).
+int deleteEmptySamples();
 // The loaded project's edits so far: it moves on whenever the project changes
 // (the looper's tracks edited by hand or recorded, a scene cut, pasted or
 // duplicated, the tempo set by hand), not when it's loaded or its scenes are

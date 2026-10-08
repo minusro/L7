@@ -141,7 +141,7 @@ sound is made differently (engine.cpp `stretchSample()`):
 
 A setting (the session's `metro=`; B+A on the tempo cell): 0 (off), A
 (auto: only in a silent scene, no clip on any track, muted or not; the default) or 1
-(on). While the clock runs and it says so (never in the dummy project), the engine clicks on every beat: a
+(on). While the clock runs and it says so (never in the dummy project, nor while the menu is open: the clock not shown), the engine clicks on every beat: a
 small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
 and louder on the bar's first beat). It's added after the master volume and
 left out of what a resampling records. A recording started with it clicking keeps it

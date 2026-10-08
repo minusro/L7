@@ -80,7 +80,7 @@ static SceneInfo emptyScene() {
   s.version = 1;
   for (auto &u : s.units) {
     memcpy(u.magic, "M8TU", 4);
-    u.version = 5;                                 // (volume and balance in today's steps: UNIT_VERSION)
+    u.version = 6;                                 // (volume and balance in today's steps: UNIT_VERSION)
     u.filterHi = FILTER_MAX;
     u.volume = VOLUME_UNITY;
   }
@@ -684,8 +684,8 @@ bool projectPaste(int p) {
   return true;
 }
 
-int deleteUnusedSamples() {
-  if (transport.running || busy() || job.on) return 0;
+// Marks every recording a project uses (scenes.h deleteUnusedSamples()).
+static void markUsedSamples() {
   flushProject();
   prepareUnits(nullptr);                           // (no prepared sample files open)
   clearSampleMarks();
@@ -703,6 +703,21 @@ int deleteUnusedSamples() {
   for (int t = 0; t < NUM_TRACKS; t++) mark(unitOf(t));   // the tracks now (muted ones too)
   if (clipFull)
     for (const auto &u : clip.units) mark(u);      // the scene clipboard
+}
+
+FLASHMEM int deleteEmptySamples() {
+  if (transport.running || busy() || job.on) return 0;
+  uint32_t ids[16];
+  int n = takeEmptySamples(ids, 16);
+  if (!n) return 0;
+  markUsedSamples();
+  int deleted = deleteUnmarkedSamples(ids, n);
+  return deleted;
+}
+
+int deleteUnusedSamples() {
+  if (transport.running || busy() || job.on) return 0;
+  markUsedSamples();
   return deleteUnmarkedSamples();
 }
 

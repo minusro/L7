@@ -97,7 +97,7 @@ static void takeLooks(int t, ShownTrack &s) {
   const Track &tr = tracks[t];
   memset(&s, 0, sizeof s);                         // (padding too: compared with memcmp)
   s.state = tr.state;
-  s.volume = tr.volume;
+  s.volume = volumeStepOf(tr.volume, headroomDbOf(tr.overview));   // (as a step on its clip's scale)
   s.balance = tr.balance;
   s.filterLo = tr.filterLo;
   s.filterHi = tr.filterHi;
@@ -108,7 +108,8 @@ static void takeLooks(int t, ShownTrack &s) {
   s.rangeStartBeat = tr.rangeStartBeat;
   s.rangeBeats = tr.rangeBeats;
   s.rangeAnchorQ = tr.rangeAnchorQ;
-  memcpy(s.overview, tr.overview, OVERVIEW_COLS);
+  float norm = overviewNormOf(tr.overview);        // drawn normalised: its peak the full height
+  for (int c = 0; c < OVERVIEW_COLS; c++) s.overview[c] = (uint8_t)min(255.0f, tr.overview[c] * norm + 0.5f);
 }
 
 // Takes the tracks' looks (held ones as above); the rows that changed are

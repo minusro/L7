@@ -68,15 +68,44 @@ float filterResponseDb(int lo, int hi, float hz) {
 }
 
 // ---- Volume and balance
-float volumeGain(int volume) {
-  return volume <= 0 ? 0.0f : powf(10.0f, (volume - VOLUME_UNITY) * VOLUME_STEP_DB / 20);
+uint16_t peakOf(const uint8_t *o) {
+  uint16_t p = o[OVERVIEW_COLS] | o[OVERVIEW_COLS + 1] << 8;
+  if (p) return p;
+  uint8_t top = 0;                                   // (not kept: from the overview, on its square-root scale)
+  for (int c = 0; c < OVERVIEW_COLS; c++) top = max(top, o[c]);
+  float f = top / 255.0f;
+  return (uint16_t)min(32767.0f, f * f * 32768.0f + 0.5f);
+}
+float headroomDbOf(const uint8_t *o) {
+  uint16_t p = peakOf(o);
+  return p < QUIET_PEAK ? 0.0f : max(0.0f, -20 * log10f(p / 32768.0f));
+}
+float overviewNormOf(const uint8_t *o) {
+  uint16_t p = peakOf(o);
+  return p < QUIET_PEAK ? 1.0f : 1 / sqrtf(p / 32768.0f);
+}
+int unityStepOf(float d) {
+  int ups = (int)ceilf(d / VOLUME_STEP_DB - 0.01f);  // (steps above unity to 0 dBFS, the last a part one)
+  return max(1, VOLUME_MAX - max(0, ups));
+}
+int volumeStepOf(int stored, float d) {
+  return stored == VOLUME_OFF ? 0 : constrain(unityStepOf(d) + stored - VOLUME_UNITY, 1, VOLUME_MAX);
+}
+int volumeStoredOf(int step, float d) {
+  return step <= 0 ? VOLUME_OFF : VOLUME_UNITY + min(step, VOLUME_MAX) - unityStepOf(d);
+}
+float volumeGainOf(int stored, float d) {
+  if (stored == VOLUME_OFF) return 0.0f;
+  int v0 = unityStepOf(d), k = volumeStepOf(stored, d) - v0, ups = VOLUME_MAX - v0;
+  float db = k <= 0 ? k * VOLUME_STEP_DB : k >= ups ? d : k * VOLUME_STEP_DB;   // (the top: 0 dBFS exactly)
+  return powf(10.0f, db / 20);
 }
 
 void setTrackMix(int t, int volume, int balance) {
   Track &tr = tracks[t];
-  volume = constrain(volume, 0, VOLUME_MAX);
+  if (volume != VOLUME_OFF) volume = constrain(volume, -100, 100);   // (steps from unity: the clip's scale limits them, volumeStepOf())
   balance = constrain(balance, -BALANCE_MAX, BALANCE_MAX);
-  float g = volumeGain(volume);
+  float g = volumeGainOf(volume, headroomDbOf(tr.overview));
   float toL = balance < 0 ? -(float)balance / BALANCE_MAX : 0;   // share of the right channel moved left
   float toR = balance > 0 ? (float)balance / BALANCE_MAX : 0;    // share of the left channel moved right
   noInterrupts();

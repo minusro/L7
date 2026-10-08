@@ -255,8 +255,8 @@ FLASHMEM static void field(char code) {
       }
       break;
     case 'E': clipEnvelopes(); break;
-    case 'g':                                    // the clip's gain: the track's volume (1: 0 dB)
-      putNumber(x.unit.volume <= 0 ? 0.0 : pow(10.0, (x.unit.volume - VOLUME_UNITY) * VOLUME_STEP_DB / 20.0));
+    case 'g':                                    // the clip's gain: the track's volume on the clip's scale (1: 0 dB)
+      putNumber(volumeGainOf(x.unit.volume, x.sample.headroomDb));
       break;
   }
 }

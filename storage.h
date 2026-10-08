@@ -117,13 +117,16 @@ bool swapTracks(int a, int b);
 void clearSampleMarks();
 void markSample(uint32_t id);
 bool sampleMarked(int i);             // sampleAt(i)'s mark
-int deleteUnmarkedSamples();
+int deleteUnmarkedSamples(const uint32_t *only = nullptr, int onlyCount = 0);   // (only: just those of these ids)
 // The track's sample: the next (dir 1) or previous (-1) in the order of their
 // names, wrapping around; an empty track takes the first (1) or last (-1) of
 // its own in the loaded project (or the name after / before). Needs at least
 // 2 samples on the card. Volume, balance, filter and mute stay; the range resets to
-// the whole loop. false: nothing changed.
+// the whole loop. false: nothing changed. Empty recordings (EMPTY_SPAN,
+// config.h) are stepped over, and noted: takeEmptySamples() hands them on
+// (to be deleted if nothing uses them, scenes.h deleteEmptySamples()).
 bool stepSample(int t, int dir);
+int takeEmptySamples(uint32_t *ids, int most);
 // Samples on the card holding recordings, including ones no track plays now
 // (until deleteUnusedSamples(), scenes.h: no project's), in the order of their
 // names: sampleAt(0 .. sampleCount() - 1).
@@ -134,7 +137,7 @@ bool moveFile(const char *from, const char *to);        // renames a file (an ol
 // name: "A30012", or "0012" for an older one) and a copy of its file.
 // bars: each bar line's frame (bars 1 .. loopBars; the last the clip's end):
 // where they fell when the tempo changed while it recorded, else evenly.
-struct SampleDetails { uint32_t frames, spb, loopBars; uint64_t bytes; char name[12]; uint32_t bars[MAX_BARS]; };
+struct SampleDetails { uint32_t frames, spb, loopBars; uint64_t bytes; char name[12]; uint32_t bars[MAX_BARS]; float headroomDb; };   // (headroomDb: its volume scale, engine.h)
 bool sampleDetails(uint32_t n, SampleDetails &d);
 bool copySample(uint32_t n, const char *to, void (*progress)() = nullptr);
 uint32_t sampleCount();

@@ -39,9 +39,10 @@ static void buildArcs() {
 }
 
 // How many halves (0..HALVES) the meter lights at a level in dB: those whose
-// volume step's level it reaches (within half a step).
+// volume step's level it reaches (within half a step): the top one 0 dBFS, as
+// the clip's top step peaks (each clip's scale, engine.h).
 static int halvesForDb(float db) {
-  return constrain((int)floorf(db / VOLUME_STEP_DB + VOLUME_UNITY + 0.5f), 0, HALVES);
+  return constrain((int)floorf(db / VOLUME_STEP_DB + VOLUME_MAX + 0.5f), 0, HALVES);
 }
 static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
 

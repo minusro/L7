@@ -69,6 +69,10 @@ constexpr bool DELETE_UNUSED_SAMPLES = false;
 // Waveform overview per track: OVERVIEW_COLS peak values over the whole loop,
 // stored in the WAV header. Peaks are gathered per PEAK_BIN_FRAMES while recording.
 constexpr int OVERVIEW_COLS = 286;                 // one per pixel: x = 30..315
+// In memory the overview is followed by the loop's peak (max |sample|, uint16
+// little-endian; 0: not known, then taken from the overview), kept in the WAV
+// header too.
+constexpr int OVERVIEW_BYTES = OVERVIEW_COLS + 2;
 constexpr uint32_t PEAK_BIN_FRAMES = 4096;
 
 // Per-track filters: a highpass at step `lo`, then a lowpass at step `hi`.
@@ -84,13 +88,27 @@ constexpr float FILTER_MIN_HZ = 20.0f, FILTER_OCTAVES = 10.0f;
 
 // Per-track volume and balance. The volume cell has 5 lines per channel, each
 // two 1-pixel halves: volume lights a half per step, balance takes a half
-// off the other side per step. Volume step v is (v - VOLUME_UNITY) *
-// VOLUME_STEP_DB dB (off at 0): -26.25 dB to +7.5 dB. Balance -BALANCE_MAX..
+// off the other side per step. Each clip has its own scale (engine.h,
+// volumeStepOf()): its top step, VOLUME_MAX, plays it peaking at 0 dBFS
+// (normalised: its peak, kept with its overview); its unity step plays it as
+// recorded, as many VOLUME_STEP_DB steps below the top as its peak is below
+// 0 dBFS, rounded up (the step just below the top taking what's left), at
+// least step 1; each step below that VOLUME_STEP_DB quieter; 0 off. A clip
+// peaking under QUIET_PEAK (empty, or near silence): taken as peaking at
+// 0 dBFS (its unity step the top). A track keeps its volume as steps from
+// unity (VOLUME_UNITY: unity; VOLUME_OFF: off), so a clip switch keeps its
+// level as recorded. Balance -BALANCE_MAX..
 // BALANCE_MAX, centre 0 (the signal as it is): turning it towards one side
 // moves that share of the other channel over to this one (linearly), so at the
 // end this side carries the mono sum (L + R) and the other is silent.
 constexpr int VOLUME_MAX = 10, VOLUME_UNITY = 8;
+constexpr int8_t VOLUME_OFF = -128;                // (a track's stored volume: off)
 constexpr float VOLUME_STEP_DB = 3.75f;
+constexpr uint16_t QUIET_PEAK = 130;               // ~-48 dBFS
+// A recording whose samples all lie within EMPTY_SPAN of each other (silence,
+// a constant level, a little noise) is empty: stepping through the samples
+// (SHIFT+LEFT/RIGHT) skips it, and, stopped, deletes it if nothing uses it.
+constexpr int EMPTY_SPAN = 256;
 constexpr int BALANCE_MAX = 10;
 // Master volume and balance: the final output (tracks and monitored input), on
 // the tracks' scale (the clock cell's control has the volume cell's shape,

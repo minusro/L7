@@ -18,7 +18,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | A or B (menu, on a project slot) | At once, on the press: load its project (playing: at the next bar line, as a scene change; its tracks start over from their 1.1.1 positions there and the clock reads 1.1.1; a project with no clips, a new one too: at once, the clock started again from 1.1.1 (`loadFromMenu()`); stopped: it stays stopped, ready to play) the menu staying open (icon: the small arrow right; once loaded, held on: the menu closes too after 0.6 s, `menuHold()` in input.cpp; the clock stopped: it starts too, as START). While it's held its card shows as the loaded one, steady; once let go, until the new project has come in (playing: its switch point, the next bar line), its card flashes every eighth (loaded on the first half of each beat, so on at the switch, N.1.1; a project's outline on the second; `menuNoteLoad()`, `shownLoaded()` in ui_menu.cpp), then stays loaded. The one before shows as not loaded from the press on, but keeps the play icon (its letter 2 blocks left for it) until the switch, when the new one takes it (`playingCard()`). An empty slot: a new, empty project there, opened once let go (the menu closes, on track 1's waveform cell; icon: the asterisk). On the loaded project's card: close the menu once let go, back to the looper (icon: the small arrow right). On either, held 0.6 s instead: the same then, without letting go, and the clock started if stopped (`openCard()`, `menuHold()`). While a project loaded here is on its way (playing: until its switch point, the next bar line), the menu can't be left: no edge leads out, and closing it (A on its card again, or holding) waits until it has come in, then happens by itself (`closeToLooper()` in input.cpp, `menuLoadPending()`). (With SHIFT, and on the list's items: once let go.) Loading not while recording |
 | SHIFT + A or B (menu, on a slot) | Once let go (no confirmation): cut its project to the project clipboard (the loaded one: its slot empties and an empty dummy project is loaded, for now), or paste the clipboard into an empty slot. A project with no clips is only emptied, the clipboard keeping what it had (so paste needs a project with clips on it). Not while recording |
 | SHIFT + A | Cut the track to the clipboard / paste onto an empty track / on a recording (or queued) track: cancel it at once, the recording thrown away (its file back to the pool; a queued one starts from the next bar). Icon: X |
-| SHIFT + LEFT/RIGHT | Previous / next sample in the order of their names (wraps; gapless): the same project and track's first, then the project's other tracks', then other projects' (storage.md); the waveform cell is selected |
+| SHIFT + LEFT/RIGHT | Previous / next sample in the order of their names (wraps; gapless): the same project and track's first, then the project's other tracks', then other projects' (storage.md); the waveform cell is selected. Empty recordings (every sample within 256 of each other: silence, a constant level, a little noise; `EMPTY_SPAN`) are stepped over, and, the clock stopped, deleted if no project uses them (`deleteEmptySamples()`) |
 | SHIFT + UP/DOWN | Newer / older scene (see scenes.md); B + UP/DOWN does the same on the status row's scene cell (double taps and holding B included) |
 | SHIFT + UP/DOWN twice, second held | To N+1\* / 0\* |
 | B, SHIFT, A / SHIFT, B, A | Paste scene (B first) / cut scene (SHIFT first; a scene with no clips on its tracks is removed but doesn't replace the clipboard, and cutting 0* does nothing) |
@@ -49,8 +49,14 @@ no snapping to the taps).
 * The start stays when the length changes.
 
 Other cells with B + arrows: filter (LEFT/RIGHT move, UP/DOWN width; width
-scales from the edge at the edge), volume (UP/DOWN: 0–10, 3.75 dB steps, unity
-at 8: each step a half line) and balance (LEFT/RIGHT: ±10; each step moves the
+scales from the edge at the edge), volume (UP/DOWN: 0–10, each step a half line, on the clip's own scale: the
+top step plays it peaking at 0 dBFS, its unity step — where it starts — plays it as
+recorded, as many 3.75 dB steps below the top as its peak is below 0 dBFS, rounded
+up, the step just below the top taking what's left; 3.75 dB steps below unity; 0
+off; a clip peaking under ~-48 dBFS counts as peaking at 0 dBFS. The track keeps
+its volume as steps from unity, so another clip plays at its own level as
+recorded. Its meter: the top half at 0 dBFS. `volumeStepOf()` in engine.cpp; the
+clip's peak is kept in its WAV header, older ones' taken from their overview) and balance (LEFT/RIGHT: ±10; each step moves the
 other channel's level by a half line, so every press shows),
 tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–240 BPM),
 the clock cell: the master volume and balance, one for all projects (UP/DOWN the volume a step, LEFT/RIGHT the balance; B twice: back to 100% and centred, as B twice resets any cell; saved in the session as `level=` and `balance=`, an older `volume=` converted).

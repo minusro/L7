@@ -31,7 +31,8 @@ struct Track {
   // the recording began; shifts when a range change keeps the playhead.
   int32_t rangeAnchorQ = 0;
   float gain = 1.0f;               // overall trim (tests)
-  // Volume and balance (loop() sets them with setTrackMix): a 2x2 mix, out
+  // Volume (steps from unity, config.h; VOLUME_OFF: off) and balance (loop()
+  // sets them with setTrackMix, on the clip's scale: its overview's peak): a 2x2 mix, out
   // left = mixLL * left + mixLR * right, out right = mixRL * left + mixRR * right
   // (volume included). levelL/R: each output's gain for a signal on both
   // channels (row sums), for display.
@@ -48,8 +49,9 @@ struct Track {
   bool hpOn = false, lpOn = false;
   float filterZ[2][2][2] = {};     // [hp/lp][left/right][state]; interrupt only, or loop() while not live
   // Waveform overview (loop() only): peak level per column across the loop,
-  // 0-255 on a square-root scale. overviewVersion changes whenever it does.
-  uint8_t overview[OVERVIEW_COLS] = {};
+  // 0-255 on a square-root scale, then the loop's peak (OVERVIEW_BYTES,
+  // config.h). overviewVersion changes whenever it does.
+  uint8_t overview[OVERVIEW_BYTES] = {};
   uint8_t overviewVersion = 0;
 
   uint32_t rangeStartFrame() const { return rangeStartBeat * spbNative; }
@@ -232,8 +234,18 @@ float filterStepHz(int step);
 // then the pair shifted so they don't both lie outside 0..FILTER_MAX.
 void setTrackFilter(int t, int lo, int hi);
 float filterResponseDb(int lo, int hi, float hz);   // magnitude of the pair (analog approximation)
-void setTrackMix(int t, int volume, int balance);   // steps (config.h), clamped
-float volumeGain(int volume);                       // linear gain of a volume step
+void setTrackMix(int t, int volume, int balance);   // volume: steps from unity (config.h), balance: steps, clamped
+// A clip's scale (config.h): from its overview (and peak, OVERVIEW_BYTES) the
+// dB its peak is below 0 dBFS (0: quiet or empty, QUIET_PEAK), its peak
+// (max |sample|), and the normalising factor for its overview's columns
+// (square-root scale: 1 / sqrt(peak)).
+float headroomDbOf(const uint8_t *overview);
+uint16_t peakOf(const uint8_t *overview);
+float overviewNormOf(const uint8_t *overview);
+int unityStepOf(float headroomDb);                  // its unity step (1..VOLUME_MAX)
+int volumeStepOf(int stored, float headroomDb);     // a track's stored volume as a step on the clip's scale (0: off)
+int volumeStoredOf(int step, float headroomDb);     // and back (step 0: VOLUME_OFF)
+float volumeGainOf(int stored, float headroomDb);   // its linear gain
 void takeTrackPeaks(int t, float &left, float &right);   // and start the next measurement
 // Master volume (config.h, steps 0..MASTER_VOLUME_MAX) and balance
 // (-BALANCE_MAX..BALANCE_MAX, as a track's) on the final output (the click:

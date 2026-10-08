@@ -691,6 +691,37 @@ int main(int argc, char **argv) {
     engine.monitor = true;
   }
 
+  printf("empty recordings: stepped over by SHIFT+LEFT/RIGHT, deleted when stopped if unused\n");
+  {
+    if (!transport.running) transportStart();
+    feedRamp = false; feedSineHz = 0;
+    runBeats(1.5);
+    recordPress(4);
+    for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+    runBeats(3.6);
+    recordPress(4);
+    runUntilIdle();
+    uint32_t empty = tracks[4].sample;
+    check(empty && tracks[4].state != TrackState::Empty, "a bar of silence recorded");
+    clearTrack(4);
+    bool landed = false;
+    for (int i = 0; i < (int)sampleCount() + 2; i++) { stepSample(4, 1); landed |= tracks[4].sample == empty; }
+    check(!landed && sampleExists(empty), "playing: stepped over, still on the card");
+    check(deleteEmptySamples() == 0 && sampleExists(empty), "playing: not deleted (the card left alone)");
+    clearTrack(4);
+    int changes = simFsChanges;
+    transportStop();
+    for (int i = 0; i < 20; i++) serviceStorage();
+    stepSample(4, 1);
+    stepSample(4, -1);
+    check(deleteEmptySamples() == 1 && !sampleExists(empty), "stopped: stepped over again, deleted (nothing uses it)");
+    clearTrack(4);
+    for (int i = 0; i < 20; i++) serviceStorage();
+    fsChangesAtStart += simFsChanges - changes;    // (stopped: the file system may change)
+    feedRamp = true;
+    transportStart();
+  }
+
   printf("record on track 7 while track 6 records: 6 stops, 7 records next\n");
   {
     int changes = simFsChanges;
@@ -1385,6 +1416,24 @@ int main(int argc, char **argv) {
       feedSineHz = 0;
     };
     recordSine(6, 101, 3.6);                       // 1 bar
+    {                                              // its peak kept, its volume scale from it (engine.h)
+      const Track &tr = tracks[6];
+      uint16_t pk = peakOf(tr.overview);
+      float d = headroomDbOf(tr.overview);
+      SampleDetails sd;
+      bool read = sampleDetails(tr.sample, sd);
+      char mp[200];
+      snprintf(mp, sizeof mp, "a sine at 8000: its peak kept (%u; in its header: %.2f dB down, here %.2f), unity step %d, the top step's gain x%.3f (0 dBFS: x%.3f)",
+               pk, read ? sd.headroomDb : -1.0f, d, unityStepOf(d), volumeGainOf(volumeStoredOf(VOLUME_MAX, d), d), 32768.0f / pk);
+      check(abs((int)pk - 8000) <= 2 && read && fabsf(sd.headroomDb - d) < 0.01f && unityStepOf(d) == 6 &&
+            volumeStepOf(VOLUME_UNITY, d) == 6 && fabsf(volumeGainOf(VOLUME_UNITY, d) - 1) < 1e-4f &&
+            fabsf(volumeGainOf(volumeStoredOf(VOLUME_MAX, d), d) * pk / 32768.0f - 1) < 1e-3f &&
+            fabsf(volumeGainOf(volumeStoredOf(7, d), d) - powf(10, 3.75f / 20)) < 1e-3f, mp);
+      uint8_t quiet[OVERVIEW_BYTES] = {};
+      quiet[OVERVIEW_COLS] = 60;                   // (~-55 dBFS: quiet)
+      check(headroomDbOf(quiet) == 0 && unityStepOf(0) == VOLUME_MAX && volumeGainOf(VOLUME_UNITY, 0) == 1 &&
+            volumeStepOf(VOLUME_OFF, 0) == 0 && volumeGainOf(VOLUME_OFF, 0) == 0, "a quiet clip: taken as peaking at 0 dBFS, its unity the top step; off is off");
+    }
     recordSine(5, 331, 3.6);
     engine.monitor = false;
     for (auto &x : tracks) x.gain = 0;
@@ -1482,7 +1531,10 @@ int main(int argc, char **argv) {
     setMasterVolume(MASTER_VOLUME_UNITY);
     bool same = true;
     for (uint32_t f : {0u, 1000u, 30000u, 100000u, tracks[6].recordedFrames - 1})
-      if (fabsf(wavLeft(6, f) - outLog[start + f - logFrom] / masterNow) > 3) same = false;
+      if (fabsf(wavLeft(6, f) - outLog[start + f - logFrom] / masterNow) > 2 + 1 / masterNow) {   // (a step of the output, scaled back up)
+        same = false;
+        if (getenv("RESAMPLE_TRACE")) printf("    frame %u: recorded %.1f, heard %.1f\n", f, (double)wavLeft(6, f), outLog[start + f - logFrom] / masterNow);
+      }
     check(tracks[6].state == TrackState::Playing && tracks[6].loopBars == 2 && same && outLog[start + 1000 - logFrom] != 0,
           "track 7 holds 2 bars of what was played, tracks and input, without the master volume (turned down 3 steps)");
     check(takeResampled() == 6 && takeResampled() == -1, "reported once as resampled");

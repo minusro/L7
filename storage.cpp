@@ -152,7 +152,7 @@ struct Plan {
   TrackUnit u;
   FsFile file;                                   // the new sample (none: the same one)
   uint32_t spb = 0, loopBars = 0, frames = 0, preroll = 0;
-  uint8_t overview[OVERVIEW_COLS];
+  uint8_t overview[OVERVIEW_BYTES];
   // The old clip's frames just before the switch, as they were before the
   // crossfade into the new one (a replanned switch crossfades again from them).
   uint32_t before[XFADE_FRAMES];
@@ -229,7 +229,10 @@ static constexpr uint32_t SAMPLE_TAG_OFFSET = SAMPLE_OVERVIEW_OFFSET + OVERVIEW_
 // tempo changed ("BR", the count, a byte spare, then each bar line's frame:
 // bars 1 .. loopBars, the last the clip's end). None: evenly, at its tempo.
 static constexpr uint32_t SAMPLE_BARS_OFFSET = SAMPLE_TAG_OFFSET + 4;
-static_assert(SAMPLE_BARS_OFFSET + 4 + MAX_BARS * 4 <= WAV_DATA_OFFSET - 8, "the overview, name and bar lines must fit in the header");
+// After the bar lines: the loop's peak ("PK", max |sample| 16 bits; none:
+// from the overview, engine.h peakOf()).
+static constexpr uint32_t SAMPLE_PEAK_OFFSET = SAMPLE_BARS_OFFSET + 4 + MAX_BARS * 4;
+static_assert(SAMPLE_PEAK_OFFSET + 4 <= WAV_DATA_OFFSET - 8, "the overview, name, bar lines and peak must fit in the header");
 
 // The samples holding recordings: their ids, sorted (the order of their
 // names). In RAM1 (20 KB; RAM2 is left to the rings, and to the MTP buffers
@@ -275,7 +278,9 @@ static bool readSampleHeader(FsFile &f, SampleInfo &info, uint8_t *overview, uin
 bool sampleDetails(uint32_t n, SampleDetails &d) {
   FsFile f;
   SampleInfo info;
-  if (!sampleExists(n) || !openSample(n, f, info, nullptr)) return false;
+  uint8_t overview[OVERVIEW_BYTES];
+  if (!sampleExists(n) || !openSample(n, f, info, overview)) return false;
+  d.headroomDb = headroomDbOf(overview);
   d.frames = info.frames;
   d.spb = info.spb;
   d.loopBars = info.loopBars;
@@ -329,6 +334,12 @@ static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t
   SampleInfo info = {{'M', '8', 'S', 'M'}, SAMPLE_VERSION, frames, spb, loopBars, order, preroll};
   memcpy(h + INFO_OFFSET, &info, sizeof info);
   if (overview) memcpy(h + SAMPLE_OVERVIEW_OFFSET, overview, OVERVIEW_COLS);
+  if (overview && (overview[OVERVIEW_COLS] || overview[OVERVIEW_COLS + 1])) {   // (its peak, after it in memory)
+    h[SAMPLE_PEAK_OFFSET] = 'P';
+    h[SAMPLE_PEAK_OFFSET + 1] = 'K';
+    h[SAMPLE_PEAK_OFFSET + 2] = overview[OVERVIEW_COLS];
+    h[SAMPLE_PEAK_OFFSET + 3] = overview[OVERVIEW_COLS + 1];
+  }
   if (uint8_t tag = idTag(id)) {
     h[SAMPLE_TAG_OFFSET] = tagLetter(tag);
     h[SAMPLE_TAG_OFFSET + 1] = tagTrack(tag);
@@ -356,7 +367,12 @@ static bool readSampleHeader(FsFile &f, SampleInfo &info, uint8_t *overview, uin
   if (!f.seekSet(0) || f.read(h, sizeof h) != (int)sizeof h) return false;
   memcpy(&info, h + INFO_OFFSET, sizeof info);
   if (memcmp(h, "RIFF", 4) || memcmp(info.magic, "M8SM", 4) || info.version < 1) return false;
-  if (overview) memcpy(overview, h + SAMPLE_OVERVIEW_OFFSET, OVERVIEW_COLS);
+  if (overview) {                                // (OVERVIEW_BYTES: its peak after it; 0: not kept)
+    memcpy(overview, h + SAMPLE_OVERVIEW_OFFSET, OVERVIEW_COLS);
+    bool kept = h[SAMPLE_PEAK_OFFSET] == 'P' && h[SAMPLE_PEAK_OFFSET + 1] == 'K';
+    overview[OVERVIEW_COLS] = kept ? h[SAMPLE_PEAK_OFFSET + 2] : 0;
+    overview[OVERVIEW_COLS + 1] = kept ? h[SAMPLE_PEAK_OFFSET + 3] : 0;
+  }
   if (tag) *tag = tagOf((char)h[SAMPLE_TAG_OFFSET], h[SAMPLE_TAG_OFFSET + 1]);
   if (number) *number = h[SAMPLE_TAG_OFFSET + 2] | h[SAMPLE_TAG_OFFSET + 3] << 8;
   if (bars) {                                    // its bar lines: kept, or evenly at its tempo
@@ -451,28 +467,25 @@ FLASHMEM static void trimSample(uint32_t id) {
 }
 
 // ---- Tracks and their unit files
-static constexpr uint32_t UNIT_VERSION = 5;   // 5: volume and balance in today's steps (4: 20 of 1.875 dB; 3: 5 of 7.5 dB, +-5; 2: 6 a side, 6 dB)
+static constexpr uint32_t UNIT_VERSION = 6;   // 6: volume as steps from unity, off VOLUME_OFF (5: off 0; 4: 20 of 1.875 dB; 3: 5 of 7.5 dB, +-5; 2: 6 a side, 6 dB)
 
 void upgradeUnit(TrackUnit &u) {
   if (u.version >= UNIT_VERSION) return;
   if (u.version == 4) {                            // (version 4: unity 16 of 20, balance as today: half, rounded up, a quiet one still heard)
     u.volume = (int8_t)((u.volume + 1) / 2);
-    u.version = UNIT_VERSION;
-    return;
-  }
-  if (u.version == 3) {                            // (version 3: unity 4 of 5, 7.5 dB; balance +-5: exactly 2x both)
+  } else if (u.version == 3) {                     // (version 3: unity 4 of 5, 7.5 dB; balance +-5: exactly 2x both)
     u.volume = (int8_t)(u.volume * 2);
     u.balance = (int8_t)(u.balance * 2);
-    u.version = UNIT_VERSION;
-    return;
+  } else if (u.version < 3) {
+    // The old steps: version 1 volume 0-32 (unity 28, 1.5 dB), balance +-16;
+    // version 2 volume 0-6 (unity 5, 6 dB), balance +-6.
+    bool v1 = u.version < 2;
+    float db = (u.volume - (v1 ? 28 : 5)) * (v1 ? 1.5f : 6.0f);
+    if (u.volume > 0)                              // (a quiet one stays audible: at least step 1)
+      u.volume = (int8_t)constrain((int)lroundf(VOLUME_UNITY + db / VOLUME_STEP_DB), 1, VOLUME_MAX);
+    u.balance = (int8_t)lroundf(u.balance * (float)BALANCE_MAX / (v1 ? 16 : 6));
   }
-  // The old steps: version 1 volume 0-32 (unity 28, 1.5 dB), balance +-16;
-  // version 2 volume 0-6 (unity 5, 6 dB), balance +-6.
-  bool v1 = u.version < 2;
-  float db = (u.volume - (v1 ? 28 : 5)) * (v1 ? 1.5f : 6.0f);
-  if (u.volume > 0)                                // (a quiet one stays audible: at least step 1)
-    u.volume = (int8_t)constrain((int)lroundf(VOLUME_UNITY + db / VOLUME_STEP_DB), 1, VOLUME_MAX);
-  u.balance = (int8_t)lroundf(u.balance * (float)BALANCE_MAX / (v1 ? 16 : 6));
+  if (u.volume <= 0) u.volume = VOLUME_OFF;        // (version 5's steps: from unity as they are; 0 was off)
   u.version = UNIT_VERSION;
 }
 
@@ -511,7 +524,7 @@ struct Prepared {
   uint32_t sample = 0;                             // the one `file` holds; 0: none
   FsFile file;
   SampleInfo info;
-  uint8_t overview[OVERVIEW_COLS];
+  uint8_t overview[OVERVIEW_BYTES];
 };
 DMAMEM static Prepared prepared[NUM_TRACKS];       // (RAM2: only loop() uses them, never DMA)
 static bool preparing = false;
@@ -573,7 +586,7 @@ static bool takePrepared(int t, uint32_t n, FsFile &f, SampleInfo &info, uint8_t
   f = std::move(p.file);                           // (SdFat copies: the copy left behind is let go)
   p.file.close();
   info = p.info;
-  memcpy(overview, p.overview, OVERVIEW_COLS);
+  memcpy(overview, p.overview, OVERVIEW_BYTES);
   p.sample = p.want = 0;
   return true;
 }
@@ -817,7 +830,7 @@ static void applyPlan(int t) {
     tr.loopBars = p.loopBars;
     tr.recordedFrames = p.frames;
     prerollFrames[t] = p.preroll;
-    memcpy(tr.overview, p.overview, OVERVIEW_COLS);
+    memcpy(tr.overview, p.overview, OVERVIEW_BYTES);
     tr.overviewVersion++;
   }
   applyRange(t, p.u);
@@ -1093,6 +1106,11 @@ static void binsToColumns(const uint16_t *bins, uint32_t loopFrames, uint32_t re
 
 static void buildOverview(Track &tr, const uint16_t *bins, uint32_t recordedFrames) {
   binsToColumns(bins, tr.loopBars * BEATS_PER_BAR * tr.spbNative, recordedFrames, tr.overview);
+  uint16_t peak = 0;                               // (the loop's: all it recorded)
+  for (uint32_t b = 0; recordedFrames && b <= (recordedFrames - 1) / PEAK_BIN_FRAMES; b++) peak = max(peak, bins[b]);
+  peak = max(peak, (uint16_t)1);                   // (known: 0 is "not kept")
+  tr.overview[OVERVIEW_COLS] = peak & 0xFF;
+  tr.overview[OVERVIEW_COLS + 1] = peak >> 8;
   tr.overviewVersion++;
 }
 
@@ -1201,6 +1219,7 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
   tr.spbNative = info.spb;
   if (info.version >= 6) {
     memcpy(tr.overview, h + INFO_OFFSET + sizeof(LegacyInfo), OVERVIEW_COLS);
+    tr.overview[OVERVIEW_COLS] = tr.overview[OVERVIEW_COLS + 1] = 0;   // (its peak: from the overview)
   } else {
     memset(recPeaks, 0, sizeof recPeaks);
     for (uint32_t fr = 0; fr < info.recordedFrames; fr += CHUNK_FRAMES) {
@@ -1246,12 +1265,14 @@ bool sampleMarked(int i) { return i >= 0 && i < sampleTotal && (sampleMarks[i / 
 // Deletes the recordings not marked, keeping what the tracks, the clipboard
 // and a recording use; empty recording space (the pool) isn't touched. Only
 // stopped and idle (it changes the file system). The marks are cleared.
-int deleteUnmarkedSamples() {
+int deleteUnmarkedSamples(const uint32_t *only, int onlyCount) {
   if (transport.running || recording.mode != Recording::Idle) return 0;
   int deleted = 0, kept = 0;
   for (int i = 0; i < sampleTotal; i++) {
     uint32_t id = sampleIds[i];
-    bool keep = sampleMarked(i) || id == clipboard.sample;
+    bool listed = !only;
+    for (int k = 0; k < onlyCount && !listed; k++) listed = only[k] == id;
+    bool keep = !listed || sampleMarked(i) || id == clipboard.sample;
     for (int t = 0; t < NUM_TRACKS && !keep; t++)
       if (tracks[t].sample == id || changes[t].u.sample == id || (plans[t].on && plans[t].u.sample == id)) keep = true;
     char path[40];
@@ -1303,6 +1324,42 @@ bool swapTracks(int a, int b) {
 }
 
 // ---- Choosing a track's sample
+// An empty recording (config.h EMPTY_SPAN): its overview flat, and a few
+// stretches of it read (evenly through it) all within EMPTY_SPAN, each channel.
+static constexpr int EMPTY_NOTED = 16;
+static uint32_t emptyNoted[EMPTY_NOTED];
+static int emptyNotedCount = 0;
+FLASHMEM static bool sampleEmpty(uint32_t n) {
+  FsFile f;
+  SampleInfo info;
+  uint8_t overview[OVERVIEW_BYTES];
+  if (!openSample(n, f, info, overview)) return false;
+  uint8_t lo = 255, hi = 0;
+  for (int c = 0; c < OVERVIEW_COLS; c++) { lo = min(lo, overview[c]); hi = max(hi, overview[c]); }
+  if (hi - lo > 2) return false;                   // (its level changes: something in it)
+  int16_t mn[2] = {32767, 32767}, mx[2] = {-32768, -32768};
+  const int READS = 4;
+  for (int r = 0; r < READS; r++) {
+    uint32_t n0 = (uint64_t)info.frames * r / READS, len = min(CHUNK_FRAMES, info.frames - n0);
+    debugStage = "SD read (empty recording?)";
+    if (!len || !f.seekSet(WAV_DATA_OFFSET + (uint64_t)n0 * 4) || f.read(chunk, len * 4) != (int)(len * 4)) return false;
+    for (uint32_t i = 0; i < len; i++)
+      for (int ch = 0; ch < 2; ch++) {
+        int16_t v = (int16_t)(ch ? chunk[i] >> 16 : chunk[i] & 0xFFFF);
+        mn[ch] = min(mn[ch], v);
+        mx[ch] = max(mx[ch], v);
+      }
+  }
+  return mx[0] - mn[0] <= EMPTY_SPAN && mx[1] - mn[1] <= EMPTY_SPAN;
+}
+
+int takeEmptySamples(uint32_t *ids, int most) {
+  int n = min(most, emptyNotedCount);
+  memcpy(ids, emptyNoted, n * sizeof *ids);
+  emptyNotedCount = 0;
+  return n;
+}
+
 bool stepSample(int t, int dir) {
   if (sampleTotal < 2 || recordingTrack(t)) return false;
   TrackUnit u = unitOf(t);                       // (a planned change counts)
@@ -1318,8 +1375,16 @@ bool stepSample(int t, int dir) {
     uint32_t own = idOf(tagOf(recordLetter, screenTrack(t)), 0);
     i = dir > 0 ? sampleIndex(own + 1) : sampleIndex(own + (1u << NUMBER_BITS)) - 1;
   }
-  uint32_t n = sampleIds[(i % sampleTotal + sampleTotal) % sampleTotal];
-  if (n == u.sample) return false;
+  uint32_t n = 0;
+  for (int k = 0; k < sampleTotal; k++, i += dir > 0 ? 1 : -1) {   // (empty ones stepped over, noted)
+    n = sampleIds[(i % sampleTotal + sampleTotal) % sampleTotal];
+    if (n == u.sample || !sampleEmpty(n)) break;
+    bool noted = false;
+    for (int e = 0; e < emptyNotedCount; e++) noted |= emptyNoted[e] == n;
+    if (!noted && emptyNotedCount < EMPTY_NOTED) emptyNoted[emptyNotedCount++] = n;
+    n = 0;
+  }
+  if (!n || n == u.sample) return false;
   // Volume, balance, filter and mute stay; the range is the whole loop again
   // (length 0), aligned to the bar counter (its start on 1.1.1).
   u.sample = n;
@@ -1983,6 +2048,7 @@ static void finishRecording() {
       addPeaks(chunk, n, f0, recPeaks);
   }
   buildOverview(tr, recPeaks, tr.recordedFrames);
+  setTrackMix(t, tr.volume, tr.balance);           // (its scale: from its peak, now known)
   // The sample's header: its length, tempo and overview. One 512-byte write,
   // like a unit file's (the file is cut down to size once stopped).
   // The pre-roll after the loop's frames, then the header (512 bytes each).
