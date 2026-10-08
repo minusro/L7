@@ -138,7 +138,6 @@ no dropouts or overruns
 
 - adjusting the tempo during audio in follow halves or doubles it V
 - B + L/R on clock nudges tempo for beatmatching
-- consistent main volume control ui V
 - compressor limiter / distortion when the line goes beyond
 - more audio testing and fixes
 	- 
