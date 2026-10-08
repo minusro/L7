@@ -161,7 +161,7 @@ bool menuOnStatus();
 bool arrowsMoved();                      // input.cpp: the last arrow press moved the selection
 bool screenSwitchPending();               // (input.cpp) an arrow held that switches screens once let go
 // While an arrow is held off an edge that switches screens once let go: a
-// line a block wide (dark grey; in the menu, black) along that edge of the screen (on top of
+// line a block wide (dark grey; in the menu, grey) along that edge of the screen (on top of
 // everything; let go without switching, what was under it again).
 void drawEdgeLine();
 inline uint16_t cellFrame(int i, int cell) {
