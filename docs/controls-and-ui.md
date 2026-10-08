@@ -170,7 +170,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Working on the look without the device: `tools/ui_preview` renders the real
   drawing code to PNGs (see build-and-test.md).
 * Menu (`ui_menu.cpp`): the app starts in the menu, on the loaded
-  project's card (with the dummy project loaded: the first card), with the clock stopped. Opened with any arrow off the looper's edges (LEFT on a row's first cell, RIGHT on its
+  project's card (with the dummy project loaded: the first empty slot's), with the clock stopped. Opened with any arrow off the looper's edges (LEFT on a row's first cell, RIGHT on its
   last, UP on track 1, DOWN on the status row), it takes the whole screen; it has no
   action button (nothing in that place). Opening and leaving the menu never starts or stops the clock;
   exporting to Ableton and storage mode stop it first, and start it again (from 1.1.1) when done if it was running. On its items A and B both act

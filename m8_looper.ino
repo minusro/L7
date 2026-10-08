@@ -207,8 +207,8 @@ void setup() {
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();
   // The app starts in the menu, on the loaded project's card (the dummy
-  // project loaded: the first card).
-  restoreMenu(1000 + max(projectCurrent(), 0));
+  // project loaded: the first empty slot's; none empty: the first card).
+  restoreMenu(1000 + (projectCurrent() >= 0 ? projectCurrent() : max(menuFirstEmptySlot(), 0)));
   // (The clock stopped, whatever it was: START starts it, the project's tracks
   // already loaded and ready to play.)
 }
