@@ -376,12 +376,6 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
       if (y < PX)
         for (int x = BUTTON_W - PX; x < BUTTON_W; x++) px[y * BUTTON_W + x] = round;
     }
-  if (i == STATUS_ROW)                             // the screen's bottom right corner: a white right triangle (3 x 3,
-    for (int r = 0; r < 3; r++)                    // its right angle in the corner: the edge mark's mirror image)
-      for (int c = 2 - r; c < 3; c++)
-        for (int dy = 0; dy < PX; dy++)
-          for (int dx = 0; dx < PX; dx++)
-            px[(height - (3 - r) * PX + dy) * BUTTON_W + BUTTON_W - (3 - c) * PX + dx] = INK;
   auto &t = board.tft();
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(BUTTON_X, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin

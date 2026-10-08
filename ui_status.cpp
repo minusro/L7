@@ -7,7 +7,7 @@
 // row is selected:
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
-//   first cell: the edge mark (ui.h), a white triangle in the screen's corner (the menu);
+//   first cell: the edge mark (ui.h), a dark grey hamburger (the menu);
 //     not selectable, no frame.
 //   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
@@ -35,9 +35,9 @@ static constexpr int INSET = 2 * PX;               // text from the cell's edges
 // The edge mark (ui.h), built in a buffer and sent at once over the space
 // given (x, w): from its left edge (the screen's).
 void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground) {
-  // A right triangle (3 x 3), its right angle in the screen's bottom left corner.
-  static const char *const MARK[3] = {"#..", "##.", "###"};
-  constexpr int ROWS = STATUS_H / PX, CW = 3, CH = 3, R0 = ROWS - CH, C0 = 0;
+  // A hamburger (6 x 5): three bars a block apart.
+  static const char *const MARK[5] = {"######", "......", "######", "......", "######"};
+  constexpr int ROWS = STATUS_H / PX, CW = 6, CH = 5, R0 = (ROWS - CH) / 2, C0 = 0;
   constexpr int MAX_W = EDGE_W;                    // (its space: the menu cell's)
   w = min(w, MAX_W);
   const int cols = w / PX;
@@ -155,12 +155,11 @@ void drawStatus() {
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
-    // The menu cell: the edge mark, a triangle in the screen's corner, on
-    // black (the selected row's ground starts after it): white; flashing dark
-    // grey and light grey while an arrow is held that goes to the menu once
-    // let go.
+    // The menu cell: the edge mark, a hamburger, on black (the selected
+    // row's ground starts after it): dark grey; light grey while an arrow is
+    // held that goes to the menu once let go.
     static uint16_t markInk = 0;
-    uint16_t ink = !screenSwitchPending() ? INK : (millis() / 125) % 2 ? LIGHT : DARK;
+    uint16_t ink = screenSwitchPending() ? LIGHT : DARK;   // (light grey: an arrow held that opens the menu)
     if (cleared || ink != markInk) drawEdgeMark(0, EDGE_W, top, ink, BG);
     markInk = ink;
   }

@@ -14,11 +14,15 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
   uint16_t own = cellFrame(i, cell);
   if (i == STATUS_ROW) {                           // (its cells only share sides with each other)
     int nc = l ? cell - 1 : rt ? cell + 1 : cell;
-    if (corner) {                                  // all corners cut (the highlight's own outer ones too: black)
+    if (corner && t) {                             // top corners cut (the highlight's own outer ones too: black)
       bool outer = (l && cell == SCENE_CELL) || (rt && cell == TEMPO_CELL);
       return outer ? BG : ground;
     }
-    if (own != BG) return own;
+    if (own != BG) return own;                     // (bottom corners: not cut, the screen's edge)
+    if (corner) {                                  // a bottom corner on a side shared with the selected cell: its frame
+      uint16_t theirs = nc >= SCENE_CELL && nc < cellCount(i) ? cellFrame(i, nc) : BG;
+      return theirs != BG ? theirs : ground;
+    }
     if (t || b || nc < 0 || nc >= cellCount(i)) return ground;
     uint16_t theirs = cellFrame(i, nc);
     return theirs != BG ? theirs : ground;
