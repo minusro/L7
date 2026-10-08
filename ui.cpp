@@ -208,6 +208,7 @@ void drawEdgeLine() {
   else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX, 0, PX, 240, ink);
   else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, PX, ink);
   else t.fillRect(0, 240 - PX, 320, PX, ink);
+  if (menuOpen()) menuDrawLogo();                  // (the menu's corner logo on top of it)
   shownKey = key;
   shownGen = uiGeneration;
 }

@@ -414,6 +414,10 @@ static void landInMenu(uint8_t key) {
   movedHere = true;
 }
 
+void menuDrawLogo() {
+  if (shown) drawSmallLogo(LOGO_X, LOGO_Y, actionRestColor());
+}
+
 void menuLand(uint8_t key) {
   if (!shown || !key) return;
   landInMenu(key);

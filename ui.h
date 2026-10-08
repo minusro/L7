@@ -225,6 +225,7 @@ bool menuOpen();
 // drawn, menuLand(); closeMenu(false): the looper's rows not drawn yet, the
 // caller moves the selection first. Drawn once, at the landing place: no flicker.)
 void openMenu(uint8_t key = 0);
+void menuDrawLogo();                     // the menu's corner logo again (on top of the edge line, drawEdgeLine())
 void closeMenu(bool draw = true);
 int menuFirstEmptySlot();                // the first slot with no project (-1: none)
 void menuSelectSlot(int k);              // the menu's selection on card k
