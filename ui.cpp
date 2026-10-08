@@ -200,8 +200,8 @@ void drawEdgeLine() {
     shownKey = 0;
     return;
   }
-  // Black along the edge, dark grey next to it towards the middle: the
-  // looper's a block of black, 3 of dark grey; the menu's 3 of black, a block of dark grey.
+  // 3 blocks along the edge, then one towards the middle: the looper's dark
+  // grey, then black; the menu's black, then dark grey.
   auto strip = [&](int from, int w, uint16_t c) {  // (from: blocks in from the edge)
     from *= PX, w *= PX;
     if (key == m8::BTN_LEFT) t.fillRect(from, 0, w, 240, c);
@@ -209,9 +209,9 @@ void drawEdgeLine() {
     else if (key == m8::BTN_UP) t.fillRect(0, from, 320, w, c);
     else t.fillRect(0, 240 - from - w, 320, w, c);
   };
-  const int edge = menuOpen() ? 3 : 1;
-  strip(0, edge, BG);
-  strip(edge, 4 - edge, DARK);
+  const bool menu = menuOpen();
+  strip(0, 3, menu ? BG : DARK);
+  strip(3, 1, menu ? DARK : BG);
   shownKey = key;
   shownGen = uiGeneration;
 }
