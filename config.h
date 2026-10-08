@@ -110,12 +110,14 @@ constexpr uint16_t QUIET_PEAK = 130;               // ~-48 dBFS
 // (SHIFT+LEFT/RIGHT) skips it, and, stopped, deletes it if nothing uses it.
 constexpr int EMPTY_SPAN = 256;
 constexpr int BALANCE_MAX = 10;
-// Master volume and balance: the final output (tracks and monitored input), on
-// the tracks' scale (the clock cell's control has the volume cell's shape,
-// ui_status.cpp): volume 0..MASTER_VOLUME_MAX, MASTER_VOLUME_UNITY 100% (the
-// default), balance -BALANCE_MAX..BALANCE_MAX. Its meter: the same scale.
-constexpr int MASTER_VOLUME_MAX = VOLUME_MAX, MASTER_VOLUME_UNITY = VOLUME_UNITY;
-constexpr float MASTER_STEP_DB = VOLUME_STEP_DB;
+// Master volume and balance: the final output (tracks and monitored input),
+// the clock cell's control in the volume cell's shape with twice its lines
+// (ui_status.cpp): volume 0..MASTER_VOLUME_MAX in MASTER_STEP_DB steps,
+// MASTER_VOLUME_UNITY 100% (the default; the top +7.5 dB), balance
+// -MASTER_BALANCE_MAX..MASTER_BALANCE_MAX (as a track's). Its meter: the same
+// scale (the unity step's half: 0 dBFS).
+constexpr int MASTER_VOLUME_MAX = 20, MASTER_VOLUME_UNITY = 16, MASTER_BALANCE_MAX = 20;
+constexpr float MASTER_STEP_DB = 1.875f;
 
 // Declicking: loop and range edges, and clip switches, are crossfaded over
 // this many frames (~3 ms); track levels (mute, volume, start, stop) glide

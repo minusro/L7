@@ -38,8 +38,8 @@ static const Cell &statusCell(int cell) {
 
 // ---- The master volume and balance: in the clock cell while B alone is held
 // on it (B + UP/DOWN: the volume, LEFT/RIGHT: the balance). The volume cell's
-// shape (ui_mix.cpp), centred, its lines shorter to fit the status row
-// (1 to 9 blocks tall, from the inside out): MV_ARCS a channel, the left one's
+// shape (ui_mix.cpp) with twice its lines, centred, shorter to fit the status
+// row (1 to 9 blocks tall, two of each, from the inside out): MV_ARCS a channel, the left one's
 // to the left, each two 1-pixel halves (HALVES a channel). A channel's level
 // lights its halves from the inside out in the accent colour, one per volume
 // step, less one per balance step away from that side; the outer ones grey.
@@ -47,8 +47,8 @@ static const Cell &statusCell(int cell) {
 // on the same scale: half h at volume step h + 1's level. Shown again, it
 // starts from silence. A half is only redrawn when its colour changes.
 static constexpr int MV_COLS = CLOCK_BOX.w / PX, MV_ROWS = STATUS_H / PX;   // 47 x 13, the border's included
-static constexpr int MV_ARCS = 5, MV_HALVES = 2 * MV_ARCS;                  // 10 a channel
-static_assert(MV_HALVES == MASTER_VOLUME_MAX && MV_HALVES == BALANCE_MAX, "a half per volume step, and per balance step");
+static constexpr int MV_ARCS = 10, MV_HALVES = 2 * MV_ARCS;                 // 20 a channel (columns 3-21, 25-43)
+static_assert(MV_HALVES == MASTER_VOLUME_MAX && MV_HALVES == MASTER_BALANCE_MAX, "a half per volume step, and per balance step");
 static constexpr int MV_INNER = MV_COLS / 2 - 2;                             // the left channel's innermost column (21; the right's: 25)
 static constexpr float MV_FALL_DB_PER_S = 24;
 
@@ -82,7 +82,7 @@ static void drawMasterVolume(bool full) {
       was = color;
       int arc = h / 2, dx = ch ? h % 2 : 1 - h % 2;   // (from the inside out: a line's inner pixel column first)
       int col = ch ? MV_COLS - 1 - MV_INNER + 2 * arc : MV_INNER - 2 * arc;
-      int height = MV_ROWS - 4 - 2 * (MV_ARCS - 1 - arc), row = (MV_ROWS - height) / 2;   // (1 to 9, centred)
+      int height = 1 + 2 * (arc / 2), row = (MV_ROWS - height) / 2;   // (1, 1, 3, 3 ... 9, 9: centred)
       t.fillRect(CLOCK_BOX.x + col * PX + dx, top + row * PX, 1, height * PX, color);
     }
   }

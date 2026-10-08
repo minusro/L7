@@ -1405,14 +1405,20 @@ Session loadSession() {
     else if (!strncmp(line, "newbpm=", 7)) s.newBpm = strtof(line + 7, nullptr);   // (new projects' tempo)
     else if (!strncmp(line, "row=", 4)) s.row = (int)strtol(line + 4, nullptr, 10);
     else if (!strncmp(line, "cell=", 5)) s.cell = (int)strtol(line + 5, nullptr, 10);
-    // ("level=": the master volume on today's scale, the tracks'; an older
-    // "volume=" (21 steps of 1.5 dB, 17: 100%) converted; "master=" left: 100% again)
-    else if (!strncmp(line, "level=", 6)) s.master = (int)strtol(line + 6, nullptr, 10);
+    // ("gain=" / "pan=": the master volume and balance on today's scale; older:
+    // "level=" (10 steps of 3.75 dB, 8: 100%) and "balance=" (+-10), "volume="
+    // (21 steps of 1.5 dB, 17: 100%), converted; "master=" left: 100% again)
+    else if (!strncmp(line, "gain=", 5)) s.master = (int)strtol(line + 5, nullptr, 10);
+    else if (!strncmp(line, "pan=", 4)) s.balance = (int)strtol(line + 4, nullptr, 10);
+    else if (!strncmp(line, "level=", 6)) {
+      int v = (int)strtol(line + 6, nullptr, 10);
+      s.master = v <= 0 ? 0 : MASTER_VOLUME_UNITY + 2 * (v - 8);
+    }
+    else if (!strncmp(line, "balance=", 8)) s.balance = 2 * (int)strtol(line + 8, nullptr, 10);
     else if (!strncmp(line, "volume=", 7)) {
       int v = (int)strtol(line + 7, nullptr, 10);
       s.master = v <= 0 ? 0 : MASTER_VOLUME_UNITY + (int)lroundf((v - 17) * 1.50515f / MASTER_STEP_DB);
     }
-    else if (!strncmp(line, "balance=", 8)) s.balance = (int)strtol(line + 8, nullptr, 10);
     else if (!strncmp(line, "project=", 8)) s.project = (int)strtol(line + 8, nullptr, 10) - 1;
     else if (!strncmp(line, "menu=", 5)) s.menu = (int)strtol(line + 5, nullptr, 10);
     else if (!strncmp(line, "playing=", 8)) s.playing = strtol(line + 8, nullptr, 10) != 0;
@@ -1423,7 +1429,7 @@ Session loadSession() {
   s.bpm = constrain(s.bpm, MIN_BPM, MAX_BPM);
   s.newBpm = constrain(s.newBpm, MIN_BPM, MAX_BPM);
   s.master = constrain(s.master, 0, MASTER_VOLUME_MAX);
-  s.balance = constrain(s.balance, -BALANCE_MAX, BALANCE_MAX);
+  s.balance = constrain(s.balance, -MASTER_BALANCE_MAX, MASTER_BALANCE_MAX);
   s.project = constrain(s.project, -1, PROJECTS - 1);   // (-1, "project=0": the dummy project)
   return s;
 }
@@ -1431,7 +1437,7 @@ Session loadSession() {
 void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nnewbpm=%.2f\nlevel=%d\nbalance=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
+  f.printf("bpm=%.2f\nnewbpm=%.2f\ngain=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
            s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro, s.follow ? 1 : 0);
   f.close();
 }

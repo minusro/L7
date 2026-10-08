@@ -59,7 +59,7 @@ recorded. Its meter: the top half at 0 dBFS. `volumeStepOf()` in engine.cpp; the
 clip's peak is kept in its WAV header, older ones' taken from their overview) and balance (LEFT/RIGHT: ±10; each step moves the
 other channel's level by a half line, so every press shows),
 tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–240 BPM),
-the clock cell: the master volume and balance, one for all projects (UP/DOWN the volume a step, LEFT/RIGHT the balance; B twice: back to 100% and centred, as B twice resets any cell; saved in the session as `level=` and `balance=`, an older `volume=` converted).
+the clock cell: the master volume and balance, one for all projects (UP/DOWN the volume a step, LEFT/RIGHT the balance; B twice: back to 100% and centred, as B twice resets any cell; saved in the session as `gain=` and `pan=`, older `level=`/`balance=` and `volume=` converted).
 
 Timing constants (input.cpp): key repeat after 200 ms, every 50 ms;
 double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
@@ -161,8 +161,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   step instead), the accent colour on 1.1.1; before it a small play icon, in
   the accent colour while it runs. While B alone is held on the clock
   cell it shows the master volume and balance instead, in the volume cell's shape
-  (its lines 1 to 9 blocks tall from the inside out, centred; the tracks' scale: volume
-  0–10, 3.75 dB a step, 8 100% — the default —; balance ±10): each channel's halves
+  with twice its lines (10 a side, 1 to 9 blocks tall in pairs from the inside out,
+  centred, across the cell; volume 0–20, 1.875 dB a step, 16 100% — the default —,
+  20 +7.5 dB; balance ±20): each channel's halves
   from the inside out in the accent colour up to its level (volume less the balance
   away from it), grey after; its meter white over them on the same scale, from
   silence each time it shows (`drawMasterVolume()` in ui_status.cpp).

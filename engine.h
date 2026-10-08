@@ -248,7 +248,7 @@ int volumeStoredOf(int step, float headroomDb);     // and back (step 0: VOLUME_
 float volumeGainOf(int stored, float headroomDb);   // its linear gain
 void takeTrackPeaks(int t, float &left, float &right);   // and start the next measurement
 // Master volume (config.h, steps 0..MASTER_VOLUME_MAX) and balance
-// (-BALANCE_MAX..BALANCE_MAX, as a track's) on the final output (the click:
+// (-MASTER_BALANCE_MAX..MASTER_BALANCE_MAX, as a track's) on the final output (the click:
 // the volume only), and that output's peaks (full scale 1) since the last call.
 void setMasterVolume(int step);
 void setMasterBalance(int balance);

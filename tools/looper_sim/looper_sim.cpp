@@ -2622,8 +2622,8 @@ for f in os.listdir("."):
       };
       int l0, r0, lh, rh, lf, rf;
       peaks(0, l0, r0);
-      peaks(BALANCE_MAX / 2, lh, rh);
-      peaks(BALANCE_MAX, lf, rf);
+      peaks(MASTER_BALANCE_MAX / 2, lh, rh);
+      peaks(MASTER_BALANCE_MAX, lf, rf);
       setMasterBalance(0);
       snprintf(m7, sizeof m7, "master balance: centred %d / %d; half right %d / %d (half the left moved right: both halved); right: the left silent (%d)",
                l0, r0, lh, rh, lf);
