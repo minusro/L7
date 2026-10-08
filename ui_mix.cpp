@@ -4,11 +4,10 @@
 // ---- Volume / balance cell: straight vertical lines of blocks either side
 // of the cell's centre, longer further out, like waves: MIX_ARCS for the left
 // channel, MIX_ARCS for the right, each two 1-pixel halves (HALVES a channel).
-// A channel's level lights its halves from the inside out: one per two volume
-// steps (config.h; a step past: one more), less one per balance step away
-// from that side. The meter (the channel's actual output, with peak hold
-// falling at METER_FALL_DB_PER_S) lights them white on the same scale: half h
-// at volume step 2 (h + 1)'s level. Up to the level / above it (the outer ones):
+// A channel's level lights its halves from the inside out: one per volume
+// step (config.h), less one per balance step away from that side. The meter
+// (the channel's actual output, with peak hold falling at METER_FALL_DB_PER_S)
+// lights them white on the same scale: half h at volume step h + 1's level. Up to the level / above it (the outer ones):
 //   unselected: grey / dark grey;  the selected track: light grey / grey;
 //   muted (no meter): dark grey / black.
 // While B is held on the cell (with other keys or not), muted or not (B + arrows change volume
@@ -20,7 +19,7 @@ static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = CELL_H / PX;
 // height (rows 2-13).
 static constexpr int MIX_ARCS = (CELL_COLS - 4) / 4;                     // 5
 static constexpr int HALVES = 2 * MIX_ARCS;                              // 10 a channel
-static_assert(2 * HALVES == VOLUME_MAX && BALANCE_MAX == HALVES, "a half per two volume steps, and per balance step");
+static_assert(HALVES == VOLUME_MAX && BALANCE_MAX == HALVES, "a half per volume step, and per balance step");
 static constexpr float METER_FALL_DB_PER_S = 24;
 
 static int8_t arcAt[BAND_ROWS][CELL_COLS];          // [row][col]: side * MIX_ARCS + arc, -1: none
@@ -40,9 +39,9 @@ static void buildArcs() {
 }
 
 // How many halves (0..HALVES) the meter lights at a level in dB: those whose
-// level (two volume steps each) it reaches (within half a half).
+// volume step's level it reaches (within half a step).
 static int halvesForDb(float db) {
-  return constrain((int)floorf((db / VOLUME_STEP_DB + VOLUME_UNITY) / 2 + 0.5f), 0, HALVES);
+  return constrain((int)floorf(db / VOLUME_STEP_DB + VOLUME_UNITY + 0.5f), 0, HALVES);
 }
 static float gainDb(float g) { return g > 0 ? 20 * log10f(g) : -200.0f; }
 
@@ -73,8 +72,7 @@ void drawMix(int i) {
 
   uint64_t frame = bordersOf(i, MIX_CELL);
   uint16_t looks[2 * HALVES];                      // each half's colour
-  const int volumeHalves = (tr.volume + 1) / 2;    // (a step past a half: that one too)
-  int levels[2] = {volumeHalves - max(0, (int)tr.balance), volumeHalves - max(0, -(int)tr.balance)};   // halves lit
+  int levels[2] = {tr.volume - max(0, (int)tr.balance), tr.volume - max(0, -(int)tr.balance)};   // halves lit
   bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
   bool editing = editingCell(i, MIX_CELL);         // (B held, with other keys or not: as the filter cell)
   uint16_t ground = rowGround(i);

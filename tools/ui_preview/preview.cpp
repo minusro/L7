@@ -244,7 +244,7 @@ int main(int argc, char **argv) {
   setTrack(3, TrackState::Playing, 2, 2, 4, 4, 0.8f);
   setTrackFilter(3, 6, 22);
   setTrack(4, TrackState::Playing, 1, 0, 4, 5, 2.0f);
-  setTrackMix(4, 16, -6);
+  setTrackMix(4, 8, -6);
   setTrack(6, TrackState::Playing, 8, 28, 8, 6, 0.5f);   // a range across the loop's end
   setTrackFilter(6, 0, 14);
 

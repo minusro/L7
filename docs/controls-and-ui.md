@@ -49,9 +49,9 @@ no snapping to the taps).
 * The start stays when the length changes.
 
 Other cells with B + arrows: filter (LEFT/RIGHT move, UP/DOWN width; width
-scales from the edge at the edge), volume (UP/DOWN: 0–20, 1.875 dB steps, unity
-at 16: every two steps light another half line) and balance (LEFT/RIGHT: ±10;
-each step moves the other channel's level by a half line, so every press shows),
+scales from the edge at the edge), volume (UP/DOWN: 0–10, 3.75 dB steps, unity
+at 8: each step a half line) and balance (LEFT/RIGHT: ±10; each step moves the
+other channel's level by a half line, so every press shows),
 tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–240 BPM),
 the clock cell: the master volume, one for all projects (any arrow a step: RIGHT/UP louder, LEFT/DOWN softer; B twice: back to 100%, as B twice resets any cell).
 
@@ -128,8 +128,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
 * Volume (`ui_mix.cpp`): 5 straight vertical lines a side, every other
   column (a column short of the cell's edges), longer further out, each two
   1-pixel halves (10 a side, lit from the inside out). A channel's level in
-  halves is the volume's (one per two steps; a step past: one more) minus its
-  balance cut (one per step); the meter lights them by the half too. Up to
+  halves is the volume step minus its balance cut (one per step of either);
+  the meter lights them by the half too. Up to
   the level / the outer lines: grey / dark grey; the selected track: light grey / grey;
   muted: dark grey / black. The meter: white. B held on it (muted or not, other keys too):
   the level in the accent colour, the outer lines grey, the meter still white over them (unmuted).

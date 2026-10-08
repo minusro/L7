@@ -80,7 +80,7 @@ static SceneInfo emptyScene() {
   s.version = 1;
   for (auto &u : s.units) {
     memcpy(u.magic, "M8TU", 4);
-    u.version = 4;                                 // (volume and balance in today's steps: UNIT_VERSION)
+    u.version = 5;                                 // (volume and balance in today's steps: UNIT_VERSION)
     u.filterHi = FILTER_MAX;
     u.volume = VOLUME_UNITY;
   }
