@@ -34,8 +34,8 @@ constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: four cells (to the volume cells' edge), left
-// to right: the menu's (a small square with the edge mark, a hamburger: the
-// menu; not selectable), the scene (the widest), the clock
+// to right: the menu's (a small square with the edge mark, a triangle in the
+// corner: the menu; not selectable), the scene (the widest), the clock
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
@@ -81,10 +81,12 @@ inline int selectedCellIn(int i) {
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // The edge mark: the menu (an arrow off any edge of the looper opens it), on
-// the status row's line: a small hamburger (6 x 5 blocks: three bars a block
-// apart, from the screen's left edge) in the looper's view (its menu cell: the space left of
+// the status row's line: a small right triangle (3 x 3 blocks, its right angle
+// in the screen's bottom left corner) in the looper's view (its menu cell: the space left of
 // the scene cell, 2 blocks short of its frame), in ink on the ground (the
-// whole space), dark grey on black. (The menu has none.)
+// whole space), white on black (flashing while an arrow held will open the
+// menu). Its mirror image is in the screen's bottom right corner, on the action
+// button. (The menu has neither.)
 constexpr int EDGE_W = MENU_BOX.w - PX;          // (2 blocks short of the scene cell's frame)
 void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground);   // (x, y, w: the space, the status row's height)
 
@@ -126,7 +128,7 @@ inline bool anyClipHeard() {
 // border; the row above's bottom border is its top; the status row's cells'
 // height), the screen's whole width (under the button too, round its panel;
 // the status row's from the scene cell's left edge to the tempo cell's right
-// one, its top corners cut a block: not under the menu cell or the button).
+// one, all its corners cut a block: not under the menu cell or the button).
 // Black elsewhere.
 bool menuOpen();
 inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() ? DARK : BG; }
