@@ -325,16 +325,16 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
       for (int c = 0; c < w; c++)
         if (on[r][c]) block(c0 + c, r0 + r);
   } else if (icon == ICON_METRO || icon == ICON_EAR) {
-    // A metronome, filled (a trapezoid; its pendulum a slit up through it and
-    // out past the top), 10 x 10, a block of margin round it at least;
+    // The metronome: four beats as dots (2 x 2), the bar's first raised above
+    // the other three, 10 x 10, a block of margin round it at least;
     // crossed out while it would click with the clock running (what B+A will
     // change). Or an ear (its rim, its inner fold, its lobe), the same size,
     // crossed out while audio follow is on (what SHIFT+A will change). The
     // cross: a slash from the top right to the bottom left, cleared a block
     // either side.
-    static const char *const METRONOME[10] = {
-        ".......#..", "......#...", "...###....", "...###....", "..###.##..", "..###.##..",
-        ".###.####.", ".###.####.", "####.#####", "##########"};
+    static const char *const METRONOME[10] = {   // (the beats: the bar's first raised, three after it)
+        "..........", "..........", "##........", "##........", "..........",
+        "..##.##.##", "..##.##.##", "..........", "..........", ".........."};
     static const char *const EAR[10] = {
         "...####...", "..######..", ".###..###.", ".##.##.##.", ".##.#..##.",
         ".....#.##.", "....##.##.", "...##.##..", ".##..##...", ".####....."};

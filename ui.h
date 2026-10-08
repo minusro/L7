@@ -93,7 +93,7 @@ void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground);   // (x, 
 // ---- The looper's two screens, the same rows: main (the tracks from the top
 // of the screen, the status row below them) and notes (the status row at the
 // top, the tracks below it, a block lower so track 7's bottom border is the
-// screen's bottom edge; the greys inverted: colors.h setGreysInverted()).
+// screen's bottom edge; the same colours).
 // UP / DOWN off one's top or bottom edge goes to the other, as if they were
 // stacked in a loop: main's status row and notes' meet, and main's track 1 and
 // notes' track 7 (input.cpp). LEFT / RIGHT off its sides: the menu, which goes

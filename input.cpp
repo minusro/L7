@@ -302,7 +302,6 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     int from = selected, at = selectedCellIn(selected);
     notesScreen = !notesScreen;
     notesLayout = notesScreen;
-    setGreysInverted(notesScreen);
     selected = rowAtPos(key == m8::BTN_UP ? ROWS - 1 : 0);   // (in its layout)
     keepColumns(from, at);
     board.tft().fillScreen(BG);

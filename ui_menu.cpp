@@ -464,8 +464,7 @@ void openMenu() {
     projectDelete(projectCurrent());
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();   // recordings no project uses: gone
   shown = true;                                  // (where it was last left: an item, or its status row)
-  notesLayout = false;                           // (the menu: main's layout and greys, whichever screen it came from)
-  setGreysInverted(false);
+  notesLayout = false;                           // (the menu: main's layout, whichever screen it came from)
   mainRow = selected;
   mainCell = selectedCell;
   if (onStatus) {                                // (where it was last time)
@@ -485,7 +484,6 @@ void closeMenu() {
   selectedCell = mainCell;
   shown = false;
   notesLayout = notesScreen;                     // (back to the screen it came from: notes, or main)
-  setGreysInverted(notesScreen);
   board.tft().fillScreen(BG);                    // (the menu's ground everywhere: the gap before the action button too)
   uiGeneration++;                                // everything redraws in full
   for (int i = 0; i < ROWS; i++) drawTrack(i);
