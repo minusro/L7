@@ -47,7 +47,7 @@ static const Cell &statusCell(int cell) {
 // MV_FALL_DB_PER_S. Shown again, it starts from silence.
 static constexpr int MV_COLS = CLOCK_BOX.w / PX, MV_ROWS = STATUS_H / PX;   // 47 x 13, the border's included
 static constexpr int MV_LINES = MASTER_VOLUME_MAX + 1;                      // (0 included)
-static constexpr int MV_LEFT = (MV_COLS - (2 * MV_LINES - 1)) / 2;          // the first line's column (centred: 3 ... 43)
+static constexpr int MV_LEFT = (MV_COLS - (2 * MV_LINES - 1)) / 2;          // the first line's column (centred: 2 ... 44)
 static constexpr int MV_HALF = (MV_ROWS - 4 - 1) / 2;                       // rows 2-5 left, 7-10 right
 static_assert(MV_LEFT >= 2, "the lines inside the border's block of space");
 static constexpr float MV_FALL_DB_PER_S = 24;

@@ -160,8 +160,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   first step; while the metronome clicks, the accent colour on each beat's first
   step instead), the accent colour on 1.1.1; before it a small play icon, in
   the accent colour while it runs. While B alone is held on the clock
-  cell it shows the master volume and balance instead: 21 vertical lines across the
-  cell (one per step 0–20, 1.875 dB apart: 0 off, 16 100% — the default —, 20 +7.5 dB;
+  cell it shows the master volume and balance instead: 22 vertical lines across the
+  cell (one per step 0–21, 1.875 dB apart: 0 off, 16 100% — the default —, 21 +9.375 dB;
   balance ±20), their upper halves the left channel's, the lower halves the right's:
   in the accent colour up to that channel's level (the volume less the balance away
   from it; none at 0), black after it; each half meters its channel (white, line 16
