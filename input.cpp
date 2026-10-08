@@ -249,7 +249,18 @@ static void closeToLooper() {
 // A or B held on a card whose project its press loaded: after LONG_PRESS_MS,
 // the menu closes too, and the clock starts if it was stopped (from 1.1.1,
 // as START). Called every pass (pollKeys()).
+// On the loaded project's card or an empty slot the press goes to the looper
+// at once; held on there LONG_PRESS_MS, the clock starts the same way
+// (startOnHold: from that press, until let go).
+static bool startOnHold = false;
 static void menuHold() {
+  if (startOnHold) {
+    if (!(board.keys() & (m8::BTN_EDIT | m8::BTN_OPT))) startOnHold = false;
+    else if (millis() - armedAt >= LONG_PRESS_MS) {
+      startOnHold = false;
+      if (!transport.running) startByHand();
+    }
+  }
   if (!menuOpen()) closeWhenIn = false;
   if (closeWhenIn && !menuLoadPending()) closeToLooper();   // (come in: now)
   if (!armed || !loadedOnPress || !menuOpen() || millis() - armedAt < LONG_PRESS_MS) return;
@@ -398,6 +409,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       if (slot >= 0 && !shift) {                     // a card: at once, on the press
         if (slot == projectCurrent()) {              // the loaded one: back to the looper (one on its way: once it has come in)
           closeToLooper();
+          startOnHold = true;                        // (held on: the clock too)
           return;
         }
         closeWhenIn = false;                         // (another one now: the menu stays)
@@ -406,6 +418,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
           if (fresh) {                               // an empty slot: a new project, opened at once (on track 1)
             closeMenu();
             for (int i = 0; i < ROWS; i++) drawTrack(i);
+            startOnHold = true;                      // (held on: the clock too)
             return;
           }
           loadedOnPress = true;                      // (held LONG_PRESS_MS: the menu closes too, menuHold())
