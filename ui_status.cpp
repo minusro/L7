@@ -7,22 +7,20 @@
 // row is selected:
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
-//   first cell: the edge mark (ui.h), a dark grey triangle pointing left (the menu);
-//     not selectable, no frame.
-//   second cell: the scene, an inverted "SCN" tag and its position "3/7" (the
+//   first cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
 //     UP/DOWN step through the scenes. The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
 //     it, or the change waiting for its switch point. Selected, A (let go) goes to the
 //     next scene (the clock as it is); SHIFT+A duplicates it (as SHIFT+B twice).
-//   third cell: the clock (bar.beat.step), after a small play icon (the
+//   second cell: the clock (bar.beat.step), after a small play icon (the
 //     accent colour while it runs), centred together: stopped, 1.1.1 as the
 //     other labels (grey, light grey when selected); running, grey with light grey on each beat's
 //     first step (selected: light grey, white on the first step), in the
 //     accent colour on 1.1.1. Selected, A starts / stops the
 //     clock (as START; SHIFT+A as SHIFT+START).
-//   fourth cell: the tempo, followed by an inverted "BPM" tag (both in the
+//   third cell: the tempo, followed by an inverted "BPM" tag (both in the
 //     accent colour while B alone is held there: B + arrows change it). With
 //     audio follow on (SHIFT+A there), the tempo flashes with the beat (black until
 //     their beat is locked, then the accent colour; then as it was): the clock's
@@ -31,28 +29,6 @@
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
-
-// The edge mark (ui.h), built in a buffer and sent at once over the space
-// given (x, w): from its left edge (the screen's).
-void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground) {
-  // A small triangle pointing left (3 x 5), 2 blocks from the screen's left
-  // and bottom edges. (Notes, its status row on top: 2 blocks from the top.)
-  static const char *const MARK[5] = {"..#", ".##", "###", ".##", "..#"};
-  constexpr int ROWS = STATUS_H / PX, CW = 3, CH = 5, C0 = 2;
-  const int R0 = notesLayout ? 2 : ROWS - 2 - CH;
-  constexpr int MAX_W = EDGE_W;                    // (its space: the menu cell's)
-  w = min(w, MAX_W);
-  const int cols = w / PX;
-  static uint16_t px[STATUS_H * MAX_W];
-  for (int r = 0; r < ROWS; r++)
-    for (int c = 0; c < cols; c++) {
-      int tr = r - R0, tc = c - C0;
-      bool on = tr >= 0 && tr < CH && tc >= 0 && tc < CW && MARK[notesLayout ? CH - 1 - tr : tr][tc] == '#';
-      for (int dy = 0; dy < PX; dy++)
-        for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * w + c * PX + dx] = on ? ink : ground;
-    }
-  board.tft().writeRect(x, y, w, STATUS_H, px);
-}
 
 // The status row's cells: the scene's, the clock's and the tempo's (ui.h).
 static constexpr int STATUS_CELLS = TEMPO_CELL + 1;
@@ -134,7 +110,7 @@ void drawStatus() {
   if (cleared) {
     drawn = uiGeneration;
     shownGround = G;
-    for (int c = 0; c < STATUS_CELLS; c++)        // (the ground from the scene cell's left edge: not under the menu cell)
+    for (int c = 0; c < STATUS_CELLS; c++)        // (the ground under the cells: the scene cell from the screen's left edge)
       t.fillRect(statusCell(c).x, top, statusCell(c).w, bgHeight(STATUS_ROW), c == MENU_CELL ? BG : G);
     shownBorders = ~0ull;
   }
@@ -142,7 +118,7 @@ void drawStatus() {
   for (int c = 0; c < STATUS_CELLS; c++) borders = borders * 31 + bordersOf(STATUS_ROW, c);
   if (borders != shownBorders) {
     shownBorders = borders;
-    for (int c = SCENE_CELL; c < STATUS_CELLS; c++) drawFrame(c);   // (the menu cell: never selected, its edge mark to the edges)
+    for (int c = SCENE_CELL; c < STATUS_CELLS; c++) drawFrame(c);   // (MENU_CELL: none, nothing drawn)
   }
 
   char text[24];
@@ -156,15 +132,6 @@ void drawStatus() {
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) ? selectedCellIn(STATUS_ROW) : -1;
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
-  {
-    // The menu cell: the edge mark, a triangle, on black (the selected
-    // row's ground starts after it): dark grey; light grey while an arrow is
-    // held that goes to the menu once let go.
-    static uint16_t markInk = 0;
-    uint16_t ink = screenSwitchPending() ? LIGHT : DARK;   // (light grey: an arrow held that opens the menu)
-    if (cleared || ink != markInk) drawEdgeMark(0, EDGE_W, top, ink, BG);
-    markInk = ink;
-  }
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the
     // scene's "SCN"): both in the accent colour while B alone is held on the

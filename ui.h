@@ -33,13 +33,13 @@ constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left
 constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
-// The status row below the tracks: four cells (to the volume cells' edge), left
-// to right: the menu's (a small square with the edge mark, a triangle: the
-// menu; not selectable), the scene (the widest), the clock
+// The status row below the tracks: three cells (to the volume cells' edge), left
+// to right: the scene (the widest, from the screen's left edge), the clock
 // (its width is the master volume's 22 lines) and the tempo. Neighbouring
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
-constexpr Cell MENU_BOX = {0, STATUS_H - 4 * PX}, SCENE_BOX = {18, 102}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
+// (MENU_CELL: no cell any more, nothing in its place: kept, empty, so the others keep their numbers.)
+constexpr Cell MENU_BOX = {0, 0}, SCENE_BOX = {0, 120}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
 // ---- What the rows show of each track (ui.cpp): a copy of its looks, taken
 // as they're drawn. While a change is on its way to any track (a scene's, a
 // project's, a move: from its request until its switch point has passed, the
@@ -73,21 +73,13 @@ inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : spanRow(
 inline int maxCells(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // A track row's cell's place (its x and width).
 inline const Cell &cellRect(int i, int cell) { return spanRow(i) ? SPAN : CELL[cell]; }
-// The selected cell in row i's terms (on the status row, never the menu cell's).
+// The selected cell in row i's terms (on the status row, never MENU_CELL: none).
 inline int selectedCellIn(int i) {
   int c = min(selectedCell, cellCount(i) - 1);
   return i == STATUS_ROW ? max(c, SCENE_CELL) : c;
 }
 // The leftmost cell selectable in row i.
 inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
-// The edge mark: the menu (an arrow off the looper's sides opens it), on
-// the status row's line: a small triangle pointing left (3 x 5 blocks, 2
-// blocks from the screen's left and bottom edges; on the notes screen, its
-// status row on top: 2 blocks from the top) in the looper's view (its menu cell: the space left of
-// the scene cell, up to its frame), in ink on the ground (the
-// whole space), dark grey on black. (The menu has none.)
-constexpr int EDGE_W = MENU_BOX.w;               // (up to the scene cell's frame)
-void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground);   // (x, y, w: the space, the status row's height)
 
 // ---- The looper's two screens, the same rows: main (the tracks from the top
 // of the screen, the status row below them) and notes (the status row at the
@@ -150,7 +142,7 @@ inline bool anyClipHeard() {
 // border; the row above's bottom border is its top; the status row's cells'
 // height), the screen's whole width (under the button too, round its panel;
 // the status row's from the scene cell's left edge to the tempo cell's right
-// one, all its corners cut a block: not under the menu cell or the button).
+// one, all its corners cut a block: not under the button).
 // Black elsewhere.
 bool menuOpen();
 inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() ? DARK : BG; }

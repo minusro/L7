@@ -717,7 +717,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     else if ((pressed & m8::BTN_DOWN) && pos == ROWS - 1 && !repeat) menuOnRelease = m8::BTN_DOWN;
     // To or from the status row: the column that row was last left on (the
     // tracks' and the status row's each their own); the first time, the cell
-    // below / above, the status row's having the menu cell to the left of the tracks' first.
+    // below / above, the status row's scene cell under the tracks' waveform cell.
     // (From an empty track, its one cell: the column kept for the rows with three, not that cell's.)
     keepColumns(row, at);
     // LEFT off a row's first cell (a fresh press): the menu, once let go (it's to the left).
