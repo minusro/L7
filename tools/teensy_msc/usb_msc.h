@@ -38,6 +38,8 @@ void usb_msc_clear_host_state(void);
 // The last command's opcode and how many there have been (for logging).
 extern volatile uint8_t usb_msc_last_op;
 extern volatile uint32_t usb_msc_commands;
+extern volatile uint32_t usb_msc_failed, usb_msc_last_sense, usb_msc_broken, usb_msc_restarts, usb_msc_reads, usb_msc_writes;
+extern volatile uint8_t usb_msc_failed_op;
 int usb_msc_ejected(void);
 // Sectors read / written so far (for a screen).
 uint32_t usb_msc_sectors_read(void);

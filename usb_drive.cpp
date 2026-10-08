@@ -128,6 +128,18 @@ bool usbDriveMode() {
       if (usb_msc_last_op != 0x28 && usb_msc_last_op != 0x2A && usb_msc_last_op != 0x00)
         Serial.printf("storage mode: command %02X\n", usb_msc_last_op);
     }
+    static uint32_t statsAt = 0, shownStats = 0;
+    if (millis() - statsAt >= 2000) {               // (serial log: what the computer did, when anything changed)
+      statsAt = millis();
+      uint32_t k = usb_msc_commands * 31 + usb_msc_failed * 7 + usb_msc_broken * 3 + usb_msc_restarts;
+      if (k != shownStats) {
+        shownStats = k;
+        Serial.printf("storage mode: %lu commands, %lu reads, %lu writes; %lu failed (the last: %02X, sense %06lX), %lu broken, %lu restarts\n",
+                      (unsigned long)usb_msc_commands, (unsigned long)usb_msc_reads, (unsigned long)usb_msc_writes,
+                      (unsigned long)usb_msc_failed, usb_msc_failed_op, (unsigned long)usb_msc_last_sense,
+                      (unsigned long)usb_msc_broken, (unsigned long)usb_msc_restarts);
+      }
+    }
     if (usb_msc_ejected()) return leave("EJECTED");
     int state = !usb_configuration ? 0 : usb_msc_host_seen() ? 2 : 1;
     if (millis() - hueAt >= 40) {                   // the title and logo: light grey, and once connected the hue goes round, once in 4 s

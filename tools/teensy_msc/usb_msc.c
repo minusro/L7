@@ -56,6 +56,12 @@ static uint8_t sense_key = 0, sense_asc = 0, sense_ascq = 0;
 
 volatile uint8_t usb_msc_last_op = 0;
 volatile uint32_t usb_msc_commands = 0;
+// (The serial log's: commands that failed, the last one's sense (key << 16 |
+// asc << 8 | ascq) and its opcode, data stages that broke, protocol restarts,
+// reads and writes.)
+volatile uint32_t usb_msc_failed = 0, usb_msc_last_sense = 0, usb_msc_broken = 0, usb_msc_restarts = 0;
+volatile uint32_t usb_msc_reads = 0, usb_msc_writes = 0;
+volatile uint8_t usb_msc_failed_op = 0;
 
 static volatile uint8_t attention = 0;
 
@@ -104,6 +110,7 @@ void usb_msc_configure(void)
 
 static void init_protocol(void)
 {
+	usb_msc_restarts++;
 	need_init = 0;
 	reset_requested = 0;
 	NVIC_DISABLE_IRQ(IRQ_USB1);
@@ -352,6 +359,14 @@ static void run_command(void)
 	usb_msc_last_op = cbw_buf[15];
 	usb_msc_commands++;
 	handle_command(&c, cbw_buf + 15);
+	if (cbw_buf[15] == 0x28) usb_msc_reads++;
+	if (cbw_buf[15] == 0x2A) usb_msc_writes++;
+	if (c.status == 1 && cbw_buf[15] != 0x03) {
+		usb_msc_failed++;
+		usb_msc_failed_op = cbw_buf[15];
+		usb_msc_last_sense = (uint32_t)sense_key << 16 | (uint32_t)sense_asc << 8 | sense_ascq;
+	}
+	if (c.status == 2) usb_msc_broken++;
 	if (reset_requested || need_init) return;
 	if (c.status != 2) {                              // (2: the data stage broke: a reset follows)
 		put_le32(csw_buf, 0x53425355);
