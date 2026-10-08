@@ -200,7 +200,7 @@ void drawEdgeLine() {
     shownKey = 0;
     return;
   }
-  uint16_t ink = menuOpen() ? DIM : DARK;          // (dark grey on the looper's black; grey on the menu's dark grey)
+  const uint16_t ink = DIM;                        // (grey, the looper's and the menu's)
   if (key == m8::BTN_LEFT) t.fillRect(0, 0, PX, 240, ink);
   else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX, 0, PX, 240, ink);
   else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, PX, ink);
