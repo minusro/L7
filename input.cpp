@@ -121,7 +121,7 @@ static int armedSlot = -1;                           // the slot it was pressed 
 static int armedItem = -1;                           // or the list item
 static bool loadedOnPress = false;                   // its press loaded the card's project: held on, the menu closes
 static uint32_t armedAt = 0;
-static constexpr uint32_t LONG_PRESS_MS = 600;
+static constexpr uint32_t LONG_PRESS_MS = 300;
 
 static bool nextSceneArmed = false;               // A pressed on the scene cell: the next scene once it's let go
 // UP / DOWN between the tracks and the status row: each keeps its own column,
