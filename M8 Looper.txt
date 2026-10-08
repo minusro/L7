@@ -115,11 +115,14 @@ no dropouts or overruns
 
 
 6oct26
+
 - menu redesign V
 - startpoint checkerboard V
 - metronome settings V
 
+
 7oct26
+
 - sync in V
 - usb midi V
 - stereo usb audio V
@@ -130,21 +133,24 @@ no dropouts or overruns
 - multi mute/unmute while holding action and up/down V
 - clip warping V
 
+
+8oct26
+
 - midi clips page ...
 	- mute played clips after finishing recording (?)
 
 - more audio testing and fixes
-
 - track ms offset
 - clip ms fine rotate
 
-123456123456
-0x00x00x00x0
-x0x0x00x0x0x
 
 - crossfading between two scenes
 - overdubbing - not for now or ever maybe X
 
+
+123456123456
+0x00x00x00x0
+x0x0x00x0x0x
 
 F1 G2 H3 I4 J5 K6 L7 M8
 
@@ -155,7 +161,5 @@ Loop8
 L7 - this one V
 7Loop
 
-
 MINUSELEVEN
 minuseleven
-

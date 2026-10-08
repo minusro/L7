@@ -35,11 +35,11 @@ static constexpr int INSET = 2 * PX;               // text from the cell's edges
 // The edge mark (ui.h), built in a buffer and sent at once over the space
 // given (x, w): from its left edge (the screen's).
 void drawEdgeMark(int x, int w, int y, uint16_t ink, uint16_t ground) {
-  // A right triangle (5 x 5), its right angle at its bottom left, 2 blocks
+  // A right triangle (4 x 4), its right angle at its bottom left, 2 blocks
   // from the screen's left and bottom edges.
   // (Notes, its status row on top: the right angle at its top left, 2 blocks from the top.)
-  static const char *const MARK[5] = {"#....", "##...", "###..", "####.", "#####"};
-  constexpr int ROWS = STATUS_H / PX, CW = 5, CH = 5, C0 = 2;
+  static const char *const MARK[4] = {"#...", "##..", "###.", "####"};
+  constexpr int ROWS = STATUS_H / PX, CW = 4, CH = 4, C0 = 2;
   const int R0 = notesLayout ? 2 : ROWS - 2 - CH;
   constexpr int MAX_W = EDGE_W;                    // (its space: the menu cell's)
   w = min(w, MAX_W);
