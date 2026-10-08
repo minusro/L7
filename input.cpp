@@ -121,7 +121,7 @@ static int armedSlot = -1;                           // the slot it was pressed 
 static int armedItem = -1;                           // or the list item
 static bool loadedOnPress = false;                   // its press loaded the card's project: held on, the menu closes
 static uint32_t armedAt = 0;
-static constexpr uint32_t LONG_PRESS_MS = 300;
+static constexpr uint32_t LONG_PRESS_MS = 600;
 
 static bool nextSceneArmed = false;               // A pressed on the scene cell: the next scene once it's let go
 // UP / DOWN between the tracks and the status row: each keeps its own column,
@@ -157,10 +157,11 @@ static uint32_t recordArmedAt = 0;                 // (transport.now at the pres
 // it; or between the looper's two (main and notes, ui.h: UP off its top, DOWN
 // off its bottom).
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
-// Or held on LONG_PRESS_MS (from when it stopped at the edge): it switches
+// Or held on SWITCH_HOLD_MS (from when it stopped at the edge): it switches
 // then, still held (pollKeys()); held on, it goes on repeating on the other
 // screen (after REPEAT_DELAY_MS), stopping at its next edge as ever.
-static uint32_t edgeAt = 0;                        // (when the switch began waiting)
+static constexpr uint32_t SWITCH_HOLD_MS = 300;
+static uint32_t switchWaitAt = 0;                        // (when the switch began waiting)
 static bool edgeHeldLong = false;                  // (this pass: held that long, it switches now)
 static bool edgeDue(uint8_t keys, uint8_t key) { return key && (!(keys & key) || edgeHeldLong); }
 // LEFT+RIGHT pressed together (the second within LR_WINDOW_MS of the first,
@@ -871,13 +872,13 @@ void pollKeys() {
     repeatAt = millis() + REPEAT_PERIOD_MS;          // after a slow pass: no burst of catch-up repeats
     onKeys(prev, repeatKey, true);
   }
-  // An arrow held off an edge (a switch waiting): LONG_PRESS_MS on, the switch
+  // An arrow held off an edge (a switch waiting): SWITCH_HOLD_MS on, the switch
   // now; the repeats go on after REPEAT_DELAY_MS from there (on the other screen).
   static bool edgeWaiting = false;
   bool waiting = menuOnRelease || leaveOnRelease || flipOnRelease;
-  if (waiting && !edgeWaiting) edgeAt = millis();
+  if (waiting && !edgeWaiting) switchWaitAt = millis();
   edgeWaiting = waiting;
-  if (waiting && millis() - edgeAt >= LONG_PRESS_MS) {
+  if (waiting && millis() - switchWaitAt >= SWITCH_HOLD_MS) {
     debugStage = "key held at an edge";
     edgeHeldLong = true;
     onKeys(prev, 0, true);
