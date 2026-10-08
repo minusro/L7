@@ -40,5 +40,7 @@ bool audioFollowFlash();
 float audioFollowBpm();                  // their tempo as found, halved or doubled as set (0: none yet)
 // B+arrows on the tempo cell while on: the clock at their tempo doubled (by > 0)
 // or halved (by < 0), again and again (within the clock's range; 0 again when
-// turned on). False: not on, or out of range.
+// turned on). Their tempo not found yet: the tempo shown halved or doubled
+// instead, the estimate leaning towards it (so it finds that octave). False:
+// not on, or out of range.
 bool audioFollowScale(int by);

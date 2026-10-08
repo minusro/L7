@@ -331,6 +331,13 @@ float audioFollowBpm() { return period > 0 ? bpmOfFrames(period) * (float)ratio(
 
 FLASHMEM bool audioFollowScale(int by) {
   if (!on || !by) return false;
+  if (period <= 0) {                                 // nothing found yet: the tempo shown halved / doubled, which the estimate leans towards
+    float b = roundf(bpm * (by > 0 ? 20 : 5)) / 10;
+    if (b < MIN_BPM || b > MAX_BPM || midiClockFollowing()) return false;
+    followTempo(spbForBpm(b), b);
+    Serial.printf("audio follow: looking near %.1f BPM\n", b);
+    return true;
+  }
   int o = octave + (by > 0 ? 1 : -1);
   if (o < -3 || o > 3) return false;
   float heard = period > 0 ? bpmOfFrames(period) : 0;

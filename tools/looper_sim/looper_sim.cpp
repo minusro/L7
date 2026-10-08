@@ -2806,6 +2806,20 @@ for f in os.listdir("."):
     audioFollowToggle();
     check(!audioFollowOn() && !onsetListen && !audioFollowFlash(), "B+A again: off, nothing listened to, no flashing");
     // Their tempo far from ours: not taken for its half or double (the tempo set nearer it than them).
+    {                                                // halved before anything's found: the estimate finds that octave
+      simSetTempo(140);
+      bpm = 140;
+      run(0.1);
+      drumBpm = 140; drumBeat = 0; drumKicks.clear();
+      audioFollowToggle();
+      check(audioFollowScale(-1) && bpm == 70, "nothing found yet: B+DOWN halves the tempo shown (70)");
+      run(12);
+      snprintf(m9, sizeof m9, "drums at 140, halved first: their tempo found as 70 (%.2f found, %.1f shown)", audioFollowBpm(), bpm);
+      check(fabs(audioFollowBpm() - 70) < 0.5f && fabs(bpm - 70) <= 0.3f, m9);
+      audioFollowToggle();
+      drumBpm = 0;
+      run(1);
+    }
     for (auto [their, set] : std::vector<std::pair<double, float>>{{90, 120}, {174, 150}, {70, 85}, {174, 100}}) {
       simSetTempo(set);
       bpm = set;
