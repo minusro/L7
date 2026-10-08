@@ -157,6 +157,12 @@ static uint32_t recordArmedAt = 0;                 // (transport.now at the pres
 // it; or between the looper's two (main and notes, ui.h: UP off its top, DOWN
 // off its bottom).
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
+// Or held on LONG_PRESS_MS (from when it stopped at the edge): it switches
+// then, still held (pollKeys()); held on, it goes on repeating on the other
+// screen (after REPEAT_DELAY_MS), stopping at its next edge as ever.
+static uint32_t edgeAt = 0;                        // (when the switch began waiting)
+static bool edgeHeldLong = false;                  // (this pass: held that long, it switches now)
+static bool edgeDue(uint8_t keys, uint8_t key) { return key && (!(keys & key) || edgeHeldLong); }
 // LEFT+RIGHT pressed together (the second within LR_WINDOW_MS of the first,
 // nothing else held) and held LR_HOLD_MS: the other screen (switchHold()).
 // From the second one's press until both are let go, they don't move the
@@ -312,7 +318,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // row, the track next to the other's), the column kept
   // (the tracks' and the status rows' each their own, both screens' status
   // rows the same).
-  if (flipOnRelease && !(keys & flipOnRelease)) {
+  if (edgeDue(keys, flipOnRelease)) {
     uint8_t key = flipOnRelease;
     flipOnRelease = 0;
     int from = selected, at = selectedCellIn(selected);
@@ -333,7 +339,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // held arrow repeating): the menu opens once that key is let go (the clock
   // goes on).
   // (menuOnRelease: the key to wait for, file scope: screenSwitchPending())
-  if (menuOnRelease && !(keys & menuOnRelease)) {
+  if (edgeDue(keys, menuOnRelease)) {
     uint8_t key = menuOnRelease;
     menuOnRelease = 0;
     openMenu(key);                                   // (on its far edge: its own column or row)
@@ -344,7 +350,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // loaded project's card; with no project loaded, a new one is made in the
   // first empty slot (its card selected), as A there.
   // (leaveOnRelease: likewise)
-  if (leaveOnRelease && !(keys & leaveOnRelease)) {
+  if (edgeDue(keys, leaveOnRelease)) {
     uint8_t key = leaveOnRelease;
     leaveOnRelease = 0;
     if (menuLeavesOn(key)) leaveMenu(key);
@@ -864,6 +870,20 @@ void pollKeys() {
     debugStage = "key repeat";
     repeatAt = millis() + REPEAT_PERIOD_MS;          // after a slow pass: no burst of catch-up repeats
     onKeys(prev, repeatKey, true);
+  }
+  // An arrow held off an edge (a switch waiting): LONG_PRESS_MS on, the switch
+  // now; the repeats go on after REPEAT_DELAY_MS from there (on the other screen).
+  static bool edgeWaiting = false;
+  bool waiting = menuOnRelease || leaveOnRelease || flipOnRelease;
+  if (waiting && !edgeWaiting) edgeAt = millis();
+  edgeWaiting = waiting;
+  if (waiting && millis() - edgeAt >= LONG_PRESS_MS) {
+    debugStage = "key held at an edge";
+    edgeHeldLong = true;
+    onKeys(prev, 0, true);
+    edgeHeldLong = false;
+    edgeWaiting = false;
+    repeatAt = millis() + REPEAT_DELAY_MS;
   }
   menuHold();
   switchHold();

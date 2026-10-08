@@ -136,16 +136,20 @@ no dropouts or overruns
 
 8oct26
 
-- midi clips page ...
-	- mute played midi clips after finishing audio recording
-	- mute played midi and audio clips after finishing resampling
-	- midi resampling
 - adjusting the tempo during audio in follow halves or doubles it
+- B + L/R on clock nudges tempo for beatmatching
 - more audio testing and fixes
 - track ms offset
 - clip ms fine rotate
 
 
+
+# Other possible features
+
+- midi clips page ...
+	- mute played midi clips after finishing audio recording
+	- mute played midi and audio clips after finishing resampling
+	- midi resampling
 - crossfading between two scenes
 - overdubbing - not for now or ever maybe X
 
