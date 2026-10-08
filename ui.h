@@ -161,7 +161,7 @@ bool menuOnStatus();
 bool arrowsMoved();                      // input.cpp: the last arrow press moved the selection
 bool screenSwitchPending();               // (input.cpp) an arrow held that switches screens once let go
 // While an arrow is held off an edge that switches screens once let go: a
-// line 3 blocks thick (light grey; in the menu, black) along that edge of the screen (on top of
+// line 3 blocks thick (dark grey; in the menu, black) along that edge of the screen (on top of
 // everything; let go without switching, what was under it again).
 void drawEdgeLine();
 inline uint16_t cellFrame(int i, int cell) {
@@ -225,7 +225,6 @@ bool menuOpen();
 // drawn, menuLand(); closeMenu(false): the looper's rows not drawn yet, the
 // caller moves the selection first. Drawn once, at the landing place: no flicker.)
 void openMenu(uint8_t key = 0);
-void menuDrawLogo();                     // the menu's corner logo again (on top of the edge line, drawEdgeLine())
 void closeMenu(bool draw = true);
 int menuFirstEmptySlot();                // the first slot with no project (-1: none)
 void menuSelectSlot(int k);              // the menu's selection on card k

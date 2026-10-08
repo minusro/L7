@@ -200,13 +200,12 @@ void drawEdgeLine() {
     shownKey = 0;
     return;
   }
-  const uint16_t ink = menuOpen() ? BG : LIGHT;    // (light grey on the looper; black on the menu's dark grey)
+  const uint16_t ink = menuOpen() ? BG : DARK;     // (dark grey on the looper; black on the menu's dark grey)
   constexpr int W = 3 * PX;                        // (3 blocks thick)
   if (key == m8::BTN_LEFT) t.fillRect(0, 0, W, 240, ink);
   else if (key == m8::BTN_RIGHT) t.fillRect(320 - W, 0, W, 240, ink);
   else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, W, ink);
   else t.fillRect(0, 240 - W, 320, W, ink);
-  if (menuOpen()) menuDrawLogo();                  // (the menu's corner logo on top of it)
   shownKey = key;
   shownGen = uiGeneration;
 }
