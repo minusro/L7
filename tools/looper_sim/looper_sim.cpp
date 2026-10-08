@@ -462,8 +462,8 @@ int main(int argc, char **argv) {
              tr.sample, tr.recordedFrames, tr.loopBars, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted);
     check(tr.sample == 1 && tr.recordedFrames == legacyFrames && tr.loopBars == 1 && tr.rangeBeats == 2 &&
           tr.state == TrackState::Muted && tr.overview[10] == 100, m);
-    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 3 && tr.balance == -1,
-          "its filter kept, volume and balance in today's steps (25 -> 3, -4 -> -1)");
+    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 14 && tr.balance == -3,
+          "its filter kept, volume and balance in today's steps (25 -> 14, -4 -> -3)");
     check(wavLeft(4, 0) == -500 && wavLeft(4, 1234) == 1234 % 1000 - 500 && wavLeft(4, legacyFrames - 1) == (int16_t)((legacyFrames - 1) % 1000 - 500),
           "its audio is intact in SAMPLES/0001.wav");
     struct stat st;
@@ -667,14 +667,14 @@ int main(int argc, char **argv) {
     long first = 0, last = -1;                     // its own first (or the next name), its own last (or the one before)
     while (first < (long)count && names[first].first < own) first++;
     while (last + 1 < (long)count && names[last + 1].first < after) last++;
-    setTrackMix(6, 3, 2);
+    setTrackMix(6, 12, 4);
     check(stepSample(6, 1) && tr.sample == at(first), "SHIFT+RIGHT on an empty track: the first of its own, or the next name");
     check(stepSample(6, 1) && tr.sample == at(first + 1), "SHIFT+RIGHT: the next name (its own first, then the project's other tracks, then other projects)");
     check(stepSample(6, -1) && tr.sample == at(first), "SHIFT+LEFT: back to the previous");
     for (size_t i = 0; i < count; i++) stepSample(6, 1);
     check(tr.sample == at(first), "SHIFT+RIGHT through all of them: round to the same one (wrapping)");
     check(stepSample(6, 1) && tr.sample == at(first + 1) && tr.rangeStartBeat == 0 && tr.rangeBeats == tr.loopBars * 4 &&
-          tr.volume == 3 && tr.balance == 2, "range reset to the whole loop, volume and balance kept");
+          tr.volume == 12 && tr.balance == 4, "range reset to the whole loop, volume and balance kept");
     setTrackMix(6, VOLUME_UNITY, 0);               // the sync check compares at unity gain
     trackChanged(6);
     runBeats(4);
@@ -827,10 +827,10 @@ int main(int argc, char **argv) {
     check(sceneGoEmpty() && waitScene() && sceneNext() && waitScene() && sceneCurrent() == 1, "on 0*: to 1");
     check(sceneGoEnd() && waitScene() && sceneCurrent() == sceneCount() + 1, "(back to N+1*)");
     check(sceneGoEmpty() && waitScene() && sceneCurrent() == 0 && empty(), "SHIFT+DOWN twice: straight to 0*");
-    setTrackMix(6, 3, 0);                          // a change on 0*
+    setTrackMix(6, 12, 0);                         // a change on 0*
     trackChanged(6);
     block();
-    check(sceneCurrent() == 1 && sceneCount() == 4 && tracks[6].volume == 3, "changing 0* inserts a new scene 1");
+    check(sceneCurrent() == 1 && sceneCount() == 4 && tracks[6].volume == 12, "changing 0* inserts a new scene 1");
     // That scene has no clips: cutting it removes it, but the clipboard keeps the scene cut before (pasted back, it has track 2 muted).
     check(sceneCut() && waitScene() && sceneCount() == 3 && sceneCurrent() == 0 && sceneClipboardFull(), "cutting a scene with no clips: it's gone, the clipboard still full");
     check(scenePaste() && waitScene() && sceneCount() == 4 && sceneCurrent() == 1 && tracks[0].sample == s1 && tracks[1].state == TrackState::Muted,
@@ -1256,14 +1256,14 @@ int main(int argc, char **argv) {
     int32_t anchorBefore[NUM_TRACKS];
     for (int t = 0; t < NUM_TRACKS; t++) { beatsBefore[t] = tracks[t].rangeBeats; anchorBefore[t] = tracks[t].rangeAnchorQ; }
     check(sceneStep(1), "to scene B");
-    setTrackMix(0, 3, 0);
+    setTrackMix(0, 12, 0);
     trackChanged(0);
     waitScene();
     for (int i = 0; i < 20; i++) block();
     afterAudio = nullptr;
     snprintf(m, sizeof m, "track 6 stops on the bar line (beat %d +%u), then empty", stop.beat, stop.sib);
     check(onBar(stop, AUDIO_BLOCK_SAMPLES) && tracks[5].state == TrackState::Empty, m);
-    check(tracks[0].volume == 3, "the volume set while waiting stayed");
+    check(tracks[0].volume == 12, "the volume set while waiting stayed");
     int kept = 0, jumped = 0;
     for (int t = 0; t < NUM_TRACKS; t++) {
       if (tracks[t].state == TrackState::Empty || tracks[t].rangeBeats != beatsBefore[t]) continue;
@@ -1734,7 +1734,7 @@ int main(int argc, char **argv) {
     }
     int playing = 0;                               // its tracks with a clip there: saved as playing
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) playing++;
-    setTrackMix(NUM_TRACKS - 1, 3, 2);              // (on scene 2: track 1, Live's first: a lower volume, a balance and filter points)
+    setTrackMix(NUM_TRACKS - 1, 12, 4);             // (on scene 2: track 1, Live's first: a lower volume, a balance and filter points)
     setTrackFilter(NUM_TRACKS - 1, 8, 24);
     trackChanged(NUM_TRACKS - 1);
     char colorHex[8];
@@ -1831,13 +1831,13 @@ int main(int argc, char **argv) {
                        "c=t.findall('DeviceChain/MainSequencer/ClipSlotList/ClipSlot')[i].find('ClipSlot/Value/AudioClip')\n"
                        "v=[float(e.find('Automation/Events/FloatEvent').get('Value')) for e in c.findall('Envelopes/Envelopes/ClipEnvelope')]\n"
                        "note=lambda hz: 69+12*math.log2(hz/440)\n"
-                       "want=[float(c.find('SampleVolume').get('Value'))-10**((3-vu)*7.5/20), v[0]-2/bm, v[1]-note(hz1), v[2]-note(hz2)]\n"
+                       "want=[float(c.find('SampleVolume').get('Value'))-10**((12-vu)*1.875/20), v[0]-4/bm, v[1]-note(hz1), v[2]-note(hz2)]\n"
                        "print(*['%.4f'%w for w in want]); sys.exit(0 if all(abs(w)<0.01 for w in want) else 1)\" '" + dir + "' " + args;
       FILE *vout = popen(vp.c_str(), "r");
       char res[120] = {};
       if (vout) { if (!fgets(res, sizeof res, vout)) res[0] = 0; }
       int vrc = vout ? pclose(vout) : -1;
-      snprintf(m, sizeof m, "volume 3, balance 2, filter 8-24 on track 1 of scene 2: the clip's gain, the Utility's balance, the cutoffs as expected (differences %s)", res);
+      snprintf(m, sizeof m, "volume 12, balance 4, filter 8-24 on track 1 of scene 2: the clip's gain, the Utility's balance, the cutoffs as expected (differences %s)", res);
       check(vrc == 0, m);
     }
     setTrackMix(NUM_TRACKS - 1, VOLUME_UNITY, 0);
@@ -2591,7 +2591,7 @@ for f in os.listdir("."):
     stemPeaks(before);
     setTrackMix(1, VOLUME_UNITY, BALANCE_MAX);       // track 2: hard right (its left moved into its right; the test
                                                      // input's right is its left inverted, so they cancel there too)
-    setTrackMix(4, VOLUME_UNITY - 1, 0);             // track 5: a step down
+    setTrackMix(4, VOLUME_UNITY - 4, 0);             // track 5: 7.5 dB down
     for (int b = 0; b < 20; b++) block();            // (the levels glide there)
     stemPeaks(after);
     int worst = 0, others = 0;
@@ -2607,7 +2607,7 @@ for f in os.listdir("."):
     }
     char m8[260];
     snprintf(m8, sizeof m8, "the tracks add up to the mix (within %d); track 2 there (%d), then hard right: its left silent (%d); "
-             "track 5 a step down: %d to %d; the empty ones silent (%d)", worst, before[2], after[2], before[8], after[8], others);
+             "track 5 7.5 dB down: %d to %d; the empty ones silent (%d)", worst, before[2], after[2], before[8], after[8], others);
     check(worst <= NUM_TRACKS && before[2] > 3000 && after[2] < 50 && before[8] > 3000 &&
           after[8] > before[8] * 0.3 && after[8] < before[8] * 0.6 && others == 0, m8);
     setTrackMuted(4, true);

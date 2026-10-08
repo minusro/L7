@@ -90,16 +90,16 @@ constexpr float FILTER_MIN_HZ = 20.0f, FILTER_OCTAVES = 10.0f;
 constexpr int MASTER_VOLUME_MAX = 21, MASTER_VOLUME_UNITY = 17;
 constexpr float MASTER_STEP_DB = 1.5051500f;       // 20 log10(2) / 4
 
-// Per-track volume and balance, in as many steps as the volume cell has lines
-// per channel (each step shows). Volume step v is (v - VOLUME_UNITY) *
-// VOLUME_STEP_DB dB (off at 0): -22.5 dB to +7.5 dB. Balance -BALANCE_MAX..
-// BALANCE_MAX (twice as many steps), centre 0 (the signal as it is): turning
-// it towards one side moves that share of the other channel over to this one
-// (linearly), so at the end this side carries the mono sum (L + R) and the
-// other is silent.
-constexpr int VOLUME_MAX = 5, VOLUME_UNITY = 4;
-constexpr float VOLUME_STEP_DB = 7.5f;
-constexpr int BALANCE_MAX = 5;
+// Per-track volume and balance. The volume cell has 5 lines per channel, each
+// two 1-pixel halves: volume lights a half per two steps, balance takes a half
+// off the other side per step. Volume step v is (v - VOLUME_UNITY) *
+// VOLUME_STEP_DB dB (off at 0): -28.1 dB to +7.5 dB. Balance -BALANCE_MAX..
+// BALANCE_MAX, centre 0 (the signal as it is): turning it towards one side
+// moves that share of the other channel over to this one (linearly), so at the
+// end this side carries the mono sum (L + R) and the other is silent.
+constexpr int VOLUME_MAX = 20, VOLUME_UNITY = 16;
+constexpr float VOLUME_STEP_DB = 1.875f;
+constexpr int BALANCE_MAX = 10;
 
 // Declicking: loop and range edges, and clip switches, are crossfaded over
 // this many frames (~3 ms); track levels (mute, volume, start, stop) glide

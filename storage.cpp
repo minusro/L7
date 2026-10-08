@@ -451,10 +451,16 @@ static void trimSample(uint32_t id) {
 }
 
 // ---- Tracks and their unit files
-static constexpr uint32_t UNIT_VERSION = 3;   // 3: volume and balance in today's steps (2: 6 a side, 6 dB)
+static constexpr uint32_t UNIT_VERSION = 4;   // 4: volume and balance in today's steps (3: 5 of 7.5 dB, +-5; 2: 6 a side, 6 dB)
 
 void upgradeUnit(TrackUnit &u) {
   if (u.version >= UNIT_VERSION) return;
+  if (u.version == 3) {                            // (version 3: unity 4 of 5, 7.5 dB; balance +-5: exactly 4x and 2x)
+    u.volume = (int8_t)(u.volume * 4);
+    u.balance = (int8_t)(u.balance * 2);
+    u.version = UNIT_VERSION;
+    return;
+  }
   // The old steps: version 1 volume 0-32 (unity 28, 1.5 dB), balance +-16;
   // version 2 volume 0-6 (unity 5, 6 dB), balance +-6.
   bool v1 = u.version < 2;
