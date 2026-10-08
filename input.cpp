@@ -598,9 +598,20 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     if (onStatus) {
       if (selectedCellIn(STATUS_ROW) == SCENE_CELL) {   // scene: UP/DOWN as SHIFT+UP/DOWN
         sceneKeys();
-      } else if (onTempo && audioFollowOn()) {       // audio follow: halved (LEFT, DOWN) or doubled (RIGHT, UP), fresh presses only
-        if (!repeat && (pressed & (m8::BTN_LEFT | m8::BTN_DOWN))) audioFollowScale(-1);
-        if (!repeat && (pressed & (m8::BTN_RIGHT | m8::BTN_UP))) audioFollowScale(1);
+      } else if (onTempo && (audioFollowOn() || syncSource() != SYNC_NONE)) {
+        // Following: UP/DOWN double / halve audio follow's tempo (fresh
+        // presses only); LEFT/RIGHT the clock's offset from the external
+        // one, as SHIFT+LEFT/RIGHT on the status row (both: back to 0).
+        if (audioFollowOn() && !repeat && (pressed & m8::BTN_DOWN)) audioFollowScale(-1);
+        if (audioFollowOn() && !repeat && (pressed & m8::BTN_UP)) audioFollowScale(1);
+        const uint8_t LRK = m8::BTN_LEFT | m8::BTN_RIGHT;
+        int src = syncSource();
+        if (src != SYNC_NONE && (pressed & LRK)) {
+          int16_t &o = syncOffsetMs[src];
+          if ((keys & LRK) == LRK) o = 0;
+          else o = constrain(o + ((pressed & m8::BTN_RIGHT) ? SYNC_OFFSET_STEP_MS : -SYNC_OFFSET_STEP_MS), -SYNC_OFFSET_MAX_MS, SYNC_OFFSET_MAX_MS);
+          syncOffsetChanged(src);
+        }
       } else if (onTempo) {                          // tempo: 0.1 BPM steps, or 1 BPM
         if (pressed & m8::BTN_LEFT) setTempo(bpm - 0.1f);
         if (pressed & m8::BTN_RIGHT) setTempo(bpm + 0.1f);
