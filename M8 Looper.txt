@@ -139,14 +139,14 @@ no dropouts or overruns
 - adjusting the tempo during audio in follow halves or doubles it
 - B + L/R on clock nudges tempo for beatmatching
 - more audio testing and fixes
+
+
+
+# Feature backlog
 - track ms offset
 - clip ms fine rotate
-
-
-
-# Other possible features
-
-- midi clips page ...
+- midi clips page
+	- prototype second screen V (off for now)
 	- mute played midi clips after finishing audio recording
 	- mute played midi and audio clips after finishing resampling
 	- midi resampling
