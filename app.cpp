@@ -72,7 +72,7 @@ void setMetronomeMode(int mode) {
 }
 bool silentScene() {
   for (int t = 0; t < NUM_TRACKS; t++)
-    if (tracks[t].state == TrackState::Playing) return false;
+    if (tracks[t].state != TrackState::Empty) return false;   // (a muted clip too)
   return true;
 }
 int nextMetronomeMode() {
