@@ -169,7 +169,7 @@ TTTTT000000TTTTT
 - auto metronome mode only plays on projects with no clips V
 - tapping tempo when stopped plays metronome in either 1 or A metronome modes V
 
-- settings page - ON/OFF items, going up from the menu settings item like a popup menu with an arrow ...
+- settings page - ON/OFF items, going up from the menu settings item like a popup menu with an arrow V
 	(from bottom to top)
 	- monitor audio in *
 	- play newly recorded *
@@ -181,7 +181,6 @@ TTTTT000000TTTTT
 
 - metronome auto volume
 - clip ms fine rotate
-
 
 
 # Backlog

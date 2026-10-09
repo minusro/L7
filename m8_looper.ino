@@ -280,6 +280,12 @@ void loop() {
       for (const auto &tr : tracks) if (tr.live) { playing++; stretching += tr.stretch; }
       Serial.printf("engine: %.1f%% of the CPU on average, %.1f%% at most (%d tracks playing, %d stretched)\n",
                     avg * 100, most * 100, playing, stretching);
+      static uint32_t batteryAt = 0;               // (the battery, raw, every 30 s: checking its reading)
+      if (millis() - batteryAt >= 30000) {
+        batteryAt = millis();
+        board.batteryPercent();
+        board.batteryLog();
+      }
     }
   }
   debugStage = "keys (I2C)";

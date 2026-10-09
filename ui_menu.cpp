@@ -57,6 +57,7 @@ static bool shown = false;
 static int menuSel = 0;                          // the selected item
 static bool setOpen = false, setDrawn = false;   // the settings popup open (below); setDrawn: its box on screen (else drawn whole next)
 static int setSel = 0;                           // its selected item (0: the bottom one)
+static uint32_t setPressAt = 0;                  // millis() of the latest A or B press in it (0: none)
 static int cardCol = 0;                          // the card column last selected (UP from the list goes back to it)
 static bool onStatus = false;                    // the selection is on the status row (selected = STATUS_ROW meanwhile)
 static int statusCell = SCENE_CELL;              // where on it, while the menu's closed (or the selection's up in the menu)
@@ -422,7 +423,11 @@ FLASHMEM static void drawSettings(bool whole) {
     for (int r = 0; r < 3; r++) t.fillRect((ax - 2 + r) * PX, (y1 + 1 + r) * PX, (5 - 2 * r) * PX, PX, DIM);
     shownKey = ~0u;
   }
-  uint32_t key = setSel | (uint32_t)frameColor() << 8;
+  // The selected item's frame: as the list's; while A or B is held, dark grey
+  // (on the grey), light grey for its first 100 ms (the press: it switched).
+  constexpr uint32_t PRESS_FLASH_MS = 100;
+  uint16_t frame = setPressAt && millis() - setPressAt < PRESS_FLASH_MS ? LIGHT : actionHeld() ? DARK : frameColor();
+  uint32_t key = setSel | (uint32_t)frame << 8;
   for (int i = 0; i < SETTING_COUNT; i++) key |= (uint32_t)setting(i) << (3 + i);
   if (key == shownKey) return;
   shownKey = key;
@@ -432,7 +437,6 @@ FLASHMEM static void drawSettings(bool whole) {
       if (sel != (pass == 1)) continue;
       bool on = setting(i);
       Shape s = {x, setRow(i, yb), w, FONT_H / PX, 0};   // (its frame round the whole line, 2 blocks out)
-      uint16_t frame = frameColor() == DIM ? DARK : frameColor();   // (on the grey: an action button held, dark grey)
       fillRing(s, 3, 2, sel ? frame : DIM, true);
       fillRing(s, 2, 0, DIM);
       t.fillRect(s.x * PX, s.y * PX, s.w * PX, FONT_H, DIM);   // (the line cleared: OFF to ON leaves nothing behind)
@@ -472,6 +476,7 @@ FLASHMEM bool menuSettingsKeys(uint8_t pressed) {
 }
 
 FLASHMEM void menuSettingsAct() {
+  setPressAt = millis();                           // (its frame light grey a moment: drawSettings())
   setSetting(setSel, !setting(setSel));
   drawSettings(false);
 }

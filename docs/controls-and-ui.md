@@ -205,8 +205,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). In the top right
   corner, two blocks in, a tiny grey battery (10 × 7 blocks and a tip a block wide, 3 tall): its
-  outline, a block of space, its fill in sixths of its charge (90 % and up: full; charging, `board.batteryCharging()`, the charger's
-  CHRG_STAT: a lightning bolt in it instead) (`board.batteryPercent()`: the
+  outline, a block of space, its fill in sixths of its charge (90 % and up: full; charging, `board.batteryCharging()`, the fuel gauge's current
+  flowing in (the charger's CHRG_STAT without it): a lightning bolt in it instead) (`board.batteryPercent()`: the
   fuel gauge's state of charge while it runs, else from the charger's battery voltage, read
   every 5 s; variant A: none). The settings popup (`menuSettings()`, app.h's settings, saved with the session: `monitor=`,
   `playnew=`, `nextfree=`, `emptyclick=`): over the menu, rising from SETTINGS (a small grey
@@ -216,7 +216,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   TRACK (off: the selection stays on the track just recorded), EMPTY PROJECT CLICK (the
   metronome, off, still clicks in a project with no clips), each ON or OFF right of its label
   (on at first; ON light grey, OFF dark grey). Its items' frames as the
-  list's, two blocks of space round them (white selected). UP/DOWN go through it; A or B turns
+  list's, two blocks of space round them (white selected; while A or B is held, dark grey, light grey for the press's first 100 ms). UP/DOWN go through it; A or B turns
   the item on / off at once, on the press (the action button: a tick); DOWN off its bottom item,
   or LEFT / RIGHT, close it; no edge leads out of the menu while it's open (LEFT + RIGHT held
   still does, closing it). The items under it aren't drawn meanwhile.

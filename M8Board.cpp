@@ -207,19 +207,37 @@ FLASHMEM int Board::batteryPercent() {
   int pct = -1, mv = -1;
   uint8_t g[2];
   // The gauge running (REG_MODE bit 4, GG_RUN): its state of charge (REG_SOC, 1/512 %).
-  if (gaugeRead(0x00, g, 1) && (g[0] & 0x10) && gaugeRead(0x02, g, 2)) {
+  _batGaugeMode = gaugeRead(0x00, g, 1) ? g[0] : -1;
+  _batSoc = -1;
+  if (_batGaugeMode >= 0 && (_batGaugeMode & 0x10) && gaugeRead(0x02, g, 2)) {
     int soc = (g[0] | g[1] << 8) / 512;
+    _batSoc = soc;
     if (soc >= 0 && soc <= 100) pct = soc;
+    if (gaugeRead(0x06, g, 2)) _batCurrent = (int16_t)(g[0] | g[1] << 8);   // REG_CURRENT: signed (+: into the battery)
+    if (gaugeRead(0x08, g, 2)) _batGaugeMv = (int16_t)((g[0] | g[1] << 8) * 22 / 10);   // REG_VOLTAGE: 2.2 mV a step
   }
   int st = bqRead(0x0B);                 // the charger's REG0B: CHRG_STAT, bits 4-3 (1 pre-charge, 2 fast charging, 3 done)
+  _batStatus = st;
   int chg = st < 0 ? 0 : (st >> 3) & 3;
-  _batCharging = chg == 1 || chg == 2;
+  // Charging: the gauge's current flowing in (measured with USB in: +440 raw
+  // at 4.21 V, 97 %); without the gauge, the charger's CHRG_STAT (pre-charge or
+  // fast charge; it reads 0xFF on this unit, so: as a fallback only).
+  constexpr int CHARGING_CURRENT = 50;
+  _batCharging = _batSoc >= 0 ? _batCurrent > CHARGING_CURRENT : chg == 1 || chg == 2;
   int v = bqRead(0x0E);                  // the charger's REG0E: BATV, 2.304 V + 20 mV a step
   if (v >= 0) mv = 2304 + (v & 0x7F) * 20;
+  _batMv = mv;
   if (pct < 0 && mv > 0) pct = percentForMv(mv);
-  if (pct != _batPct) Serial.printf("battery %d%% (%d mV, gauge %s, charge status %d)\n", pct, mv, pct >= 0 && pct != percentForMv(mv) ? "on" : "off or agrees", chg);
+  bool changed = pct != _batPct;
   _batPct = pct;
+  if (changed) batteryLog();
   return _batPct;
+}
+
+FLASHMEM void Board::batteryLog() {
+  Serial.printf("battery %d%%: gauge mode 0x%02x%s, its charge %d%%, current %d (raw), %d mV; charger REG0B 0x%02x (charging: %s), %d mV (%d%% by voltage)\n",
+                _batPct, _batGaugeMode & 0xFF, _batGaugeMode < 0 ? " (no answer)" : (_batGaugeMode & 0x10) ? " (running)" : " (standby)",
+                _batSoc, _batCurrent, _batGaugeMv, _batStatus & 0xFF, _batCharging ? "yes" : "no", _batMv, _batMv > 0 ? percentForMv(_batMv) : -1);
 }
 
 bool Board::initChargerB() {

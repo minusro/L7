@@ -93,9 +93,10 @@ public:
   // charger measures it (BQ2589x, its ADC on since initChargerB()).
   static constexpr uint32_t BATTERY_POLL_MS = 5000;
   int batteryPercent();
-  // Charging (the charger's REG0B CHRG_STAT: pre-charge or fast charge, so
-  // power is coming in), as of the last batteryPercent() read.
+  // Charging (the fuel gauge's current flowing in; without the gauge, the
+  // charger's REG0B CHRG_STAT), as of the last batteryPercent() read.
   bool batteryCharging() const { return _batCharging; }
+  void batteryLog();                 // the last read, raw, on the serial log (the gauge's mode and charge, the charger's status and voltage)
 
   // Starts the MIDI out port at 31250 baud and returns it. On variant B this
   // also gives pin 15 back to the key expander's INT (Serial3 claims it as RX).
@@ -138,6 +139,8 @@ private:
   uint32_t _hpPolledMs = 0;
   int8_t _batPct = -1;
   bool _batCharging = false;
+  int16_t _batMv = -1, _batGaugeMode = -1, _batSoc = -1, _batStatus = -1;   // (the last read, raw; -1: no answer)
+  int16_t _batCurrent = 0, _batGaugeMv = -1;   // (the gauge's: REG_CURRENT raw, signed; REG_VOLTAGE, mV)
   bool _batPolled = false;
   uint32_t _batPolledMs = 0;
 };
