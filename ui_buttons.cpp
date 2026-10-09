@@ -326,11 +326,11 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     // "TAP" in the font's letters, a block apart (11 x 5 blocks, the P's bowl
     // closed), in the icon's colour (black), from the button's left block
     // column in.
-    // (Pressed: the letters touching, no gaps: 9 x 5.)
+    // (Pressed: the T a block right and the P a block left, touching the A.)
     static const char *const TAP[5] = {"###.###.###", ".#..#.#.#.#", ".#..###.###", ".#..#.#.#..", ".#..#.#.#.."};
-    static const char *const TAP_PRESSED[5] = {"#########", ".#.#.##.#", ".#.######", ".#.#.##..", ".#.#.##.."};
+    static const char *const TAP_PRESSED[5] = {".#########.", "..#.#.##.#.", "..#.######.", "..#.#.##...", "..#.#.##..."};
     const char *const *art = pressed ? TAP_PRESSED : TAP;
-    const int w = pressed ? 9 : 11, h = 5;
+    const int w = 11, h = 5;
     int c0 = PANEL_LEFT, r0 = (rows - h) / 2;
     for (int r = 0; r < h; r++)
       for (int c = 0; c < w; c++)
