@@ -235,21 +235,18 @@ void drawStatus() {
     ink = firstHalf ? ACCENT : DIM;
   }
   int x = box.x + INSET + tagWidth("SCN") + PX;
-  // Stepping (the accent colour on): a small up and down arrow stacked at the
-  // cell's right end, each in the accent colour where that way goes on, grey
-  // where it doesn't (up: past the copy after the last; down: below the empty scene 0*).
-  static constexpr int ARROW_W = 3 * PX;
-  const int arrowX = box.x + box.w - INSET - ARROW_W;
-  drawText(x, textY, text, ink, G, (sceneAccent ? arrowX - PX : box.x + box.w - INSET) - x);
+  drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
+  // Stepping (the accent colour on): the tag's S an up and a down arrow,
+  // stacked, in its letters' colour where that way goes on, grey where it
+  // doesn't (up: past the copy after the last; down: below the empty scene 0*).
   if (sceneAccent) {
-    static const char *const UP[2] = {".#.", "###"}, *const DOWN[2] = {"###", ".#."};
+    static const char *const ARROWS[5] = {".#.", "###", "...", "###", ".#."};
     const int top = count ? count + 1 : 0;           // (no scenes: no copy after the last)
-    const uint16_t upInk = scene < top ? ACCENT : DIM, downInk = scene > 0 ? ACCENT : DIM;
+    const uint16_t upInk = scene < top ? G : DIM, downInk = scene > 0 ? G : DIM;
+    const int sx = box.x + INSET + 2 * PX, sy = tagY + 2 * PX;   // (the S's place in the tag)
     for (int r = 0; r < 5; r++)
-      for (int c = 0; c < 3; c++) {
-        bool on = r < 2 ? UP[r][c] == '#' : r > 2 && DOWN[r - 3][c] == '#';
-        t.fillRect(arrowX + c * PX, textY + r * PX, PX, PX, on ? (r < 2 ? upInk : downInk) : G);
-      }
+      for (int c = 0; c < 3; c++)
+        t.fillRect(sx + c * PX, sy + r * PX, PX, PX, ARROWS[r][c] == '#' ? (r < 2 ? upInk : downInk) : ACCENT);
   }
 
 }
