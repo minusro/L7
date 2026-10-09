@@ -242,6 +242,7 @@ void drawStatus() {
     ink = firstHalf ? ACCENT : DIM;
   }
   int x = box.x + INSET + tagW + PX;
+  t.fillRect(x - PX, tagY, PX, TAG_H, G);          // (the block between the tag and the position: the position, moved, left nothing there)
   drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
   // Stepping (the accent colour on): the wider tag, its up and down arrows
   // stacked, black where that way goes on, none where it doesn't (up: past
