@@ -167,8 +167,7 @@ static uint32_t switchWaitAt = 0;                        // (when the switch beg
 static bool edgeHeldLong = false;                  // (this pass: held that long, it switches now)
 static bool edgeDue(uint8_t keys, uint8_t key) {
   if (!key || ((keys & key) && !edgeHeldLong)) return false;
-  board.tft().setClipRect();                       // (the edge line's clip off, the menu's shift too: the other screen drawn whole, ui.cpp drawEdgeLine())
-  board.tft().setOrigin();
+  board.tft().setClipRect();                       // (the edge line's clip off: the other screen drawn whole, ui.cpp drawEdgeLine())
   return true;
 }
 // LEFT+RIGHT pressed together (the second within LR_WINDOW_MS of the first,

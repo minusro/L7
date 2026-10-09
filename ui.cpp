@@ -189,8 +189,7 @@ void drawEdgeLine() {
   if (key != m8::BTN_LEFT && key != m8::BTN_RIGHT && key != m8::BTN_UP && key != m8::BTN_DOWN) key = 0;   // (LEFT+RIGHT held: no one edge)
   auto &t = board.tft();
   if (!key) {
-    t.setClipRect();                               // (the whole screen drawn to again, from its corner)
-    t.setOrigin();
+    t.setClipRect();                               // (the whole screen drawn to again)
     if (shownKey && shownGen == uiGeneration) {    // let go without switching: what was under it
       uiGeneration++;
       if (menuOpen()) {
@@ -209,22 +208,6 @@ void drawEdgeLine() {
   // flicker). (A switch clears the clip first: input.cpp, edgeDue().)
   if (key == shownKey && shownGen == uiGeneration) return;
   t.setClipRect();
-  if (menuOpen()) {                                // leaving the menu: no line; the menu moved MENU_SHIFT blocks off that edge, black there
-    constexpr int MENU_SHIFT = 8 * PX;
-    t.setOrigin();
-    if (key == m8::BTN_LEFT) t.fillRect(0, 0, MENU_SHIFT, 240, BG);
-    else if (key == m8::BTN_RIGHT) t.fillRect(320 - MENU_SHIFT, 0, MENU_SHIFT, 240, BG);
-    else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, MENU_SHIFT, BG);
-    else t.fillRect(0, 240 - MENU_SHIFT, 320, MENU_SHIFT, BG);
-    t.setOrigin(key == m8::BTN_LEFT ? MENU_SHIFT : key == m8::BTN_RIGHT ? -MENU_SHIFT : 0,
-                key == m8::BTN_UP ? MENU_SHIFT : key == m8::BTN_DOWN ? -MENU_SHIFT : 0);   // (everything drawn meanwhile: moved)
-    uiGeneration++;
-    drawMenu();
-    drawTrack(STATUS_ROW);
-    shownKey = key;
-    shownGen = uiGeneration;
-    return;
-  }
   // 6 blocks along the edge, then a block, then another: each a colour along
   // it, its ends (from the screen's corners in) as a pattern of their own
   // (T: left as it is): the line's ends stepping in, like a bevel.
@@ -246,7 +229,7 @@ void drawEdgeLine() {
       part(len - 1 - k, 1, (uint16_t)c);
     }
   };
-  strip(0, 6, DARK, "TTTT0L");                     // (LJJJJL, the thick one: 6 blocks)
+  strip(0, 6, menuOpen() ? BG : DARK, "TTTT0L");   // (LJJJJL, the thick one: 6 blocks; leaving the menu, black)
   strip(6, 1, LIGHT, "TTTTT0");                    // (0LLLL0)
   strip(7, 1, BG, "TTTTTT");                       // (T0000T)
   constexpr int D = 8 * PX;                        // (the clip: the screen less the line)
