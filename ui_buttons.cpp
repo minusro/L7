@@ -377,7 +377,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
     int c0 = (track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB)) +
              0,
-      r0 = (rows - ic.h) / 2 - (track && icon != ICON_RECORD && icon != ICON_MOVE && icon != ICON_RESAMPLE && icon != ICON_PLAY);   // (a block clear of the backdrop's edge; a track's own icons not a block higher)
+      r0 = (rows - ic.h) / 2 - track;   // (a block clear of the backdrop's edge; a track's: a block higher)
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);
