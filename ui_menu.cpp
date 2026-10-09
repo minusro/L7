@@ -356,8 +356,9 @@ static uint32_t itemKey(int k) {
 // arrow down to it), its items from the bottom up, each a label and, right of
 // it, ON or OFF (HELP: grey, not yet). A or B on SETTINGS opens it (once let
 // go); UP/DOWN go through it, A or B turns the item on or off (on the press),
-// DOWN off its bottom one or LEFT/RIGHT close it. Black, a grey border (its
-// corners cut); its items' frames as the list's, two blocks of space round them.
+// DOWN off its bottom one or LEFT/RIGHT close it. Grey all over, each corner
+// cut (its block and the two next to it); its items' frames as the list's, two
+// blocks of space round them; OFF and HELP dark grey.
 static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
                                                           "EMPTY PROJECT CLICK", "HELP"};
 static constexpr int SET_ITEMS = SETTING_COUNT + 1, SET_PITCH = 10;
@@ -402,13 +403,14 @@ FLASHMEM static void drawSettings(bool whole) {
   setBox(x0, y0, x1, y1);
   static uint32_t shownKey = 0;
   if (whole) {
-    t.fillRect((x0 + 1) * PX, (y0 + 1) * PX, (x1 - x0 - 1) * PX, (y1 - y0 - 1) * PX, BG);
-    t.fillRect((x0 + 1) * PX, y0 * PX, (x1 - x0 - 1) * PX, PX, DIM);   // (the border; its corners cut)
-    t.fillRect((x0 + 1) * PX, y1 * PX, (x1 - x0 - 1) * PX, PX, DIM);
-    t.fillRect(x0 * PX, (y0 + 1) * PX, PX, (y1 - y0 - 1) * PX, DIM);
-    t.fillRect(x1 * PX, (y0 + 1) * PX, PX, (y1 - y0 - 1) * PX, DIM);
+    t.fillRect(x0 * PX, y0 * PX, (x1 - x0 + 1) * PX, (y1 - y0 + 1) * PX, DIM);   // (grey; each corner cut: its block and the two next to it)
     for (int c : {x0, x1})
-      for (int r : {y0, y1}) t.fillRect(c * PX, r * PX, PX, PX, MENU_BG);
+      for (int r : {y0, y1}) {
+        int dc = c == x0 ? 1 : -1, dr = r == y0 ? 1 : -1;
+        t.fillRect(c * PX, r * PX, PX, PX, MENU_BG);
+        t.fillRect((c + dc) * PX, r * PX, PX, PX, MENU_BG);
+        t.fillRect(c * PX, (r + dr) * PX, PX, PX, MENU_BG);
+      }
     int ax = itemShape(CARDS + LIST - 1).x + 4;    // the arrow: down to SETTINGS, under its label's start
     for (int r = 0; r < 3; r++) t.fillRect((ax - 2 + r) * PX, (y1 + 1 + r) * PX, (5 - 2 * r) * PX, PX, DIM);
     shownKey = ~0u;
@@ -422,13 +424,14 @@ FLASHMEM static void drawSettings(bool whole) {
       bool sel = i == setSel;
       if (sel != (pass == 1)) continue;
       Shape s = {x, yb - i * SET_PITCH, w, FONT_H / PX, 0};
-      fillRing(s, 3, 2, sel ? frameColor() : BG, true);
-      fillRing(s, 2, 0, BG);
+      uint16_t frame = frameColor() == DIM ? DARK : frameColor();   // (on the grey: an action button held, dark grey)
+      fillRing(s, 3, 2, sel ? frame : DIM, true);
+      fillRing(s, 2, 0, DIM);
       bool help = i == SETTING_COUNT, on = !help && setting(i);
-      drawText(x * PX, s.y * PX, SET_LABELS[i], help ? DIM : sel ? INK : LIGHT, BG);
+      drawText(x * PX, s.y * PX, SET_LABELS[i], help ? DARK : sel ? INK : LIGHT, DIM);
       if (!help) {
         const char *v = on ? "ON" : "OFF";
-        drawText((x + w) * PX - textWidth(v), s.y * PX, v, on ? (sel ? INK : LIGHT) : DIM, BG);
+        drawText((x + w) * PX - textWidth(v), s.y * PX, v, on ? (sel ? INK : LIGHT) : DARK, DIM);
       }
     }
 }
