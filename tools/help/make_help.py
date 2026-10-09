@@ -24,7 +24,7 @@ PREV = sys.argv[1]
 def TRACK(t, x0=110): top = (7 - t) * 30; return (x0, top, x0 + 210, top + 30)   # track t's row (from x0: its right part)
 STATUS_LEFT, STATUS_RIGHT = (0, 212, 210, 240), (110, 212, 320, 240)            # the status row: the scene's end, the tempo's
 CARDS = (60, 26, 270, 64)                                                         # the menu's top card row
-BOTTOM = (0, 120, 320, 240)                                                       # the screen's bottom half (tracks 3-1, the status row)
+BOTTOM = (0, 90, 320, 240)                                                        # the screen's lower part (tracks 4-1, the status row)
 PAGES = [
     dict(title=("L7", "HOW TO"), steps=[], lines=("A LOOPER FOR THE M8", "7 STEREO TRACKS, 200 SCENES AND 12 PROJECTS", "< > TO MOVE")),
     dict(title=("THE", "SCREEN"), whole=("ui_played", BOTTOM),
@@ -146,20 +146,19 @@ def page(n, p):
         for j, (line, ink) in enumerate(lines):           # (the last, how to move, a line lower: apart)
             ops.append(("text", 8, 140 + (j + (j == len(lines) - 1)) * 14, 2, NAMED[ink], line))
         return ops, 10
-    ops.append(("text", 8, 8, 4, acc, t1))
-    if t2: ops.append(("text", 8, 32, 4, NAMED["INK"], t2))
-    ops.append(("rect", 254, 6, 60, 48, acc))
-    ops.append(("text", ev(284 - text_w(str(n), 6) // 2), 16, 6, NAMED["BG"], str(n)))
+    title = (t1 + " " + t2).strip()                  # (one line, in the page's colour; no page number)
+    if text_w(title, 4) > 304: sys.exit(f"title too wide: {title}")
+    ops.append(("text", 8, 8, 4, acc, title))
     # The steps: strips, each its part of a screenshot at the screen's size in a
     # black frame a block wide, its number in a circle left of it, its caption
     # right of it; centred together between the title and the rule. A page
     # without steps: its screenshot's part whole, the screen's width.
     if p.get("whole"):
         name, crop = p["whole"]
-        ops.append(("image", 0, 60, image((name, acc, crop), shot(name, acc).crop(crop))))
+        ops.append(("image", 0, 30, image((name, acc, crop), shot(name, acc).crop(crop))))   # (y 30-180: under the title, over the rule)
     steps = p.get("steps", [])
-    PITCH, TOP, ROOM = 42, 60, 118                     # (a strip every 42 px, in y 60-178)
-    y = ev(TOP + (ROOM - (len(steps) * PITCH - 12)) // 2) if not p.get("notes") else 62
+    PITCH, TOP, ROOM = 48, 38, 140                     # (a strip every 48 px, in y 38-178: under the one-line title)
+    y = ev(TOP + (ROOM - (len(steps) * PITCH - 18)) // 2) if not p.get("notes") else 44
     for i, (name, crop, lab) in enumerate(steps):
         w, h = crop[2] - crop[0], crop[3] - crop[1]
         ops.append(("rect", 30, y - 2, w + 4, h + 4, NAMED["BG"]))

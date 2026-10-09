@@ -224,12 +224,12 @@ A recording track's waveform area is in the accent colour (a block of black betw
   still does, closing it). The items under it aren't drawn meanwhile.
   The help pages (`menuHelp()`, ui_help.cpp, drawn from help_slides.h: tools/help/make_help.py):
   12 pages over the whole screen, from HELP, on the page last shown. Each page: the menu's ground,
-  a big title top left (its first line in the page's project colour, A-L by page, the second
-  white), the page's number in a tile of that colour top right, one to three screenshots
-  (numbered in circles of that colour; their accent turned to its hue) with captions, two lines
+  a big one-line title top left in the page's project colour (A-L by page), one to three
+  screenshots (full-size strips of the screen, numbered in blocky circles of that colour, their
+  accent turned to its hue) with captions, two lines
   of text under a rule of that colour (the first page: the logo, HOW TO and three lines); then
   the page row (from x 10, the first page's too: its content left-aligned as the others'): a
-  square each, the pages seen filled in their colour, the others a grey outline, the shown one on
+  square each, 16 px apart, the pages seen filled in their colour, the others a grey outline, the shown one on
   a solid light grey square two blocks wider all round (white for 100 ms after LEFT/RIGHT). LEFT / RIGHT turn the pages,
   wrapping round; a held arrow's repeats stop at the title page (a fresh press goes on); A or B go
   back to the menu, and UP or DOWN too, once let go or held 0.6 s, its edge line meanwhile (as a
