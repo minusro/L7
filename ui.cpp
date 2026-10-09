@@ -247,7 +247,7 @@ void drawEdgeLine() {
   // flicker). (A switch clears the clip first: input.cpp, edgeDue().)
   if (key == shownKey && shownGen == uiGeneration) return;
   t.setClipRect();
-  // 7 blocks along the edge, then a block, then another: each a colour along
+  // 8 blocks along the edge, then a block, then another: each a colour along
   // it, its ends (from the screen's corners in) as a pattern of their own
   // (T: left as it is): the line's ends stepping in, like a bevel.
   constexpr int TRANSPARENT = -1;
@@ -268,10 +268,10 @@ void drawEdgeLine() {
       part(len - 1 - k, 1, (uint16_t)c);
     }
   };
-  strip(0, 7, menuOpen() ? BG : DARK, "TTTT0L");   // (LJJJJL, the thick one: 7 blocks; leaving the menu, black)
-  strip(7, 1, LIGHT, "TTTT00");                    // (00LLLL00)
-  strip(8, 1, BG, "TTTTT");                        // (T000000T)
-  constexpr int D = 9 * PX;                        // (the clip: the screen less the line)
+  strip(0, 8, menuOpen() ? BG : DARK, "TTTT0L");   // (LJJJJL, the thick one: 8 blocks; leaving the menu, black)
+  strip(8, 1, LIGHT, "TTTT00");                    // (00LLLL00)
+  strip(9, 1, BG, "TTTTT");                        // (T000000T)
+  constexpr int D = 10 * PX;                       // (the clip: the screen less the line)
   if (key == m8::BTN_LEFT) t.setClipRect(D, 0, 320 - D, 240);
   else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - D, 240);
   else if (key == m8::BTN_UP) t.setClipRect(0, D, 320, 240 - D);
