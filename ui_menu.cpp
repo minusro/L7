@@ -40,7 +40,7 @@ uint32_t uiGeneration = 1;
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
 static constexpr int CARDS = PROJECTS, LIST = 3, LIST_ROOM = 3, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE", "SETTINGS"};   // (settings: off for now)
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE", "SETTINGS"};
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), kept (the menu closed and opened again,
 // storage mode too) until the project changes (projectEdits()) or another one
@@ -308,7 +308,7 @@ static void drawItem(int k) {
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
     fillRing(s, LIST_SPACE, 0, MENU_BG);
-    bool off = (k - CARDS == 0 && !projectHasClips()) || k - CARDS == 2;   // export: nothing to export (no clips, or the dummy project); settings: off for now
+    bool off = k - CARDS == 0 && !projectHasClips();   // export: nothing to export (no clips, or the dummy project)
     const char *label = k == CARDS && exportText[0] ? exportText : LABELS[k - CARDS];
     uint16_t ink = off ? DIM : sel ? INK : LIGHT;
     if (k == CARDS && exportText[0] && exportNameAt > 0 && exportFor >= 0) {   // "SAVED AS " grey, the name in the project's colour
@@ -330,8 +330,7 @@ uint16_t menuActionColor() {
   dropStaleExport();
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
-  if (menuSel - CARDS == 2) return DIM;            // settings: off for now (grey)
-  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode: system-level)
+  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode, settings: system-level)
   return projectHasClips() && !exportText[0] ? ACCENT : DIM;   // export: grey with nothing to export, or while its label shows
 }
 
@@ -353,13 +352,126 @@ static uint32_t itemKey(int k) {
          (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25;
 }
 
+// ---- The settings (app.h): a popup over the menu, rising from SETTINGS (an
+// arrow down to it), its items from the bottom up, each a label and, right of
+// it, ON or OFF (HELP: grey, not yet). A or B on SETTINGS opens it (once let
+// go); UP/DOWN go through it, A or B turns the item on or off (on the press),
+// DOWN off its bottom one or LEFT/RIGHT close it. Black, a grey border (its
+// corners cut); its items' frames as the list's, two blocks of space round them.
+static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
+                                                          "EMPTY PROJECT CLICK", "HELP"};
+static constexpr int SET_ITEMS = SETTING_COUNT + 1, SET_PITCH = 10;
+static bool setOpen = false, setDrawn = false;  // (setDrawn: its box on screen; else drawn whole next)
+static int setSel = 0;                           // (0: the bottom one)
+
+bool menuSettingsOpen() { return shown && setOpen; }
+int menuSettingsItem() { return menuSettingsOpen() ? setSel : -1; }
+
+// Its content's place (blocks): x, the bottom item's label row, the width;
+// its box (the border's outer edge).
+static void setLayout(int &x, int &yb, int &w) {
+  int lw = 0;
+  for (const char *l : SET_LABELS) lw = max(lw, textWidth(l) / PX);
+  w = lw + 4 + textWidth("OFF") / PX;
+  x = (320 / PX - w) / 2;
+  yb = itemShape(CARDS + LIST - 1).y - 17;       // (its border 8 rows above SETTINGS' label: the arrow between)
+}
+static void setBox(int &x0, int &y0, int &x1, int &y1) {
+  int x, yb, w;
+  setLayout(x, yb, w);
+  x0 = x - 5;
+  x1 = x + w + 4;
+  y0 = yb - (SET_ITEMS - 1) * SET_PITCH - 5;
+  y1 = yb + 9;
+}
+// An item's place overlapping the popup (its frame's too): not drawn while it's open.
+static bool underSettings(int k) {
+  if (!setOpen) return false;
+  int x0, y0, x1, y1;
+  setBox(x0, y0, x1, y1);
+  y1 += 3;                                         // (the arrow)
+  Shape s = itemShape(k);
+  int d = k < CARDS ? 2 : LIST_SPACE + 1;
+  return s.x - d <= x1 && s.x + s.w - 1 + d >= x0 && s.y - d <= y1 && s.y + s.h - 1 + d >= y0;
+}
+
+FLASHMEM static void drawSettings(bool whole) {
+  auto &t = board.tft();
+  int x, yb, w, x0, y0, x1, y1;
+  setLayout(x, yb, w);
+  setBox(x0, y0, x1, y1);
+  static uint32_t shownKey = 0;
+  if (whole) {
+    t.fillRect((x0 + 1) * PX, (y0 + 1) * PX, (x1 - x0 - 1) * PX, (y1 - y0 - 1) * PX, BG);
+    t.fillRect((x0 + 1) * PX, y0 * PX, (x1 - x0 - 1) * PX, PX, DIM);   // (the border; its corners cut)
+    t.fillRect((x0 + 1) * PX, y1 * PX, (x1 - x0 - 1) * PX, PX, DIM);
+    t.fillRect(x0 * PX, (y0 + 1) * PX, PX, (y1 - y0 - 1) * PX, DIM);
+    t.fillRect(x1 * PX, (y0 + 1) * PX, PX, (y1 - y0 - 1) * PX, DIM);
+    for (int c : {x0, x1})
+      for (int r : {y0, y1}) t.fillRect(c * PX, r * PX, PX, PX, MENU_BG);
+    int ax = itemShape(CARDS + LIST - 1).x + 4;    // the arrow: down to SETTINGS, under its label's start
+    for (int r = 0; r < 3; r++) t.fillRect((ax - 2 + r) * PX, (y1 + 1 + r) * PX, (5 - 2 * r) * PX, PX, DIM);
+    shownKey = ~0u;
+  }
+  uint32_t key = setSel | (uint32_t)frameColor() << 8;
+  for (int i = 0; i < SETTING_COUNT; i++) key |= (uint32_t)setting(i) << (3 + i);
+  if (key == shownKey) return;
+  shownKey = key;
+  for (int pass = 0; pass < 2; pass++)             // (the selected one last: its frame on top of the rows it shares)
+    for (int i = 0; i < SET_ITEMS; i++) {
+      bool sel = i == setSel;
+      if (sel != (pass == 1)) continue;
+      Shape s = {x, yb - i * SET_PITCH, w, FONT_H / PX, 0};
+      fillRing(s, 3, 2, sel ? frameColor() : BG, true);
+      fillRing(s, 2, 0, BG);
+      bool help = i == SETTING_COUNT, on = !help && setting(i);
+      drawText(x * PX, s.y * PX, SET_LABELS[i], help ? DIM : sel ? INK : LIGHT, BG);
+      if (!help) {
+        const char *v = on ? "ON" : "OFF";
+        drawText((x + w) * PX - textWidth(v), s.y * PX, v, on ? (sel ? INK : LIGHT) : DIM, BG);
+      }
+    }
+}
+
+FLASHMEM void menuSettings(bool open) {
+  if (!shown || setOpen == open) return;
+  setOpen = open;
+  setSel = 0;
+  setDrawn = false;
+  uiGeneration++;                                  // (the menu whole: the items under it gone, or back)
+  drawMenu();
+}
+
+FLASHMEM bool menuSettingsKeys(uint8_t pressed) {
+  if ((pressed & m8::BTN_LEFT) || (pressed & m8::BTN_RIGHT) || ((pressed & m8::BTN_DOWN) && setSel == 0)) {
+    menuSettings(false);
+    return true;
+  }
+  int was = setSel;
+  if ((pressed & m8::BTN_UP) && setSel < SET_ITEMS - 1) setSel++;
+  if ((pressed & m8::BTN_DOWN) && setSel > 0) setSel--;
+  movedHere = setSel != was;
+  drawSettings(false);
+  return movedHere;
+}
+
+FLASHMEM void menuSettingsAct() {
+  if (setSel < SETTING_COUNT) setSetting(setSel, !setting(setSel));
+  drawSettings(false);
+}
+
 // The battery, top right (two blocks in): a tiny grey one, its outline, a block
-// of space, its fill in sixths; its tip a block right, 3 blocks tall.
+// of space, its fill in sixths (90 % and up: full); its tip a block right, 3
+// blocks tall. Charging: a lightning bolt in it instead of the fill.
 FLASHMEM static void drawBattery(bool all) {
   static int shownFill = -2;                       // (-1: not known, none)
-  int pct = board.batteryPercent(), fill = pct < 0 ? -1 : (pct * 6 + 50) / 100;
-  if (!all && fill == shownFill) return;
+  static bool shownCharging = false;
+  int pct = board.batteryPercent(), fill = pct < 0 ? -1 : pct >= 90 ? 6 : (pct * 6 + 50) / 100;
+  bool charging = fill >= 0 && board.batteryCharging();
+  if (!all && fill == shownFill && charging == shownCharging) return;
   shownFill = fill;
+  shownCharging = charging;
+  static const char *const BOLT[5] = {"....##", "...##.", "..####", ".##...", "##...."};   // (rows 1-5, columns 2-7)
   auto &t = board.tft();
   constexpr int W = 10, H = 7, X = 320 / PX - 2 - (W + 1), Y = 2;   // (its body, then its tip)
   for (int r = 0; r < H; r++)
@@ -367,6 +479,7 @@ FLASHMEM static void drawBattery(bool all) {
       bool edge = r == 0 || r == H - 1 || c == 0 || c == W - 1, tip = c == W && r >= 2 && r <= H - 3;
       bool inside = r >= 2 && r <= H - 3 && c >= 2 && c - 2 < fill;
       bool on = fill >= 0 && (c < W ? edge || inside : tip);
+      if (charging && !edge && c < W) on = r >= 1 && r <= 5 && c >= 2 && c <= 7 && BOLT[r - 1][c - 2] == '#';
       t.fillRect((X + c) * PX, (Y + r) * PX, PX, PX, on ? DIM : MENU_BG);
     }
 }
@@ -386,7 +499,7 @@ FLASHMEM void drawMenu() {
     for (int r = 0; r < 240 / PX; r++) {
       int spans[ITEMS][2], n = 0;
       for (int k = 0; k < ITEMS; k++) {
-        if (!listInView(k)) continue;
+        if (!listInView(k) || underSettings(k)) continue;   // (under the settings: the ground, the popup over it)
         int c0, c1;
         if (rowSpan(itemShape(k), k < CARDS ? 2 : LIST_SPACE + 1, r, c0, c1, true)) {
           int i = n++;
@@ -430,10 +543,18 @@ FLASHMEM void drawMenu() {
     for (int k = 0; k < ITEMS; k++) {
       uint32_t key = itemKey(k);
       if ((key & 1) != pass || (!all && key == shownKey[k] && !(pass && redrawn))) continue;
+      if (underSettings(k)) {                      // (under the settings: once they close)
+        shownKey[k] = ~0u;
+        continue;
+      }
       shownKey[k] = key;
       drawItem(k);
       redrawn = true;
     }
+  if (setOpen) {
+    drawSettings(all || !setDrawn);
+    setDrawn = true;
+  }
 }
 
 // Back from the status row (it can't be reached any more: kept for input.cpp).
@@ -532,7 +653,7 @@ int menuFirstEmptySlot() {
 bool menuLeavesOn(uint8_t key) {
   // (No project loaded: leaving makes a new one in the first empty slot; with none, nowhere to go.)
   if (!shown || onStatus || (projectCurrent() < 0 && menuFirstEmptySlot() < 0)) return false;
-  if (menuLoadPending()) return false;           // (a project on its way: not until it has come in)
+  if (menuLoadPending() || setOpen) return false;   // (the settings open: DOWN, LEFT and RIGHT close them)           // (a project on its way: not until it has come in)
   // RIGHT off the screen's right edge (the looper's that way): off a card
   // row's right end, or a list item's side; LEFT off its left edge; UP off its
   // top: the top card row (A-D); DOWN off its bottom: the list's last item.
@@ -547,6 +668,11 @@ void menuSelectSlot(int k) {
   menuSel = k;
   cardCol = k % COLS;
 }
+
+// Left by A or B on a card (to the looper): back in, on the loaded project's
+// card, wherever it's opened from; off an edge, as ever.
+static bool backToCard = false;
+void menuNoteLeave(bool byAction) { backToCard = byAction; }
 
 FLASHMEM void openMenu(uint8_t key) {
   if (shown) return;
@@ -563,7 +689,15 @@ FLASHMEM void openMenu(uint8_t key) {
     selected = STATUS_ROW;
     selectedCell = statusCell;
   }
-  if (key) landInMenu(key);                      // (before it's drawn: once, where it lands)
+  setOpen = false;
+  if (backToCard && projectCurrent() >= 0) {      // left with A or B on a card: back on the loaded project's card
+    menuSel = projectCurrent();
+    cardCol = menuSel % COLS;
+    movedHere = false;
+  } else if (key) {
+    landInMenu(key);                             // (before it's drawn: once, where it lands)
+  }
+  backToCard = false;
   uiGeneration++;                                // the menu in full; the status row redraws too
   drawMenu();
   drawTrack(STATUS_ROW);
@@ -576,6 +710,7 @@ void closeMenu(bool draw) {
   selected = mainRow;
   selectedCell = mainCell;
   shown = false;
+  setOpen = false;
   notesLayout = notesScreen;                     // (back to the screen it came from: notes, or main)
   // (Not the whole screen wiped first, which flickered: the looper's rows,
   // drawn whole below, cover all of it but the strip under the last track's

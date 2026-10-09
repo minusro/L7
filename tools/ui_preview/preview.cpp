@@ -441,6 +441,16 @@ int main(int argc, char **argv) {
     render(out + "/ui_menu_leaving_" + name + ".png");
   }
   simSwitchKey = 0;
+  for (int i = 0; i < 6; i++) menuKeys(m8::BTN_DOWN);   // the settings: open, the second item selected, one off
+  menuSettings(true);
+  menuSettingsKeys(m8::BTN_UP);
+  setSetting(SET_NEXT_FREE, false);
+  board.charging = true;                           // (the battery charging, full)
+  board.battery = 96;
+  render(out + "/ui_menu_settings.png");
+  setSetting(SET_NEXT_FREE, true);
+  board.charging = false;
+  menuSettings(false);
   closeMenu();
   return 0;
 }

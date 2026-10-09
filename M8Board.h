@@ -93,6 +93,9 @@ public:
   // charger measures it (BQ2589x, its ADC on since initChargerB()).
   static constexpr uint32_t BATTERY_POLL_MS = 5000;
   int batteryPercent();
+  // Charging (the charger's REG0B CHRG_STAT: pre-charge or fast charge, so
+  // power is coming in), as of the last batteryPercent() read.
+  bool batteryCharging() const { return _batCharging; }
 
   // Starts the MIDI out port at 31250 baud and returns it. On variant B this
   // also gives pin 15 back to the key expander's INT (Serial3 claims it as RX).
@@ -134,6 +137,7 @@ private:
   bool _hpLast = false;
   uint32_t _hpPolledMs = 0;
   int8_t _batPct = -1;
+  bool _batCharging = false;
   bool _batPolled = false;
   uint32_t _batPolledMs = 0;
 };

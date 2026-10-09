@@ -211,10 +211,13 @@ FLASHMEM int Board::batteryPercent() {
     int soc = (g[0] | g[1] << 8) / 512;
     if (soc >= 0 && soc <= 100) pct = soc;
   }
+  int st = bqRead(0x0B);                 // the charger's REG0B: CHRG_STAT, bits 4-3 (1 pre-charge, 2 fast charging, 3 done)
+  int chg = st < 0 ? 0 : (st >> 3) & 3;
+  _batCharging = chg == 1 || chg == 2;
   int v = bqRead(0x0E);                  // the charger's REG0E: BATV, 2.304 V + 20 mV a step
   if (v >= 0) mv = 2304 + (v & 0x7F) * 20;
   if (pct < 0 && mv > 0) pct = percentForMv(mv);
-  if (pct != _batPct) Serial.printf("battery %d%% (%d mV, gauge %s)\n", pct, mv, pct >= 0 && pct != percentForMv(mv) ? "on" : "off or agrees");
+  if (pct != _batPct) Serial.printf("battery %d%% (%d mV, gauge %s, charge status %d)\n", pct, mv, pct >= 0 && pct != percentForMv(mv) ? "on" : "off or agrees", chg);
   _batPct = pct;
   return _batPct;
 }

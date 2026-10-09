@@ -249,8 +249,18 @@ void closeMenu(bool draw = true);
 int menuFirstEmptySlot();                // the first slot with no project (-1: none)
 float menuCutProgress(int &slot);        // (input.cpp) SHIFT+A held on a project's card: it (slot; -1: none) and how far to its cut (0-1)
 uint32_t menuCardPressMs();              // (input.cpp) millis() of the latest A or B press on a card (0: none)
-bool menuJustCut();
-void menuCutFlash(int k);                // (ui_menu.cpp) the hold to cut through: card k flashed white 100 ms as an empty slot's                      // (input.cpp) a project just cut by holding, its keys still held
+bool menuJustCut();                      // (input.cpp) a project just cut by holding, its keys still held
+// The menu's settings popup (ui_menu.cpp, app.h's settings): open or closed;
+// its selected item (0: the bottom one; SETTING_COUNT: help; -1: closed); the
+// arrows in it (true: it moved); A or B in it; how the menu was last left (by
+// A or B on a card: back on the loaded project's card).
+bool menuSettingsOpen();
+int menuSettingsItem();
+void menuSettings(bool open);
+bool menuSettingsKeys(uint8_t pressed);
+void menuSettingsAct();
+void menuNoteLeave(bool byAction);
+void menuCutFlash(int k);                // (ui_menu.cpp) the hold to cut through: card k flashed white 100 ms as an empty slot's
 void menuSelectSlot(int k);              // the menu's selection on card k
 void menuNoteLoad(int from);             // a project just loaded from the menu, `from` the one before: its card flashing until it comes in
 bool menuLoadPending();                  // a project loaded from the menu hasn't come in yet (playing: its switch point): the menu can't be left meanwhile

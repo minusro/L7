@@ -52,7 +52,8 @@ static int actionIcon() {
   bool shift = mainKeys() & m8::BTN_SHIFT;
   if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
     int slot = menuSlot();
-    if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : menuListItem() == 1 ? ICON_USB : ICON_NONE;   // (settings: off for now)
+    if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : menuListItem() == 1 ? ICON_USB
+                       : menuSettingsItem() == SETTING_COUNT ? ICON_NONE : ICON_CHECK;   // (settings: open them, an item on / off; help: not yet)
     if (shift) return projectFilled(slot) ? ICON_CUT : ICON_PASTE;
     if (slot == projectCurrent()) return ICON_HOME;   // (the loaded one: back to the looper)
     return projectFilled(slot) ? ICON_LOAD : ICON_NEW;
@@ -190,7 +191,7 @@ PROGMEM static const Icon ICONS[] = {
   {5, 5, {"..#..", "#.#.#", ".###.", "#.#.#", "..#.."}},   // NEW (a small asterisk)
   {8, 9, {"...##...", "...##...", "...##...", ".######.", "..####..", "...##...", "#......#", "#......#", "########"}},   // SAVE (an arrow down into a tray; a block right: centred on the backdrop)
   {8, 9, {"...##...", "..####..", ".######.", "...##...", "...##...", "...##...", "#......#", "#......#", "########"}},   // USB (an arrow up out of a tray: SAVE reversed; a block right as it)
-  {5, 7, {".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."}},   // CHECK (a question mark: cut the project with a second A?)
+  {7, 5, {"......#", ".....#.", "#...#..", ".#.#...", "..#...."}},   // CHECK (a tick: the settings, on or off)
   {9, 7, {"..#.#....", "..#.##...", "..#.###..", "..#.####.", "..#.###..", "..#.##...", "..#.#...."}},   // RESTART (|>: start from 1.1.1; a block right of centre)
   {9, 9, {"#.#.#.#.#", ".........", "#...#...#", "....#....", "#.#####.#",
           "....#....", "#...#...#", ".........", "#.#.#.#.#"}},   // SCENE_DUP (a + in a checkered square, as SCENE_CUT / PASTE)

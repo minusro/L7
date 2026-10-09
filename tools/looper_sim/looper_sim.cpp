@@ -314,7 +314,7 @@ static uint32_t quarterFrames(uint32_t q, uint32_t spb) { return (q / 4) * spb +
 // Checks the output at the next few beats against the track's recording.
 static void checkSync(int t, const char *label) {
   feedRamp = false;
-  engine.monitor = false;
+  inputMonitored = false;
   for (auto &tr : tracks) tr.gain = 0;
   tracks[t].gain = 1;
   for (int i = 0; i < 6; i++) block();             // the other tracks' levels glide down (~1 ms time constant)
@@ -346,7 +346,7 @@ static void checkSync(int t, const char *label) {
            checked - bad, checked, tr.underruns);
   check(bad == 0 && checked > 8 && tr.underruns == 0, msg);
   for (auto &x : tracks) x.gain = 1;
-  engine.monitor = true;
+  inputMonitored = true;
 }
 
 // Random session: every few beats press something, like a user would. Looks
@@ -499,7 +499,7 @@ int main(int argc, char **argv) {
   printf("loop range of track 1 changed to bars 2-3 (beats 4-11) while playing\n");
   {
     feedRamp = false;
-    engine.monitor = false;
+    inputMonitored = false;
     for (auto &x : tracks) x.gain = 0;
     Track &tr = tracks[0];
     tr.gain = 1;
@@ -543,7 +543,7 @@ int main(int argc, char **argv) {
     check(!tr.rangePending && tr.rangeStartBeat == 4 && tr.rangeBeats == 8, "range applied and kept");
     check(!setRange(0, 0, 0) && !setRange(0, 0, tr.loopBars * 4 + 1), "lengths of 0 or longer than the loop are refused");
     for (auto &x : tracks) x.gain = 1;
-    engine.monitor = true;
+    inputMonitored = true;
   }
 
   printf("quarter-bar range: beat 6 of track 1 repeated\n");
@@ -595,7 +595,7 @@ int main(int argc, char **argv) {
     setRange(0, 4, 8);
     runBeats(6);
     for (auto &x : tracks) x.gain = 1;
-    engine.monitor = true;
+    inputMonitored = true;
   }
 
   printf("clipboard: track 3 cut, pasted onto tracks 6 and 7 while playing\n");
@@ -616,7 +616,7 @@ int main(int argc, char **argv) {
     clearTrack(5);
     clearTrack(6);
     for (auto &x : tracks) x.gain = 1;
-    engine.monitor = true;
+    inputMonitored = true;
   }
 
   printf("moving an empty track (B + UP/DOWN): track 3 (empty) and track 2 swap while playing\n");
@@ -640,7 +640,7 @@ int main(int argc, char **argv) {
     setTrackFilter(2, 0, FILTER_MAX);
     trackChanged(2);
     for (auto &x : tracks) x.gain = 1;
-    engine.monitor = true;
+    inputMonitored = true;
   }
 
   printf("choosing samples on track 7 (empty) while playing: in the order of their names\n");
@@ -687,7 +687,7 @@ int main(int argc, char **argv) {
     snprintf(m, sizeof m, "%zu recordings on the card", count);
     check(count == 4, m);
     for (auto &x : tracks) x.gain = 1;
-    engine.monitor = true;
+    inputMonitored = true;
   }
 
   printf("empty recordings: stepped over by SHIFT+LEFT/RIGHT, deleted when stopped if unused\n");
@@ -819,7 +819,7 @@ int main(int argc, char **argv) {
     checkSync(0, "track 1 after snapping");
     checkSync(1, "track 2 after snapping");
     for (auto &x : tracks) x.gain = 1;
-    engine.monitor = true;
+    inputMonitored = true;
   }
 
   printf("scenes while playing\n");
@@ -878,7 +878,7 @@ int main(int argc, char **argv) {
     tracks[0].gain = 1;
     checkSync(0, "track 1 after the scene changes");
     for (auto &x : tracks) x.gain = 1;
-    engine.monitor = true;
+    inputMonitored = true;
   }
 
   printf("SD card stops responding while recording track 4 (others playing)\n");
@@ -1434,7 +1434,7 @@ int main(int argc, char **argv) {
             volumeStepOf(VOLUME_OFF, 0) == 0 && volumeGainOf(VOLUME_OFF, 0) == 0, "a quiet clip: taken as peaking at 0 dBFS, its unity the top step; off is off");
     }
     recordSine(5, 331, 3.6);
-    engine.monitor = false;
+    inputMonitored = false;
     for (auto &x : tracks) x.gain = 0;
     tracks[6].gain = 1;
     for (int i = 0; i < 10; i++) block();
@@ -1487,7 +1487,7 @@ int main(int argc, char **argv) {
     steps(331, "stopping the transport");
     transportStart();
     for (auto &x : tracks) x.gain = 1;
-    engine.monitor = true;
+    inputMonitored = true;
     feedRamp = true;
   }
 
@@ -2086,7 +2086,7 @@ for f in os.listdir("."):
     simSetTempo(120);
     runBeats(1);
     feedRamp = true;
-    engine.monitor = true;
+    inputMonitored = true;
     recordPress(4);
     for (int i = 0; i < 4000 && recording.mode != Recording::Running; i++) block();
     int32_t startBeat = recording.startBeat;
@@ -2601,8 +2601,8 @@ for f in os.listdir("."):
 
   printf("USB audio out: the mix as the line out has it, without the metronome\n");
   {
-    bool wasMonitor = engine.monitor;
-    engine.monitor = true;
+    bool wasMonitor = inputMonitored;
+    inputMonitored = true;
     feedSineHz = 440;
     if (!transport.running) transportStart();
     int vol = masterVolume();
@@ -2652,7 +2652,7 @@ for f in os.listdir("."):
     }
     setMasterVolume(vol);
     feedSineHz = 0;
-    engine.monitor = wasMonitor;
+    inputMonitored = wasMonitor;
     for (int i = 0; i < 4; i++) block();
   }
 
@@ -2660,8 +2660,8 @@ for f in os.listdir("."):
   {
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) clearTrack(t);
     if (!transport.running) transportStart();
-    bool wasMonitor = engine.monitor;
-    engine.monitor = false;                          // (the mix: the tracks alone)
+    bool wasMonitor = inputMonitored;
+    inputMonitored = false;                          // (the mix: the tracks alone)
     feedRamp = false; feedSineHz = 300;
     for (int t : {1, 4}) {                           // two loops of the sine
       recordPress(t);
@@ -2722,7 +2722,7 @@ for f in os.listdir("."):
     setTrackMuted(4, false);
     setTrackMix(1, VOLUME_UNITY, 0);
     setTrackMix(4, VOLUME_UNITY, 0);
-    engine.monitor = wasMonitor;
+    inputMonitored = wasMonitor;
     for (int t : {1, 4}) clearTrack(t);
     for (int i = 0; i < 4; i++) block();
   }
@@ -2968,7 +2968,7 @@ for f in os.listdir("."):
     if (transport.running) transportStop();
     simSetTempo(120);
     runBeats(0.1);
-    bool wasMonitor = engine.monitor;
+    bool wasMonitor = inputMonitored;
     feedRamp = false; feedSineHz = 440;
     transportStart();
     recordPress(2);                                  // a bar of a 440 Hz sine at 120 BPM
@@ -2977,7 +2977,7 @@ for f in os.listdir("."):
     recordPress(2);
     for (int i = 0; i < 200000 && recording.mode != Recording::Idle; i++) block();
     feedSineHz = 0;
-    engine.monitor = false;                          // (the track alone)
+    inputMonitored = false;                          // (the track alone)
     // Its frequency, its level's spread and its biggest step over 40 blocks of the output.
     auto measure = [&](double &hz, double &spread, double &step) {
       std::vector<float> v;
@@ -3061,7 +3061,7 @@ for f in os.listdir("."):
              sMean, rMean, sWorst);
     check(fabs(sMean - rMean) < 8 && sWorst < 8, m13);
     tracks[4].stretch = false;
-    engine.monitor = wasMonitor;
+    inputMonitored = wasMonitor;
     clearTrack(4);
     simSetTempo(120);
     runBeats(1);
@@ -3073,7 +3073,7 @@ for f in os.listdir("."):
     if (!transport.running) transportStart();
     simSetTempo(120);
     runBeats(1);
-    bool wasMonitor = engine.monitor;
+    bool wasMonitor = inputMonitored;
     feedRamp = false; feedSineHz = 0;
     drumClicks = true;
     drumBpm = 120;
@@ -3085,7 +3085,7 @@ for f in os.listdir("."):
     for (int i = 0; i < 200000 && recording.mode != Recording::Idle; i++) block();
     drumBpm = 0;
     drumClicks = false;
-    engine.monitor = false;
+    inputMonitored = false;
     // Six of our beats' clicks (each beat's start from beatLog): their onsets (ms from the beat) and how
     // closely each matches `ref`, the click as recorded (the best normalised correlation within 2 ms:
     // a click played twice, a flam or a smear match less).
@@ -3160,7 +3160,7 @@ for f in os.listdir("."):
     }
     tracks[5].stretch = true;
     tracks[5].stretch = false;
-    engine.monitor = wasMonitor;
+    inputMonitored = wasMonitor;
     clearTrack(5);
     simSetTempo(120);
     runBeats(1);
@@ -3236,6 +3236,28 @@ for f in os.listdir("."):
              v4.first, v4.second, v4quiet.first, v3.first, v3.second, v3max.first, v3max.second);
     check(v4 == std::make_pair(VOLUME_UNITY, -6) && v4quiet.first == 1 && v4quiet.second == 10 &&
           v3 == std::make_pair(VOLUME_UNITY, 4) && v3max == std::make_pair(VOLUME_MAX, -BALANCE_MAX), m16);
+  }
+
+  printf("\"play newly recorded\" off: a new clip comes in muted\n");
+  {
+    int t = -1;
+    for (int i = 0; i < NUM_TRACKS && t < 0; i++)
+      if (tracks[i].state == TrackState::Empty) t = i;
+    if (!transport.running) transportStart();
+    check(t >= 0, "an empty track to record on");
+    if (t >= 0) {
+      newClipsPlay = false;
+      feedRamp = true;
+      recordPress(t);
+      for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+      runBeats(3);
+      recordPress(t);
+      runUntilIdle();
+      runBeats(2);
+      check(tracks[t].state == TrackState::Muted && unitOf(t).muted && tracks[t].loopBars == 1, "recorded, a bar long, muted");
+      newClipsPlay = true;
+      feedRamp = false;
+    }
   }
 
   printf("random sessions\n");

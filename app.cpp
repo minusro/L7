@@ -75,17 +75,25 @@ void setMetronomeMode(int mode) {
   metroMode = mode;
   changedMs = millis();
 }
-int nextMetronomeMode() {
-  bool silent = !projectHasClips();
-  switch (metroMode) {
-    case METRO_ON: return METRO_OFF;
-    case METRO_AUTO: return silent ? METRO_OFF : METRO_ON;
-    default: return silent ? METRO_AUTO : METRO_ON;
-  }
-}
+int nextMetronomeMode() { return metroMode == METRO_ON ? METRO_OFF : METRO_ON; }
 bool metronomeWanted() {
   if (projectCurrent() < 0) return false;          // (the dummy project: never)
-  return metroMode == METRO_ON || (metroMode == METRO_AUTO && !projectHasClips());
+  return metroMode == METRO_ON || (setting(SET_EMPTY_CLICK) && !projectHasClips());
+}
+
+// ---- Settings (app.h)
+static bool settings[SETTING_COUNT] = {true, true, true, true}, savedSettings[SETTING_COUNT] = {true, true, true, true};
+bool setting(int which) { return which >= 0 && which < SETTING_COUNT && settings[which]; }
+// Where they act: the engine's monitoring, the storage's new clips.
+static void applySettings() {
+  inputMonitored = settings[SET_MONITOR];
+  newClipsPlay = settings[SET_PLAY_NEW];
+}
+void setSetting(int which, bool on) {
+  if (which < 0 || which >= SETTING_COUNT) return;
+  settings[which] = on;
+  applySettings();
+  changedMs = millis();
 }
 
 // ---- Session (tempo, master volume, the loaded project, the selection: the
@@ -107,7 +115,9 @@ void beginSession() {
   savedProject = bootProject = s.project;
   savedPlaying = bootPlaying = s.playing;
   savedMenu = bootMenu = s.menu;
-  if (s.metro >= METRO_OFF && s.metro <= METRO_ON) metroMode = savedMetro = s.metro;
+  if (s.metro >= METRO_OFF && s.metro <= METRO_ON) metroMode = savedMetro = s.metro == METRO_ON ? METRO_ON : METRO_OFF;   // (auto: off, the setting below)
+  for (int i = 0; i < SETTING_COUNT; i++) settings[i] = savedSettings[i] = s.settings[i];
+  applySettings();
   audioFollowBegin(s.follow);
   savedFollow = s.follow;
   for (int i = 0; i < SYNC_SOURCES; i++) syncOffsetMs[i] = savedOffsets[i] = (int16_t)s.offsets[i];
@@ -122,7 +132,7 @@ static bool sessionDirty() {
   mainSelection(row, cell);                        // (the looper's, not the menu's)
   return tempoDirty || masterVolume() != savedMaster || masterBalance() != savedBalance || projectCurrent() != savedProject ||
          menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell ||
-         metroMode != savedMetro || audioFollowOn() != savedFollow ||
+         metroMode != savedMetro || audioFollowOn() != savedFollow || memcmp(settings, savedSettings, sizeof settings) ||
          memcmp(syncOffsetMs, savedOffsets, sizeof savedOffsets);
 }
 
@@ -138,6 +148,7 @@ static void writeSession() {
   mainSelection(s.row, s.cell);
   s.metro = metroMode;
   s.follow = audioFollowOn();
+  for (int i = 0; i < SETTING_COUNT; i++) s.settings[i] = savedSettings[i] = settings[i];
   for (int i = 0; i < SYNC_SOURCES; i++) s.offsets[i] = savedOffsets[i] = syncOffsetMs[i];
   saveSession(s);
   savedMetro = s.metro;

@@ -80,9 +80,11 @@ public:
     return true;
   }
   int batteryPercent() { return battery; }
+  bool batteryCharging() const { return charging; }
   Display display;
   uint8_t heldKeys = 0, lastKeys = 0;
   int battery = 70;
+  bool charging = false;
 };
 
 }  // namespace m8

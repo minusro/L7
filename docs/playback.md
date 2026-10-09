@@ -142,9 +142,10 @@ sound is made differently (engine.cpp `stretchSample()`):
 
 ## Metronome
 
-A setting (the session's `metro=`; B+A on the tempo cell): 0 (off), A
-(auto: only in a project with no clips, none on its tracks or in any of its scenes, `projectHasClips()`; the default) or 1
-(on). While the clock runs and it says so (never in the dummy project, nor while the menu is open: the clock not shown), the engine clicks on every beat: a
+A setting (the session's `metro=`; B+A on the tempo cell): off or on (an
+older session's auto, 1: off). Off, a project with no clips (none on its
+tracks or in any of its scenes, `projectHasClips()`) still clicks while the
+EMPTY PROJECT CLICK setting is on (the default; the menu's settings). While the clock runs and it says so (never in the dummy project, nor while the menu is open: the clock not shown), the engine clicks on every beat: a
 small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
 and louder on the bar's first beat). It's added after the master volume and
 left out of what a resampling records. Stopped, it clicks on each of tap tempo's first four taps too (the first as a bar's first beat), the 5th starting the clock on its own click (`metronomeClick()`). A recording started with it clicking keeps it
@@ -287,7 +288,7 @@ divided back). Nothing found yet: the tempo shown is halved or doubled
 instead (the clock too), and the estimate, leaning towards it, finds that
 octave. An external MIDI clock being followed
 comes first (audio follow listens on, but doesn't touch the clock meanwhile).
-* What's listened to: the input as monitored and recorded (the line input and
+* What's listened to: the input as recorded (monitored or not) (the line input and
   USB audio mixed, before resampling's swap). The interrupt (only while on),
   each block: the mono input through three bands (two one-poles under
   ~150 Hz; above ~2.5 kHz; all), each band's energy smoothed over ~10 ms, its
@@ -390,7 +391,7 @@ macOS and Windows 10 (1703) and later have the class driver built in.
   (View > Show hidden devices, the "L7" entries: Uninstall device) before the
   16 channels show up.
 * Out, channels 1-2: the mix as the line out has it (the tracks and the
-  monitored input, the master volume in it) without the metronome; channels
+  monitored input, while MONITOR AUDIO IN is on: `inputMonitored`; the master volume in it) without the metronome; channels
   3-16: each track as heard in the mix before the master volume (its volume,
   balance, filters and mute, the mix's headroom `masterGain`; at the master
   volume's 100 % the tracks add up to channels 1-2, without the monitored

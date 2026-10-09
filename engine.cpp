@@ -123,6 +123,7 @@ static int masterStep = MASTER_VOLUME_UNITY, masterBal = 0;
 static volatile float outputGain = 1.0f;          // the master volume's
 static volatile float outLL = 1, outLR = 0, outRL = 0, outRR = 1;   // and with its balance (as a track's: setTrackMix())
 volatile bool metronomeOn = false;
+volatile bool inputMonitored = true;
 volatile bool metronomeSteady = false;
 volatile float lineInPeak = 0, lineInFloor = 1;
 volatile bool usbAudioIn = false;
@@ -814,7 +815,7 @@ void LooperEngine::update() {
       onE[2] += (m * m - onE[2]) * ON_K_E;
     }
 
-    const float monL = monitor ? l : 0, monR = monitor ? r : 0;   // the input being monitored
+    const float monL = inputMonitored ? l : 0, monR = inputMonitored ? r : 0;   // the input being monitored (app.h's setting)
     float mixL = 0, mixR = 0;                        // the tracks
     int16_t *usbFrame = usbOut ? usbOut + i * USB_OUT_CHANNELS : nullptr;
     if (usbFrame) memset(usbFrame + 2, 0, 2 * NUM_TRACKS * sizeof *usbFrame);   // (each track's: silent unless playing)

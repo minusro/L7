@@ -188,6 +188,7 @@ void beginTempoMarks(uint32_t sample, int32_t beat);
 extern Track tracks[NUM_TRACKS];
 extern Transport transport;
 extern Recording recording;
+extern volatile bool inputMonitored;      // the input heard in the mix (app.h's setting; recorded either way)
 extern uint32_t inputRing[INPUT_FRAMES];  // stereo input, index = sample % INPUT_FRAMES
 // Tracks (bit per track) silenced from transport sample silenceFrom on: the
 // others while a resampling's loop takes over from them. A track's bit
@@ -321,7 +322,6 @@ public:
   // metronome in; to USB: usbAudioWrite).
   LooperEngine() : AudioStream(2, inputQueue_) {}
   float masterGain = 0.7f;                         // the tracks' mix, before the master volume (headroom)
-  bool monitor = true;
   void update() override;
 
 private:

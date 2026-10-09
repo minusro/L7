@@ -234,6 +234,7 @@ static bool loadFromMenu(int p, bool keepSelection = false) {   // (keepSelectio
 // looper's left edge (its row's first cell), LEFT, its right edge (its last),
 // in the row it was left on.
 static bool leaveMenu(uint8_t key = 0) {
+  menuNoteLeave(false);                              // (back in: where the arrow lands)
   bool back = projectCurrent() >= 0;
   if (!back) {
     int slot = menuFirstEmptySlot();
@@ -275,6 +276,7 @@ static void closeToLooper() {
 // opened (on track 1). False: nothing done.
 static bool openCard(int slot) {
   openOnLetGo = false;
+  menuNoteLeave(true);                               // (back in: on the loaded project's card)
   if (slot == projectCurrent()) {
     closeToLooper();
     return true;
@@ -331,6 +333,7 @@ static void menuHold() {
   if (!armed || !loadedOnPress || !menuOpen() || millis() - armedAt < LONG_PRESS_MS) return;
   loadedOnPress = false;
   armed = false;                                     // (letting go: nothing more)
+  menuNoteLeave(true);                               // (back in: on the loaded project's card)
   closeToLooper();
   if (!transport.running) startByHand();
 }
@@ -356,6 +359,7 @@ static void switchHold() {
   if (!menuOpen()) {
     openMenu();
   } else if (menuLoadPending()) {
+    menuNoteLeave(false);
     closeWhenIn = true;
     drawPending();
   } else if (!leaveMenu()) {
@@ -466,6 +470,11 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
     const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
     if (pressed & act) noteActionPress();            // (the icon: what letting go will do)
+    if (menuSettingsOpen() && !armed) {              // the settings popup: A or B turns its item on / off (on the
+      if (pressed & act) menuSettingsAct();          // press); the arrows go through it (DOWN off its bottom, LEFT / RIGHT: closed)
+      else if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) moved = menuSettingsKeys(pressed);
+      return;
+    }
     if ((pressed & act) && !armed) {
       armed = true;
       armedSlot = menuSlot();
@@ -489,8 +498,9 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     if (armed && !(keys & (m8::BTN_EDIT | m8::BTN_OPT))) {   // all let go: act
       armed = false;
       int slot = armedSlot;
-      if (slot < 0) {                                // the list's items: export, storage mode
+      if (slot < 0) {                                // the list's items: export, storage mode, the settings
         if (armedItem == 0 && !shifted && projectCurrent() >= 0 && projectHasClips() && !menuExportShown()) exportToAbleton();
+        if (armedItem == 2 && !shifted) menuSettings(true);
         if (armedItem == 1 && !shifted) {
           bool wasRunning = transport.running;
           midiInSuspend(true);                       // (no MIDI taken in meanwhile)
@@ -945,7 +955,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
 // empty track (in their numbering, from the bottom up, wrapping), else the
 // next muted one, else stay.
 static void selectAfterRecording(int t) {
-  if (selected != t) return;                       // the user has moved on already
+  if (selected != t || !setting(SET_NEXT_FREE)) return;   // the user has moved on already (the setting off: it stays)
   for (TrackState want : {TrackState::Empty, TrackState::Muted}) {
     for (int k = 1; k < NUM_TRACKS; k++) {
       int i = (t - k + NUM_TRACKS) % NUM_TRACKS;   // (the track numbered next: the row above)

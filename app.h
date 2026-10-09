@@ -26,17 +26,25 @@ float newProjectTempo();                 // the last tempo set by hand (saved wi
 // The master volume a step up (by 1) or down (-1); saved with the session.
 void stepMasterVolume(int by);
 void stepMasterBalance(int by);                  // the master balance a step right (1) or left (-1); saved too
-// The metronome (saved with the session): off (0), auto (A: only in a
-// project with no clips: none on its tracks or in any of its scenes,
-// projectHasClips()) or on (1), while the clock runs; never in the dummy
-// project. B+A on the tempo cell goes to the next setting: from on, off; from
-// auto, off with no clips, else on; from off, auto with no clips, else on (so
-// it always changes what's heard).
+// The metronome (saved with the session): off or on, while the clock runs;
+// off, it still clicks in a project with no clips (none on its tracks or in
+// any of its scenes, projectHasClips()) while the "empty project click"
+// setting is on; never in the dummy project. B+A on the tempo cell: the other
+// one. (METRO_AUTO: an older session's auto, taken as off, the setting
+// doing what it did.)
 enum { METRO_OFF, METRO_AUTO, METRO_ON };
 int metronomeMode();
 int nextMetronomeMode();
 void setMetronomeMode(int mode);
 bool metronomeWanted();                  // the click, by the setting now (a recording keeps its own: m8_looper.ino)
+// The settings (the menu's SETTINGS popup; saved with the session), each on
+// or off, all on at first: the input monitored (heard in the mix: the line
+// out and USB 1-2; recorded either way), a new recording playing once done
+// (off: it comes in muted), the selection moving on to the next free track
+// after a recording, and the click in a project with no clips (above).
+enum { SET_MONITOR, SET_PLAY_NEW, SET_NEXT_FREE, SET_EMPTY_CLICK, SETTING_COUNT };
+bool setting(int which);
+void setSetting(int which, bool on);
 // The session: the tempo, the master volume, the loaded project and the
 // selected row and cell (the app's: loading a project or changing scene
 // leaves it as it is), kept in SESSION.DAT. beginSession() loads it (none

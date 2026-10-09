@@ -1396,6 +1396,8 @@ bool stepSample(int t, int dir) {
   return true;
 }
 
+bool newClipsPlay = true;
+
 Session loadSession() {
   Session s;
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_RDONLY);
@@ -1433,6 +1435,10 @@ Session loadSession() {
     else if (!strncmp(line, "offmidi=", 8)) s.offsets[0] = (int)strtol(line + 8, nullptr, 10);
     else if (!strncmp(line, "offusb=", 7)) s.offsets[1] = (int)strtol(line + 7, nullptr, 10);
     else if (!strncmp(line, "offaudio=", 9)) s.offsets[2] = (int)strtol(line + 9, nullptr, 10);
+    else if (!strncmp(line, "monitor=", 8)) s.settings[0] = strtol(line + 8, nullptr, 10) != 0;
+    else if (!strncmp(line, "playnew=", 8)) s.settings[1] = strtol(line + 8, nullptr, 10) != 0;
+    else if (!strncmp(line, "nextfree=", 9)) s.settings[2] = strtol(line + 9, nullptr, 10) != 0;
+    else if (!strncmp(line, "emptyclick=", 11)) s.settings[3] = strtol(line + 11, nullptr, 10) != 0;
   }
   f.close();
   s.bpm = constrain(s.bpm, MIN_BPM, MAX_BPM);
@@ -1449,6 +1455,7 @@ void saveSession(const Session &s) {
   if (!f) return;
   f.printf("bpm=%.2f\nnewbpm=%.2f\nout=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\noffmidi=%d\noffusb=%d\noffaudio=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
            s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro, s.follow ? 1 : 0, s.offsets[0], s.offsets[1], s.offsets[2]);
+  f.printf("monitor=%d\nplaynew=%d\nnextfree=%d\nemptyclick=%d\n", s.settings[0], s.settings[1], s.settings[2], s.settings[3]);
   f.close();
 }
 
@@ -1993,7 +2000,7 @@ static void armRecordedLoop(bool endAhead) {
   tr.rangeBeats = tr.loopBars * BEATS_PER_BAR;
   tr.rangePending = false;
   tr.rangeAnchorQ = 4 * recording.startBeat;
-  tr.state = TrackState::Playing;
+  tr.state = newClipsPlay ? TrackState::Playing : TrackState::Muted;   // (off: it comes in muted)
   if (!transport.running) return;
   if (!endAhead) {
     startTrack(t, transport.beat + 1, true);
@@ -2057,7 +2064,7 @@ static void finishRecording() {
   tr.rangeStartBeat = 0;
   tr.rangeBeats = tr.loopBars * BEATS_PER_BAR;
   tr.rangeAnchorQ = 4 * recording.startBeat;
-  tr.state = TrackState::Playing;
+  tr.state = newClipsPlay ? TrackState::Playing : TrackState::Muted;   // (off: it comes in muted)
   if (recording.written > tr.recordedFrames && tr.recordedFrames % PEAK_BIN_FRAMES) {
     // Trimmed: the last bin also saw audio past the new end. Re-measure it.
     uint32_t b = tr.recordedFrames / PEAK_BIN_FRAMES, f0 = b * PEAK_BIN_FRAMES;

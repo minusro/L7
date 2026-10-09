@@ -173,8 +173,11 @@ struct Session {
   int metro = 1;                                   // the metronome: 0 off, 1 auto, 2 on (app.h)
   bool follow = false;                             // audio follow (audio_follow.h)
   int offsets[3] = {0, 0, 0};                      // the external clocks' offsets, ms (midi_in.h syncOffsetMs: serial MIDI, USB MIDI, audio)
+  bool settings[4] = {true, true, true, true};     // app.h's settings: monitor, play new, next free, empty project click
 };
 Session loadSession();
+// A new recording plays once it's done (false: it comes in muted; app.h's setting).
+extern bool newClipsPlay;
 void saveSession(const Session &s);  // creates/rewrites a file: only while stopped
 void trackChanged(int t);            // settings changed: header saved when buffers allow
 // Mute (a change on its way to the track included).
