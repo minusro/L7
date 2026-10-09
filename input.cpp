@@ -426,9 +426,15 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     if (menuLeavesOn(key) && !leaveMenu(key)) arrivedKey = 0;
     return;
   }
+  // Off the menu's edge: back to the looper at once, on the press (no line
+  // of the menu's); while that arrow is held there, the looper's edge line on
+  // the edge it came in by (arrivalEdgeKey()), no highlights meanwhile, the
+  // arrow doing nothing more until let go.
   for (uint8_t key : {m8::BTN_RIGHT, m8::BTN_UP, m8::BTN_DOWN, m8::BTN_LEFT})
     if (menuLeavesOn(key) && (pressed & key) && !repeat && !(keys & (m8::BTN_SHIFT | m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY))) {
-      leaveOnRelease = key;
+      arrivedKey = key;                              // (first: the looper drawn without highlights)
+      if (leaveMenu(key)) stopRepeat = true;
+      else arrivedKey = 0;
       return;
     }
   // The menu's items: the arrows move its selection; A or B runs the action
