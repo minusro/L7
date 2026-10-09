@@ -251,9 +251,7 @@ static bool leaveMenu(uint8_t key = 0) {
     } else if (key == m8::BTN_LEFT) {
       selectedCell = maxCells(selected) - 1;        // (an empty track: the column kept as on a full one)
     }
-    drawEdgeLine();                                  // (its arrow held: the line first, the rows clipped round it, nothing drawn under it)
     for (int i = 0; i < ROWS; i++) drawTrack(i);
-    edgeLineFillEnds();                              // (the line's ends: the looper's there too, as going into the menu)
   }
   return back;
 }
@@ -423,22 +421,12 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   if (edgeDue(keys, leaveOnRelease)) {
     uint8_t key = leaveOnRelease;
     leaveOnRelease = 0;
-    // (Held long enough, still held: the looper's edge line on the edge it
-    // came in by meanwhile, arrivalEdgeKey(); the arrow doing nothing more till let go.)
-    if (keys & key) arrivedKey = key;
-    if (menuLeavesOn(key) && !leaveMenu(key)) arrivedKey = 0;
+    if (menuLeavesOn(key)) leaveMenu(key);
     return;
   }
-  // Off the menu's edge: back to the looper at once, on the press (no line
-  // of the menu's); while that arrow is held there, the looper's edge line on
-  // the edge it came in by (arrivalEdgeKey()), no highlights meanwhile, the
-  // arrow doing nothing more until let go.
   for (uint8_t key : {m8::BTN_RIGHT, m8::BTN_UP, m8::BTN_DOWN, m8::BTN_LEFT})
     if (menuLeavesOn(key) && (pressed & key) && !repeat && !(keys & (m8::BTN_SHIFT | m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY))) {
-      arrivedKey = key;                              // (first: the looper drawn without highlights)
-      arrivedAt = millis();
-      if (leaveMenu(key)) stopRepeat = true;
-      else arrivedKey = 0;
+      leaveOnRelease = key;                          // (once let go, or held SWITCH_HOLD_MS: pollKeys())
       return;
     }
   // The menu's items: the arrows move its selection; A or B runs the action
