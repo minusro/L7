@@ -251,6 +251,7 @@ static bool leaveMenu(uint8_t key = 0) {
     } else if (key == m8::BTN_LEFT) {
       selectedCell = maxCells(selected) - 1;        // (an empty track: the column kept as on a full one)
     }
+    drawEdgeLine();                                  // (its arrow held: the line first, the rows clipped round it, nothing drawn under it)
     for (int i = 0; i < ROWS; i++) drawTrack(i);
   }
   return back;
