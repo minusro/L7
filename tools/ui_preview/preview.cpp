@@ -26,12 +26,12 @@ HardwareSerial midi;
 
 bool optBeforeShift() { return true; }             // (input.cpp isn't built here)
 bool arrowsMoved() { return true; }
-bool screenSwitchPending() { return false; }
+static uint8_t simSwitchKey = 0;                   // (an arrow held that switches screens: the peeps)
+bool screenSwitchPending() { return simSwitchKey != 0; }
 bool tempoNudging() { return false; }
 uint32_t lastTapMs() { return 0; }
 uint8_t mainKeys() { return board.keys(); }
 uint8_t arrowModifier() { uint8_t k = board.keys(); return k & m8::BTN_OPT ? m8::BTN_OPT : k & m8::BTN_SHIFT ? m8::BTN_SHIFT : 0; }
-static uint8_t simSwitchKey = 0;                   // (an arrow held that switches screens: the peeps)
 uint8_t screenSwitchKey() { return simSwitchKey; }
 
 // A made-up waveform: a hit on every beat (louder on bar starts), decaying,
@@ -89,6 +89,7 @@ static void render(const std::string &path) {
   for (int i = 0; i < ROWS; i++) drawTrack(i);
   if (menuOpen()) drawMenu();                      // (in the track rows' place)
   else updatePlayheads();
+  drawEdgeLine();                                  // (an arrow held off an edge: its line)
   writePng(path);
 }
 
@@ -258,6 +259,11 @@ int main(int argc, char **argv) {
   selected = 3;
   selectedCell = FILTER_CELL;
   render(out + "/ui_filter.png");
+  for (auto [k, name] : {std::pair<uint8_t, const char *>{m8::BTN_LEFT, "left"}, {m8::BTN_RIGHT, "right"}, {m8::BTN_UP, "up"}, {m8::BTN_DOWN, "down"}}) {
+    simSwitchKey = k;                              // an arrow held off each edge: its line (towards the menu)
+    render(out + "/ui_navi_" + name + ".png");
+  }
+  simSwitchKey = 0;
   selected = 4;
   selectedCell = MIX_CELL;
   render(out + "/ui_mix.png");
@@ -426,6 +432,10 @@ int main(int argc, char **argv) {
   menuKeys(m8::BTN_RIGHT);
   simSwitchKey = m8::BTN_RIGHT;
   render(out + "/ui_menu_leaving.png");
+  for (auto [k, name] : {std::pair<uint8_t, const char *>{m8::BTN_LEFT, "left"}, {m8::BTN_UP, "up"}, {m8::BTN_DOWN, "down"}}) {
+    simSwitchKey = k;                              // (the other edges' lines, out of the menu)
+    render(out + "/ui_menu_leaving_" + name + ".png");
+  }
   simSwitchKey = 0;
   closeMenu();
   return 0;
