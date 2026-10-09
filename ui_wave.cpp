@@ -150,6 +150,17 @@ static void drawColumn(int i, int bc) {
       }
     }
   }
+  // SHIFT held on the track (its waveform cell framed in the accent colour:
+  // LEFT/RIGHT step its sample): an arrow out of each side of the frame, at
+  // its middle, the frame cleared a block round its tip.
+  if ((bc <= 1 || bc >= BLOCK_COLS - 2) && i == selected && shiftArrows() && !recordingOn(i) && cellFrame(i, WAVE_CELL) == ACCENT) {
+    const bool edge = bc == 0 || bc == BLOCK_COLS - 1;   // (the frame's column: the tip; the one inside it: the arrow's back)
+    for (int r = MID_ROW - 2; r <= MID_ROW + 3; r++) {
+      bool tip = r == MID_ROW || r == MID_ROW + 1, back = r >= MID_ROW - 1 && r <= MID_ROW + 2;
+      if (edge) block(r, tip ? ACCENT : v.ground);
+      else if (back) block(r, ACCENT);
+    }
+  }
   auto &t = board.tft();
   int x = WAVE_X + bc * PX, top = rowTop(i);
   t.writeRect(x, top, PX, CELL_H, px);
