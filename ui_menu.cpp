@@ -353,7 +353,25 @@ static uint32_t itemKey(int k) {
          (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25;
 }
 
-void drawMenu() {
+// The battery, top right (a block in): a tiny grey one, its outline, a block
+// of space, its fill in sixths; its tip a block right, 3 blocks tall.
+FLASHMEM static void drawBattery(bool all) {
+  static int shownFill = -2;                       // (-1: not known, none)
+  int pct = board.batteryPercent(), fill = pct < 0 ? -1 : (pct * 6 + 50) / 100;
+  if (!all && fill == shownFill) return;
+  shownFill = fill;
+  auto &t = board.tft();
+  constexpr int W = 10, H = 7, X = 320 / PX - 1 - (W + 1), Y = 1;   // (its body, then its tip)
+  for (int r = 0; r < H; r++)
+    for (int c = 0; c <= W; c++) {
+      bool edge = r == 0 || r == H - 1 || c == 0 || c == W - 1, tip = c == W && r >= 2 && r <= H - 3;
+      bool inside = r >= 2 && r <= H - 3 && c >= 2 && c - 2 < fill;
+      bool on = fill >= 0 && (c < W ? edge || inside : tip);
+      t.fillRect((X + c) * PX, (Y + r) * PX, PX, PX, on ? DIM : MENU_BG);
+    }
+}
+
+FLASHMEM void drawMenu() {
   static uint32_t shownKey[ITEMS];
   static uint32_t drawn = 0;                     // uiGeneration when last drawn whole
   if (!shown) return;
@@ -390,6 +408,7 @@ void drawMenu() {
   // first, which flickered.
   // Unselected first: frames that touch a neighbour's space don't get wiped.
   // (Anything redrawn: the selected one again after it, its frame on top.)
+  drawBattery(all);
   static uint16_t logo;                          // the corner logo's colour shown
   if (all || logo != actionRestColor()) {        // the logo, bottom left: the action button's colour (not its pressed look)
     logo = actionRestColor();
@@ -462,7 +481,7 @@ bool menuKeys(uint8_t pressed) {
 // selected; LEFT off the looper's left edge: the menu's right side, RIGHT: its
 // left side, in its own row, where its selection was: a card row, a list item,
 // or its status row).
-static void landInMenu(uint8_t key) {
+FLASHMEM static void landInMenu(uint8_t key) {
   const bool vertical = key == m8::BTN_UP || key == m8::BTN_DOWN;
   if (onStatus && vertical) {                      // (off its status row, onto its items)
     onStatus = false;
@@ -529,7 +548,7 @@ void menuSelectSlot(int k) {
   cardCol = k % COLS;
 }
 
-void openMenu(uint8_t key) {
+FLASHMEM void openMenu(uint8_t key) {
   if (shown) return;
   // A project with no clips at all (none recorded since it was made): gone,
   // the dummy project instead (one has to be chosen before leaving the menu).

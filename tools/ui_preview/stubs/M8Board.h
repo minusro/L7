@@ -79,8 +79,10 @@ public:
     k = lastKeys = heldKeys;
     return true;
   }
+  int batteryPercent() { return battery; }
   Display display;
   uint8_t heldKeys = 0, lastKeys = 0;
+  int battery = 70;
 };
 
 }  // namespace m8

@@ -179,6 +179,46 @@ static int bqRead(uint8_t reg) {
   return Wire.read();
 }
 
+// The fuel gauge (STC3115 @0x70): n registers from reg.
+FLASHMEM static bool gaugeRead(uint8_t reg, uint8_t *buf, uint8_t n) {
+  Wire.beginTransmission(0x70);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom((uint8_t)0x70, n) != n) return false;
+  for (uint8_t i = 0; i < n; i++) buf[i] = Wire.read();
+  return true;
+}
+
+// A Li-ion cell's charge from its voltage at rest (mV), roughly.
+FLASHMEM static int percentForMv(int mv) {
+  static const int16_t MV[] = {3300, 3500, 3600, 3650, 3700, 3750, 3800, 3900, 4000, 4100, 4200};
+  static const int8_t PCT[] = {0, 5, 10, 20, 30, 40, 50, 65, 80, 90, 100};
+  if (mv <= MV[0]) return 0;
+  for (int i = 1; i < 11; i++)
+    if (mv < MV[i]) return PCT[i - 1] + (PCT[i] - PCT[i - 1]) * (mv - MV[i - 1]) / (MV[i] - MV[i - 1]);
+  return 100;
+}
+
+FLASHMEM int Board::batteryPercent() {
+  if (_variant != VARIANT_B) return -1;
+  if (_batPolled && millis() - _batPolledMs < BATTERY_POLL_MS) return _batPct;
+  _batPolled = true;
+  _batPolledMs = millis();
+  int pct = -1, mv = -1;
+  uint8_t g[2];
+  // The gauge running (REG_MODE bit 4, GG_RUN): its state of charge (REG_SOC, 1/512 %).
+  if (gaugeRead(0x00, g, 1) && (g[0] & 0x10) && gaugeRead(0x02, g, 2)) {
+    int soc = (g[0] | g[1] << 8) / 512;
+    if (soc >= 0 && soc <= 100) pct = soc;
+  }
+  int v = bqRead(0x0E);                  // the charger's REG0E: BATV, 2.304 V + 20 mV a step
+  if (v >= 0) mv = 2304 + (v & 0x7F) * 20;
+  if (pct < 0 && mv > 0) pct = percentForMv(mv);
+  if (pct != _batPct) Serial.printf("battery %d%% (%d mV, gauge %s)\n", pct, mv, pct >= 0 && pct != percentForMv(mv) ? "on" : "off or agrees");
+  _batPct = pct;
+  return _batPct;
+}
+
 bool Board::initChargerB() {
   delay(2);
   int r14 = bqRead(0x14);

@@ -87,6 +87,13 @@ public:
   bool headphonesChanged(bool &in);  // true once per change (and once at first)
   void setSpeaker(bool on);          // the amp enable pin (HIGH = on)
 
+  // The battery (variant B, HARDWARE.md): its charge, 0..100 (-1: not known;
+  // variant A). Read at most once per BATTERY_POLL_MS: the fuel gauge's state
+  // of charge while it runs (STC3115), else from the battery's voltage as the
+  // charger measures it (BQ2589x, its ADC on since initChargerB()).
+  static constexpr uint32_t BATTERY_POLL_MS = 5000;
+  int batteryPercent();
+
   // Starts the MIDI out port at 31250 baud and returns it. On variant B this
   // also gives pin 15 back to the key expander's INT (Serial3 claims it as RX).
   HardwareSerial *midiOutBegin();
@@ -126,6 +133,9 @@ private:
   uint8_t _hpCount = 0;
   bool _hpLast = false;
   uint32_t _hpPolledMs = 0;
+  int8_t _batPct = -1;
+  bool _batPolled = false;
+  uint32_t _batPolledMs = 0;
 };
 
 } // namespace m8
