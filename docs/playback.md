@@ -333,6 +333,10 @@ comes first (audio follow listens on, but doesn't touch the clock meanwhile).
   on it; the serial log: "audio follow: silence (the tempo kept)"). Sound again:
   after 3 beats of it, their beat found afresh at the tempo kept (the
   strongest phase since; the tempo still kept meanwhile), then tracked as ever.
+* Recording or resampling (waiting for its bar line too: `recording.mode` not
+  Idle): the tempo frozen, the clock neither changed nor nudged (`follow()`),
+  their beat still tracked; once it's through, the clock caught up with them
+  as ever (the nudge).
 * The tempo cell's number flashes with the beat (its first half: black until
   their beat is locked, then the accent colour), whenever audio follow is on: the clock's while it runs; stopped,
   theirs as the tracker has it (locked or not yet), or, nothing found yet, at

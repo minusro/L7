@@ -222,7 +222,10 @@ static uint32_t inBeatNow() {                        // (transportStartAt(): sam
   return (uint32_t)min(ourPhase() * transport.spb, transport.spb - 1.0);
 }
 
+// Recording or resampling (waiting for its bar line too): the tempo frozen,
+// the tracker still following them (caught up once it's through).
 static void follow(bool nudged, uint32_t count, uint32_t at) {
+  if (recording.mode != Recording::Idle) return;
   double theirSpb = period * AUDIO_BLOCK_SAMPLES / ratio();   // (our beat's: theirs halved or doubled)
   double want = theirSpb;
   if (nudged) {
