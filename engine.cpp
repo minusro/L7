@@ -159,6 +159,9 @@ static void startClick(bool bar) {
   clickAmpHi = clickAmp * 0.5f;
 }
 
+static volatile uint8_t clickAsked = 0;          // metronomeClick(): 1 a beat's, 2 a bar's (the next block)
+void metronomeClick(bool bar) { clickAsked = bar ? 2 : 1; }
+
 static float clickSample() {
   if (clickAmp < 1) return 0;
   float s = clickAmp * sinf(clickPhase) + clickAmpHi * sinf(clickPhase * 2.76f);
@@ -748,6 +751,10 @@ void LooperEngine::update() {
     mix[t][3] = g * tr.mixRR;
   }
 
+  if (clickAsked) {                                // (a click asked for by hand: a tap)
+    startClick(clickAsked == 2);
+    clickAsked = 0;
+  }
   const bool listen = onsetListen;
   const uint32_t blockNow = transport.now;
   // Resampling: the output goes in the input history (what's recorded) instead.

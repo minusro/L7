@@ -74,6 +74,9 @@ static void tapTempo() {
     double msPerBeat = (n * sumIT - sumI * sumT) / (n * (double)n * ((double)n * n - 1) / 12);
     if (msPerBeat > 0) setTempo(60000.0f / msPerBeat);
   }
+  // Stopped, the metronome on: each of the first four taps clicks (the
+  // first as a bar's first beat); the 5th starts the clock, which clicks itself.
+  if (!transport.running && metronomeOn && n < 5) metronomeClick(n == 1);
   if (n == 5 && !transport.running) transportStart();   // the 5th: a bar line now
 }
 

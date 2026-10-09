@@ -285,6 +285,9 @@ extern void (*usbAudioWritten)();
 // switch waits for its bar line, the switch's beat: silent meanwhile, the
 // new one's first beat clicks if it should).
 extern volatile int32_t clickFromBeat;
+// A click now (the next block), as the metronome's on a beat (bar: the bar's
+// first beat's): tap tempo's taps, stopped (input.cpp).
+void metronomeClick(bool bar);
 int masterVolume();
 void takeOutputPeaks(float &left, float &right);
 // Transients in a track's stream (stretching locks its grains to them): the

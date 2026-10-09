@@ -144,7 +144,7 @@ A setting (the session's `metro=`; B+A on the tempo cell): 0 (off), A
 (on). While the clock runs and it says so (never in the dummy project, nor while the menu is open: the clock not shown), the engine clicks on every beat: a
 small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
 and louder on the bar's first beat). It's added after the master volume and
-left out of what a resampling records. A recording started with it clicking keeps it
+left out of what a resampling records. Stopped, it clicks on each of tap tempo's first four taps too (the first as a bar's first beat), the 5th starting the clock on its own click (`metronomeClick()`). A recording started with it clicking keeps it
 until it's completely recorded: on auto it stops on the bar line where that
 recording ends and the clip starts playing (it goes on while the recording
 finishes its bar; that bar line itself doesn't click). While a scene or project
