@@ -260,12 +260,12 @@ static uint16_t iconColor(int i, int icon) {
   return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white
 }
 
-// The selected track's panel: light grey on a track playing (none on a muted or empty one); in the
+// The selected track's panel: grey on a track playing (none on a muted or empty one); in the
 // accent colour while A is held, with the action button (acting on the track).
 static uint16_t markColor() {                     // (B held on a track, or SHIFT the arrows' modifier there: the accent colour too)
   if (heldAction >= 0 || bOnTrack() || (selected != STATUS_ROW && !menuOpen() && shiftArrows())) return ACCENT;
   // Else only on a track playing (unmuted): light grey; none on a muted or empty one.
-  return selected >= 0 && selected < NUM_TRACKS && tracks[selected].state == TrackState::Playing && !recordingOn(selected) ? LIGHT : BG;
+  return selected >= 0 && selected < NUM_TRACKS && tracks[selected].state == TrackState::Playing && !recordingOn(selected) ? DIM : BG;
 }
 
 // The button, built whole in a buffer and sent at once.
@@ -381,7 +381,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     // black, its number in the accent colour, on the panel in the accent colour.)
     uint16_t frame = badge == BADGE_PLAYING ? (panel == ACCENT ? BG : ACCENT) : (panel != BG ? BG : DIM);
     uint16_t ink = badge == BADGE_PLAYING ? (panel == ACCENT ? ACCENT : BG)
-                 : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL || panel != BG ? BG : DARK;   // (empty: black on the panel)
+                 : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL || panel != BG || i == selected ? BG : DARK;   // (empty: black on the panel, or on the selected row's ground)
     drawBadge(trackNumber(i), badge == BADGE_PLAYING, badge == BADGE_PLAYING || badge == BADGE_MUTED, frame, ink);
   }
   const uint16_t round = i == STATUS_ROW ? (menuOpen() ? MENU_BG : BG) : rowGround(i);   // (round the button: the menu's ground while it's open; a selected track's; the status row's highlight ends at the tempo cell)
