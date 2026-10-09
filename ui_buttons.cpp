@@ -300,9 +300,9 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   // colour while A is held, showing just the track's number then, in black.
   uint16_t panel = i == selected && i != STATUS_ROW ? markColor() : BG;
   if (panel != BG) {
-    for (int r = 0; r < rows - 1; r++)            // (the row's band but its bottom block row)
+    for (int r = 1; r < rows - 1; r++)            // (the row's band but its top and bottom block rows)
       for (int c = PANEL_C0; c < cols; c++)           // (from two blocks in, to the right edge)
-        if (!(c == PANEL_C0 && (r == 0 || r == rows - 2))) blockIn(c, r, panel);   // (the left corners cut)
+        if (!(c == PANEL_C0 && (r == 1 || r == rows - 2))) blockIn(c, r, panel);   // (the left corners cut)
     if (color == panel) color = BG;                // (a recording icon in the accent colour, on it)
     if (panel == ACCENT && badge != BADGE_NONE) badge = BADGE_LABEL;   // highlighted: the number alone
   }
