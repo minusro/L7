@@ -284,7 +284,6 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   // cell); its top block row the panel's of the selected track above, if that
   // one shows (its bottom block row: the selected row's ground shares it).
   const uint16_t ground = bg;
-  const uint16_t topGround = ground;
   for (int p = 0; p < BUTTON_W * height; p++) px[p] = ground;
   auto blockIn = [&](int c, int r, uint16_t ink) {
     for (int dy = 0; dy < PX; dy++)
