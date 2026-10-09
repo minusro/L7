@@ -375,8 +375,8 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
     int c0 = (track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE || icon == ICON_NEXT)) +
-             (icon == ICON_ADJUST || icon == ICON_SCENE_CUT || icon == ICON_SCENE_PASTE || icon == ICON_SCENE_DUP),
-      r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge; B's arrows and the scene's cut, paste and copy: a block right)
+             (icon == ICON_SCENE_CUT || icon == ICON_SCENE_PASTE || icon == ICON_SCENE_DUP) + 2 * (icon == ICON_ADJUST),
+      r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge; the scene's cut, paste and copy: a block right; B's arrows: two)
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);

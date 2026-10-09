@@ -154,15 +154,20 @@ void drawStatus() {
     const Cell &box = TEMPO_BOX;
     int right = box.x + box.w - INSET;
     uint16_t ink = (cell == TEMPO_CELL && bAlone()) || offsetShown ? ACCENT : labelInk(TEMPO_CELL);
+    // Tap tempo (A on the cell): the tag in the accent colour while A is held,
+    // the number for TAP_FLASH_MS after each tap.
+    constexpr uint32_t TAP_FLASH_MS = 50;
+    const bool tapHeld = cell == TEMPO_CELL && (k & m8::BTN_EDIT) && !(k & (m8::BTN_OPT | m8::BTN_SHIFT)) && !audioFollowOn();
+    const bool tapped = cell == TEMPO_CELL && lastTapMs() && millis() - lastTapMs() < TAP_FLASH_MS;
     int tagX = right - tagWidth("BPM");
-    drawTag(tagX, tagY, offsetShown ? "MS" : "BPM", TAG_INVERTED, ink, G, tagWidth("BPM"));
+    drawTag(tagX, tagY, offsetShown ? "MS" : "BPM", TAG_INVERTED, tapHeld ? ACCENT : ink, G, tagWidth("BPM"));
     static const int tempoW = textWidth("888.8");  // the widest tempo: its box clears any other
     int numRight = tagX - PX, numLeft = numRight - tempoW, w = textWidth(text);
     t.fillRect(numLeft, tagY, numRight - numLeft + PX, textY - tagY, G);   // round the text: what was there
     t.fillRect(numLeft, textY + FONT_H, numRight - numLeft + PX, tagY + TAG_H - textY - FONT_H, G);
     t.fillRect(numLeft, textY, tempoW - w, FONT_H, G);
     t.fillRect(numRight, textY, PX, FONT_H, G);
-    uint16_t numInk = offsetShown || tempoNudging() ? ACCENT                                // (nudged, or the offset: the accent colour)
+    uint16_t numInk = offsetShown || tempoNudging() || tapped ? ACCENT                      // (nudged, the offset, or just tapped: the accent colour)
                     : audioFollowFlash() ? (audioFollowLocked() ? ACCENT : BG) : ink;   // (audio follow: the beat; black until locked)
     drawText(numRight - w, textY, text, numInk, G);
   }

@@ -48,8 +48,12 @@ static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // a little over a beat at 
 static int tapCount = 0;                            // taps in this run (0: the next is the first)
 
 
+static uint32_t tapAt = 0;                          // millis() of the latest tap (taken)
+uint32_t lastTapMs() { return tapAt; }
+
 static void tapTempo() {
   if (audioFollowOn()) return;                       // (the tempo heard: not by hand)
+  tapAt = millis();
   static uint32_t first, last;                      // this run's first and latest taps
   static double sumT, sumIT;                        // over the taps: t (ms after the first), i * t
   uint32_t now = millis();
