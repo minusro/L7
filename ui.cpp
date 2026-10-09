@@ -239,12 +239,11 @@ static int shownDepth = 0;
 // The line along the edge of arrow `key` drawn, everything else clipped to
 // the rest of the screen meanwhile.
 FLASHMEM static void paintEdgeLine(uint8_t key) {
-  // A line the edge's whole length, 4 blocks wide: the project's colour, black, its colour, dark grey
-  // from the edge (in the menu: its colour, dark grey, its colour, dark grey). The project's: the
+  // A line the edge's whole length, 3 blocks wide (both screens alike), in the project's colour: the
   // loaded one's (none: the first empty slot's, where a new one would go; every slot full: grey).
   auto &t = board.tft();
   t.setClipRect();
-  constexpr int W = 4 * PX;
+  constexpr int W = 3 * PX;
   auto band = [&](int in, int w, uint16_t c) {     // (w px, in px from the edge)
     if (key == m8::BTN_LEFT) t.fillRect(in, 0, w, 240, c);
     else if (key == m8::BTN_RIGHT) t.fillRect(320 - in - w, 0, w, 240, c);
@@ -252,8 +251,7 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
     else t.fillRect(0, 240 - in - w, 320, w, c);
   };
   const int slot = projectCurrent() >= 0 ? projectCurrent() : menuFirstEmptySlot();
-  const uint16_t a = slot >= 0 ? PROJECT_COLORS[slot] : DIM, b = menuOpen() ? DARK : BG;   // (alternating, from the edge)
-  for (int k = 0; k < 4; k++) band(k * PX, PX, k == 3 ? DARK : k % 2 ? b : a);
+  band(0, W, slot >= 0 ? PROJECT_COLORS[slot] : DIM);
   shownDepth = W;
   if (key == m8::BTN_LEFT) t.setClipRect(W, 0, 320 - W, 240);
   else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - W, 240);
