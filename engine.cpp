@@ -147,7 +147,21 @@ volatile int32_t clickFromBeat = INT32_MIN;
 
 // The metronome's wood block: two damped sines (its body and a harder upper
 // partial), started on a beat.
-static constexpr float CLICK_LEVEL = 5000, CLICK_BAR_HZ = 1600, CLICK_BEAT_HZ = 1150;
+static constexpr float CLICK_BAR_HZ = 1600, CLICK_BEAT_HZ = 1150;
+// Its level (the metronome's auto volume): the peak of what's heard (after the
+// master volume, the click left out) over the last ~3 s (REF_BUCKETS of ~0.5 s,
+// the oldest dropped), at least -12 dBFS at the master volume (all the way
+// down: none); the bar's first beat at it, the others 3/4 of it.
+static constexpr int REF_BUCKETS = 6;
+static constexpr uint32_t REF_BUCKET_BLOCKS = 172;   // (~0.5 s of blocks)
+static float refPeak[REF_BUCKETS];
+static int refAt = 0;
+static uint32_t refBlocks = 0;
+static float clickLevel() {
+  float m = 0.25f * 32767 * outputGain;            // (-12 dBFS, at the master volume)
+  for (float p : refPeak) m = max(m, p);
+  return min(m, 32767.0f) / 1.4f;                  // (the two partials' peak together: ~1.4 of the body's)
+}
 static const float CLICK_DECAY = expf(-1.0f / (0.012f * AUDIO_SAMPLE_RATE_EXACT));      // body, ~12 ms
 static const float CLICK_DECAY_HI = expf(-1.0f / (0.004f * AUDIO_SAMPLE_RATE_EXACT));   // partial, ~4 ms
 static float clickAmp = 0, clickAmpHi = 0, clickPhase = 0, clickStep = 0;
@@ -156,7 +170,7 @@ static void startClick(bool bar) {
   float hz = bar ? CLICK_BAR_HZ : CLICK_BEAT_HZ;
   clickStep = 2 * (float)M_PI * hz / AUDIO_SAMPLE_RATE_EXACT;
   clickPhase = 0;
-  clickAmp = CLICK_LEVEL * (bar ? 1.0f : 0.75f);
+  clickAmp = clickLevel() * (bar ? 1.0f : 0.75f);
   clickAmpHi = clickAmp * 0.5f;
 }
 
@@ -777,10 +791,11 @@ void LooperEngine::update() {
   const uint32_t blockNow = transport.now;
   // Resampling: the output goes in the input history (what's recorded) instead.
   const bool captureOutput = recording.resample && recording.mode != Recording::Idle;
-  const float outGain = outputGain, outTo[4] = {outLL, outLR, outRL, outRR};
+  const float outTo[4] = {outLL, outLR, outRL, outRR};
   static float outNow[4] = {1, 0, 0, 1};           // (the master's mix as it glides, MASTER_GLIDE_MS)
   for (auto &tr : tracks) glideFilters(tr);
   float outPeak[2] = {0, 0};
+  float blockPeak = 0;                             // (the click's reference: clickLevel())
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
     // USB's latency: the first sharp sound after each beat line (well above the
     // input's average level), timed in the beat (loop() decides).
@@ -912,7 +927,7 @@ void LooperEngine::update() {
       int16_t cr = (int16_t)constrain(mixR + monR, -32767.0f, 32767.0f);
       inputRing[at % INPUT_FRAMES] = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
     }
-    float click = clickSample() * outGain;
+    float click = clickSample();                     // (its level the mix's peak: the master volume in it already)
     {                                                // the master volume and balance
       for (int k = 0; k < 4; k++) outNow[k] += (outTo[k] - outNow[k]) * MASTER_GLIDE;
       float l = mixL + monL, r = mixR + monR;
@@ -924,12 +939,19 @@ void LooperEngine::update() {
       usbFrame[0] = (int16_t)constrain(mixL + uc, -32767.0f, 32767.0f);
       usbFrame[1] = (int16_t)constrain(mixR + uc, -32767.0f, 32767.0f);
     }
+    blockPeak = max(blockPeak, max(fabsf(mixL), fabsf(mixR)));   // (what's heard, the click left out: its level)
     mixL += click;
     mixR += click;
     outPeak[0] = max(outPeak[0], fabsf(mixL));
     outPeak[1] = max(outPeak[1], fabsf(mixR));
     outL->data[i] = (int16_t)constrain(mixL, -32767.0f, 32767.0f);
     outR->data[i] = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
+  }
+  refPeak[refAt] = max(refPeak[refAt], blockPeak);   // (the last ~3 s: a bucket each ~0.5 s, the oldest dropped)
+  if (++refBlocks >= REF_BUCKET_BLOCKS) {
+    refBlocks = 0;
+    refAt = (refAt + 1) % REF_BUCKETS;
+    refPeak[refAt] = 0;
   }
 
   if (listen) {                                      // audio follow: this block's rise in loudness
