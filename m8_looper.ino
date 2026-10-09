@@ -22,7 +22,7 @@
 //   * MIDI clock + start/stop go out on serial MIDI port 2
 //
 // Keys:
-//   UP/DOWN          select a row: tracks 1 (top) to 7 (just above the status row),
+//   UP/DOWN          select a row: tracks 7 (top) to 1 (just above the status row),
 //                      then the status row; it starts on track 1. Off the top or bottom row
 //                      (a fresh press): the other screen (main / notes, its status row on top;
 //                      on release); LEFT/RIGHT off a row's ends: the menu

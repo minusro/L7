@@ -11,7 +11,7 @@
 // pixel font, and the selection shown by frames and inverted boxes.
 constexpr int PX = 2;
 // Vertical layout: rows every 30 px (15 blocks): the 7 tracks from the top
-// of the screen, track 1 first (row NUM_TRACKS - 1) down to track 7 (row 0, just
+// of the screen, track 7 first (row 0) down to track 1 (row NUM_TRACKS - 1, just
 // above the status row), then the status row 4 px (two blocks) lower.
 constexpr int ROW_BAND = 30;                             // a row's height (its button's)
 constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2 * PX;   // 214
@@ -95,26 +95,26 @@ inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 inline bool notesScreen = false, notesLayout = false;
 inline int rowTop(int i) {
   if (i == STATUS_ROW) return notesLayout ? 0 : STATUS_TOP;
-  return (notesLayout ? STATUS_H + PX : 0) + (NUM_TRACKS - 1 - i) * ROW_BAND;
+  return (notesLayout ? STATUS_H + PX : 0) + i * ROW_BAND;
 }
 // A row's place on the screen from the top (0: the top row), and back.
 inline int rowPos(int i) {
-  if (notesLayout) return i == STATUS_ROW ? 0 : NUM_TRACKS - i;
-  return i == STATUS_ROW ? NUM_TRACKS : NUM_TRACKS - 1 - i;
+  if (notesLayout) return i == STATUS_ROW ? 0 : i + 1;
+  return i;                                        // (the status row: NUM_TRACKS)
 }
 inline int rowAtPos(int p) {
-  if (notesLayout) return p == 0 ? STATUS_ROW : NUM_TRACKS - p;
-  return p == NUM_TRACKS ? STATUS_ROW : NUM_TRACKS - 1 - p;
+  if (notesLayout) return p == 0 ? STATUS_ROW : p - 1;
+  return p;
 }
 // The row above / below row i on the screen (-1: none; the status row has a gap next to it).
-inline int rowAbove(int i) { return i < NUM_TRACKS - 1 ? i + 1 : -1; }
-inline int rowBelow(int i) { return i > 0 && i != STATUS_ROW ? i - 1 : -1; }
+inline int rowAbove(int i) { return i > 0 && i != STATUS_ROW ? i - 1 : -1; }
+inline int rowBelow(int i) { return i < NUM_TRACKS - 1 ? i + 1 : -1; }
 // A row's backgrounds: its band; main: the track row above the status row's
 // out to it, the status row's out to the screen's bottom edge; notes: the
 // first track row's from the status row's bottom, the last's to the screen's
 // bottom edge.
-constexpr int LAST_TRACK_ROW = 0;
-inline int bgTop(int i) { return notesLayout && i == NUM_TRACKS - 1 ? STATUS_H : rowTop(i); }
+constexpr int LAST_TRACK_ROW = NUM_TRACKS - 1;
+inline int bgTop(int i) { return notesLayout && i == 0 ? STATUS_H : rowTop(i); }
 inline int bgHeight(int i) {
   if (notesLayout) return (i == STATUS_ROW ? STATUS_H : i == LAST_TRACK_ROW ? 240 : rowTop(i) + ROW_BAND) - bgTop(i);
   return (i == STATUS_ROW ? 240 : i == LAST_TRACK_ROW ? STATUS_TOP : rowTop(i) + ROW_BAND) - bgTop(i);

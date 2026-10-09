@@ -229,7 +229,7 @@ static bool loadFromMenu(int p, bool keepSelection = false) {   // (keepSelectio
 // menu's selection staying where it was), as A there. False: nowhere to go.
 // The looper's selection: as it was left (its row and cell); off the menu's
 // edge with arrow `key`, on the looper's far edge: UP off the menu's top, its
-// bottom row (the status row), DOWN off its bottom, its top one (track 1), at
+// bottom row (the status row), DOWN off its bottom, its top one (track 7), at
 // the column that row was left on; RIGHT off the menu's right side, the
 // looper's left edge (its row's first cell), LEFT, its right edge (its last),
 // in the row it was left on.
@@ -542,7 +542,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   if (swipeOn && !(keys & m8::BTN_EDIT)) swipeOn = false;
   if (swipeOn && (pressed & (m8::BTN_UP | m8::BTN_DOWN))) {
     if (!swipeDone && !shift && !opt) {
-      int t = (selected + ((pressed & m8::BTN_UP) ? 1 : NUM_TRACKS - 1)) % NUM_TRACKS;   // (UP: a row up; the top track's index is NUM_TRACKS - 1)
+      int t = (selected + ((pressed & m8::BTN_UP) ? NUM_TRACKS - 1 : 1)) % NUM_TRACKS;   // (UP: a row up; the top track's index is 0)
       if (!swipeMute && t == swipeFrom) {
         swipeDone = true;                            // unmuting, round again: stopped on the track before it
         t = selected;
@@ -688,7 +688,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       // the selection goes with it. A track with a clip: the same with A
       // pressed while B is held (B + A + UP/DOWN; B alone: its range; A
       // first: a swipe, above, which takes UP/DOWN).
-      int to = (pressed & m8::BTN_UP) ? (selected + 1) % NUM_TRACKS : (selected + NUM_TRACKS - 1) % NUM_TRACKS;   // (row 6: track 1, at the top)
+      int to = (pressed & m8::BTN_UP) ? (selected + NUM_TRACKS - 1) % NUM_TRACKS : (selected + 1) % NUM_TRACKS;   // (row 0: track 7, at the top)
       if (swapTracks(selected, to)) {
         drawTrack(selected);
         selected = to;
@@ -830,7 +830,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
   } else {
     int row = selected, at = selectedCellIn(selected);
-    // (By place on the screen: main, track 1 at the top, the status row at the
+    // (By place on the screen: main, track 7 at the top, the status row at the
     // bottom; notes, the status row at the top.) Off its top or bottom row (a
     // fresh press; a held arrow stops there): the menu, once let go. (The notes
     // screen: not reached for now, flipOnRelease unused.)
@@ -948,7 +948,7 @@ static void selectAfterRecording(int t) {
   if (selected != t) return;                       // the user has moved on already
   for (TrackState want : {TrackState::Empty, TrackState::Muted}) {
     for (int k = 1; k < NUM_TRACKS; k++) {
-      int i = (t - k + NUM_TRACKS) % NUM_TRACKS;   // (the track numbered next: the row below)
+      int i = (t - k + NUM_TRACKS) % NUM_TRACKS;   // (the track numbered next: the row above)
       if (tracks[i].state == want) {
         selected = i;
         drawTrack(i);
