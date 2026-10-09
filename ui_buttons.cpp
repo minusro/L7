@@ -118,9 +118,10 @@ static int trackIcon(int i) {
       default:                 return flashOn() ? ICON_PLAY : ICON_NONE;
     }
   }
-  // B held on the selected empty track (B + UP/DOWN moves it): up and down
-  // arrows instead of its number.
+  // B held on the selected empty track (B + UP/DOWN moves it), or B then A on
+  // one with a clip (B + A + UP/DOWN do; A first: a swipe): up and down arrows instead of its number.
   if (shownSelected(i) && bAlone() && unitOf(i).sample == 0) return ICON_MOVE;
+  if (shownSelected(i) && bArrows() && (mainKeys() & m8::BTN_EDIT) && hasClip(i) && heldAction < 0 && !(mainKeys() & m8::BTN_PLAY)) return ICON_MOVE;
   return ICON_NONE;                                // (the track's number shows its state)
 }
 
