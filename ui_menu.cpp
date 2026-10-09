@@ -485,9 +485,9 @@ FLASHMEM void menuSettingsAct() {
 }
 
 // ---- The help pages: over the whole screen, from the menu's HELP (once let
-// go), on the page last shown; LEFT/RIGHT the page before / after (wrapping
+// go), on the page last shown; LEFT/RIGHT (or UP/DOWN) the page before / after (wrapping
 // round; a held arrow's repeats stop at the title page, a fresh press goes on),
-// A, B, UP or DOWN back to the menu. Each page drawn whole as it's turned to (ui_help.cpp).
+// A or B back to the menu. Each page drawn whole as it's turned to (ui_help.cpp).
 bool menuHelpOpen() { return shown && helpOpen; }
 
 FLASHMEM void menuHelp(bool open) {
@@ -506,8 +506,8 @@ FLASHMEM bool menuHelpKeys(uint8_t pressed, bool repeat) {
   const int n = helpPages(), p = helpPage();
   if (repeat && p == 0) return false;              // (held on: it stops at the title page)
   int to = p;
-  if (pressed & m8::BTN_RIGHT) to = (p + 1) % n;
-  if (pressed & m8::BTN_LEFT) to = (p + n - 1) % n;
+  if (pressed & (m8::BTN_RIGHT | m8::BTN_DOWN)) to = (p + 1) % n;   // (DOWN as RIGHT, UP as LEFT)
+  if (pressed & (m8::BTN_LEFT | m8::BTN_UP)) to = (p + n - 1) % n;
   if (to == p) return false;
   setHelpPage(to);
   helpTurned();

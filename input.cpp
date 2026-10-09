@@ -255,7 +255,6 @@ static int swipeFrom = -1;
 // it; or between the looper's two (main and notes, ui.h: UP off its top, DOWN
 // off its bottom).
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
-static uint8_t helpOnRelease = 0;                  // (UP or DOWN in the help pages: back to the menu, the same way)
 static bool stopRepeat = false;                    // (pollKeys(): that arrow's repeats off)
 // Or held on SWITCH_HOLD_MS (from when it stopped at the edge): it switches
 // then, still held (pollKeys()); held on, it does nothing more (no repeats)
@@ -277,8 +276,8 @@ static bool lrHeld = false, lrDone = false;
 static uint32_t lrAt = 0, leftAt = 0, rightAt = 0;   // (the combo's start; each arrow's last fresh press)
 static constexpr uint8_t LR = m8::BTN_LEFT | m8::BTN_RIGHT;
 static constexpr uint32_t LR_WINDOW_MS = 200, LR_HOLD_MS = 300;
-bool screenSwitchPending() { return menuOnRelease || leaveOnRelease || flipOnRelease || helpOnRelease || (lrHeld && !lrDone); }
-uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease | flipOnRelease | helpOnRelease | (lrHeld && !lrDone ? LR : 0); }
+bool screenSwitchPending() { return menuOnRelease || leaveOnRelease || flipOnRelease || (lrHeld && !lrDone); }
+uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease | flipOnRelease | (lrHeld && !lrDone ? LR : 0); }
 
 // Loads project slot p from the menu; a new project (an empty slot) opens
 // with the selection on track 1 (the looper's, for when the menu closes);
@@ -520,12 +519,6 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // loaded project's card; with no project loaded, a new one is made in the
   // first empty slot (the menu's selection staying where it was), as A there.
   // (leaveOnRelease: likewise)
-  // UP or DOWN in the help pages: back to the menu, likewise (the edge line meanwhile).
-  if (edgeDue(keys, helpOnRelease)) {
-    helpOnRelease = 0;
-    menuHelp(false);
-    return;
-  }
   if (edgeDue(keys, leaveOnRelease)) {
     uint8_t key = leaveOnRelease;
     leaveOnRelease = 0;
@@ -561,10 +554,9 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
     const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
     if (pressed & act) noteActionPress();            // (the icon: what letting go will do)
-    if (menuHelpOpen() && !armed) {                  // the help pages: LEFT / RIGHT turn them, A or B back to the menu; UP or
-      if (pressed & act) menuHelp(false);          // DOWN too, once let go (or held SWITCH_HOLD_MS), its edge line meanwhile
-      else if ((pressed & (m8::BTN_UP | m8::BTN_DOWN)) && !repeat) helpOnRelease = pressed & m8::BTN_UP ? m8::BTN_UP : m8::BTN_DOWN;
-      else if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) moved = menuHelpKeys(pressed, repeat);
+    if (menuHelpOpen() && !armed) {                  // the help pages: the arrows turn them (UP as LEFT, DOWN as RIGHT), A or B back to the menu
+      if (pressed & act) menuHelp(false);
+      else if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) moved = menuHelpKeys(pressed, repeat);
       return;
     }
     if (menuSettingsOpen() && !armed) {              // the settings popup: A or B turns its item on / off (on the
@@ -1173,7 +1165,7 @@ void pollKeys() {
   // An arrow held off an edge (a switch waiting): SWITCH_HOLD_MS on, the switch
   // now; it doesn't repeat on the other screen (until pressed again).
   static bool edgeWaiting = false;
-  bool waiting = menuOnRelease || leaveOnRelease || flipOnRelease || helpOnRelease;
+  bool waiting = menuOnRelease || leaveOnRelease || flipOnRelease;
   if (waiting && !edgeWaiting) switchWaitAt = millis();
   edgeWaiting = waiting;
   if (waiting && millis() - switchWaitAt >= SWITCH_HOLD_MS) {
