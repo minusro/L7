@@ -147,7 +147,10 @@ bool screenSwitchPending();               // (input.cpp) an arrow held that swit
 // (An arrow held off an edge, the screen about to switch: none.)
 uint8_t arrivalEdgeKey();                // (input.cpp: just back from the menu, its arrow held)
 // (An edge line shown, either way: none.)
-inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() && !screenSwitchPending() && !arrivalEdgeKey() ? DARK : BG; }
+// Row i shows as selected: the selected one, but while an edge line's shown
+// (it then looks as the others).
+inline bool shownSelected(int i) { return i == selected && !menuOpen() && !screenSwitchPending() && !arrivalEdgeKey(); }
+inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && shownSelected(i) ? DARK : BG; }
 // Something drawn dark grey that would vanish on it: black there instead.
 inline uint16_t onGround(uint16_t color, uint16_t ground) { return ground == DARK && color == DARK ? BG : color; }
 inline uint16_t cellBackground(int i, int cell) {
@@ -200,7 +203,7 @@ inline bool bAlone() {
 // The cell is being edited: it's the selected one and B is the arrows'
 // modifier (B + arrows change it). Its markings then show in the accent colour.
 inline bool editingCell(int i, int cell) {
-  return i == selected && cell == selectedCellIn(i) && bArrows();
+  return shownSelected(i) && cell == selectedCellIn(i) && bArrows();
 }
 // The colour of block (r, c) of row i's cell (rows x cols blocks, its border
 // included) if it's on the border (corners: always BG), from its own frame or
@@ -250,6 +253,7 @@ void closeMenu(bool draw = true);
 int menuFirstEmptySlot();                // the first slot with no project (-1: none)
 float menuCutProgress(int &slot);        // (input.cpp) SHIFT+A held on a project's card: it (slot; -1: none) and how far to its cut (0-1)
 uint32_t menuCardPressMs();              // (input.cpp) millis() of the latest A or B press on a card (0: none)
+bool menuJustCut();                      // (input.cpp) a project just cut by holding, its keys still held
 void menuSelectSlot(int k);              // the menu's selection on card k
 void menuNoteLoad(int from);             // a project just loaded from the menu, `from` the one before: its card flashing until it comes in
 bool menuLoadPending();                  // a project loaded from the menu hasn't come in yet (playing: its switch point): the menu can't be left meanwhile

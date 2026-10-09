@@ -294,15 +294,27 @@ static bool openCard(int slot) {
 // (let go sooner: nothing); meanwhile its card wipes away from the left
 // (menuCutProgress(), ui_menu.cpp).
 static constexpr uint32_t CUT_HOLD_MS = 1000;
+static bool justCut = false;                       // a project just cut by holding: its card's letter not in its colour until the keys are let go
+bool menuJustCut() { return justCut; }
 float menuCutProgress(int &slot) {
-  slot = armed && shifted && armedSlot >= 0 && menuOpen() && projectFilled(armedSlot) ? armedSlot : -1;
+  slot = armed && shifted && armedSlot >= 0 && menuOpen() && projectFilled(armedSlot) && (board.keys() & m8::BTN_SHIFT) ? armedSlot : -1;
   return slot < 0 ? 0 : min(1.0f, (millis() - armedAt) / (float)CUT_HOLD_MS);
 }
 
 static void menuHold() {
+  if (justCut && !(board.keys() & (m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_SHIFT))) {
+    justCut = false;                               // (all let go: its letter as an empty slot's again)
+    drawMenu();
+  }
+  if (armed && shifted && armedSlot >= 0 && menuOpen() && projectFilled(armedSlot) && !(board.keys() & m8::BTN_SHIFT)) {
+    armed = false;                                 // SHIFT let go: the cut's countdown cancelled (A let go: as ever)
+    drawMenu();
+    return;
+  }
   int cutSlot;
   if (menuCutProgress(cutSlot) >= 1) {             // held long enough: cut
     armed = false;                                   // (letting go: nothing more)
+    justCut = true;
     projectCut(cutSlot);
     drawMenu();
     for (int i = 0; i < ROWS; i++) drawTrack(i);    // (the loaded one cut: the looper emptied)

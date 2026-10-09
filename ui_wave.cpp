@@ -175,7 +175,7 @@ void drawWave(int i, bool recordingHere) {
   // The range: light grey, white on the selected track (all its cells look
   // selected; the frame is on the selected one), the accent colour while B
   // alone is held on the selected cell (editing, muted or not); muted: grey.
-  bool muted = tr.state == TrackState::Muted, here = i == selected;
+  bool muted = tr.state == TrackState::Muted, here = shownSelected(i);
   bool editing = editingCell(i, WAVE_CELL);        // (B held, with other keys or not: as the filter cell)
   uint16_t rangeInk = editing ? ACCENT : muted ? DIM : here ? INK : LIGHT;
   if (recordingHere) rangeInk = INK;                 // the recording's waveform: white

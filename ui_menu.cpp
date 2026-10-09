@@ -263,7 +263,7 @@ static void drawItem(int k) {
     bool filled = projectFilled(k) && !emptyLook, loaded = k == shownLoaded() && !emptyLook,
          playing = k == playingCard() && transport.running && !emptyLook;   // (emptyLook: as an empty slot's, the cut's wipe)
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
-    uint16_t letter = loaded ? BG : filled || (sel && actionHeld() && !emptyLook) ? color : DIM;   // (an empty slot's: grey, as its outline; its colour while an action button is held)
+    uint16_t letter = loaded ? BG : filled || (sel && actionHeld() && !emptyLook && !menuJustCut()) ? color : DIM;   // (an empty slot's: grey, as its outline; its colour while an action button is held)
     if (loaded) {                                 // the loaded one: filled
       fillRing(s, 0, -s.w, color);
     } else if (filled) {                          // a project: a thick outline, two blocks
@@ -334,7 +334,7 @@ static uint32_t itemKey(int k) {
   int loaded = shownLoaded(), playing = playingCard();
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == loaded) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
-         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
+         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(sel && menuJustCut()) << 29 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
          (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25;
 }
 

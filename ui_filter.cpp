@@ -29,7 +29,7 @@ void drawFilter(int i) {
   k.hi = tr.filterHi;
   k.borders = bordersOf(i, FILTER_CELL);
   k.clip = shownClip(i);                             // empty (or still recording): nothing
-  bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
+  bool muted = tr.state == TrackState::Muted, here = shownSelected(i);   // (the selected track: all its cells look selected)
   bool editing = here && editingCell(i, FILTER_CELL);
   k.ground = rowGround(i);
   k.fill = onGround(editing ? ACCENT_DARK : muted ? DARK : here ? LIGHT : DIM, k.ground);

@@ -120,7 +120,7 @@ static int trackIcon(int i) {
   }
   // B held on the selected empty track (B + UP/DOWN moves it): up and down
   // arrows instead of its number.
-  if (i == selected && bAlone() && unitOf(i).sample == 0) return ICON_MOVE;
+  if (shownSelected(i) && bAlone() && unitOf(i).sample == 0) return ICON_MOVE;
   return ICON_NONE;                                // (the track's number shows its state)
 }
 
@@ -298,7 +298,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   // corners cut (a border round the badge: a block on top, two on the left and
   // bottom). Grey; the accent
   // colour while A is held, showing just the track's number then, in black.
-  uint16_t panel = i == selected && i != STATUS_ROW ? markColor() : BG;
+  uint16_t panel = shownSelected(i) && i != STATUS_ROW ? markColor() : BG;
   if (panel != BG) {
     for (int r = 1; r < rows - 3; r++)            // (the row's band but its top block row and bottom three)
       for (int c = PANEL_C0; c < cols; c++)           // (from two blocks in, to the right edge)
@@ -425,7 +425,7 @@ void drawCells(int i) {
   k.icon = buttonIcon(i);
   k.bg = buttonBackground(i, k.icon);
   k.iconColor = iconColor(i, k.icon);
-  k.mark = i == selected && i != STATUS_ROW ? markColor() : BG;
+  k.mark = shownSelected(i) && i != STATUS_ROW ? markColor() : BG;
   k.badge = trackBadge(i);
   k.metro = k.icon == ICON_METRO ? (uint8_t)(metronomeMode() + 4 * metronomeOn)   // (its look: the setting now, crossed while clicking;
           : k.icon == ICON_EAR ? (uint8_t)(8 + audioFollowOn()) : 0;                   // the input: crossed while following)

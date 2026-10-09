@@ -74,7 +74,7 @@ void drawMix(int i) {
   uint64_t frame = bordersOf(i, MIX_CELL);
   uint16_t looks[2 * HALVES];                      // each half's colour
   int levels[2] = {tr.volume - max(0, (int)tr.balance), tr.volume - max(0, -(int)tr.balance)};   // halves lit
-  bool muted = tr.state == TrackState::Muted, here = i == selected;   // (the selected track: all its cells look selected)
+  bool muted = tr.state == TrackState::Muted, here = shownSelected(i);   // (the selected track: all its cells look selected)
   bool editing = editingCell(i, MIX_CELL);         // (B held, with other keys or not: as the filter cell)
   uint16_t ground = rowGround(i);
   uint16_t levelInk = onGround(editing ? ACCENT : muted ? DARK : here ? LIGHT : DIM, ground);
