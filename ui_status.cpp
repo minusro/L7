@@ -232,15 +232,15 @@ void drawStatus() {
   if (!sceneAccent && (wasWide || cleared)) t.fillRect(box.x + INSET + tagWidth("SCN"), tagY, ARROWS_W + PX, TAG_H, G);
   wasWide = sceneAccent;
   int scene = sceneCurrent(), count = sceneCount();
-  // A scene just come in (not one stepped to, still held or waiting for its
-  // switch point): the tag and position white for 100 ms.
-  static int arrived = -2;                         // (the scene last come in; -2: none yet)
-  static uint32_t arrivedAt = 0;
-  if (!sceneHeld() && !sceneChangeWaiting() && scene != arrived) {
-    if (arrived != -2) arrivedAt = max(1u, millis());
-    arrived = scene;
+  // Another scene selected (stepped to, or come in): the tag and position
+  // white for 100 ms.
+  static int picked = -2;                          // (the scene last selected; -2: none yet)
+  static uint32_t pickedAt = 0;
+  if (scene != picked) {
+    if (picked != -2) pickedAt = max(1u, millis());
+    picked = scene;
   }
-  const bool sceneFlash = arrivedAt && millis() - arrivedAt < 100 && !sceneAccent;
+  const bool sceneFlash = pickedAt && millis() - pickedAt < 100;
   if (!sceneAccent) drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneFlash ? INK : labelInk(SCENE_CELL), G);
   bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
@@ -257,19 +257,16 @@ void drawStatus() {
   t.fillRect(x - PX, tagY, PX, TAG_H, G);          // (the block between the tag and the position: the position, moved, left nothing there)
   drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
   // Stepping (the accent colour on): the wider tag, its up and down arrows
-  // stacked, black where that way goes on, none where it doesn't (up: past
-  // the copy after the last; down: below the empty scene 0*).
+  // stacked, in black (both, whether that way goes on or not).
   if (sceneAccent) {
     const int tx = box.x + INSET;
-    drawTag(tx, tagY, "", TAG_INVERTED, ACCENT, G, tagW);   // (the box alone: its contents placed below)
+    drawTag(tx, tagY, "", TAG_INVERTED, sceneFlash ? INK : ACCENT, G, tagW);   // (the box alone: its contents placed below)
     static const char *const ARROWS[5] = {".#.", "###", "...", "###", ".#."};
-    const int top = count ? count + 1 : 0;           // (no scenes: no copy after the last)
-    const bool up = scene < top, down = scene > 0;   // (black where that way goes on; none where it doesn't)
     const int ax = tx + 2 * PX, ay = tagY + 2 * PX;  // (two blocks in from the tag's edge; its text's rows)
     for (int r = 0; r < 5; r++)
       for (int c = 0; c < 3; c++)
-        if (ARROWS[r][c] == '#' && (r < 2 ? up : down)) t.fillRect(ax + c * PX, ay + r * PX, PX, PX, BG);
-    drawText(tx + 2 * PX + ARROWS_W, ay, "SCN", G, ACCENT);
+        if (ARROWS[r][c] == '#') t.fillRect(ax + c * PX, ay + r * PX, PX, PX, BG);
+    drawText(tx + 2 * PX + ARROWS_W, ay, "SCN", G, sceneFlash ? INK : ACCENT);
   }
 
 }
