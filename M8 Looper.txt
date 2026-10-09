@@ -146,11 +146,20 @@ no dropouts or overruns
 	- more than one recording at once bug !
 	- check for more spurious metronome sounds V seems fine
 
-
 TTTT0LXXXXL0TTTT 
 TTTT00LLLL00TTTT 
 TTTTT000000TTTTT 
 
+
+9oct26
+
+- hide copyright before starting loading
+- move menu list 2 blocks up
+- draw left/right arrows on accent wave switch outline
+- draw small up/down arrow icons in accent at the end of the scene list is shift held
+	- unavailable direction
+- hold press shift+A to cut project
+	- show indicator, maybe the card is wiped left to right?
 
 # Feature backlog
 - track ms offset
