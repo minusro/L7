@@ -1321,7 +1321,7 @@ PROGMEM static const uint8_t HELP_IMG_42_RUNS[] = {
   39,1,21,0,
 };
 PROGMEM static const HelpImage HELP_IMG_42 = {210, 38, HELP_IMG_42_PAL, HELP_IMG_42_RUNS, 690};
-PROGMEM static const char HELP_STR_0[] = "HOW TO";
+PROGMEM static const char HELP_STR_0[] = "HELP";
 PROGMEM static const char HELP_STR_1[] = "A LOOPER FOR THE M8";
 PROGMEM static const char HELP_STR_2[] = "7 STEREO TRACKS, 200 SCENES";
 PROGMEM static const char HELP_STR_3[] = "AND 12 PROJECTS";
