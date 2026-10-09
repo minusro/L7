@@ -337,10 +337,10 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     // closed), in the icon's colour (black), from the button's left block
     // column in.
     // (10 x 5: the T against the A, the A pointed, a block before the P.)
-    static const char *const TAP[5] = {"###.#..###", ".#.#.#.#.#", ".#.###.###", ".#.#.#.#..", ".#.#.#.#.."};
+    static const char *const TAP[5] = {"###.#..##.", ".#.#.#.#.#", ".#.###.##.", ".#.#.#.#..", ".#.#.#.#.."};   // (the P's bowl rounded)
     const char *const *art = TAP;
     const int w = 10, h = 5;
-    int c0 = PANEL_LEFT, r0 = (rows - h) / 2;
+    int c0 = PANEL_LEFT + 1, r0 = (rows - h) / 2;
     for (int r = 0; r < h; r++)
       for (int c = 0; c < w; c++)
         if (art[r][c] == '#') block(c0 + c, r0 + r);
