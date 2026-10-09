@@ -207,7 +207,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   outline, a block of space, its fill in sevenths of its charge (90 % and up: full; charging, `board.batteryCharging()`, the fuel gauge's current
   flowing in (the charger's CHRG_STAT without it): a plus in its middle instead) (`board.batteryPercent()`: the
   fuel gauge's state of charge while it runs, else from the charger's battery voltage, read
-  every 5 s; variant A: none). The settings popup (`menuSettings()`, app.h's settings, saved with the session: `monitor=`,
+  every 5 s; always shown: with no reading, variant A too, full). The settings popup (`menuSettings()`, app.h's settings, saved with the session: `monitor=`,
   `playnew=`, `nextfree=`, `emptyclick=`): over the menu, rising from SETTINGS (a small grey
   arrow down to its label, over its first S), grey all over, from four blocks under the screen's top (each corner cut: its block and the two next to it), centred; the menu's own selection frame (round SETTINGS) hidden while it's open; its items from
   the bottom up: MONITOR AUDIO IN (the input heard in the mix: the line out and USB 1-2;

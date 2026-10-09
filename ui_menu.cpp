@@ -483,14 +483,15 @@ FLASHMEM void menuSettingsAct() {
 
 // The battery, top right (two blocks in): a tiny grey one, 11 x 7 blocks, its
 // outline, a block of space, its fill in sevenths (90 % and up: full); its tip
-// a block right, 3 blocks tall. Charging: a plus in its middle instead of the fill.
+// a block right, 3 blocks tall. Charging: a plus in its middle instead of the
+// fill. Always shown: with no reading (variant A, no answer), full.
 // (ink on ground: the menu's grey on its ground; storage mode's dark grey on its grey.)
 FLASHMEM void drawBatteryIcon(bool all, uint16_t ink, uint16_t ground) {
-  static int shownFill = -2;                       // (-1: not known, none)
+  static int shownFill = -1;
   static bool shownCharging = false;
   constexpr int STEPS = 7;
-  int pct = board.batteryPercent(), fill = pct < 0 ? -1 : pct >= 90 ? STEPS : (pct * STEPS + 50) / 100;
-  bool charging = fill >= 0 && board.batteryCharging();
+  int pct = board.batteryPercent(), fill = pct < 0 || pct >= 90 ? STEPS : (pct * STEPS + 50) / 100;
+  bool charging = pct >= 0 && board.batteryCharging();
   if (!all && fill == shownFill && charging == shownCharging) return;
   shownFill = fill;
   shownCharging = charging;
@@ -501,7 +502,7 @@ FLASHMEM void drawBatteryIcon(bool all, uint16_t ink, uint16_t ground) {
     for (int c = 0; c <= W; c++) {
       bool edge = r == 0 || r == H - 1 || c == 0 || c == W - 1, tip = c == W && r >= 2 && r <= H - 3;
       bool inside = r >= 2 && r <= H - 3 && c >= 2 && c - 2 < fill;
-      bool on = fill >= 0 && (c < W ? edge || inside : tip);
+      bool on = c < W ? edge || inside : tip;
       if (charging && !edge && c < W) on = r >= 2 && r <= 4 && c >= 4 && c <= 6 && PLUS[r - 2][c - 4] == '#';
       t.fillRect((X + c) * PX, (Y + r) * PX, PX, PX, on ? ink : ground);
     }
