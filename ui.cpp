@@ -268,10 +268,11 @@ void drawEdgeLine() {
       part(len - 1 - k, 1, (uint16_t)c);
     }
   };
-  strip(0, 8, menuOpen() ? BG : DARK, "TTTT0L");   // (LJJJJL, the thick one: 8 blocks; leaving the menu, black)
-  strip(8, 1, LIGHT, "TTTT00");                    // (00LLLL00)
-  strip(9, 1, BG, "TTTTT");                        // (T000000T)
-  constexpr int D = 10 * PX;                       // (the clip: the screen less the line)
+  const int thick = key == m8::BTN_UP || key == m8::BTN_DOWN ? 6 : 8;   // (the thick one: 8 blocks; along the top or bottom, 6)
+  strip(0, thick, menuOpen() ? BG : DARK, "TTTT0L");   // (LJJJJL; leaving the menu, black)
+  strip(thick, 1, LIGHT, "TTTT00");                // (00LLLL00)
+  strip(thick + 1, 1, BG, "TTTTT");                // (T000000T)
+  const int D = (thick + 2) * PX;                  // (the clip: the screen less the line)
   if (key == m8::BTN_LEFT) t.setClipRect(D, 0, 320 - D, 240);
   else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - D, 240);
   else if (key == m8::BTN_UP) t.setClipRect(0, D, 320, 240 - D);
