@@ -268,15 +268,15 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   };
   const int cols = BUTTON_W / PX, rows = height / PX;
   // The selected track's panel, under its number or icons: from a block in to
-  // a block short of the right edge, the button's height but its top block row, its bottom
+  // the right edge, the button's height but its top block row, its left
   // corners cut (a border round the badge: a block on top, two on the left and
   // bottom). Grey; the accent
   // colour while A is held, showing just the track's number then, in black.
   uint16_t panel = i == selected && i != STATUS_ROW ? markColor() : BG;
   if (panel != BG) {
     for (int r = 1; r < rows; r++)                // (not the top block row)
-      for (int c = PANEL_LEFT; c < cols - 1; c++)     // (not the rightmost column)
-        if (!((c == PANEL_LEFT || c == cols - 2) && r == rows - 1)) blockIn(c, r, panel);   // (the bottom corners cut)
+      for (int c = PANEL_LEFT; c < cols; c++)         // (to the right edge)
+        if (!(c == PANEL_LEFT && (r == 1 || r == rows - 1))) blockIn(c, r, panel);   // (the left corners cut)
     if (color == panel) color = BG;                // (a recording icon in the accent colour, on it)
     if (panel == ACCENT && badge != BADGE_NONE) badge = BADGE_LABEL;   // highlighted: the number alone
   }
