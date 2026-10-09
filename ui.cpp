@@ -239,14 +239,14 @@ static int shownDepth = 0;
 // The line along the edge of arrow `key` drawn, everything else clipped to
 // the rest of the screen meanwhile.
 FLASHMEM static void paintEdgeLine(uint8_t key) {
-  // A grey line 4 blocks wide, the edge's whole length, an arrow pointing at
-  // the edge cut out of its middle (not drawn: what's under it shows; 3
-  // blocks deep, 5 long, its tip a block in from the edge). The looper's: a
+  // A grey line 5 blocks wide, the edge's whole length, an arrow pointing at
+  // the edge cut out of its middle (not drawn: what's under it shows; 4
+  // blocks deep, 14 long, its tip a block in from the edge). The looper's: a
   // black outline on its inner side too, a block wide, round the arrow as well.
   auto &t = board.tft();
   t.setClipRect();
   const bool outline = !menuOpen();
-  const int depth = outline ? 5 : 4;               // (blocks; the outline's the 5th)
+  const int depth = outline ? 6 : 5;               // (blocks; the outline's the 6th)
   const bool across = key == m8::BTN_UP || key == m8::BTN_DOWN;
   const int len = (across ? 320 : 240) / PX, mid = len / 2;
   auto put = [&](int d, int b0, int n, uint16_t c) {   // d blocks in from the edge, along from block b0, n blocks
@@ -256,13 +256,16 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
     else if (key == m8::BTN_UP) t.fillRect(along, in, w, PX, c);
     else t.fillRect(along, 240 - PX - in, w, PX, c);
   };
-  auto arrow = [&](int d, int a) { return d >= 1 && d <= 3 && abs(a) <= d - 1; };
+  auto arrow = [&](int d, int a) {                 // (4 deep, 14 long: 2, 6, 10, 14 blocks from its tip, a block in, to its base)
+    int r = d - 1;
+    return r >= 0 && r <= 3 && a >= -(2 * r + 1) && a <= 2 * r;
+  };
   auto colour = [&](int d, int a) -> int {         // (-1: not drawn)
     if (arrow(d, a)) return -1;
     if (outline && (d == depth - 1 || arrow(d - 1, a) || arrow(d + 1, a) || arrow(d, a - 1) || arrow(d, a + 1))) return BG;
     return DIM;
   };
-  constexpr int WIN = 4;                           // (round the arrow: block by block; the rest in runs)
+  constexpr int WIN = 9;                           // (round the arrow: block by block; the rest in runs)
   for (int d = 0; d < depth; d++) {
     uint16_t run = outline && d == depth - 1 ? BG : DIM;
     put(d, 0, mid - WIN, run);
