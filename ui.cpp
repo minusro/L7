@@ -262,11 +262,11 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
       part(len - 1 - k, 1, (uint16_t)c);
     }
   };
-  if (menuOpen()) {                                // leaving the menu: a grey line a block wide, the edge's whole length
-    if (key == m8::BTN_LEFT) t.fillRect(0, 0, PX, 240, DIM);
-    else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX, 0, PX, 240, DIM);
-    else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, PX, DIM);
-    else t.fillRect(0, 240 - PX, 320, PX, DIM);
+  if (menuOpen()) {                                // leaving the menu: a light grey line a block wide, the edge's whole length
+    if (key == m8::BTN_LEFT) t.fillRect(0, 0, PX, 240, LIGHT);
+    else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX, 0, PX, 240, LIGHT);
+    else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, PX, LIGHT);
+    else t.fillRect(0, 240 - PX, 320, PX, LIGHT);
     shownDepth = PX;
     if (key == m8::BTN_LEFT) t.setClipRect(PX, 0, 320 - PX, 240);
     else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - PX, 240);
