@@ -339,7 +339,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     static const char *const TAP[5] = {"###.###.###", ".#..#.#.#.#", ".#..###.###", ".#..#.#.#..", ".#..#.#.#.."};
     const char *const *art = TAP;
     const int w = 11, h = 5;
-    int c0 = PANEL_LEFT, r0 = (rows - h) / 2;
+    int c0 = PANEL_LEFT + pressed, r0 = (rows - h) / 2;   // (pressed: a block right)
     for (int r = 0; r < h; r++)
       for (int c = 0; c < w; c++)
         if (art[r][c] == '#') block(c0 + c, r0 + r);
