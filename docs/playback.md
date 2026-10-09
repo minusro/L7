@@ -149,9 +149,13 @@ length; in the upper 24 bits of the old 32-bit mute, so older units read 0).
 `Track::rangeStartFrame()` takes it off (every place played is that much
 earlier in the file), so the range's start, its wraps, the planned switches
 and the stream all follow; the waveform's overview is drawn turned as far
-right (ui.cpp `takeLooks()`). A change while playing is a switch like a
-moved range (`sameClip()` counts it), on the next quarter beat after the lead,
-crossfaded, the clip in step with the clock. The simulator checks the output
+right (ui.cpp `takeLooks()`). A change while playing (`rotateTrack()`) is queued as a moved
+range is (`queueRange()`, with the range: one doesn't undo the other): the
+switch goes on the first quarter beat the stream hadn't buffered yet, the old
+place playing on from the buffer up to it and the new one read after it, so
+it's heard only once its data is in, a whole buffer (~0.35 s) ahead;
+crossfaded, the clip in step with the clock. (A scene's units differing in it
+switch as clips do: `sameClip()` counts it.) The simulator checks the output
 at each beat turned a quarter beat, a millisecond more, and back.
 
 ## Metronome

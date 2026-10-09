@@ -131,11 +131,13 @@ struct Track {
   FsFile unitFile;                 // where the track's settings are saved
   uint32_t fileFrame = 0;          // loop frame that stream frame `head` comes from
 
-  // Queued loop range (loop() only): the stream switches to it at stream
-  // frame switchS, which falls on transport quarter beat switchQ. The old
-  // range keeps playing until then.
+  // Queued loop range and fine rotate (loop() only): the stream switches to
+  // them at stream frame switchS, which falls on transport quarter beat
+  // switchQ (the first the stream hadn't buffered yet: the new data is read
+  // after the old range's, a whole buffer ahead). The old range keeps playing
+  // until then.
   bool rangePending = false;
-  uint32_t pendingStartBeat = 0, pendingBeats = 0, switchS = 0;
+  uint32_t pendingStartBeat = 0, pendingBeats = 0, pendingRotate = 0, switchS = 0;
   int32_t switchQ = 0;
 };
 

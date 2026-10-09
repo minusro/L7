@@ -502,7 +502,7 @@ TrackUnit unitOf(int t) {
   trackRange(t, u.rangeStart, u.rangeLen);       // a queued range counts
   u.rangePhase = (uint32_t)posMod(-tr.rangeAnchorQ, 4 * u.rangeLen);
   u.muted = tr.state == TrackState::Muted;
-  u.rotate = tr.rotate;
+  u.rotate = tr.rangePending ? tr.pendingRotate : tr.rotate;   // (a queued one counts)
   return u;
 }
 
@@ -1321,17 +1321,22 @@ bool pasteTrack(int t) {
   return true;
 }
 
+static void queueRange(int t, uint32_t startBeat, uint32_t beats, uint32_t rotate);
 bool rotateTrack(int t, int32_t by) {
   Track &tr = tracks[t];
-  TrackUnit u = unitOf(t);                       // (a planned change counts)
-  if (!u.sample || u.sample != tr.sample || recordingTrack(t)) return false;
+  if (tr.state == TrackState::Empty || recordingTrack(t)) return false;
+  if (changes[t].on || plans[t].on || tr.sampleSwitch) return false;   // a change on its way (a moment)
   int64_t loop = tr.loopFrames();
   if (loop <= 0) return false;
-  int64_t r = ((int64_t)u.rotate + by) % loop;
-  u.rotate = (uint32_t)(r < 0 ? r + loop : r);
-  bool ok = setTrackUnit(t, u);
-  sceneStateChanged();                           // (setTrackUnit() alone leaves the scene to its caller)
-  return ok;
+  uint32_t now = tr.rangePending ? tr.pendingRotate : tr.rotate;
+  int64_t r = ((int64_t)now + by) % loop;
+  uint32_t to = (uint32_t)(r < 0 ? r + loop : r);
+  if (to == now) return true;
+  uint32_t rs, rb;
+  trackRange(t, rs, rb);
+  queueRange(t, rs, rb, to);                     // (as a range: at once, or switched to with the old buffered)
+  sceneStateChanged();                           // (the scene follows)
+  return true;
 }
 
 bool swapTracks(int a, int b) {
@@ -1843,11 +1848,16 @@ static void applyQueuedRange(Track &tr) {
   uint32_t before[XFADE_FRAMES];
   bool saved = false;
   const bool startMoved = tr.pendingStartBeat != tr.rangeStartBeat && tr.pendingBeats == tr.rangeBeats;
+  const bool turned = tr.pendingRotate != tr.rotate;   // (the fine rotate: from the place it gives)
   tr.rangeStartBeat = tr.pendingStartBeat;
   tr.rangeBeats = tr.pendingBeats;
+  if (turned) {
+    tr.rotate = tr.pendingRotate;
+    tr.overviewVersion++;                          // (the waveform drawn turned too)
+  }
   tr.rangePending = false;
   uint32_t offset = tr.rangeOffset(tr.fileFrame);
-  if (!startMoved && offset < tr.rangeFrames()) {
+  if (!startMoved && !turned && offset < tr.rangeFrames()) {
     // Playhead position in the new range, in quarter beats (switches fall on
     // quarter beats; round away the per-quarter rounding of frames).
     int32_t posQ = (int32_t)(((uint64_t)offset * 4 + tr.spbNative / 2) / tr.spbNative);
@@ -1941,6 +1951,8 @@ static void startTrack(int t, int32_t beat0, bool fillNow) {
   if (tr.rangePending) {                         // restarting: take the queued range now
     tr.rangeStartBeat = tr.pendingStartBeat;
     tr.rangeBeats = tr.pendingBeats;
+    if (tr.pendingRotate != tr.rotate) tr.overviewVersion++;
+    tr.rotate = tr.pendingRotate;
     tr.rangePending = false;
     trackChanged(t);
   }
@@ -2479,17 +2491,27 @@ bool setRange(int t, uint32_t startBeat, uint32_t beats) {
   if (tr.state == TrackState::Empty || beats < 1 ||
       startBeat >= tr.loopBars * BEATS_PER_BAR || beats > tr.loopBars * BEATS_PER_BAR)
     return false;
+  queueRange(t, startBeat, beats, tr.rangePending ? tr.pendingRotate : tr.rotate);
+  return true;
+}
+
+// A range and fine rotate for a track with a clip: not playing, at once;
+// playing, queued: the switch goes on the first quarter beat that the stream
+// hasn't buffered yet, so the old range plays right up to it with no gap, the
+// new one's data read after it, a whole buffer ahead of where it's heard.
+static void queueRange(int t, uint32_t startBeat, uint32_t beats, uint32_t rotate) {
+  Track &tr = tracks[t];
   if (!tr.live) {                                // not playing: just change it
     tr.rangePending = false;
     tr.rangeStartBeat = startBeat;
     tr.rangeBeats = beats;
+    if (rotate != tr.rotate) tr.overviewVersion++;
+    tr.rotate = rotate;
     trackChanged(t);
     if (tr.armed) startTrack(t, tr.startBeat, false);   // joining soon: refill for the new range
-    return true;
+    return;
   }
-  // Playing: queue it. The switch goes on the first quarter beat that the
-  // stream hasn't buffered yet, so the old range plays right up to it with no
-  // gap. Stream frame of transport quarter q: s0 + frames since startBeat.
+  // Stream frame of transport quarter q: s0 + frames since startBeat.
   noInterrupts();
   int32_t q = transport.beat * 4 + (int32_t)((uint64_t)transport.sampleInBeat * 4 / transport.spb) + 1;
   interrupts();
@@ -2497,10 +2519,11 @@ bool setRange(int t, uint32_t startBeat, uint32_t beats) {
   while ((int32_t)(streamAt(q) - tr.head) < 0) q++;
   tr.pendingStartBeat = startBeat;
   tr.pendingBeats = beats;
+  tr.pendingRotate = rotate;
   tr.switchQ = q;
   tr.switchS = streamAt(q);
   tr.rangePending = true;
-  return true;
+  trackChanged(t);                               // (the unit file: a queued one counts)
 }
 
 // ---- Transport

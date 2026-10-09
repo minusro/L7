@@ -130,29 +130,29 @@ static bool editAfterOpt = false;
 static int32_t rotateBy = 0;
 static int rotateT = -1;
 static uint8_t rotateKey = 0;
+static bool rotateHeld = false;                    // (its keys still held)
 static int32_t rotateQ = 0;                        // (the quarter beat last seen: a crossing, what's turned heard)
 int32_t clipRotatePending(int t) { return t == rotateT ? rotateBy : 0; }
-static void applyRotate() {
-  if (rotateT >= 0 && rotateBy) rotateTrack(rotateT, rotateBy);
-  if (rotateT >= 0) drawTrack(rotateT);
-  rotateBy = 0;
-  rotateT = -1;
-  rotateKey = 0;
-}
 static int32_t quarterNow() {
   noInterrupts();
   int32_t q = transport.beat * 4 + (int32_t)((uint64_t)transport.sampleInBeat * 4 / transport.spb);
   interrupts();
   return q;
 }
+// What's turned goes to the track (rotateTrack(): queued as a range, switched
+// to on a quarter beat with the new data buffered) at each quarter beat
+// crossing while held and playing, and once let go; a change on its way
+// meanwhile: again until taken.
 static void serviceRotate() {                      // (every pass: pollKeys())
   if (rotateT < 0) return;
   int32_t q = quarterNow();
-  if (q == rotateQ) return;
+  bool crossing = q != rotateQ;
   rotateQ = q;
-  if (rotateBy && transport.running) {
-    rotateTrack(rotateT, rotateBy);                // (heard from the next quarter beat after the lead)
-    rotateBy = 0;
+  if (rotateBy && (!rotateHeld || (crossing && transport.running)) && rotateTrack(rotateT, rotateBy)) rotateBy = 0;
+  if (!rotateHeld && !rotateBy) {
+    drawTrack(rotateT);
+    rotateT = -1;
+    rotateKey = 0;
   }
 }
 // A turn as signed frames: past half the loop, as earlier.
@@ -409,7 +409,10 @@ static void switchHold() {
 FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (flash: on key presses only; RAM1 is full)
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   // The fine rotate's keys: one let go, what was shown is heard.
-  if (rotateT >= 0 && (!(keys & m8::BTN_EDIT) || !(keys & m8::BTN_OPT) || !(keys & rotateKey))) applyRotate();
+  if (rotateHeld && (!(keys & m8::BTN_EDIT) || !(keys & m8::BTN_OPT) || !(keys & rotateKey))) {
+    rotateHeld = false;
+    serviceRotate();
+  }
   // The arrows' modifier (exclusive: the one pressed last; ui.h arrowModifier()).
   const bool shiftA = arrowModifier() == m8::BTN_SHIFT, optA = arrowModifier() == m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
@@ -757,7 +760,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       // audio as it was): LEFT/RIGHT 5 ms earlier / later, UP/DOWN a
       // quarter beat later / earlier, each held repeating; while held only
       // the waveform drawn (and the ms shown) turn: heard once a key of the
-      // combo is let go (applyRotate(), above).
+      // combo is let go (serviceRotate(), above).
       // Both LEFT and RIGHT (or UP and DOWN) held: back to none. Reaching none
       // (or passing it, either way): there, a held arrow's repeats stopped
       // (a fresh press goes on).
@@ -783,10 +786,13 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       }
       if (by) {
         if (rotateT != selected) {
-          applyRotate();
+          rotateHeld = false;                      // (another track's, let go of: to it now)
+          serviceRotate();
+          rotateBy = 0;
           rotateQ = quarterNow();                  // (heard from the next crossing on)
         }
         rotateT = selected;
+        rotateHeld = true;
         rotateBy += by;
         rotateKey = pressed & (LR | UD);
         drawTrack(selected);

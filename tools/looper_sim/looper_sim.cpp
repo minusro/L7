@@ -3259,6 +3259,8 @@ for f in os.listdir("."):
       Track &tr = tracks[t];
       const uint32_t loop = tr.loopFrames(), quarter = tr.spbNative / 4, start = tr.rangeStartBeat * tr.spbNative;
       check(rotateTrack(t, (int32_t)quarter), "turned a quarter beat later");
+      check(tr.rangePending && (int32_t)(tr.switchS - tr.head) >= 0 && tr.switchQ % 1 == 0,
+            "queued: switched to where the stream hadn't buffered yet (the old place played up to it, nothing dropped)");
       runBeats(3);
       char msg[160];
       snprintf(msg, sizeof msg, "its unit and track: %u frames (a quarter beat: %u); the range starts that much earlier in the file",
