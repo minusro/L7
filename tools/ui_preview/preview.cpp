@@ -26,6 +26,7 @@ HardwareSerial midi;
 
 bool optBeforeShift() { return true; }             // (input.cpp isn't built here)
 bool clipRotating() { return false; }
+int32_t clipRotatePending(int) { return 0; }
 bool arrowsMoved() { return true; }
 static uint8_t simSwitchKey = 0;                   // (an arrow held that switches screens: the peeps)
 bool screenSwitchPending() { return simSwitchKey != 0; }

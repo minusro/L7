@@ -150,7 +150,8 @@ void drawStatus() {
   // loop: as earlier), as the offset.
   const bool rotateShown = clipRotating();
   if (rotateShown) {
-    int32_t f = unitOf(selected).rotate, loop = tracks[selected].loopFrames();
+    int32_t loop = tracks[selected].loopFrames();
+    int32_t f = ((int32_t)((unitOf(selected).rotate + (int64_t)clipRotatePending(selected)) % loop) + loop) % loop;   // (held, not heard yet: counted)
     if (f > loop / 2) f -= loop;
     snprintf(text, sizeof text, "%+d", (int)lroundf(f * 1000.0f / AUDIO_SAMPLE_RATE_EXACT));
   }

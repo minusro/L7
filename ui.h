@@ -56,6 +56,7 @@ struct ShownTrack {
   TrackState state;
   int8_t volume, balance, filterLo, filterHi;
   uint8_t overviewVersion;
+  uint16_t turn;                                   // the waveform turned right this many columns (the fine rotate)
   uint32_t loopBars;
   uint32_t rs, rb;                                 // the range shown (trackRange(): a queued one)
   uint32_t rangeStartBeat, rangeBeats;             // the range playing (the playhead's)

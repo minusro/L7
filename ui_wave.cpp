@@ -58,6 +58,7 @@ struct WaveView {
   uint16_t headColor = 0;                          // a line this colour; INVERT_HEAD: the column inverted
   uint16_t rangeInk = INK;                         // the waveform inside the loop range
   uint16_t outInk = DARK;                          // the waveform outside the loop range
+  uint16_t turn = 0;                               // turned right this many columns (the fine rotate)
   // live view
   uint32_t liveBars = 0;
   int liveFilled = 0;                              // columns with recorded audio
@@ -181,12 +182,13 @@ void drawWave(int i, bool recordingHere) {
   if (recordingHere) rangeInk = INK;                 // the recording's waveform: white
   uint16_t ground = rowGround(i);
   uint16_t outInk = onGround(muted ? DARK : DIM, ground);   // outside it: grey (muted: dark grey; black on the selected track's ground)
-  if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.state == (uint8_t)tr.state &&
+  if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.turn == tr.turn && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.ground == ground && v.borders == borders &&
       v.rangeInk == rangeInk && v.outInk == outInk)
     return;
   v.drawn = uiGeneration;
   v.version = tr.overviewVersion;
+  v.turn = tr.turn;
   v.state = (uint8_t)tr.state;
   v.rec = recordingHere;
   v.rs = rs;

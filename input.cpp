@@ -121,6 +121,20 @@ bool optBeforeShift() { return optFirst; }
 // A pressed while B was held (B then A: the clip's fine rotate, moving a track
 // with a clip; A first: a swipe).
 static bool editAfterOpt = false;
+// The fine rotate while its keys are held: turned this far more (frames) on
+// track rotateT, shown (the waveform drawn, the ms) but not heard until a key
+// of the combo (B, A or the arrow) is let go: then applied (rotateTrack()).
+static int32_t rotateBy = 0;
+static int rotateT = -1;
+static uint8_t rotateKey = 0;
+int32_t clipRotatePending(int t) { return t == rotateT ? rotateBy : 0; }
+static void applyRotate() {
+  if (rotateT >= 0 && rotateBy) rotateTrack(rotateT, rotateBy);
+  if (rotateT >= 0) drawTrack(rotateT);
+  rotateBy = 0;
+  rotateT = -1;
+  rotateKey = 0;
+}
 // B then A held on a clip's waveform cell: its fine rotate (the arrows turn it).
 bool clipRotating() {
   uint8_t k = mainKeys();
@@ -369,6 +383,8 @@ static void switchHold() {
 
 FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (flash: on key presses only; RAM1 is full)
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
+  // The fine rotate's keys: one let go, what was shown is heard.
+  if (rotateT >= 0 && (!(keys & m8::BTN_EDIT) || !(keys & m8::BTN_OPT) || !(keys & rotateKey))) applyRotate();
   // The arrows' modifier (exclusive: the one pressed last; ui.h arrowModifier()).
   const bool shiftA = arrowModifier() == m8::BTN_SHIFT, optA = arrowModifier() == m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
@@ -713,16 +729,23 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       }
     } else if (clipRotating()) {
       // B then A on a clip's waveform: its fine rotate (the clip turned, its
-      // audio as it was: what plays and the waveform drawn move together):
-      // LEFT/RIGHT a millisecond earlier / later (repeats too), UP/DOWN a
-      // quarter beat later / earlier (a fresh press each).
+      // audio as it was): LEFT/RIGHT a millisecond earlier / later, UP/DOWN a
+      // quarter beat later / earlier, each held repeating; while held only
+      // the waveform drawn (and the ms shown) turn: heard once a key of the
+      // combo is let go (applyRotate(), above).
       const Track &tr = tracks[selected];
       int32_t by = 0;
       if (pressed & m8::BTN_RIGHT) by += (int32_t)lroundf(AUDIO_SAMPLE_RATE_EXACT / 1000);
       if (pressed & m8::BTN_LEFT) by -= (int32_t)lroundf(AUDIO_SAMPLE_RATE_EXACT / 1000);
-      if (!repeat && (pressed & m8::BTN_UP)) by += (int32_t)(tr.spbNative / 4);
-      if (!repeat && (pressed & m8::BTN_DOWN)) by -= (int32_t)(tr.spbNative / 4);
-      if (by && rotateTrack(selected, by)) drawTrack(selected);
+      if (pressed & m8::BTN_UP) by += (int32_t)(tr.spbNative / 4);
+      if (pressed & m8::BTN_DOWN) by -= (int32_t)(tr.spbNative / 4);
+      if (by) {
+        if (rotateT != selected) applyRotate();
+        rotateT = selected;
+        rotateBy += by;
+        rotateKey = pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN);
+        drawTrack(selected);
+      }
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats: any whole number of beats, up to the whole loop.
       //   LEFT/RIGHT: move its start a step, wrapping around the loop (a range

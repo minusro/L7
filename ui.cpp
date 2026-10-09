@@ -86,8 +86,13 @@ static void takeLooks(int t, ShownTrack &s) {
   s.rangeBeats = tr.rangeBeats;
   s.rangeAnchorQ = tr.rangeAnchorQ;
   float norm = overviewNormOf(tr.overview);        // drawn normalised: its peak the full height
-  uint32_t loop = tr.loopFrames();                 // (its fine rotate: the waveform turned as far right)
-  int shift = loop ? (int)((uint64_t)tr.rotate * OVERVIEW_COLS / loop) : 0;
+  // Its fine rotate (a change on its way, and one held but not heard yet,
+  // counting): the waveform turned as far right.
+  uint32_t loop = tr.loopFrames();
+  TrackUnit u = unitOf(t);
+  int64_t turn = (u.sample == tr.sample ? u.rotate : tr.rotate) + (int64_t)clipRotatePending(t);
+  int shift = loop ? (int)(((turn % loop + loop) % loop) * OVERVIEW_COLS / loop) : 0;
+  s.turn = shift;
   for (int c = 0; c < OVERVIEW_COLS; c++) s.overview[(c + shift) % OVERVIEW_COLS] = (uint8_t)min(255.0f, tr.overview[c] * norm + 0.5f);
 }
 
