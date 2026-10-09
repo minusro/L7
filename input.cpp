@@ -278,7 +278,24 @@ static bool openCard(int slot) {
 // On the loaded project's card or an empty slot (openOnLetGo): nothing on the
 // press; let go, to the looper (openCard()); held LONG_PRESS_MS, to the looper
 // and the clock started the same way.
+// SHIFT+A (or B) held on a card with a project: cut once held CUT_HOLD_MS
+// (let go sooner: nothing); meanwhile its card wipes away from the left
+// (menuCutProgress(), ui_menu.cpp).
+static constexpr uint32_t CUT_HOLD_MS = 1000;
+float menuCutProgress(int &slot) {
+  slot = armed && shifted && armedSlot >= 0 && menuOpen() && projectFilled(armedSlot) ? armedSlot : -1;
+  return slot < 0 ? 0 : min(1.0f, (millis() - armedAt) / (float)CUT_HOLD_MS);
+}
+
 static void menuHold() {
+  int cutSlot;
+  if (menuCutProgress(cutSlot) >= 1) {             // held long enough: cut
+    armed = false;                                   // (letting go: nothing more)
+    projectCut(cutSlot);
+    drawMenu();
+    for (int i = 0; i < ROWS; i++) drawTrack(i);    // (the loaded one cut: the looper emptied)
+    return;
+  }
   if (armed && openOnLetGo && menuOpen() && millis() - armedAt >= LONG_PRESS_MS) {
     armed = false;                                   // (letting go: nothing more)
     if (openCard(armedSlot) && !transport.running) startByHand();
@@ -404,7 +421,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // button's action once let go (on the item it was pressed on); START starts /
   // stops the clock, as in the looper's view. The menu doesn't
   // start or stop the clock.
-  // SHIFT+A on a project: cuts it when let go (no confirmation). A on a card,
+  // SHIFT+A on a project: cuts it once held CUT_HOLD_MS (its card wiping away meanwhile; let go sooner: nothing). A on a card,
   // at once on the press: its project loaded, the menu staying open (held
   // LONG_PRESS_MS: it closes too, menuHold(); let go, the two cards take turns
   // as the loaded one until it comes in: menuNoteLoad()); on an empty slot (once
@@ -463,8 +480,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         openCard(slot);
         return;
       } else if (shifted) {                          // SHIFT: cut its project, or paste one into it
-        if (projectFilled(slot)) projectCut(slot);
-        else projectPaste(slot);
+        if (!projectFilled(slot)) projectPaste(slot);   // (a project: cut only once held, menuHold())
+        else drawMenu();                             // (let go too soon: its card whole again)
         drawMenu();
         for (int i = 0; i < ROWS; i++) drawTrack(i);   // (the loaded one cut: the looper emptied)
       }                                              // (a card without SHIFT: done on the press)

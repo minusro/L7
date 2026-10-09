@@ -266,6 +266,12 @@ static void drawItem(int k) {
             if (PLAY[r][c] == '#') t.fillRect((x0 + w + 1 + c) * PX, (y0 + r) * PX, PX, PX, letter);
       }
     }
+    int cutSlot;                                  // SHIFT+A held on it (to cut it): wiped away from the left, as far as the hold
+    float cut = menuCutProgress(cutSlot);
+    if (cutSlot == k && cut > 0) {
+      int cols = (int)(cut * s.w);
+      if (cols > 0) t.fillRect(s.x * PX, s.y * PX, cols * PX, s.h * PX, MENU_BG);
+    }
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
     fillRing(s, LIST_SPACE, 0, MENU_BG);
@@ -357,6 +363,15 @@ void drawMenu() {
     drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
   bool redrawn = false;
+  int cutSlot;
+  const float cut = menuCutProgress(cutSlot);
+  static int shownCut = -1;                        // (the card being wiped: its blocks wiped so far, + 100 * slot)
+  const int cutKey = cutSlot < 0 ? -1 : cutSlot * 100 + (int)(cut * CARD_W);
+  if (cutKey != shownCut) {                        // (it, and the one before, again)
+    if (shownCut >= 0) shownKey[shownCut / 100] = ~0u;
+    if (cutSlot >= 0) shownKey[cutSlot] = ~0u;
+    shownCut = cutKey;
+  }
   for (int pass = 0; pass < 2; pass++)
     for (int k = 0; k < ITEMS; k++) {
       uint32_t key = itemKey(k);
