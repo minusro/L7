@@ -264,7 +264,7 @@ static void drawItem(int k) {
          playing = k == playingCard() && transport.running && !emptyLook;   // (emptyLook: as an empty slot's, the cut's wipe)
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
     uint16_t letter = loaded ? BG : filled || (sel && actionHeld() && !emptyLook && !menuJustCut()) ? color : DIM;   // (an empty slot's: grey, as its outline; its colour while an action button is held)
-    const bool cutFlash = !filled && !loaded && k == menuCutFlash();   // (just cut: its outline and letter white for 100 ms)
+    const bool cutFlash = !filled && !loaded && k == menuCutFlash();   // (just cut: its outline and letter white for 50 ms)
     if (cutFlash) letter = INK;
     if (loaded) {                                 // the loaded one: filled
       fillRing(s, 0, -s.w, color);

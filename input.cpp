@@ -296,9 +296,9 @@ static bool openCard(int slot) {
 static constexpr uint32_t CUT_HOLD_MS = 1000;
 static bool justCut = false;                       // a project just cut by holding: its card's letter not in its colour until the keys are let go
 bool menuJustCut() { return justCut; }
-static int cutFlashSlot = -1;                      // the card just cut by holding, and when: white for 100 ms
+static int cutFlashSlot = -1;                      // the card just cut by holding, and when: white for 50 ms
 static uint32_t cutFlashAt = 0;
-int menuCutFlash() { return cutFlashSlot >= 0 && millis() - cutFlashAt < 100 ? cutFlashSlot : -1; }
+int menuCutFlash() { return cutFlashSlot >= 0 && millis() - cutFlashAt < 50 ? cutFlashSlot : -1; }
 float menuCutProgress(int &slot) {
   slot = armed && shifted && armedSlot >= 0 && menuOpen() && projectFilled(armedSlot) && (board.keys() & m8::BTN_SHIFT) ? armedSlot : -1;
   return slot < 0 ? 0 : min(1.0f, (millis() - armedAt) / (float)CUT_HOLD_MS);
