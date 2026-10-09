@@ -75,7 +75,7 @@ static constexpr uint32_t INTRO_MS = max(LOGO_FADE_MS + HUE_MS, TEXT_FROM_MS + R
 static constexpr uint32_t OUT_FROM_MS = 3500, OUT_MS = 500;
 static uint32_t shownAt = 0, outAt = 0;            // (outAt: the fade out's start; 0: not yet)
 
-static const char COPYRIGHT[] = "(c) 2026 Daniel Stanciu";
+static const char COPYRIGHT[] = "\xA9 2026 Daniel Stanciu";
 
 // Width of a line of text, in blocks.
 static int textCols(const char *text) {
@@ -243,7 +243,7 @@ void splashIntro() {
 void splashLoading() {
   if (shownTextY >= 0) board.tft().fillRect(lineX, shownTextY, textWidthPx(lineText), TEXT_H, BG);   // (the copyright gone)
   lineText = "Loading...";
-  lineX = copyrightX + (textCols("(c) ") + 1) * TEXT_PX;   // (where its "2026" started)
+  lineX = copyrightX + (textCols("\xA9 ") + 1) * TEXT_PX;   // (where its "2026" started)
   lineChanged = true;
   splashTick();
 }
