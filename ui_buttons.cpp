@@ -106,6 +106,13 @@ static bool adjusting() {
   return mainKeys() & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN | m8::BTN_EDIT);
 }
 
+// B then A held on the selected track with a clip (B + A + UP/DOWN move it;
+// A first: a swipe): its panel shown, the up and down arrows on it in black.
+static bool movingClip(int i) {
+  return shownSelected(i) && i != STATUS_ROW && bArrows() && (mainKeys() & m8::BTN_EDIT) && hasClip(i) && heldAction < 0 &&
+         !(mainKeys() & m8::BTN_PLAY);
+}
+
 // The track's own state.
 static int trackIcon(int i) {
   // (Resampling: the record dot with a plus instead.)
@@ -121,7 +128,7 @@ static int trackIcon(int i) {
   // B held on the selected empty track (B + UP/DOWN moves it), or B then A on
   // one with a clip (B + A + UP/DOWN do; A first: a swipe): up and down arrows instead of its number.
   if (shownSelected(i) && bAlone() && unitOf(i).sample == 0) return ICON_MOVE;
-  if (shownSelected(i) && bArrows() && (mainKeys() & m8::BTN_EDIT) && hasClip(i) && heldAction < 0 && !(mainKeys() & m8::BTN_PLAY)) return ICON_MOVE;
+  if (movingClip(i)) return ICON_MOVE;
   return ICON_NONE;                                // (the track's number shows its state)
 }
 
@@ -261,7 +268,7 @@ static uint16_t iconColor(int i, int icon) {
     return actionHeldHere() ? actionColor(icon) : BG;
   }
   if (unavailable(i, icon)) return DARK;
-  if (icon == ICON_MOVE) return ACCENT;            // (on the selected track's grey panel)
+  if (icon == ICON_MOVE) return movingClip(i) ? BG : ACCENT;   // (B + A on a clip: black, on its panel)
   if (bg != BG) return BG;
   if (recordingOn(i) || recordQueued() == i) return ACCENT;
   return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white
@@ -270,7 +277,7 @@ static uint16_t iconColor(int i, int icon) {
 // The selected track's panel: only while A is held (pressed here), in the
 // accent colour while A is held, with the action button (acting on the track).
 static uint16_t markColor() {                     // (only while A is held, its press made here: the accent colour)
-  return actionHeldHere() ? ACCENT : BG;
+  return actionHeldHere() || movingClip(selected) ? ACCENT : BG;   // (B then A on a clip: too)
 }
 
 // The button, built whole in a buffer and sent at once.
