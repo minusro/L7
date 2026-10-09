@@ -316,7 +316,8 @@ static void drawItem(int k) {
     fillRing(s, LIST_SPACE, 0, MENU_BG);
     bool off = k - CARDS == MENU_EXPORT && !projectHasClips();   // export: nothing to export (no clips, or the dummy project)
     const char *label = k == CARDS && exportText[0] ? exportText : LABELS[k - CARDS];
-    uint16_t ink = off ? DIM : sel ? INK : LIGHT;
+    // (Export, when it can: in the loaded project's colour, selected or not.)
+    uint16_t ink = off ? DIM : k == CARDS + MENU_EXPORT && projectCurrent() >= 0 ? PROJECT_COLORS[projectCurrent()] : sel ? INK : LIGHT;
     if (k == CARDS && exportText[0] && exportNameAt > 0 && exportFor >= 0) {   // "SAVED AS " grey, the name in the project's colour
       char head[24];
       snprintf(head, sizeof head, "%.*s", exportNameAt, exportText);
@@ -355,7 +356,8 @@ static uint32_t itemKey(int k) {
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == loaded) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
          (uint32_t)(sel && !setOpen ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(sel && menuJustCut()) << 29 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
-         (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25;
+         (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25 ^
+         (k == CARDS + MENU_EXPORT ? (uint32_t)(projectCurrent() + 2) * 2654435761u : 0);   // (export: the loaded project's colour)
 }
 
 // ---- The settings (app.h): a popup over the menu, rising from SETTINGS (an
