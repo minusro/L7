@@ -208,19 +208,34 @@ void drawEdgeLine() {
   // flicker). (A switch clears the clip first: input.cpp, edgeDue().)
   if (key == shownKey && shownGen == uiGeneration) return;
   t.setClipRect();
-  // 4 blocks along the edge (the looper's dark grey, the menu's black), then
-  // a block of light grey, then one of black.
-  auto strip = [&](int from, int w, uint16_t c) {  // (from: blocks in from the edge)
+  // 4 blocks along the edge, then a block, then another, each with its own
+  // colour at its two ends along the edge (stepping in, like a bevel).
+  // A strip `w` blocks deep, `from` blocks in from the edge, along it: `mid`,
+  // its first and last blocks along the edge `end` (TRANSPARENT: left as they are).
+  constexpr int TRANSPARENT = -1;
+  auto strip = [&](int from, int w, uint16_t mid, int end) {
     from *= PX, w *= PX;
-    if (key == m8::BTN_LEFT) t.fillRect(from, 0, w, 240, c);
-    else if (key == m8::BTN_RIGHT) t.fillRect(320 - from - w, 0, w, 240, c);
-    else if (key == m8::BTN_UP) t.fillRect(0, from, 320, w, c);
-    else t.fillRect(0, 240 - from - w, 320, w, c);
+    const bool across = key == m8::BTN_UP || key == m8::BTN_DOWN;   // (a line across the screen; else down it)
+    const int len = across ? 320 : 240, at = key == m8::BTN_LEFT || key == m8::BTN_UP ? from : (across ? 240 : 320) - from - w;
+    auto part = [&](int p0, int n, uint16_t c) {
+      if (across) t.fillRect(p0, at, n, w, c);
+      else t.fillRect(at, p0, w, n, c);
+    };
+    part(PX, len - 2 * PX, mid);
+    if (end != TRANSPARENT) {
+      part(0, PX, (uint16_t)end);
+      part(len - PX, PX, (uint16_t)end);
+    }
   };
-  const bool menu = menuOpen();
-  strip(0, 4, menu ? BG : DARK);
-  strip(4, 1, LIGHT);
-  strip(5, 1, BG);
+  if (menuOpen()) {                                // leaving the menu: black, light grey, black
+    strip(0, 4, BG, BG);
+    strip(4, 1, LIGHT, LIGHT);
+    strip(5, 1, BG, BG);
+  } else {                                         // to the menu: dark grey (light grey ends), light grey (black ends), black (ends as they are)
+    strip(0, 4, DARK, LIGHT);
+    strip(4, 1, LIGHT, BG);
+    strip(5, 1, BG, TRANSPARENT);
+  }
   constexpr int D = 6 * PX;                        // (the clip: the screen less the line)
   if (key == m8::BTN_LEFT) t.setClipRect(D, 0, 320 - D, 240);
   else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - D, 240);
