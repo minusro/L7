@@ -154,7 +154,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   An arrow held that switches screens once let go (any of the four, off an edge): on the looper, the selected track or cell shown as not selected meanwhile (no frame, ground, panel, white or accent looks: `shownSelected()`, ui.h), and a line along the edge's whole length, 4 blocks wide: dark grey, black, dark grey, black from the edge (both screens alike), drawn along the screen's edge that way, in the menu too (over its corner logo): gone again if let go without switching (`drawEdgeLine()`, ui.cpp).
   Status row (labels 50% grey, light grey on the selected cell): the scene cell, from the screen's left edge
   (an inverted SCN tag with the scene position,
-  flashing while a change waits), then the clock cell (the clock
+  flashing while a change waits; both white for 100 ms once a new scene has come in), then the clock cell (the clock
   centred), then the tempo cell (the tempo followed by an inverted BPM tag),
   then the button. In the accent colour: the scene's tag
   and number while SHIFT is held, or B alone on the scene cell; the tempo and

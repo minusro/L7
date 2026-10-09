@@ -231,8 +231,17 @@ void drawStatus() {
   static bool wasWide = false;                     // (the wider tag shown: once narrow again, what it covered past the plain one cleared)
   if (!sceneAccent && (wasWide || cleared)) t.fillRect(box.x + INSET + tagWidth("SCN"), tagY, ARROWS_W + PX, TAG_H, G);
   wasWide = sceneAccent;
-  if (!sceneAccent) drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, labelInk(SCENE_CELL), G);
   int scene = sceneCurrent(), count = sceneCount();
+  // A scene just come in (not one stepped to, still held or waiting for its
+  // switch point): the tag and position white for 100 ms.
+  static int arrived = -2;                         // (the scene last come in; -2: none yet)
+  static uint32_t arrivedAt = 0;
+  if (!sceneHeld() && !sceneChangeWaiting() && scene != arrived) {
+    if (arrived != -2) arrivedAt = max(1u, millis());
+    arrived = scene;
+  }
+  const bool sceneFlash = arrivedAt && millis() - arrivedAt < 100 && !sceneAccent;
+  if (!sceneAccent) drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneFlash ? INK : labelInk(SCENE_CELL), G);
   bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
   else snprintf(text, sizeof text, "%d/%d", scene, count);       // (0: the empty scene)
@@ -243,6 +252,7 @@ void drawStatus() {
     interrupts();
     ink = firstHalf ? ACCENT : DIM;
   }
+  if (sceneFlash) ink = INK;
   int x = box.x + INSET + tagW + PX;
   t.fillRect(x - PX, tagY, PX, TAG_H, G);          // (the block between the tag and the position: the position, moved, left nothing there)
   drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
