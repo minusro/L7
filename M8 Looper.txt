@@ -161,23 +161,41 @@ TTTTT000000TTTTT
 	- hold press shift+A to cut project
 		- show indicator, maybe the card is wiped left to right?
 
-- think about fx page
+- auto metronome mode only plays on projects with no clips V
+- tapping tempo when stopped plays metronome in either 1 or A metronome modes V
+
+- settings page - ON/OFF items, going up from the menu settings item like a popup menu with an arrow. from bottom to top:
+	- monitor audio in *
+	- play newly recorded *
+	- select next free track *
+	- empty project click *
+	- help **
+* items that are on by default
+** 12 slide manual showing the basic operating principles of the app, in full m8 resolution, using l7 screenshots in a diagram lego ikea instructions kind of style, utilizing all the 12 project colors as accent colors in the slides. cycle trhrough the slides with arrows, wrapping but breaking autohold at the title page. show me 4 variations first
+
+- metronome auto volume
+
 
 TTTT0GGJJGG0TTTT
 TTTT00GGGG00TTTT
 TTTT00GGGG00TTTT
 TTTTT000000TTTTT  
 
+
 # Feature backlog
-- track ms offset
 - clip ms fine rotate
 - midi clips page
 	- prototype second screen V (off for now)
 	- mute played midi clips after finishing audio recording
 	- mute played midi and audio clips after finishing resampling
 	- midi resampling
-- crossfading between two scenes
+- think about fx page
+
+
+#Feature graveyard
 - overdubbing - not for now or ever maybe X
+- track ms offset - clip rotate and clock follow offset should be enough X
+- crossfading between two scenes - good idea but not for this app, maybe 4v4 mixing would work X
 
 
 123456123456

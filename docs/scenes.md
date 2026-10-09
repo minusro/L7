@@ -8,7 +8,8 @@ saved: the tempo belongs to the project, the same in all its scenes).
 
 A project is a scene list with its current scene, the looper's selected
 row and cell, and its tempo (block 0: `tempo10`, tenths of a BPM, in the
-place of a 250th scene: 248 scenes at most; 0 in a project saved before, which
+place of a 250th scene: room for 248 scenes, `LIST_SLOTS`; 200 at most for
+now, `MAX_SCENES`; 0 in a project saved before, which
 then keeps its current scene's tempo; `volume1` next to it is no longer used).
 Changing the tempo, in any scene, changes the project's. The master volume is
 the app's, one for all projects (in the session). `DATA/SESSION.DAT` names the
@@ -65,9 +66,10 @@ version's `/L7/scenes.dat` are moved to these names at boot.
 ## The list
 
 * Stored in the project's file: block 0 = `SceneList` {magic `M8SL`, version,
-  count, current, row, cell, slot[250]}; scene records in blocks 1…, in slots reused as
+  count, current, row, cell, slot[248]}; scene records in blocks 1…, in slots reused as
   scenes come and go (inserting/removing only rewrites block 0).
-  `MAX_SCENES` = 250.
+  `LIST_SLOTS` = 248 (the file's room), `MAX_SCENES` = 200 (the most a project
+  takes now: none added past it; a file with more loads as it is).
 * Position **0\*** is the empty scene, never stored; changing anything there
   inserts a new scene 1 (the others move up).
 * Position **N+1\*** (after the last scene N) is a copy of N, stored only once

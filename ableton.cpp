@@ -109,7 +109,7 @@ static int liveColorFor(uint16_t c565) {
 // ---- The set, from the templates: their fields filled in as they're written.
 static struct {
   int p, scenes, current, number;                // scenes: those with clips; current: its place among them (-1: none)
-  uint8_t pos[MAX_SCENES];                       // each one's position in the project (1..)
+  uint8_t pos[LIST_SLOTS];                       // each one's position in the project (1..)
   int color;                                     // the project's colour, as a Live palette index
   float tempo;
   char dir[48], name[16];                        // "/L7/EXPORTS/L7 A005 Project", "L7 A005"
@@ -339,7 +339,7 @@ FLASHMEM int exportProject(int p, void (*progress)(int done, int total)) {
   // Its scenes with clips (an empty one, as the empty scene 0* is, left out).
   x.scenes = 0;
   x.current = -1;
-  for (int pos = 1; pos <= scenes && x.scenes < MAX_SCENES; pos++) {
+  for (int pos = 1; pos <= scenes && x.scenes < LIST_SLOTS; pos++) {
     TrackUnit units[NUM_TRACKS];
     bool clips = false;
     if (projectScene(p, pos, units))

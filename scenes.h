@@ -21,7 +21,11 @@ namespace looper {
 
 struct TrackUnit;                                  // (storage.h)
 
-constexpr int MAX_SCENES = 248, PROJECTS = 12;   // (248: the list block keeps the master volume and tempo in the 249th and 250th's places)
+// A project's file has room for LIST_SLOTS scenes (its list block keeps the
+// master volume and tempo in the 249th and 250th's places); MAX_SCENES: the
+// most it takes for now.
+constexpr int LIST_SLOTS = 248, MAX_SCENES = 200, PROJECTS = 12;
+static_assert(MAX_SCENES <= LIST_SLOTS, "the file's room");
 
 // Drops the loaded project and everything read from the project files, without
 // touching the card (storage mode: see storageForget()); scenesBegin() loads it

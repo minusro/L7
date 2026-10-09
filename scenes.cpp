@@ -27,13 +27,13 @@ struct SceneList {
   char magic[4];                                 // "M8SL"
   uint16_t version, count, current;
   uint8_t row, cell;                             // (unused: the selection a project kept, before it stopped keeping one)
-  uint16_t slot[MAX_SCENES];                     // record slot of each scene, in list order
+  uint16_t slot[LIST_SLOTS];                     // record slot of each scene, in list order
   uint16_t recTempo10;                           // (unused: the tempo its last recording was made at, before each scene kept its own;
                                                  // these 2 bytes were a project's master volume and a spare before that)
   uint16_t tempo10;                              // the project's tempo, tenths of a BPM (0: not kept yet, older files)
 };
 static constexpr uint32_t BLOCK = 512;
-static constexpr uint64_t FILE_BYTES = BLOCK * (1 + (uint64_t)MAX_SCENES);
+static constexpr uint64_t FILE_BYTES = BLOCK * (1 + (uint64_t)LIST_SLOTS);
 static_assert(sizeof(SceneList) <= BLOCK && sizeof(SceneInfo) <= BLOCK, "a block each");
 
 static FsFile file;                              // the loaded project's
@@ -131,7 +131,7 @@ static int insertAt(int pos) {
   clipsKnown = -1;
   edits++;
   if (list.count >= MAX_SCENES) return -1;
-  bool used[MAX_SCENES] = {};
+  bool used[LIST_SLOTS] = {};
   for (int i = 0; i < list.count; i++) used[list.slot[i]] = true;
   int slot = 0;
   while (used[slot]) slot++;
@@ -407,7 +407,7 @@ static SceneList newList() {
 static bool readList(FsFile &f, SceneList &l) {
   memset(&l, 0, sizeof l);
   if (!f || !f.seekSet(0) || f.read(&l, sizeof l) != (int)sizeof l) return false;
-  return !memcmp(l.magic, "M8SL", 4) && l.count <= MAX_SCENES;
+  return !memcmp(l.magic, "M8SL", 4) && l.count <= LIST_SLOTS;   // (one with more than MAX_SCENES: as it is, none added)
 }
 
 // A project file holds a clip in one of its scenes (false: none, or an empty slot).
