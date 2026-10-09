@@ -27,15 +27,15 @@ float newProjectTempo();                 // the last tempo set by hand (saved wi
 void stepMasterVolume(int by);
 void stepMasterBalance(int by);                  // the master balance a step right (1) or left (-1); saved too
 // The metronome (saved with the session): off (0), auto (A: only in a
-// silent scene: no clip on any track, muted or not) or on (1), while the clock runs;
-// never in the dummy project. B+A on the tempo cell goes to the next
-// setting: from on, off; from auto, off in a silent scene, else on; from
-// off, auto in a silent scene, else on (so it always changes what's heard).
+// project with no clips: none on its tracks or in any of its scenes,
+// projectHasClips()) or on (1), while the clock runs; never in the dummy
+// project. B+A on the tempo cell goes to the next setting: from on, off; from
+// auto, off with no clips, else on; from off, auto with no clips, else on (so
+// it always changes what's heard).
 enum { METRO_OFF, METRO_AUTO, METRO_ON };
 int metronomeMode();
 int nextMetronomeMode();
 void setMetronomeMode(int mode);
-bool silentScene();                      // no clip on any track in the current scene (muted ones count)
 bool metronomeWanted();                  // the click, by the setting now (a recording keeps its own: m8_looper.ino)
 // The session: the tempo, the master volume, the loaded project and the
 // selected row and cell (the app's: loading a project or changing scene

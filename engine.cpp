@@ -627,7 +627,7 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
   int32_t beat = transport.beat;
   tickInBeat_ = 0;
   nextTickAt_ = 0;
-  // The click, but on auto (only in a silent scene) not from where a
+  // The click, but on auto (only in a project with no clips) not from where a
   // finishing recording ends: its clip plays from there (loop() turns the
   // click off a little later, once the recording is completely done). On
   // (metronomeSteady): it goes on.

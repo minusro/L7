@@ -75,13 +75,8 @@ void setMetronomeMode(int mode) {
   metroMode = mode;
   changedMs = millis();
 }
-bool silentScene() {
-  for (int t = 0; t < NUM_TRACKS; t++)
-    if (tracks[t].state != TrackState::Empty) return false;   // (a muted clip too)
-  return true;
-}
 int nextMetronomeMode() {
-  bool silent = silentScene();
+  bool silent = !projectHasClips();
   switch (metroMode) {
     case METRO_ON: return METRO_OFF;
     case METRO_AUTO: return silent ? METRO_OFF : METRO_ON;
@@ -90,7 +85,7 @@ int nextMetronomeMode() {
 }
 bool metronomeWanted() {
   if (projectCurrent() < 0) return false;          // (the dummy project: never)
-  return metroMode == METRO_ON || (metroMode == METRO_AUTO && silentScene());
+  return metroMode == METRO_ON || (metroMode == METRO_AUTO && !projectHasClips());
 }
 
 // ---- Session (tempo, master volume, the loaded project, the selection: the
