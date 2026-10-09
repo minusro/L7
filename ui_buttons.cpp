@@ -286,15 +286,15 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   };
   const int cols = BUTTON_W / PX, rows = height / PX;
   // The selected track's panel, under its number or icons: from a block in to
-  // the right edge, the button's height but its top and bottom block rows, its left
+  // the right edge, the button's height but its top block row, its left
   // corners cut (a border round the badge: a block on top, two on the left and
   // bottom). Grey; the accent
   // colour while A is held, showing just the track's number then, in black.
   uint16_t panel = i == selected && i != STATUS_ROW ? markColor() : BG;
   if (panel != BG) {
-    for (int r = 1; r < rows - 1; r++)            // (not the top block row, nor the bottom one)
+    for (int r = 1; r < rows; r++)                // (not the top block row)
       for (int c = PANEL_LEFT; c < cols; c++)         // (to the right edge)
-        if (!(c == PANEL_LEFT && (r == 1 || r == rows - 2))) blockIn(c, r, panel);   // (the left corners cut)
+        if (!(c == PANEL_LEFT && (r == 1 || r == rows - 1))) blockIn(c, r, panel);   // (the left corners cut)
     if (color == panel) color = BG;                // (a recording icon in the accent colour, on it)
     if (panel == ACCENT && badge != BADGE_NONE) badge = BADGE_LABEL;   // highlighted: the number alone
   }
@@ -311,11 +311,11 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
       }
   };
   // A track's badge: its number, in a square (filled, or outlined) or alone.
-  // The square: 7 x 9 blocks, centred (a block of edge, a block of space
-  // round the digit).
+  // The square: 7 x 10 blocks (a block of edge, a block of space round the
+  // digit, two below it), from where a centred 9-tall one would be.
   auto drawBadge = [&](int number, bool filled, bool square, uint16_t frame, uint16_t ink) {
     const int r0 = (rows - 9) / 2;
-    if (square) drawSquare(7, 9, r0, filled, frame);
+    if (square) drawSquare(7, 10, r0, filled, frame);
     const Glyph *g = glyphFor((char)('0' + number));
     int gc = TRACK_ICON_CENTRE - glyphWidth(*g) / 2, gr = r0 + 2;
     for (int r = 0; r < 5; r++)
