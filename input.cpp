@@ -196,6 +196,12 @@ static void serviceRotate() {                      // (every pass: pollKeys())
     rotateKey = 0;
   }
 }
+// B then A held on a track (A pressed while B was held): its selection frame
+// on its waveform cell, in black (ui.h cellFrame()).
+bool optThenEdit() {
+  uint8_t k = mainKeys();
+  return editAfterOpt && (k & m8::BTN_OPT) && (k & m8::BTN_EDIT) && selected != STATUS_ROW && !menuOpen();
+}
 // B then A held on a clip's waveform cell: its fine rotate (the arrows turn it).
 bool clipRotating() {
   uint8_t k = mainKeys();

@@ -177,12 +177,16 @@ inline bool bArrows() { return arrowModifier() == m8::BTN_OPT; }
 // The cell framed in row i (the selected row): its selected cell; a track's
 // with SHIFT the arrows' modifier, its waveform cell (SHIFT+LEFT/RIGHT step
 // its sample, from any of its cells), in the accent colour, the other hidden.
+bool optThenEdit();                       // (input.cpp) B then A held on a track
 inline int frameCell(int i) {
-  return i != STATUS_ROW && shiftArrows() && !recordingOn(i) ? WAVE_CELL : selectedCellIn(i);
+  return i != STATUS_ROW && ((shiftArrows() && !recordingOn(i)) || optThenEdit()) ? WAVE_CELL : selectedCellIn(i);
 }
+// A frame in black (BG means none): black to the eye.
+constexpr uint16_t FRAME_BLACK = 0x0001;
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != frameCell(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
   if (screenSwitchPending()) return BG;            // (an edge line shown: no frame meanwhile)
+  if (i != STATUS_ROW && optThenEdit()) return FRAME_BLACK;   // (B then A on a track: black, on its waveform cell)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   if (i != STATUS_ROW && shiftArrows() && !recordingOn(i)) return ACCENT;   // (SHIFT: its waveform cell)
