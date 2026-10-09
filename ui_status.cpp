@@ -199,6 +199,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   noInterrupts();
   int32_t beat = transport.beat - transportOrigin();   // (from a project switch's bar line)
   uint32_t step = (uint64_t)transport.sampleInBeat * 4 / transport.spb;   // quarter beats
+  uint32_t inBeat = transport.sampleInBeat;
   bool running = transport.running;
   interrupts();
   if (running)
@@ -221,7 +222,20 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
     int w = textWidth(text), inL = CLOCK_BOX.x + INSET, inR = CLOCK_BOX.x + CLOCK_BOX.w - INSET;
     int x = CLOCK_BOX.x + (CLOCK_BOX.w - iconW - gap - w) / 2 / PX * PX, tx = x + iconW + gap;
     x -= PX;                                       // (the icon a block further left)
-    t.fillRect(inL, textY, x - inL, FONT_H, G);
+    // The metronome clicking (the clock running): two dots 2 x 2 blocks, one
+    // over the other a block apart, a block's gap left of the icon's place
+    // (shown or not); grey, the top one white for CLICK_FLASH_MS from each
+    // bar's first beat (X.1.1), the bottom one light grey from the others'.
+    constexpr uint32_t CLICK_FLASH_MS = 100;
+    const int dx = x - 3 * PX;
+    const bool dots = running && clicking, flash = inBeat < (uint32_t)(CLICK_FLASH_MS * AUDIO_SAMPLE_RATE_EXACT / 1000);
+    const bool barBeat = beat % BEATS_PER_BAR == 0;
+    const uint16_t topInk = !dots ? G : flash && barBeat ? INK : DIM, bottomInk = !dots ? G : flash && !barBeat ? LIGHT : DIM;
+    t.fillRect(inL, textY, dx - inL, FONT_H, G);   // (round the dots: what was there; not under them, no flicker)
+    t.fillRect(dx, textY, 2 * PX, 2 * PX, topInk);
+    t.fillRect(dx, textY + 2 * PX, 2 * PX, PX, G);
+    t.fillRect(dx, textY + 3 * PX, 2 * PX, 2 * PX, bottomInk);
+    t.fillRect(dx + 2 * PX, textY, x - dx - 2 * PX, FONT_H, G);
     for (int r = 0; r < 5; r++)
       for (int c = 0; c < 3; c++)
         t.fillRect(x + c * PX, textY + r * PX, PX, PX, PLAY[r][c] == '#' && running ? ACCENT : G);

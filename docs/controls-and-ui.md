@@ -160,7 +160,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   light grey on each beat's first step (selected: light grey, white on the
   first step; while the metronome clicks, the accent colour on each beat's first
   step instead), the accent colour on 1.1.1; before it a small play icon, in
-  the accent colour while it runs. While B alone is held on the clock
+  the accent colour while it runs; while the metronome clicks (the clock running), two grey dots
+  2 × 2 blocks a block left of the icon's place (shown or not), one over the other a block apart:
+  the top one white for 100 ms from each bar's first beat (X.1.1), the bottom one light grey from
+  the other beats'. While B alone is held on the clock
   cell it shows the master volume and balance instead: 22 vertical lines across the
   cell (one per step 1–22, 1.875 dB apart: 0 off, 17 100% — the default —, 22 +9.375 dB;
   balance ±20), their upper halves the left channel's, the lower halves the right's:
