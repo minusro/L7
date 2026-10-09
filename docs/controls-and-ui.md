@@ -204,7 +204,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; a block
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). In the top right
-  corner, a block in, a tiny grey battery (10 × 7 blocks and a tip a block wide, 3 tall): its
+  corner, two blocks in, a tiny grey battery (10 × 7 blocks and a tip a block wide, 3 tall): its
   outline, a block of space, its fill in sixths of its charge (`board.batteryPercent()`: the
   fuel gauge's state of charge while it runs, else from the charger's battery voltage, read
   every 5 s; variant A: none). No mark for the
