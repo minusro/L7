@@ -241,19 +241,19 @@ void drawStatus() {
   int x = box.x + INSET + tagW + PX;
   drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
   // Stepping (the accent colour on): the wider tag, its up and down arrows
-  // stacked in its letters' colour where that way goes on, grey where it
-  // doesn't (up: past the copy after the last; down: below the empty scene 0*).
+  // stacked, black where that way goes on, none where it doesn't (up: past
+  // the copy after the last; down: below the empty scene 0*).
   if (sceneAccent) {
     const int tx = box.x + INSET;
     drawTag(tx, tagY, "", TAG_INVERTED, ACCENT, G, tagW);   // (the box alone: its contents placed below)
     static const char *const ARROWS[5] = {".#.", "###", "...", "###", ".#."};
     const int top = count ? count + 1 : 0;           // (no scenes: no copy after the last)
-    const uint16_t upInk = scene < top ? G : DIM, downInk = scene > 0 ? G : DIM;
-    const int ax = tx + 2 * PX, ay = tagY + 2 * PX;  // (inside its border, as a tag's text)
+    const bool up = scene < top, down = scene > 0;   // (black where that way goes on; none where it doesn't)
+    const int ax = tx + PX, ay = tagY + 2 * PX;      // (a block in from the tag's edge; its text's rows)
     for (int r = 0; r < 5; r++)
       for (int c = 0; c < 3; c++)
-        if (ARROWS[r][c] == '#') t.fillRect(ax + c * PX, ay + r * PX, PX, PX, r < 2 ? upInk : downInk);
-    drawText(ax + ARROWS_W, ay, "SCN", G, ACCENT);
+        if (ARROWS[r][c] == '#' && (r < 2 ? up : down)) t.fillRect(ax + c * PX, ay + r * PX, PX, PX, BG);
+    drawText(tx + 2 * PX + ARROWS_W, ay, "SCN", G, ACCENT);
   }
 
 }
