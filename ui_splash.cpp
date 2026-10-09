@@ -214,8 +214,18 @@ void showSplash() {
 // calls splashTick() only between its steps, and the card's start alone
 // outlasts the slide and the copyright line's rise, which then went by unseen.
 // Everything's still from here until the fade out.
+// Any key pressed meanwhile: straight to its end (everything in place), and no
+// wait before the fade out once started (the press taken, not acted on later).
+static bool skipped = false;
 void splashIntro() {
   while (millis() - shownAt < INTRO_MS) {
+    uint8_t k;
+    if (board.keys()) {
+      board.keysChanged(k);                        // (taken: no press for the app)
+      skipped = true;
+      shownAt = millis() - INTRO_MS;
+      break;
+    }
     splashTick();
     delay(1);
   }
@@ -225,7 +235,7 @@ void splashIntro() {
 // The fade out, from now (the start-up done; not before OUT_FROM_MS), then
 // the screen cleared.
 void hideSplash() {
-  while (millis() - shownAt < OUT_FROM_MS) {
+  while (!skipped && millis() - shownAt < OUT_FROM_MS) {
     splashTick();
     delay(10);
   }
