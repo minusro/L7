@@ -356,7 +356,7 @@ static uint32_t itemKey(int k) {
 
 // ---- The settings (app.h): a popup over the menu, rising from SETTINGS (an
 // arrow down to it), its items from the bottom up, each a label and, right of
-// it, ON or OFF; HELP at its top, a gap below it (grey, not yet). A or B on SETTINGS opens it (once let
+// it, ON or OFF; HELP at its top, right-aligned, a gap below it (grey, not yet). A or B on SETTINGS opens it (once let
 // go); UP/DOWN go through it, A or B turns the item on or off (on the press),
 // DOWN off its bottom one or LEFT/RIGHT close it (the menu's own selection
 // frame hidden meanwhile). Grey all over, from two blocks under the screen's top, each corner
@@ -435,7 +435,8 @@ FLASHMEM static void drawSettings(bool whole) {
       fillRing(s, 2, 0, DIM);
       t.fillRect(x * PX, s.y * PX, w * PX, FONT_H, DIM);   // (the line cleared: OFF to ON leaves nothing behind)
       bool help = i == SETTING_COUNT, on = !help && setting(i);
-      drawText(x * PX, s.y * PX, SET_LABELS[i], help ? DARK : sel ? INK : LIGHT, DIM);
+      int lx = help ? (x + w) * PX - textWidth(SET_LABELS[i]) : x * PX;   // (help: right-aligned, as the values)
+      drawText(lx, s.y * PX, SET_LABELS[i], help ? DARK : sel ? INK : LIGHT, DIM);
       if (!help) {
         const char *v = on ? "ON" : "OFF";
         drawText((x + w) * PX - textWidth(v), s.y * PX, v, on ? (sel ? INK : LIGHT) : DARK, DIM);

@@ -215,7 +215,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   recorded either way), PLAY NEWLY RECORDED (off: a new clip comes in muted), SELECT NEXT FREE
   TRACK (off: the selection stays on the track just recorded), EMPTY PROJECT CLICK (the
   metronome, off, still clicks in a project with no clips), each ON or OFF right of its label
-  (on at first; ON light grey, OFF dark grey); at the panel's top, apart from them (a gap), HELP
+  (on at first; ON light grey, OFF dark grey); at the panel's top, apart from them (a gap), right-aligned, HELP
   (dark grey: not yet; UP from the top switch goes to it). Its items' frames as the
   list's, two blocks of space round them (white selected). UP/DOWN go through it; A or B turns
   the item on / off at once, on the press (the action button: a tick); DOWN off its bottom item,
