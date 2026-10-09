@@ -162,8 +162,8 @@ tracks or in any of its scenes, `projectHasClips()`) still clicks while the
 EMPTY PROJECT CLICK setting is on (the default; the menu's settings). While the clock runs and it says so (never in the dummy project, nor while the menu is open: the clock not shown), the engine clicks on every beat: a
 small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
 and louder on the bar's first beat). Its level follows what's heard: the
-peak of the mix after the master volume (the click left out) over the last
-~3 s (six ~0.5 s buckets, the oldest dropped), the bar's first beat at that
+peak of the mix after the master volume (the click left out), followed
+rising at once and falling 6 dB a second (`REF_FALL_DB`), the bar's first beat at that
 peak and the others at 3/4 of it, never under -24 dBFS at the master volume
 (all the way down: silent) (`clickLevel()`, engine.cpp). It's added after the master volume and
 left out of what a resampling records. Stopped, it clicks on each of tap tempo's first four taps too (the first as a bar's first beat), the 5th starting the clock on its own click (`metronomeClick()`). A recording started with it clicking keeps it

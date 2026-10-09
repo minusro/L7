@@ -148,18 +148,15 @@ volatile int32_t clickFromBeat = INT32_MIN;
 // The metronome's wood block: two damped sines (its body and a harder upper
 // partial), started on a beat.
 static constexpr float CLICK_BAR_HZ = 1600, CLICK_BEAT_HZ = 1150;
-// Its level (the metronome's auto volume): the peak of what's heard (after the
-// master volume, the click left out) over the last ~3 s (REF_BUCKETS of ~0.5 s,
-// the oldest dropped), at least -24 dBFS at the master volume (all the way
+// Its level (the metronome's auto volume): what's heard (after the master
+// volume, the click left out) followed by its peak, rising at once and falling
+// REF_FALL_DB a second; at least -24 dBFS at the master volume (all the way
 // down: none); the bar's first beat at it, the others 3/4 of it.
-static constexpr int REF_BUCKETS = 6;
-static constexpr uint32_t REF_BUCKET_BLOCKS = 172;   // (~0.5 s of blocks)
-static float refPeak[REF_BUCKETS];
-static int refAt = 0;
-static uint32_t refBlocks = 0;
+static constexpr float REF_FALL_DB = 6;
+static const float REF_FALL = powf(10, -REF_FALL_DB / 20 * AUDIO_BLOCK_SAMPLES / AUDIO_SAMPLE_RATE_EXACT);   // (a block's)
+static float refPeak = 0;
 static float clickLevel() {
-  float m = 0.0631f * 32767 * outputGain;          // (-24 dBFS, at the master volume)
-  for (float p : refPeak) m = max(m, p);
+  float m = max(0.0631f * 32767 * outputGain, refPeak);   // (-24 dBFS, at the master volume)
   return min(m, 32767.0f) / 1.4f;                  // (the two partials' peak together: ~1.4 of the body's)
 }
 static const float CLICK_DECAY = expf(-1.0f / (0.012f * AUDIO_SAMPLE_RATE_EXACT));      // body, ~12 ms
@@ -947,12 +944,7 @@ void LooperEngine::update() {
     outL->data[i] = (int16_t)constrain(mixL, -32767.0f, 32767.0f);
     outR->data[i] = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
   }
-  refPeak[refAt] = max(refPeak[refAt], blockPeak);   // (the last ~3 s: a bucket each ~0.5 s, the oldest dropped)
-  if (++refBlocks >= REF_BUCKET_BLOCKS) {
-    refBlocks = 0;
-    refAt = (refAt + 1) % REF_BUCKETS;
-    refPeak[refAt] = 0;
-  }
+  refPeak = max(blockPeak, refPeak * REF_FALL);     // (up at once, down 6 dB a second)
 
   if (listen) {                                      // audio follow: this block's rise in loudness
     float flux = 0;
