@@ -393,12 +393,16 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   const uint16_t round = i == STATUS_ROW ? (menuOpen() ? MENU_BG : BG) : rowGround(i);   // (round the button: the menu's ground while it's open; a selected track's; the status row's highlight ends at the tempo cell)
   if (i == STATUS_ROW && bg != round)              // the action button: from its place's left edge (pressed: a block in, as the
     for (int y = 0; y < height; y++)               // tracks' panels), its top left and bottom left corners cut
-      for (int x = 0; x < ((pressed ? PANEL_LEFT : 0) + (y < PX || y >= height - PX)) * PX; x++) px[y * BUTTON_W + x] = round;
+      for (int x = 0; x < ((pressed ? PANEL_LEFT : 0) + ((y < PX && !pressed) || y >= height - PX)) * PX; x++) px[y * BUTTON_W + x] = round;   // (pressed: its top row a block higher, below)
   auto &t = board.tft();
   int top = rowTop(i);
   const int bx = BUTTON_X + (i != STATUS_ROW ? TRACK_BUTTON_SHIFT : 0);   // (a track's: further right, cut by the screen's edge)
   if (bgTop(i) < top) t.fillRect(bx, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin
   t.writeRect(bx, top, BUTTON_W, height, px);
+  if (i == STATUS_ROW && !menuOpen()) {            // pressed: a block taller, its top a block higher (its top left corner cut); else that block row black
+    t.fillRect(bx, top - PX, BUTTON_W, PX, BG);
+    if (pressed) t.fillRect(bx + (PANEL_LEFT + 1) * PX, top - PX, BUTTON_W - (PANEL_LEFT + 1) * PX, PX, bg);
+  }
   int bottom = top + height, end = bgTop(i) + bgHeight(i);
   if (i == STATUS_ROW && !menuOpen()) {            // (a track's: its volume cell right up to it)
     t.fillRect(BUTTON_X - PX, top, PX, height, round);
