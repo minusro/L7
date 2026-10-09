@@ -169,7 +169,7 @@ static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
 // Or held on SWITCH_HOLD_MS (from when it stopped at the edge): it switches
 // then, still held (pollKeys()); held on, it does nothing more (no repeats)
 // until let go.
-static constexpr uint32_t SWITCH_HOLD_MS = 300;
+static constexpr uint32_t SWITCH_HOLD_MS = 600;
 static uint32_t switchWaitAt = 0;                        // (when the switch began waiting)
 static bool edgeHeldLong = false;                  // (this pass: held that long, it switches now)
 static bool edgeDue(uint8_t keys, uint8_t key) {
