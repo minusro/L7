@@ -625,7 +625,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         if (pressed & m8::BTN_DOWN) setTempo((tenths + 9) / 10 - 1);
       } else if (onClock) {                          // the master volume (UP/DOWN) and balance (LEFT/RIGHT), a step at a time
         if (pressed & m8::BTN_DOWN) stepMasterVolume(-1);
-        if (pressed & m8::BTN_UP) stepMasterVolume(1);
+        // (UP at full volume, panned: the balance a step back to the centre, the far side a line more.)
+        if (pressed & m8::BTN_UP) masterVolume() >= MASTER_VOLUME_MAX && masterBalance() ? stepMasterBalance(masterBalance() > 0 ? -1 : 1) : stepMasterVolume(1);
         // (Balance all the way one side, that way again: the volume up a step.)
         if (pressed & m8::BTN_LEFT) masterBalance() <= -MASTER_BALANCE_MAX ? stepMasterVolume(1) : stepMasterBalance(-1);
         if (pressed & m8::BTN_RIGHT) masterBalance() >= MASTER_BALANCE_MAX ? stepMasterVolume(1) : stepMasterBalance(1);
@@ -751,7 +752,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       const Track &tr = tracks[selected];
       float d = headroomDbOf(tr.overview);
       int step = volumeStepOf(tr.volume, d), balance = tr.balance;
-      if (pressed & m8::BTN_UP) step++;
+      // (UP at the top step, panned: the balance a step back to the centre, the far side a half more.)
+      if (pressed & m8::BTN_UP) step >= VOLUME_MAX && balance ? balance += balance > 0 ? -1 : 1 : step++;
       if (pressed & m8::BTN_DOWN) step--;
       // (Balance all the way one side, that way again: the volume up a step.)
       if (pressed & m8::BTN_RIGHT) balance >= BALANCE_MAX ? step++ : balance++;
