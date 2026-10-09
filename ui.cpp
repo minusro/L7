@@ -230,9 +230,10 @@ static void followProjectColor() {
   for (int i = 0; i < ROWS; i++) drawTrack(i);
 }
 
-void drawEdgeLine() {
+FLASHMEM void drawEdgeLine() {   // (flash: RAM1 is full)
   static uint8_t shownKey = 0;                     // the edge shown (its arrow), 0: none
   static uint32_t shownGen = 0;                    // (uiGeneration then: since redrawn whole, it's gone already)
+  static int shownDepth = 0;                       // (its band's depth, px)
   uint8_t key = screenSwitchPending() ? screenSwitchKey() : arrivalEdgeKey();   // (just back from the menu, its arrow held: the edge it came in by)
   if (key != m8::BTN_LEFT && key != m8::BTN_RIGHT && key != m8::BTN_UP && key != m8::BTN_DOWN) key = 0;   // (LEFT+RIGHT held: no one edge)
   auto &t = board.tft();
@@ -243,8 +244,11 @@ void drawEdgeLine() {
       if (menuOpen()) {
         drawMenu();
         drawTrack(STATUS_ROW);
-      } else {
-        t.fillScreen(BG);
+      } else {                                     // (only the line's band cleared first: no flash of the whole screen)
+        if (shownKey == m8::BTN_LEFT) t.fillRect(0, 0, shownDepth, 240, BG);
+        else if (shownKey == m8::BTN_RIGHT) t.fillRect(320 - shownDepth, 0, shownDepth, 240, BG);
+        else if (shownKey == m8::BTN_UP) t.fillRect(0, 0, 320, shownDepth, BG);
+        else t.fillRect(0, 240 - shownDepth, 320, shownDepth, BG);
         for (int i = 0; i < ROWS; i++) drawTrack(i);
       }
     }
@@ -282,6 +286,7 @@ void drawEdgeLine() {
   strip(thick, 1, LIGHT, "TTTT00");                // (00LLLL00)
   strip(thick + 1, 1, BG, "TTTTT");                // (T000000T)
   const int D = (thick + 2) * PX;                  // (the clip: the screen less the line)
+  shownDepth = D;
   if (key == m8::BTN_LEFT) t.setClipRect(D, 0, 320 - D, 240);
   else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - D, 240);
   else if (key == m8::BTN_UP) t.setClipRect(0, D, 320, 240 - D);

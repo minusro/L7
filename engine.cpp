@@ -39,24 +39,23 @@ static Biquad butterworth(float hz, bool highpass) {
   return q;
 }
 
-void setTrackFilter(int t, int lo, int hi) {
+FLASHMEM void setTrackFilter(int t, int lo, int hi) {   // (flash: on edits only; RAM1 is full)
   Track &tr = tracks[t];
   if (hi < lo) hi = lo;
   if (hi - lo > FILTER_MAX) hi = lo + FILTER_MAX;
   if (hi < 0) { lo -= hi; hi = 0; }
   if (lo > FILTER_MAX) { hi -= lo - FILTER_MAX; lo = FILTER_MAX; }
-  Biquad hp = butterworth(filterStepHz(constrain(lo, 1, FILTER_MAX)), true);
-  Biquad lp = butterworth(filterStepHz(constrain(hi, 0, FILTER_MAX - 1)), false);
+  float hpHz = filterStepHz(constrain(lo, 1, FILTER_MAX)), lpHz = filterStepHz(constrain(hi, 0, FILTER_MAX - 1));
   noInterrupts();
   tr.filterLo = lo;
   tr.filterHi = hi;
-  bool wasHp = tr.hpOn, wasLp = tr.lpOn;
-  tr.hp = hp;
-  tr.lp = lp;
+  tr.hpTarget = hpHz;                            // (the interrupt glides there: glideFilters())
+  tr.lpTarget = lpHz;
   tr.hpOn = lo > 0;
   tr.lpOn = hi < FILTER_MAX;
-  if (tr.hpOn && !wasHp) memset(tr.filterZ[0], 0, sizeof tr.filterZ[0]);   // start clean
-  if (tr.lpOn && !wasLp) memset(tr.filterZ[1], 0, sizeof tr.filterZ[1]);
+  // One faded out (or never on): at its cutoff at once, clean, fading in from there.
+  if (tr.hpWet == 0) { tr.hpHz = hpHz; tr.hp = butterworth(hpHz, true); memset(tr.filterZ[0], 0, sizeof tr.filterZ[0]); }
+  if (tr.lpWet == 0) { tr.lpHz = lpHz; tr.lp = butterworth(lpHz, false); memset(tr.filterZ[1], 0, sizeof tr.filterZ[1]); }
   interrupts();
 }
 
@@ -101,7 +100,7 @@ float volumeGainOf(int stored, float d) {
   return powf(10.0f, db / 20);
 }
 
-void setTrackMix(int t, int volume, int balance) {
+FLASHMEM void setTrackMix(int t, int volume, int balance) {
   Track &tr = tracks[t];
   if (volume != VOLUME_OFF) volume = constrain(volume, -100, 100);   // (steps from unity: the clip's scale limits them, volumeStepOf())
   balance = constrain(balance, -BALANCE_MAX, BALANCE_MAX);
@@ -172,7 +171,7 @@ static float clickSample() {
   return s;
 }
 static volatile float outPeakL = 0, outPeakR = 0;
-static void setOutputMix() {
+FLASHMEM static void setOutputMix() {
   float g = masterStep ? powf(10.0f, (masterStep - MASTER_VOLUME_UNITY) * MASTER_STEP_DB / 20) : 0.0f;
   float toL = masterBal < 0 ? -(float)masterBal / MASTER_BALANCE_MAX : 0, toR = masterBal > 0 ? (float)masterBal / MASTER_BALANCE_MAX : 0;
   noInterrupts();
@@ -606,6 +605,22 @@ static void takeSwitch(Track &tr) {
 
 // Per-sample step of the level glide (one-pole, GAIN_GLIDE_MS).
 static const float GLIDE = 1.0f - expf(-1000.0f / (GAIN_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));
+static const float MASTER_GLIDE = 1.0f - expf(-1000.0f / (MASTER_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));
+static const float FADE = 1.0f - expf(-1000.0f / (FILTER_FADE_MS * AUDIO_SAMPLE_RATE_EXACT));
+static const float CUTOFF_GLIDE = 1.0f - expf(-1000.0f * AUDIO_BLOCK_SAMPLES / (FILTER_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));   // (a block's)
+
+// Each block: the filters' cutoffs a step nearer their settings (on a log
+// scale), their coefficients recalculated while they move.
+static void glideFilters(Track &tr) {
+  auto glide = [](float &hz, float target, Biquad &q, bool highpass) {
+    if (hz == target || hz <= 0) return;
+    float r = target / hz;
+    hz = fabsf(r - 1) < 0.001f ? target : hz * powf(r, CUTOFF_GLIDE);
+    q = butterworth(hz, highpass);
+  };
+  glide(tr.hpHz, tr.hpTarget, tr.hp, true);
+  glide(tr.lpHz, tr.lpTarget, tr.lp, false);
+}
 
 void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
   (void)blockMicros; (void)sampleIndex;
@@ -761,7 +776,9 @@ void LooperEngine::update() {
   const uint32_t blockNow = transport.now;
   // Resampling: the output goes in the input history (what's recorded) instead.
   const bool captureOutput = recording.resample && recording.mode != Recording::Idle;
-  const float outGain = outputGain, oLL = outLL, oLR = outLR, oRL = outRL, oRR = outRR;
+  const float outGain = outputGain, outTo[4] = {outLL, outLR, outRL, outRR};
+  static float outNow[4] = {1, 0, 0, 1};           // (the master's mix as it glides, MASTER_GLIDE_MS)
+  for (auto &tr : tracks) glideFilters(tr);
   float outPeak[2] = {0, 0};
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
     // USB's latency: the first sharp sound after each beat line (well above the
@@ -844,8 +861,21 @@ void LooperEngine::update() {
           sl = al + (bl - al) * f;
           sr = ar + (br - ar) * f;
         }
-        if (tr.hpOn) { sl = runBiquad(tr.hp, tr.filterZ[0][0], sl); sr = runBiquad(tr.hp, tr.filterZ[0][1], sr); }
-        if (tr.lpOn) { sl = runBiquad(tr.lp, tr.filterZ[1][0], sl); sr = runBiquad(tr.lp, tr.filterZ[1][1], sr); }
+        // The filters, each faded in or out (mixed with the signal unfiltered).
+        tr.hpWet += ((tr.hpOn ? 1.0f : 0.0f) - tr.hpWet) * FADE;
+        if (!tr.hpOn && tr.hpWet < 1e-4f) tr.hpWet = 0;
+        if (tr.hpWet > 0) {
+          float fl = runBiquad(tr.hp, tr.filterZ[0][0], sl), fr = runBiquad(tr.hp, tr.filterZ[0][1], sr);
+          sl += (fl - sl) * tr.hpWet;
+          sr += (fr - sr) * tr.hpWet;
+        }
+        tr.lpWet += ((tr.lpOn ? 1.0f : 0.0f) - tr.lpWet) * FADE;
+        if (!tr.lpOn && tr.lpWet < 1e-4f) tr.lpWet = 0;
+        if (tr.lpWet > 0) {
+          float fl = runBiquad(tr.lp, tr.filterZ[1][0], sl), fr = runBiquad(tr.lp, tr.filterZ[1][1], sr);
+          sl += (fl - sl) * tr.lpWet;
+          sr += (fr - sr) * tr.lpWet;
+        }
         const float *m = mix[t];
         float *c = tr.curMix;                        // levels glide (no clicks on mute, volume, start, stop)
         for (int k = 0; k < 4; k++) c[k] += (m[k] - c[k]) * GLIDE;
@@ -883,9 +913,10 @@ void LooperEngine::update() {
     }
     float click = clickSample() * outGain;
     {                                                // the master volume and balance
+      for (int k = 0; k < 4; k++) outNow[k] += (outTo[k] - outNow[k]) * MASTER_GLIDE;
       float l = mixL + monL, r = mixR + monR;
-      mixL = l * oLL + r * oLR;
-      mixR = l * oRL + r * oRR;
+      mixL = l * outNow[0] + r * outNow[1];
+      mixR = l * outNow[2] + r * outNow[3];
     }
     if (usbFrame) {                                  // USB: the mix as the line out has it, without the metronome
       float uc = USB_OUT_CLICK ? click : 0.0f;

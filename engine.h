@@ -46,7 +46,9 @@ struct Track {
   // 12 dB/octave each, on both channels.
   int8_t filterLo = 0, filterHi = FILTER_MAX;   // steps (see config.h)
   Biquad hp, lp;
-  bool hpOn = false, lpOn = false;
+  bool hpOn = false, lpOn = false;               // (wanted: each fades in / out, hpWet / lpWet, FILTER_FADE_MS)
+  float hpHz = 0, lpHz = 0, hpTarget = 0, lpTarget = 0;   // their cutoffs: now (gliding, FILTER_GLIDE_MS), and set
+  float hpWet = 0, lpWet = 0;                    // each one's share of the signal (0: unfiltered; interrupt only)
   float filterZ[2][2][2] = {};     // [hp/lp][left/right][state]; interrupt only, or loop() while not live
   // Waveform overview (loop() only): peak level per column across the loop,
   // 0-255 on a square-root scale, then the loop's peak (OVERVIEW_BYTES,

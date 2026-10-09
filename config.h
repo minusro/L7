@@ -124,6 +124,10 @@ constexpr float MASTER_STEP_DB = 1.875f;
 // with a ~1 ms time constant.
 constexpr uint32_t XFADE_FRAMES = 128;
 constexpr float GAIN_GLIDE_MS = 1.0f;
+// The master volume and balance glide too, more slowly; a filter's cutoff
+// glides (on a log scale, recalculated each block), and a filter switched on
+// or off fades in or out (mixed with the signal unfiltered).
+constexpr float MASTER_GLIDE_MS = 20.0f, FILTER_GLIDE_MS = 30.0f, FILTER_FADE_MS = 20.0f;
 
 // WAV files keep their audio at a 512-byte offset so SD reads stay aligned.
 constexpr uint32_t WAV_DATA_OFFSET = 512;

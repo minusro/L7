@@ -2635,7 +2635,7 @@ for f in os.listdir("."):
     {                                                // the master balance (the input: a sine left, its inverse right)
       auto peaks = [](int bal, int &pl, int &pr) {
         setMasterBalance(bal);
-        for (int i = 0; i < 8; i++) block();
+        for (int i = 0; i < 60; i++) block();          // (the master's glide: settled)
         pl = pr = 0;
         for (int b = 0; b < 16; b++) {
           block();
