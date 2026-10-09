@@ -151,8 +151,9 @@ static Shape itemShape(int k) {
   if (k < CARDS)
     return {CARDS_X + (k % COLS) * (CARD_W + CARD_GAP), CARDS_Y + (k / COLS) * (CARD_H + CARD_VGAP), CARD_W, CARD_H, CARD_CUT};
   // A list item: the box fitting the longest label, centred (its label
-  // left-aligned in it).
-  int w = 0;
+  // left-aligned in it); at least as wide as "EXPORT ABLETON PROJECT" was (the
+  // list where it's always been, its labels shorter now).
+  int w = textWidth("EXPORT ABLETON PROJECT") / PX;
   for (const char *label : LABELS) w = max(w, textWidth(label) / PX);
   return {(320 / PX - w) / 2, LIST_Y + (k - CARDS - listTop) * LIST_PITCH, w, FONT_H / PX, 0};   // (in view: listInView())
 }
