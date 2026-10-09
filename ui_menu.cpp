@@ -428,6 +428,7 @@ FLASHMEM static void drawSettings(bool whole) {
       uint16_t frame = frameColor() == DIM ? DARK : frameColor();   // (on the grey: an action button held, dark grey)
       fillRing(s, 3, 2, sel ? frame : DIM, true);
       fillRing(s, 2, 0, DIM);
+      t.fillRect(x * PX, s.y * PX, w * PX, FONT_H, DIM);   // (the line cleared: OFF to ON leaves nothing behind)
       bool help = i == SETTING_COUNT, on = !help && setting(i);
       drawText(x * PX, s.y * PX, SET_LABELS[i], help ? DARK : sel ? INK : LIGHT, DIM);
       if (!help) {
