@@ -143,6 +143,28 @@ static void followTracks() {
   busy = false;
 }
 
+// The space between a track's cells (none touching: CELL): the row's ground,
+// its top and bottom block rows the ones it shares with the rows above and
+// below (dark grey if either is the selected track), as the cells' borders.
+static void drawGaps(int i) {
+  static uint32_t drawn[NUM_TRACKS], shown[NUM_TRACKS];
+  uint16_t mid = rowGround(i), topG = mid == DARK || rowGround(rowAbove(i)) == DARK ? DARK : BG,
+           botG = mid == DARK || rowGround(rowBelow(i)) == DARK ? DARK : BG;
+  uint32_t key = (uint32_t)mid << 2 | (topG == DARK) << 1 | (botG == DARK);
+  if (drawn[i] == uiGeneration && shown[i] == key) return;
+  drawn[i] = uiGeneration;
+  shown[i] = key;
+  auto &t = board.tft();
+  const int top = rowTop(i);
+  for (int k = 0; k + 1 < CELLS; k++) {
+    int x = CELL[k].x + CELL[k].w, w = CELL[k + 1].x - x;
+    if (w <= 0) continue;
+    t.fillRect(x, top, w, PX, topG);
+    t.fillRect(x, top + PX, w, CELL_H - 2 * PX, mid);
+    t.fillRect(x, top + CELL_H - PX, w, PX, botG);
+  }
+}
+
 void drawTrack(int i) {
   followTracks();
   if (i < 0 || i >= ROWS || (menuOpen() && i != STATUS_ROW)) return;   // (the menu: in the track rows' place)
@@ -164,6 +186,7 @@ void drawTrack(int i) {
   drawFilter(i);
   drawMix(i);
   drawWave(i, recordingOn(i));
+  drawGaps(i);
 }
 
 // The accent colour: the loaded project's (ACCENT_DARK at half its
