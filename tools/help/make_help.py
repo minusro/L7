@@ -147,8 +147,8 @@ def page(n, p):
             ops.append(("text", 8, 140 + (j + (j == len(lines) - 1)) * 14, 2, NAMED[ink], line))
         return ops, 10
     title = (t1 + " " + t2).strip()                  # (one line, in the page's colour; no page number)
-    if text_w(title, 4) > 304: sys.exit(f"title too wide: {title}")
-    ops.append(("text", 8, 8, 4, acc, title, 1))     # (squeezed: its middle row half as tall, 18 px)
+    if text_w(title, 3) > 304: sys.exit(f"title too wide: {title}")
+    ops.append(("text", 8, 8, 3, acc, title))        # (3 px a dot: 15 px tall)
     ops.append(("rect", 0, 30, 320, 152, NAMED["BG"]))   # (the content's area, under the title down to the rule: black)
     # The steps: strips, each its part of a screenshot at the screen's size in a
     # black frame a block wide, its number in a circle left of it, its caption

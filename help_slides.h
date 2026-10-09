@@ -1312,7 +1312,7 @@ PROGMEM static const HelpOp HELP_PAGE_1[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_2[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xD755, HELP_STR_5, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xD755, HELP_STR_5, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 0, 30, 0, 0, 0, nullptr, &HELP_IMG_0},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xD755, nullptr, nullptr},
@@ -1321,7 +1321,7 @@ PROGMEM static const HelpOp HELP_PAGE_2[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_3[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xF774, HELP_STR_8, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xF774, HELP_STR_8, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 42, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 44, 0, 0, 0, nullptr, &HELP_IMG_1},
@@ -1344,7 +1344,7 @@ PROGMEM static const HelpOp HELP_PAGE_3[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_4[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xFED4, HELP_STR_16, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xFED4, HELP_STR_16, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_5},
@@ -1362,7 +1362,7 @@ PROGMEM static const HelpOp HELP_PAGE_4[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_5[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xFE55, HELP_STR_19, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xFE55, HELP_STR_19, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_8},
@@ -1380,7 +1380,7 @@ PROGMEM static const HelpOp HELP_PAGE_5[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_6[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xF5B8, HELP_STR_24, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xF5B8, HELP_STR_24, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_11},
@@ -1398,7 +1398,7 @@ PROGMEM static const HelpOp HELP_PAGE_6[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_7[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xF5DB, HELP_STR_29, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xF5DB, HELP_STR_29, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 42, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 44, 0, 0, 0, nullptr, &HELP_IMG_14},
@@ -1421,7 +1421,7 @@ PROGMEM static const HelpOp HELP_PAGE_7[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_8[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xE5BC, HELP_STR_35, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xE5BC, HELP_STR_35, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 32, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_18},
@@ -1439,7 +1439,7 @@ PROGMEM static const HelpOp HELP_PAGE_8[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_9[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xCDDD, HELP_STR_40, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xCDDD, HELP_STR_40, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 32, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_21},
@@ -1457,7 +1457,7 @@ PROGMEM static const HelpOp HELP_PAGE_9[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_10[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xB63E, HELP_STR_45, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xB63E, HELP_STR_45, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_24},
@@ -1475,7 +1475,7 @@ PROGMEM static const HelpOp HELP_PAGE_10[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_11[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xAEBD, HELP_STR_50, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xAEBD, HELP_STR_50, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 42, 214, 32, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 44, 0, 0, 0, nullptr, &HELP_IMG_27},
@@ -1491,7 +1491,7 @@ PROGMEM static const HelpOp HELP_PAGE_11[] = {
 };
 PROGMEM static const HelpOp HELP_PAGE_12[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
-  {HELP_TEXT, 4, 8, 8, 1, 0, 0xAF1B, HELP_STR_57, nullptr},
+  {HELP_TEXT, 3, 8, 8, 0, 0, 0xAF1B, HELP_STR_57, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 42, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_29},
