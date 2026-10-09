@@ -38,7 +38,7 @@ static void resetCell() {
 
 // Tap tempo (A on the status row): from the second tap on, the tempo is the
 // least-squares fit of every tap in the run (tap n at beat n), so each tap
-// refines it from the 4th tap on (three intervals), a long series evening out the
+// refines it from the 3rd tap on (two intervals), a long series evening out the
 // jitter of single taps. Taps further apart than TAP_TIMEOUT_MS start a new
 // run, and so does any other key press in between. The 5th tap lands on a
 // bar line: a stopped clock starts there, from 1.1.1 (running, it's left as it
@@ -67,7 +67,7 @@ static void tapTempo() {
   sumIT += i * t;
   last = now;
   int n = ++tapCount;
-  if (n >= 4) {                                     // (the tempo from the 4th tap on: three intervals at least)
+  if (n >= 3) {                                     // (the tempo from the 3rd tap on: two intervals at least)
     // The slope of t over i (ms per beat), with i = 0 .. n-1:
     // sum(i) = n(n-1)/2, n sum(i^2) - sum(i)^2 = n^2(n^2-1)/12.
     double sumI = n * (n - 1) / 2.0;
