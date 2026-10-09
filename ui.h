@@ -169,6 +169,7 @@ uint32_t lastTapMs();                     // (input.cpp) millis() of the latest 
 // block-wide one inside it, then a black block-wide one, along that edge of the screen (on top of
 // everything; let go without switching, what was under it again).
 void drawEdgeLine();
+void edgeLineFillEnds();                 // (back from the menu, its line drawn first) the looper's in the line's ends too
 // The arrows' modifier (input.cpp): SHIFT or B, whichever of the two held was
 // pressed last (0: neither). They're exclusive for the arrows and the looks
 // (not the action button's): pressing the other while one is held switches

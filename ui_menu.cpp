@@ -367,12 +367,15 @@ void drawMenu() {
   bool redrawn = false;
   int cutSlot;
   const float cut = menuCutProgress(cutSlot);
-  static int shownCut = -1;                        // (the card being wiped: its blocks wiped so far, + 100 * slot)
-  const int cutKey = cutSlot < 0 ? -1 : cutSlot * 100 + (int)(cut * CARD_W);
-  if (cutKey != shownCut) {                        // (it, and the one before, again)
-    if (shownCut >= 0) shownKey[shownCut / 100] = ~0u;
-    if (cutSlot >= 0) shownKey[cutSlot] = ~0u;
-    shownCut = cutKey;
+  static int shownCut = -1;                        // (the card being wiped)
+  if (cutSlot != shownCut) {                       // (another, or none: the one before whole again)
+    if (shownCut >= 0) shownKey[shownCut] = ~0u;
+    shownCut = cutSlot;
+  }
+  if (cutSlot >= 0 && listInView(cutSlot)) {       // wiping: only as far as it's got, over the card as drawn (no flicker)
+    Shape cs = itemShape(cutSlot);
+    int cols = (int)(cut * cs.w);
+    if (cols > 0) t.fillRect(cs.x * PX, cs.y * PX, cols * PX, cs.h * PX, MENU_BG);
   }
   for (int pass = 0; pass < 2; pass++)
     for (int k = 0; k < ITEMS; k++) {

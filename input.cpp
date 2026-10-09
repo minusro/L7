@@ -253,6 +253,7 @@ static bool leaveMenu(uint8_t key = 0) {
     }
     drawEdgeLine();                                  // (its arrow held: the line first, the rows clipped round it, nothing drawn under it)
     for (int i = 0; i < ROWS; i++) drawTrack(i);
+    edgeLineFillEnds();                              // (the line's ends: the looper's there too, as going into the menu)
   }
   return back;
 }
