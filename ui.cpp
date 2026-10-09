@@ -238,8 +238,9 @@ static int shownDepth = 0;
 
 // The line along the edge of arrow `key` drawn, everything else clipped to
 // the rest of the screen meanwhile.
-FLASHMEM static void paintEdgeLine(uint8_t key) {
-  // A grey line the edge's whole length, a block wide (both screens alike).
+FLASHMEM static void paintEdgeLine(uint8_t key, uint16_t color) {
+  // A line the edge's whole length, a block wide (both screens alike): grey,
+  // light grey for its first 50 ms.
   auto &t = board.tft();
   t.setClipRect();
   constexpr int W = PX;
@@ -249,7 +250,7 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
     else if (key == m8::BTN_UP) t.fillRect(0, in, 320, w, c);
     else t.fillRect(0, 240 - in - w, 320, w, c);
   };
-  band(0, W, DIM);
+  band(0, W, color);
   shownDepth = W;
   if (key == m8::BTN_LEFT) t.setClipRect(W, 0, 320 - W, 240);
   else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - W, 240);
@@ -282,10 +283,17 @@ FLASHMEM void drawEdgeLine() {   // (flash: RAM1 is full)
   // Drawn once (and again after a full redraw), then everything else is
   // clipped to the rest of the screen meanwhile: nothing drawn over it (no
   // flicker). (A switch clears the clip first: input.cpp, edgeDue().)
-  if (key == shownKey && shownGen == uiGeneration) return;
-  paintEdgeLine(key);
+  // Light grey for its first EDGE_FLASH_MS (the arrow just pressed), then grey.
+  constexpr uint32_t EDGE_FLASH_MS = 50;
+  static uint32_t lineAt = 0;
+  static bool shownLight = false;
+  if (key != shownKey) lineAt = millis();          // (a new line: from now)
+  bool light = millis() - lineAt < EDGE_FLASH_MS;
+  if (key == shownKey && shownGen == uiGeneration && light == shownLight) return;
+  paintEdgeLine(key, light ? LIGHT : DIM);
   shownKey = key;
   shownGen = uiGeneration;
+  shownLight = light;
 }
 
 

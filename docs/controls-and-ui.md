@@ -150,7 +150,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the line; the scene versions the same with a checkered square right round them.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  An arrow held that switches screens once let go (any of the four, off an edge): on the looper, the selected track or cell shown as not selected meanwhile (no frame, ground, panel, white or accent looks: `shownSelected()`, ui.h), and a line along the edge's whole length, a block wide, grey (both screens alike), drawn along the screen's edge that way, in the menu too (over its corner logo): gone again if let go without switching (`drawEdgeLine()`, ui.cpp).
+  An arrow held that switches screens once let go (any of the four, off an edge): on the looper, the selected track or cell shown as not selected meanwhile (no frame, ground, panel, white or accent looks: `shownSelected()`, ui.h), and a line along the edge's whole length, a block wide, grey, light grey for its first 50 ms (the arrow just pressed) (both screens alike), drawn along the screen's edge that way, in the menu too (over its corner logo): gone again if let go without switching (`drawEdgeLine()`, ui.cpp).
   Status row (labels 50% grey, light grey on the selected cell): the scene cell, from the screen's left edge
   (an inverted SCN tag with the scene position,
   flashing while a change waits; both white for 100 ms once another scene is selected, stepped to or come in), then the clock cell (the clock
@@ -215,7 +215,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   recorded either way), PLAY NEWLY RECORDED (off: a new clip comes in muted), SELECT NEXT FREE
   TRACK (off: the selection stays on the track just recorded), EMPTY PROJECT CLICK (the
   metronome, off, still clicks in a project with no clips), each ON or OFF right of its label
-  (on at first; ON light grey, OFF dark grey), then HELP (dark grey: not yet). Its items' frames as the
+  (on at first; ON light grey, OFF dark grey). Its items' frames as the
   list's, two blocks of space round them (white selected). UP/DOWN go through it; A or B turns
   the item on / off at once, on the press (the action button: a tick); DOWN off its bottom item,
   or LEFT / RIGHT, close it; no edge leads out of the menu while it's open (LEFT + RIGHT held
@@ -226,7 +226,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   No mark for the
   way out (any edge, `menuLeavesOn()`); while an arrow is held that leaves it once let go,
   the selection frame is hidden. Under them
-  a list, "EXPORT ABLETON PROJECT", "ENTER STORAGE MODE" and "SETTINGS" (A or B, once let go: the settings popup, below), up to three in view at a time (scrolling once it has more; the row level with the logo left clear). Export
+  a list, "HELP" (not yet: grey, the action button grey with no icon; still selectable), "EXPORT ABLETON PROJECT", "ENTER STORAGE MODE" and "SETTINGS" (A or B, once let go: the settings popup, below), up to four in view at a time (scrolling once it has more; the last level with the logo; `MENU_HELP`... in ui.h). Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
   3/14" (samples copied, then the set) and then "SAVED AS L7 A005" ("SAVED AS" grey,

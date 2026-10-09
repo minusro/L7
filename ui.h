@@ -165,7 +165,7 @@ bool screenSwitchPending();               // (input.cpp) an arrow held that swit
 bool tempoNudging();                      // (input.cpp) SHIFT+LEFT/RIGHT held on the status row: the tempo nudged
 uint32_t lastTapMs();                     // (input.cpp) millis() of the latest tap tempo tap
 // While an arrow is held off an edge that switches screens once let go: a
-// grey line a block thick (both screens alike) along that edge
+// grey line a block thick (light grey for its first 50 ms; both screens alike) along that edge
 // of the screen (on top of everything; let go without switching, what was under it again).
 void drawEdgeLine();
 // The arrows' modifier (input.cpp): SHIFT or B, whichever of the two held was
@@ -278,7 +278,8 @@ int menuSlot();                          // the project slot selected in the men
 bool menuOnList();                       // the selection on the menu's list (EXPORT ABLETON PROJECT ...)
 uint16_t menuActionColor();
 uint16_t actionRestColor();              // the action button's colour when not pressed (ui_buttons.cpp; grey: it can't act)              // the action button's colour (the accent, a card's, light grey)
-int menuListItem();                      // which of its items (0: export, 1: storage mode, 2: settings), or -1
+int menuListItem();                      // which of its items (MENU_HELP...), or -1
+enum { MENU_HELP, MENU_EXPORT, MENU_STORAGE, MENU_SETTINGS };   // the menu's list items, top first
 int menuListX();                         // the list's left edge, px (storage mode's texts start there too)
 bool menuExportShown();                  // the export item shows its label (exporting is off until it goes)
 void menuExportStatus(const char *text, int nameAt = -1);   // the export item's label ("EXPORTING 3/14"; nullptr: its own), kept until the
