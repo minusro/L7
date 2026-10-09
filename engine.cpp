@@ -150,13 +150,16 @@ volatile int32_t clickFromBeat = INT32_MIN;
 static constexpr float CLICK_BAR_HZ = 1600, CLICK_BEAT_HZ = 1150;
 // Its level (the metronome's auto volume): what's heard (after the master
 // volume, the click left out) followed by its peak, rising at once and falling
-// REF_FALL_DB a second; at least -24 dBFS at the master volume (all the way
-// down: none); the bar's first beat at it, the others 3/4 of it.
+// REF_FALL_DB a second; the click CLICK_OVER_DB over it, at least -16 dBFS at
+// the master volume (all the way down: none), at most full scale; the bar's
+// first beat at it, the others 3/4 of it.
 static constexpr float REF_FALL_DB = 6;
 static const float REF_FALL = powf(10, -REF_FALL_DB / 20 * AUDIO_BLOCK_SAMPLES / AUDIO_SAMPLE_RATE_EXACT);   // (a block's)
+static constexpr float CLICK_OVER_DB = 2, CLICK_FLOOR_DB = -16;
+static const float CLICK_OVER = powf(10, CLICK_OVER_DB / 20), CLICK_FLOOR = powf(10, CLICK_FLOOR_DB / 20);
 static float refPeak = 0;
 static float clickLevel() {
-  float m = max(0.0631f * 32767 * outputGain, refPeak);   // (-24 dBFS, at the master volume)
+  float m = max(CLICK_FLOOR * 32767 * outputGain, refPeak * CLICK_OVER);   // (the floor at the master volume)
   return min(m, 32767.0f) / 1.4f;                  // (the two partials' peak together: ~1.4 of the body's)
 }
 static const float CLICK_DECAY = expf(-1.0f / (0.012f * AUDIO_SAMPLE_RATE_EXACT));      // body, ~12 ms

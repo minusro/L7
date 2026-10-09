@@ -163,8 +163,8 @@ EMPTY PROJECT CLICK setting is on (the default; the menu's settings). While the 
 small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
 and louder on the bar's first beat). Its level follows what's heard: the
 peak of the mix after the master volume (the click left out), followed
-rising at once and falling 6 dB a second (`REF_FALL_DB`), the bar's first beat at that
-peak and the others at 3/4 of it, never under -24 dBFS at the master volume
+rising at once and falling 6 dB a second (`REF_FALL_DB`), the bar's first beat 2 dB over that
+peak (`CLICK_OVER_DB`; at most full scale) and the others at 3/4 of it, never under -16 dBFS at the master volume
 (all the way down: silent) (`clickLevel()`, engine.cpp). It's added after the master volume and
 left out of what a resampling records. Stopped, it clicks on each of tap tempo's first four taps too (the first as a bar's first beat), the 5th starting the clock on its own click (`metronomeClick()`). A recording started with it clicking keeps it
 until it's completely recorded: on auto it stops on the bar line where that
