@@ -151,7 +151,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the line; the scene versions the same with a checkered square right round them.
 * Text (`ui_font.cpp`): a 3×5 pixel font (upper case, digits, a few signs;
   the splash's lower case and ©) and tags (plain / outlined / inverted).
-  An arrow held that switches screens once let go (any of the four, off an edge): on the looper, the selected track or cell shown as not selected meanwhile (no frame, ground, panel, white or accent looks: `shownSelected()`, ui.h), and a line along the edge's whole length, 4 blocks wide: its first and third blocks grey, its second and innermost dark grey (on the looper: dark grey and black), drawn along the screen's edge that way, in the menu too (over its corner logo): gone again if let go without switching (`drawEdgeLine()`, ui.cpp).
+  An arrow held that switches screens once let go (any of the four, off an edge): on the looper, the selected track or cell shown as not selected meanwhile (no frame, ground, panel, white or accent looks: `shownSelected()`, ui.h), and a line along the edge's whole length, 4 blocks wide: its first and third blocks dark grey, its second and innermost black (both screens alike), drawn along the screen's edge that way, in the menu too (over its corner logo): gone again if let go without switching (`drawEdgeLine()`, ui.cpp).
   Status row (labels 50% grey, light grey on the selected cell): the scene cell, from the screen's left edge
   (an inverted SCN tag with the scene position,
   flashing while a change waits), then the clock cell (the clock

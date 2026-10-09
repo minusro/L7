@@ -239,8 +239,8 @@ static int shownDepth = 0;
 // The line along the edge of arrow `key` drawn, everything else clipped to
 // the rest of the screen meanwhile.
 FLASHMEM static void paintEdgeLine(uint8_t key) {
-  // A line the edge's whole length, 4 blocks wide: its first and third blocks grey, its second and
-  // innermost dark grey (on the looper: dark grey and black).
+  // A line the edge's whole length, 4 blocks wide (both screens alike): its first and third blocks
+  // dark grey, its second and innermost black.
   auto &t = board.tft();
   t.setClipRect();
   constexpr int W = 4 * PX;
@@ -250,10 +250,9 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
     else if (key == m8::BTN_UP) t.fillRect(0, in, 320, w, c);
     else t.fillRect(0, 240 - in - w, 320, w, c);
   };
-  const uint16_t outer = menuOpen() ? DIM : DARK, inner = menuOpen() ? DARK : BG;
-  band(0, W - PX, outer);
-  band(PX, PX, inner);
-  band(W - PX, PX, inner);
+  band(0, W - PX, DARK);
+  band(PX, PX, BG);
+  band(W - PX, PX, BG);
   shownDepth = W;
   if (key == m8::BTN_LEFT) t.setClipRect(W, 0, 320 - W, 240);
   else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - W, 240);
