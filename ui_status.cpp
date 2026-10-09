@@ -222,25 +222,25 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
     int w = textWidth(text), inL = CLOCK_BOX.x + INSET, inR = CLOCK_BOX.x + CLOCK_BOX.w - INSET;
     int x = CLOCK_BOX.x + (CLOCK_BOX.w - iconW - gap - w) / 2 / PX * PX, tx = x + iconW + gap;
     x -= PX;                                       // (the icon a block further left)
-    // The metronome clicking (the clock running): two dots 2 x 2 blocks, one
-    // over the other a block apart, a block's gap left of the icon's place
-    // (shown or not); grey, the top one white for CLICK_FLASH_MS from each
-    // bar's first beat (X.1.1), the bottom one light grey from the others'.
+    // The metronome on (it clicks, or would with the clock running): two dots
+    // 2 x 2 blocks, one over the other a block apart, at the cell's right
+    // inner edge; grey, while the clock runs the top one white for
+    // CLICK_FLASH_MS from each bar's first beat (X.1.1), the bottom one light
+    // grey from the others'.
     constexpr uint32_t CLICK_FLASH_MS = 100;
-    const int dx = x - 3 * PX;
-    const bool dots = running && clicking, flash = inBeat < (uint32_t)(CLICK_FLASH_MS * AUDIO_SAMPLE_RATE_EXACT / 1000);
+    const int dx = inR - 2 * PX;
+    const bool dots = metronomeOn, flash = running && clicking && inBeat < (uint32_t)(CLICK_FLASH_MS * AUDIO_SAMPLE_RATE_EXACT / 1000);
     const bool barBeat = beat % BEATS_PER_BAR == 0;
     const uint16_t topInk = !dots ? G : flash && barBeat ? INK : DIM, bottomInk = !dots ? G : flash && !barBeat ? LIGHT : DIM;
-    t.fillRect(inL, textY, dx - inL, FONT_H, G);   // (round the dots: what was there; not under them, no flicker)
-    t.fillRect(dx, textY, 2 * PX, 2 * PX, topInk);
-    t.fillRect(dx, textY + 2 * PX, 2 * PX, PX, G);
-    t.fillRect(dx, textY + 3 * PX, 2 * PX, 2 * PX, bottomInk);
-    t.fillRect(dx + 2 * PX, textY, x - dx - 2 * PX, FONT_H, G);
+    t.fillRect(inL, textY, x - inL, FONT_H, G);
     for (int r = 0; r < 5; r++)
       for (int c = 0; c < 3; c++)
         t.fillRect(x + c * PX, textY + r * PX, PX, PX, PLAY[r][c] == '#' && running ? ACCENT : G);
     t.fillRect(x + iconW, textY, tx - x - iconW, FONT_H, G);
-    t.fillRect(tx + w, textY, inR - tx - w, FONT_H, G);
+    t.fillRect(tx + w, textY, dx - tx - w, FONT_H, G);   // (up to the dots: not under them, no flicker)
+    t.fillRect(dx, textY, 2 * PX, 2 * PX, topInk);
+    t.fillRect(dx, textY + 2 * PX, 2 * PX, PX, G);
+    t.fillRect(dx, textY + 3 * PX, 2 * PX, 2 * PX, bottomInk);
     drawText(tx, textY, text, clockInk, G);
   }
 
