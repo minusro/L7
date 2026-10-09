@@ -226,6 +226,9 @@ void drawStatus() {
   // inside its border, a block of space, then SCN; drawn below, with them.)
   static constexpr int ARROWS_W = 4 * PX;          // (the arrows, 3 blocks, and a block of space)
   const int tagW = tagWidth("SCN") + (sceneAccent ? ARROWS_W : 0);
+  static bool wasWide = false;                     // (the wider tag shown: once narrow again, what it covered past the plain one cleared)
+  if (!sceneAccent && (wasWide || cleared)) t.fillRect(box.x + INSET + tagWidth("SCN"), tagY, ARROWS_W + PX, TAG_H, G);
+  wasWide = sceneAccent;
   if (!sceneAccent) drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, labelInk(SCENE_CELL), G);
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;

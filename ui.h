@@ -145,7 +145,9 @@ inline bool shownClip(int i) { return shownTrack(i).state != TrackState::Empty &
 bool menuOpen();
 bool screenSwitchPending();               // (input.cpp) an arrow held that switches screens once let go
 // (An arrow held off an edge, the screen about to switch: none.)
-inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() && !screenSwitchPending() ? DARK : BG; }
+uint8_t arrivalEdgeKey();                // (input.cpp: just back from the menu, its arrow held)
+// (An edge line shown, either way: none.)
+inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() && !screenSwitchPending() && !arrivalEdgeKey() ? DARK : BG; }
 // Something drawn dark grey that would vanish on it: black there instead.
 inline uint16_t onGround(uint16_t color, uint16_t ground) { return ground == DARK && color == DARK ? BG : color; }
 inline uint16_t cellBackground(int i, int cell) {
