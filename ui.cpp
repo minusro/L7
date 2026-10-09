@@ -233,7 +233,7 @@ static void followProjectColor() {
 void drawEdgeLine() {
   static uint8_t shownKey = 0;                     // the edge shown (its arrow), 0: none
   static uint32_t shownGen = 0;                    // (uiGeneration then: since redrawn whole, it's gone already)
-  uint8_t key = screenSwitchPending() ? screenSwitchKey() : 0;
+  uint8_t key = screenSwitchPending() ? screenSwitchKey() : arrivalEdgeKey();   // (just back from the menu, its arrow held: the edge it came in by)
   if (key != m8::BTN_LEFT && key != m8::BTN_RIGHT && key != m8::BTN_UP && key != m8::BTN_DOWN) key = 0;   // (LEFT+RIGHT held: no one edge)
   auto &t = board.tft();
   if (!key) {

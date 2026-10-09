@@ -168,6 +168,15 @@ static uint32_t recordArmedAt = 0;                 // (transport.now at the pres
 // it; or between the looper's two (main and notes, ui.h: UP off its top, DOWN
 // off its bottom).
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
+// The arrow that just left the menu (on its press), while still held: the
+// looper's edge line on the opposite edge (the one it came in by).
+static uint8_t arrivedKey = 0;
+static bool stopRepeat = false;                    // (pollKeys(): that arrow's repeats off)
+uint8_t arrivalEdgeKey() {
+  if (!arrivedKey || menuOpen() || !(board.keys() & arrivedKey)) return 0;
+  return arrivedKey == m8::BTN_LEFT ? m8::BTN_RIGHT : arrivedKey == m8::BTN_RIGHT ? m8::BTN_LEFT
+       : arrivedKey == m8::BTN_UP ? m8::BTN_DOWN : m8::BTN_UP;
+}
 // Or held on SWITCH_HOLD_MS (from when it stopped at the edge): it switches
 // then, still held (pollKeys()); held on, it does nothing more (no repeats)
 // until let go.
@@ -414,9 +423,15 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     if (menuLeavesOn(key)) leaveMenu(key);
     return;
   }
+  // Off the menu's edge: back to the looper at once, on the press; while that
+  // arrow is held there, the looper's edge line on the edge it came in by
+  // (arrivalEdgeKey()), the arrow doing nothing more until let go.
   for (uint8_t key : {m8::BTN_RIGHT, m8::BTN_UP, m8::BTN_DOWN, m8::BTN_LEFT})
     if (menuLeavesOn(key) && (pressed & key) && !repeat && !(keys & (m8::BTN_SHIFT | m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY))) {
-      leaveOnRelease = key;
+      if (leaveMenu(key)) {
+        arrivedKey = key;
+        stopRepeat = true;
+      }
       return;
     }
   // The menu's items: the arrows move its selection; A or B runs the action
@@ -1020,7 +1035,9 @@ void pollKeys() {
     } else if (!(keys & repeatKey)) {
       repeatKey = 0;                                 // released
     }
+    if (arrivedKey && !(keys & arrivedKey)) arrivedKey = 0;   // (let go)
     onKeys(keys, pressed, false);
+    if (stopRepeat) { repeatKey = 0; stopRepeat = false; }
     prev = keys;
   } else if (repeatKey && (int32_t)(millis() - repeatAt) >= 0) {
     debugStage = "key repeat";
