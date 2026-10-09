@@ -167,9 +167,9 @@ void drawStatus() {
     drawText(numRight - w, textY, text, numInk, G);
   }
 
-  // The clock, or the master volume while B alone is held on its cell.
+  // The clock, or the master volume while B is held on its cell (A too or not).
   static bool shownVolume = false;
-  bool volume = cell == CLOCK_CELL && bAlone();
+  bool volume = cell == CLOCK_CELL && bArrows();   // (A held too or not)
   if (volume) {
     drawMasterVolume(!shownVolume || cleared);
     shownVolume = true;

@@ -226,7 +226,7 @@ static bool bOnTrack() {
 }
 // The same for the action button with B on the clock cell (the master volume; the panel: a track's only).
 static bool bAdjusting() {
-  return bOnTrack() || (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == CLOCK_CELL && !menuOpen() && bAlone());
+  return bOnTrack() || (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == CLOCK_CELL && !menuOpen() && bArrows());   // (A held too or not)
 }
 
 static uint16_t buttonBackground(int i, int icon) {
