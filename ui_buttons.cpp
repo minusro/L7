@@ -269,8 +269,8 @@ static uint16_t markColor() {                     // (B held on a track, or SHIF
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
   // The action button pressed (A held, or B + an arrow adjusting): grey, a
-  // block in from the left (moved right, the screen's edge cutting it), its
-  // icon a block right with it; else it reaches the button's place's left edge.
+  // block in from the left (its icon where it was); else it reaches the
+  // button's place's left edge.
   const bool pressed = i == STATUS_ROW && !cannotAct(icon) && (heldAction >= 0 || (icon == ICON_ADJUST && adjusting()));
   // The action button: as tall as the status cells.
   const int height = i == STATUS_ROW ? STATUS_H : ROW_BAND;
@@ -298,7 +298,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     if (color == panel) color = BG;                // (a recording icon in the accent colour, on it)
     if (panel == ACCENT && badge != BADGE_NONE) badge = BADGE_LABEL;   // highlighted: the number alone
   }
-  auto block = [&](int c, int r) { blockIn(c + pressed, r, color); };   // (pressed: the icon a block right, with the button)
+  auto block = [&](int c, int r) { blockIn(c, r, color); };
   // A badge: a square w x h blocks with its bottom corners cut (filled, or
   // outlined) from row r0, centred on the icons' column.
   auto drawSquare = [&](int w, int h, int r0, bool filled, uint16_t frame) {
@@ -364,7 +364,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
-    int c0 = (track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE)) +
+    int c0 = (track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB)) +
              0,
       r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
     for (int r = 0; r < ic.h; r++)
