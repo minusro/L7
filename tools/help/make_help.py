@@ -27,27 +27,27 @@ CARDS = (60, 26, 270, 64)                                                       
 BOTTOM = (0, 90, 320, 240)                                                        # the screen's lower part (tracks 4-1, the status row)
 PAGES = [
     dict(title=("L7", "HOW TO"), steps=[], lines=("A LOOPER FOR THE M8", "7 STEREO TRACKS, 200 SCENES AND 12 PROJECTS", "< > TO MOVE")),
-    dict(title=("THE", "SCREEN"), whole=("ui_played", BOTTOM),
+    dict(title=("THE", "SCREEN"), icon="PLAY", whole=("ui_played", BOTTOM),
          lines=("A TRACK: SOUND, FILTER, VOLUME", "BELOW: SCENE, TIME, TEMPO")),
-    dict(title=("RECORD", ""), steps=[("ui_empty", TRACK(2), "EMPTY"), ("ui_recording", TRACK(2), "RECORD"), ("ui_played", TRACK(2), "PLAY")],
+    dict(title=("RECORD", ""), icon="RECORD", steps=[("ui_empty", TRACK(2), "EMPTY"), ("ui_recording", TRACK(2), "RECORD"), ("ui_played", TRACK(2), "PLAY")],
          lines=("A: RECORD", "A AGAIN: STOP. IT PLAYS")),
-    dict(title=("MUTE", ""), steps=[("ui_wave", TRACK(6), "PLAY"), ("ui_muted", TRACK(5), "MUTE")],
+    dict(title=("MUTE", ""), icon="MUTE", steps=[("ui_wave", TRACK(6), "PLAY"), ("ui_muted", TRACK(5), "MUTE")],
          lines=("A: MUTE OR PLAY", "HOLD A, PRESS ^v: MORE TRACKS")),
-    dict(title=("LENGTH", ""), steps=[("ui_wave", TRACK(6, 0), "LONG"), ("ui_wave_edit", TRACK(6, 0), "SHORT")],
+    dict(title=("LENGTH", ""), icon="MOVE", steps=[("ui_wave", TRACK(6, 0), "LONG"), ("ui_wave_edit", TRACK(6, 0), "SHORT")],
          lines=("HOLD B, PRESS ^v: LONGER OR SHORTER", "HOLD B, PRESS < >: MOVE IT")),
-    dict(title=("FILTER", "VOLUME"), steps=[("ui_filter_edit", TRACK(4), "FILTER"), ("ui_mix_edit", TRACK(3), "VOLUME")],
+    dict(title=("FILTER", "VOLUME"), icon="ADJUST", steps=[("ui_filter_edit", TRACK(4), "FILTER"), ("ui_mix_edit", TRACK(3), "VOLUME")],
          lines=("HOLD B ON A FILTER OR VOLUME", "PRESS THE ARROWS TO CHANGE IT")),
-    dict(title=("CLIPS", ""), steps=[("ui_cut", TRACK(6), "CUT"), ("ui_paste", TRACK(2), "PASTE"), ("ui_shift_track", TRACK(5, 0), "CHANGE")],
+    dict(title=("CLIPS", ""), icon="CUT", steps=[("ui_cut", TRACK(6), "CUT"), ("ui_paste", TRACK(2), "PASTE"), ("ui_shift_track", TRACK(5, 0), "CHANGE")],
          lines=("SHIFT+A: CUT OR PASTE", "SHIFT+< >: OTHER SOUNDS")),
-    dict(title=("SCENES", ""), steps=[("ui_played", STATUS_LEFT, "SCENE 1"), ("ui_status_scene_edit", STATUS_LEFT, "SCENE 2")],
+    dict(title=("SCENES", ""), icon="SCENE_DUP", steps=[("ui_played", STATUS_LEFT, "SCENE 1"), ("ui_status_scene_edit", STATUS_LEFT, "SCENE 2")],
          lines=("A SCENE KEEPS ALL TRACKS", "SHIFT+^v: NEXT SCENE")),
-    dict(title=("TEMPO", ""), steps=[("ui_status_tap_held", STATUS_RIGHT, "TAP"), ("ui_status_metro_on", STATUS_RIGHT, "CLICK")],
+    dict(title=("TEMPO", ""), icon="RESTART", steps=[("ui_status_tap_held", STATUS_RIGHT, "TAP"), ("ui_status_metro_on", STATUS_RIGHT, "CLICK")],
          lines=("START: PLAY OR STOP", "A ON TEMPO: TAP. B+A: CLICK")),
-    dict(title=("RESAMPLE", "AND MOVE"), steps=[("ui_resampling", TRACK(2), "RESAMPLE"), ("ui_move", TRACK(2), "MOVE")],
+    dict(title=("RESAMPLE", "AND MOVE"), icon="RESAMPLE", steps=[("ui_resampling", TRACK(2), "RESAMPLE"), ("ui_move", TRACK(2), "MOVE")],
          lines=("B+A: RECORD WHAT YOU HEAR", "B+^v: MOVE A TRACK")),
-    dict(title=("SYNC", ""), steps=[("ui_status_follow_on", STATUS_RIGHT, "FOLLOW")],
+    dict(title=("SYNC", ""), icon="USB", steps=[("ui_status_follow_on", STATUS_RIGHT, "FOLLOW")],
          lines=("L7 FOLLOWS MIDI AND USB CLOCK", "SHIFT+A ON TEMPO: FOLLOW AUDIO"), notes=["MIDI", "USB", "AUDIO"]),
-    dict(title=("PROJECTS", ""), steps=[("ui_menu_load", CARDS, "OPEN"), ("ui_menu_cut", CARDS, "CUT")],
+    dict(title=("PROJECTS", ""), icon="LOAD", steps=[("ui_menu_load", CARDS, "OPEN"), ("ui_menu_cut", CARDS, "CUT")],
          lines=("ARROW OFF THE EDGE: MENU", "A: OPEN. SHIFT+A: CUT")),
 ]
 
@@ -61,6 +61,14 @@ def text_w(s, k=1): return max(0, sum((len(g(c)[0]) + 1) * k for c in s) - k)
 for line in [l for p in PAGES for l in p["lines"] + tuple(p.get("notes", [])) + p["title"]] + [c for p in PAGES for _, _, c in p.get("steps", [])]:
     for ch in line:
         if ch not in GLYPHS and ch.upper() not in GLYPHS: sys.exit(f"not in the font: {ch!r} ({line})")
+
+# ---- The action button's icons (ui_buttons.cpp), by name: their art, rows of '#'.
+_ub = open(os.path.join(ROOT, "ui_buttons.cpp")).read()
+_names = re.search(r"enum \{ (ICON_NONE[^}]*)\}", _ub).group(1).replace(" ", "").split(",")
+_block = _ub[_ub.index("static const Icon ICONS[] = {"):]
+_block = _block[:_block.index("\n};")]
+_arts = [re.findall(r'"([.#]*)"', m.group(3)) for m in re.finditer(r"\{(\d+), (\d+), \{((?:[^{}])*)\}\}", _block)]
+ICON_ART = {n[5:]: a for n, a in zip(_names, _arts)}
 
 def rgb(h): return ((h >> 16) & 255, (h >> 8) & 255, h & 255)
 def ev(v): return v // 2 * 2                         # (on the 2 px grid)
@@ -147,8 +155,25 @@ def page(n, p):
             ops.append(("text", 8, 140 + (j + (j == len(lines) - 1)) * 14, 2, NAMED[ink], line))
         return ops, 10
     title = (t1 + " " + t2).strip()                  # (one line, in the page's colour; no page number)
-    if text_w(title, 3) > 304: sys.exit(f"title too wide: {title}")
-    ops.append(("text", 8, 8, 3, acc, title))        # (3 px a dot: 15 px tall)
+    # Its icon left of it (the action button's, a block a dot: 2 px), in the
+    # page's colour, centred on the title's 15 px; the title 3 blocks after it.
+    tx = 8
+    if p.get("icon"):
+        art = ICON_ART[p["icon"]]                      # (its empty edges trimmed: the same gap to every title; its inside kept)
+        lit = [i for i, r in enumerate(art) if '#' in r]
+        art = art[lit[0]:lit[-1] + 1]
+        c0 = min(r.index('#') for r in art if '#' in r); c1 = max(r.rindex('#') for r in art if '#' in r)
+        art = [r[c0:c1 + 1] for r in art]
+        w, h = len(art[0]), len(art)
+        icon = Image.new("RGBA", (w * 2, h * 2), (0, 0, 0, 0))
+        d = ImageDraw.Draw(icon)
+        for r, row in enumerate(art):
+            for c, v in enumerate(row):
+                if v == '#': d.rectangle([c * 2, r * 2, c * 2 + 1, r * 2 + 1], fill=acc + (255,))
+        ops.append(("image", 8, ev(8 + 15 // 2 - h), image(("icon", p["icon"], acc), icon)))
+        tx = 8 + w * 2 + 6
+    if tx + text_w(title, 3) > 312: sys.exit(f"title too wide: {title}")
+    ops.append(("text", tx, 8, 3, acc, title))       # (3 px a dot: 15 px tall)
     ops.append(("rect", 0, 30, 320, 152, NAMED["BG"]))   # (the content's area, under the title down to the rule: black)
     # The steps: strips, each its part of a screenshot at the screen's size in a
     # black frame a block wide, its number in a circle left of it, its caption
