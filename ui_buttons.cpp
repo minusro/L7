@@ -65,8 +65,8 @@ static int actionIcon() {
       return ICON_RESAMPLE;                          // an empty track: B+A resamples (unavailable with no clip playing unmuted)
     if (mainKeys() & m8::BTN_PLAY) return ICON_NONE;
     const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
-    if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == TEMPO_CELL && !(board.keys() & arrows))
-      return ICON_METRO;                             // the tempo cell: B+A, the metronome's next setting
+    if (selected == STATUS_ROW && !(board.keys() & arrows))
+      return ICON_METRO;                             // the status row (any cell): B+A, the metronome on / off
     if (selected == STATUS_ROW) return ICON_ADJUST;
     return hasClip(selected) ? ICON_ADJUST : ICON_NONE;
   }

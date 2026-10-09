@@ -987,8 +987,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   if ((pressed & m8::BTN_EDIT) && opt) {
     if (shift) {
       sceneChanged = optFirst ? scenePaste() : sceneCut();
-    } else if (onTempo) {
-      setMetronomeMode(nextMetronomeMode());       // B+A on the tempo cell: the metronome's next setting
+    } else if (onStatus) {
+      setMetronomeMode(nextMetronomeMode());       // B+A on the status row (any cell): the metronome on / off
       metronomeOn = metronomeWanted();             // (at once: the next beat too)
     } else if (!onStatus && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
                recordQueued() != selected) {
