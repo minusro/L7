@@ -269,6 +269,7 @@ void uiRefresh() {
   if (millis() - lastDraw >= 30) {
     lastDraw = millis();
     if (menuHelpOpen()) {                            // (the help pages: drawn as they're turned; UP or DOWN held: its edge line)
+      helpService(helpPage());
       drawEdgeLine();
       return;
     }

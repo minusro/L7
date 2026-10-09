@@ -510,6 +510,7 @@ FLASHMEM bool menuHelpKeys(uint8_t pressed, bool repeat) {
   if (pressed & m8::BTN_LEFT) to = (p + n - 1) % n;
   if (to == p) return false;
   setHelpPage(to);
+  helpTurned();
   drawHelpPage(to);
   return true;
 }

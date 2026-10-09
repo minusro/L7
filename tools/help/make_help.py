@@ -134,8 +134,8 @@ def page(n, p):
     t1, t2 = p["title"]
     if n == 1:
         # The logo as the menu's (drawn from its shape, not an image), twice its size: 110 x 52, on the ground.
-        ops.append(("logo", 160 - 110 // 2 // 2 * 2, 36, 2, acc))
-        ops.append(("text", ev(160 - text_w("HOW TO", 4) // 2), 104, 4, acc, "HOW TO"))
+        ops.append(("logo", 8, 36, 2, acc))              # (left-aligned, as the other pages' titles)
+        ops.append(("text", 8, 104, 4, acc, "HOW TO"))
         lines = []
         for line, ink in zip(p["lines"], ("LIGHT", "LIGHT", "DIM")):
             if text_w(line, 2) > 304 and " AND " in line:      # (a natural break: before its last "and")
@@ -144,8 +144,8 @@ def page(n, p):
             else:
                 lines.append((line, ink))
         for j, (line, ink) in enumerate(lines):
-            ops.append(("text", ev(160 - text_w(line, 2) // 2), 140 + j * 14, 2, NAMED[ink], line))
-        return ops, 80
+            ops.append(("text", 8, 140 + j * 14, 2, NAMED[ink], line))
+        return ops, 10
     ops.append(("text", 8, 8, 4, acc, t1))
     if t2: ops.append(("text", 8, 32, 4, NAMED["INK"], t2))
     ops.append(("rect", 254, 6, 60, 48, acc))

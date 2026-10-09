@@ -228,8 +228,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   white), the page's number in a tile of that colour top right, one to three screenshots
   (numbered in circles of that colour; their accent turned to its hue) with captions, two lines
   of text under a rule of that colour (the first page: the logo, HOW TO and three lines); then
-  the page row: a square each, the pages seen filled in their colour, the others a grey outline,
-  the shown one in a light grey line 2 px out (its corners cut). LEFT / RIGHT turn the pages,
+  the page row (from x 10, the first page's too: its content left-aligned as the others'): a
+  square each, the pages seen filled in their colour, the others a grey outline, the shown one on
+  a solid light grey square two blocks wider all round (white for 100 ms after LEFT/RIGHT). LEFT / RIGHT turn the pages,
   wrapping round; a held arrow's repeats stop at the title page (a fresh press goes on); A or B go
   back to the menu, and UP or DOWN too, once let go or held 0.6 s, its edge line meanwhile (as a
   screen switch's: `helpOnRelease`); no edge leads out meanwhile. The pages seen and the last one shown are

@@ -2,8 +2,8 @@
 // (tools/help/make_help.py), each page a list of steps (rectangles, text in
 // L7's font at 1-6 px a dot, run-length coded images), then the page row:
 // a square each, the pages seen (app.h helpSeen()) filled in their project's
-// colour, the others a grey outline; the page shown in a light grey line 2 px
-// out from its square (a gap), its corner blocks cut.
+// colour, the others a grey outline; the page shown on a solid light grey
+// square two blocks wider all round (white for HELP_FLASH_MS after a turn).
 #include "ui.h"
 #include "ui_font.h"
 #include "help_slides.h"
@@ -57,24 +57,32 @@ FLASHMEM static void helpImage(int x0, int y0, const HelpImage &im) {
 }
 
 // The page row: a square each, 14 px apart, 8 px square, from (x, 224).
+static constexpr uint32_t HELP_FLASH_MS = 100;
+static uint32_t flashAt = 0;                     // millis() of the last turn (0: none showing)
+static int dotsX = 10;
 FLASHMEM static void helpDots(int x, int shown) {
   auto &t = board.tft();
   constexpr int Y = 224, SIZE = 8, STEP = 14;
   uint16_t seen = helpSeen();
   for (int i = 0; i < HELP_PAGES; i++) {
     int x0 = x + i * STEP;
+    if (i == shown) t.fillRect(x0 - 2 * PX, Y - 2 * PX, SIZE + 4 * PX, SIZE + 4 * PX, flashAt ? INK : LIGHT);
     if (seen & (1 << i)) {
       t.fillRect(x0, Y, SIZE, SIZE, PROJECT_COLORS[i]);
     } else {
       t.fillRect(x0, Y, SIZE, SIZE, DIM);
       t.fillRect(x0 + 2, Y + 2, SIZE - 4, SIZE - 4, MENU_BG);
     }
-    if (i != shown) continue;
-    t.fillRect(x0 - 2, Y - 4, SIZE + 4, 2, LIGHT);             // (2 px out from the square, its corners cut)
-    t.fillRect(x0 - 2, Y + SIZE + 2, SIZE + 4, 2, LIGHT);
-    t.fillRect(x0 - 4, Y - 2, 2, SIZE + 4, LIGHT);
-    t.fillRect(x0 + SIZE + 2, Y - 2, 2, SIZE + 4, LIGHT);
   }
+}
+
+// A turn (LEFT/RIGHT): the shown page's square white a moment.
+void helpTurned() { flashAt = max(1u, millis()); }
+// Every pass while the help shows: the flash over, the square light grey again.
+FLASHMEM void helpService(int page) {
+  if (!flashAt || millis() - flashAt < HELP_FLASH_MS) return;
+  flashAt = 0;
+  helpDots(dotsX, page);
 }
 
 FLASHMEM void drawHelpPage(int page) {
@@ -89,5 +97,6 @@ FLASHMEM void drawHelpPage(int page) {
     else if (op.op == HELP_LOGO) drawLogoScaled(op.x, op.y, op.k, op.color);
     else helpImage(op.x, op.y, *op.img);
   }
+  dotsX = p.dotsX;
   helpDots(p.dotsX, page);
 }
