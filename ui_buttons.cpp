@@ -359,7 +359,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
         "..........", "......####", ".##.######", ".##.######", "......####"};
     const char *const *art = icon == ICON_EAR ? EAR : METRONOME;
     constexpr int W = 10, H = 10;
-    int c0 = PANEL_LEFT + (icon != ICON_EAR), r0 = (rows - H) / 2;   // (the input's: a block further left)
+    int c0 = PANEL_LEFT + 1, r0 = (rows - H) / 2;
     bool crossed = icon == ICON_EAR ? audioFollowOn() : metronomeOn;   // (the metronome: it would click were the clock running, metronomeOn, kept up to date running or not)
     for (int r = 0; r < H; r++)
       for (int c = 0; c < W; c++) {
