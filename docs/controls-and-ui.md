@@ -161,7 +161,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   first step; while the metronome clicks, the accent colour on each beat's first
   step instead), the accent colour on 1.1.1; before it a small play icon, in
   the accent colour while it runs; while the metronome is on (it clicks, or would with the clock
-  running), two grey dots 2 × 2 blocks at the cell's right inner edge, one over the other a block
+  running), two grey dots 2 × 2 blocks a block in from the cell's right inner edge, one over the other a block
   apart: while the clock runs the top one white for 100 ms from each bar's first beat (X.1.1), the
   bottom one light grey from the other beats'. While B alone is held on the clock
   cell it shows the master volume and balance instead: 22 vertical lines across the

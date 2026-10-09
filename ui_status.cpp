@@ -223,12 +223,12 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
     int x = CLOCK_BOX.x + (CLOCK_BOX.w - iconW - gap - w) / 2 / PX * PX, tx = x + iconW + gap;
     x -= PX;                                       // (the icon a block further left)
     // The metronome on (it clicks, or would with the clock running): two dots
-    // 2 x 2 blocks, one over the other a block apart, at the cell's right
-    // inner edge; grey, while the clock runs the top one white for
+    // 2 x 2 blocks, one over the other a block apart, a block in from the
+    // cell's right inner edge; grey, while the clock runs the top one white for
     // CLICK_FLASH_MS from each bar's first beat (X.1.1), the bottom one light
     // grey from the others'.
     constexpr uint32_t CLICK_FLASH_MS = 100;
-    const int dx = inR - 2 * PX;
+    const int dx = inR - 3 * PX;
     const bool dots = metronomeOn, flash = running && clicking && inBeat < (uint32_t)(CLICK_FLASH_MS * AUDIO_SAMPLE_RATE_EXACT / 1000);
     const bool barBeat = beat % BEATS_PER_BAR == 0;
     const uint16_t topInk = !dots ? G : flash && barBeat ? INK : DIM, bottomInk = !dots ? G : flash && !barBeat ? LIGHT : DIM;
@@ -241,6 +241,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
     t.fillRect(dx, textY, 2 * PX, 2 * PX, topInk);
     t.fillRect(dx, textY + 2 * PX, 2 * PX, PX, G);
     t.fillRect(dx, textY + 3 * PX, 2 * PX, 2 * PX, bottomInk);
+    t.fillRect(dx + 2 * PX, textY, inR - dx - 2 * PX, FONT_H, G);   // (the block right of them)
     drawText(tx, textY, text, clockInk, G);
   }
 
