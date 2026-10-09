@@ -353,7 +353,7 @@ static uint32_t itemKey(int k) {
          (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25;
 }
 
-// The battery, top right (two blocks in): a tiny grey one, its outline, a block
+// The battery, top right (three blocks in): a tiny grey one, its outline, a block
 // of space, its fill in sixths; its tip a block right, 3 blocks tall.
 FLASHMEM static void drawBattery(bool all) {
   static int shownFill = -2;                       // (-1: not known, none)
@@ -361,7 +361,7 @@ FLASHMEM static void drawBattery(bool all) {
   if (!all && fill == shownFill) return;
   shownFill = fill;
   auto &t = board.tft();
-  constexpr int W = 10, H = 7, X = 320 / PX - 2 - (W + 1), Y = 2;   // (its body, then its tip)
+  constexpr int W = 10, H = 7, X = 320 / PX - 3 - (W + 1), Y = 3;   // (its body, then its tip)
   for (int r = 0; r < H; r++)
     for (int c = 0; c <= W; c++) {
       bool edge = r == 0 || r == H - 1 || c == 0 || c == W - 1, tip = c == W && r >= 2 && r <= H - 3;
