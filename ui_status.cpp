@@ -153,8 +153,11 @@ void drawStatus() {
     int32_t loop = tracks[selected].loopFrames();
     int32_t f = ((int32_t)((unitOf(selected).rotate + (int64_t)clipRotatePending(selected)) % loop) + loop) % loop;   // (held, not heard yet: counted)
     if (f > loop / 2) f -= loop;
-    snprintf(text, sizeof text, "%+d", (int)lroundf(f * 1000.0f / AUDIO_SAMPLE_RATE_EXACT));
+    int ms = (int)lroundf(f * 1000.0f / AUDIO_SAMPLE_RATE_EXACT);
+    if (abs(ms) < 10000) snprintf(text, sizeof text, "%+d", ms);   // (the number's room: "+8888" at most)
+    else snprintf(text, sizeof text, "%+.1f", ms / 1000.0f);      // (10 s and more: seconds, the tag S)
   }
+  const bool inSeconds = rotateShown && strchr(text, '.');
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) && !screenSwitchPending() ? selectedCellIn(STATUS_ROW) : -1;   // (an arrow held off an edge: no selection shown)
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
@@ -171,8 +174,8 @@ void drawStatus() {
     const bool tapHeld = cell == TEMPO_CELL && (k & m8::BTN_EDIT) && !(k & (m8::BTN_OPT | m8::BTN_SHIFT)) && !audioFollowOn();
     const bool tapped = cell == TEMPO_CELL && lastTapMs() && millis() - lastTapMs() < TAP_FLASH_MS;
     int tagX = right - tagWidth("BPM");
-    drawTag(tagX, tagY, offsetShown || rotateShown ? "MS" : "BPM", TAG_INVERTED, tapHeld ? ACCENT : ink, G, tagWidth("BPM"));
-    static const int tempoW = textWidth("888.8");  // the widest tempo: its box clears any other
+    drawTag(tagX, tagY, inSeconds ? "S" : offsetShown || rotateShown ? "MS" : "BPM", TAG_INVERTED, tapHeld ? ACCENT : ink, G, tagWidth("BPM"));
+    static const int tempoW = textWidth("+8888");  // the widest number (a tempo, an offset in ms): its box clears any other
     int numRight = tagX - PX, numLeft = numRight - tempoW, w = textWidth(text);
     t.fillRect(numLeft, tagY, numRight - numLeft + PX, textY - tagY, G);   // round the text: what was there
     t.fillRect(numLeft, textY + FONT_H, numRight - numLeft + PX, tagY + TAG_H - textY - FONT_H, G);
