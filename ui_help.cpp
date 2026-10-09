@@ -10,22 +10,27 @@
 
 int helpPages() { return HELP_PAGES; }
 
-// Text at k px a dot (the font's blocks drawn k px square), from (x, y).
-FLASHMEM static void helpText(int x, int y, int k, uint16_t ink, const char *s) {
+// Text at k px a dot (the font's blocks drawn k px square), from (x, y);
+// squeezed: its middle row half as tall (the titles: a block shorter).
+FLASHMEM static void helpText(int x, int y, int k, uint16_t ink, const char *s, bool squeezed = false) {
   auto &t = board.tft();
   for (const char *p = s; *p; p++) {
     const Glyph *g = glyphFor(*p);
     if (!g) g = glyphFor(toupper(*p));
     if (!g) g = glyphFor(' ');
     int w = glyphWidth(*g);
-    for (int r = 0; r < 7 && g->rows[r]; r++)
+    for (int r = 0; r < 7 && g->rows[r]; r++) {
+      int row = r + g->top, top = row * k, h = k;   // (squeezed: row 2 half as tall, the rows under it that much higher)
+      if (squeezed && row == 2) h = k / 2;
+      if (squeezed && row > 2) top -= k / 2;
       for (int c = 0; c < w;) {
         if (g->rows[r][c] != '#') { c++; continue; }
         int n = 1;
         while (c + n < w && g->rows[r][c + n] == '#') n++;
-        t.fillRect(x + c * k, y + (r + g->top) * k, n * k, k, ink);
+        t.fillRect(x + c * k, y + top, n * k, h, ink);
         c += n;
       }
+    }
     x += (w + 1) * k;
   }
 }
@@ -93,7 +98,7 @@ FLASHMEM void drawHelpPage(int page) {
   for (int i = 0; i < p.count; i++) {
     const HelpOp &op = p.ops[i];
     if (op.op == HELP_RECT) t.fillRect(op.x, op.y, op.w, op.h, op.color);
-    else if (op.op == HELP_TEXT) helpText(op.x, op.y, op.k, op.color, op.text);
+    else if (op.op == HELP_TEXT) helpText(op.x, op.y, op.k, op.color, op.text, op.w);   // (w: squeezed)
     else if (op.op == HELP_LOGO) drawLogoScaled(op.x, op.y, op.k, op.color);
     else helpImage(op.x, op.y, *op.img);
   }

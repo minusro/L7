@@ -148,7 +148,7 @@ def page(n, p):
         return ops, 10
     title = (t1 + " " + t2).strip()                  # (one line, in the page's colour; no page number)
     if text_w(title, 4) > 304: sys.exit(f"title too wide: {title}")
-    ops.append(("text", 8, 8, 4, acc, title))
+    ops.append(("text", 8, 8, 4, acc, title, 1))     # (squeezed: its middle row half as tall, 18 px)
     ops.append(("rect", 0, 30, 320, 152, NAMED["BG"]))   # (the content's area, under the title down to the rule: black)
     # The steps: strips, each its part of a screenshot at the screen's size in a
     # black frame a block wide, its number in a circle left of it, its caption
@@ -205,7 +205,7 @@ for n, (ops, dx) in enumerate(pages, 1):
     for op in ops:
         if op[0] == "rect": rows.append(f"{{HELP_RECT, 0, {op[1]}, {op[2]}, {op[3]}, {op[4]}, 0x{c565(op[5]):04X}, nullptr, nullptr}}")
         elif op[0] == "logo": rows.append(f"{{HELP_LOGO, {op[3]}, {op[1]}, {op[2]}, 0, 0, 0x{c565(op[4]):04X}, nullptr, nullptr}}")
-        elif op[0] == "text": rows.append(f"{{HELP_TEXT, {op[3]}, {op[1]}, {op[2]}, 0, 0, 0x{c565(op[4]):04X}, {string(op[5])}, nullptr}}")
+        elif op[0] == "text": rows.append(f"{{HELP_TEXT, {op[3]}, {op[1]}, {op[2]}, {op[6] if len(op) > 6 else 0}, 0, 0x{c565(op[4]):04X}, {string(op[5])}, nullptr}}")   # (w: squeezed)
         else: rows.append(f"{{HELP_IMAGE, 0, {op[1]}, {op[2]}, 0, 0, 0, nullptr, &{op[3]}}}")
     page_ops.append((n, rows, dx))
 for s, name in strings.items():
