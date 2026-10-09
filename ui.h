@@ -97,7 +97,7 @@ inline int firstCellIn(int i) { return i == STATUS_ROW ? SCENE_CELL : 0; }
 // closed): the rows' places follow it.
 inline bool notesScreen = false, notesLayout = false;
 inline int rowTop(int i) {
-  if (i == STATUS_ROW) return notesLayout ? 0 : STATUS_TOP + PX;   // (main: a block lower, its bottom block row off the screen)
+  if (i == STATUS_ROW) return notesLayout ? 0 : STATUS_TOP;
   return (notesLayout ? STATUS_H + PX : 0) + (NUM_TRACKS - 1 - i) * ROW_BAND;
 }
 // A row's place on the screen from the top (0: the top row), and back.
@@ -120,7 +120,7 @@ constexpr int LAST_TRACK_ROW = 0;
 inline int bgTop(int i) { return notesLayout && i == NUM_TRACKS - 1 ? STATUS_H : rowTop(i); }
 inline int bgHeight(int i) {
   if (notesLayout) return (i == STATUS_ROW ? STATUS_H : i == LAST_TRACK_ROW ? 240 : rowTop(i) + ROW_BAND) - bgTop(i);
-  return (i == STATUS_ROW ? 240 : i == LAST_TRACK_ROW ? rowTop(STATUS_ROW) : rowTop(i) + ROW_BAND) - bgTop(i);
+  return (i == STATUS_ROW ? 240 : i == LAST_TRACK_ROW ? STATUS_TOP : rowTop(i) + ROW_BAND) - bgTop(i);
 }
 
 inline bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }
