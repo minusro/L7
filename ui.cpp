@@ -241,7 +241,7 @@ static int shownDepth = 0;
 FLASHMEM static void paintEdgeLine(uint8_t key) {
   // A line 4 blocks wide, the edge's whole length (the looper's light grey,
   // the menu's grey), a dark grey arrow cut out of its middle pointing at the
-  // edge (3 blocks deep, 5 long: its tip at the edge).
+  // edge (3 blocks deep, 5 long: its tip a block past the edge, cut off).
   auto &t = board.tft();
   t.setClipRect();
   constexpr int W = 4 * PX;
@@ -254,7 +254,8 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
   const int mid = (across ? 320 : 240) / PX / 2;   // (the edge's middle block)
   for (int d = 0; d < 3; d++)                      // d: blocks in from the edge
     for (int a = -d; a <= d; a++) {                // a: along it, from the middle
-      int along = (mid + a) * PX, in = d * PX;
+      if (d == 0) continue;                        // (a block further out: its tip past the edge)
+      int along = (mid + a) * PX, in = (d - 1) * PX;
       if (key == m8::BTN_LEFT) t.fillRect(in, along, PX, PX, DARK);
       else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX - in, along, PX, PX, DARK);
       else if (key == m8::BTN_UP) t.fillRect(along, in, PX, PX, DARK);
