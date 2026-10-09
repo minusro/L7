@@ -23,14 +23,17 @@ constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2 * PX;   // 214
 // drawn there, grey round the selected cell (ui.cpp, borderAt()). The
 // selected track gets a grey panel in its button, behind its number
 // (ui_buttons.cpp). A block's space before the buttons.
-//   waveform: x 0-187   filter: x 186-245   volume: x 244-291   button: x 294-319
+//   waveform: x 0-187   filter: x 188-247   volume: x 248-295   button: x 298-319
+//   (the track cells side by side, their own borders each; the tracks'
+//   buttons TRACK_BUTTON_SHIFT right of the status row's)
 struct Cell { int x, w; };
 constexpr int CELL_H = ROW_BAND + PX;
 // The status row's cells: to the screen's bottom edge, framed all round (no
 // row below shares their bottom border).
 constexpr int STATUS_H = 240 - STATUS_TOP;               // y 214-239: the tags a block from the frame each way
 constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left to right
-constexpr Cell CELL[CELLS] = {{0, 188}, {186, 60}, {244, 48}};
+constexpr Cell CELL[CELLS] = {{0, 188}, {188, 60}, {248, 48}};
+constexpr int TRACK_BUTTON_SHIFT = 2 * PX;           // (their content cut by the screen's edge)
 constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: three cells (to the volume cells' edge), left

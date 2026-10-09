@@ -390,19 +390,20 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
       for (int x = 0; x < ((pressed ? PANEL_LEFT : 0) + (y < PX || y >= height - PX)) * PX; x++) px[y * BUTTON_W + x] = round;
   auto &t = board.tft();
   int top = rowTop(i);
-  if (bgTop(i) < top) t.fillRect(BUTTON_X, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin
-  t.writeRect(BUTTON_X, top, BUTTON_W, height, px);
+  const int bx = BUTTON_X + (i != STATUS_ROW ? TRACK_BUTTON_SHIFT : 0);   // (a track's: further right, cut by the screen's edge)
+  if (bgTop(i) < top) t.fillRect(bx, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin
+  t.writeRect(bx, top, BUTTON_W, height, px);
   int bottom = top + height, end = bgTop(i) + bgHeight(i);
   if (i != STATUS_ROW) {                           // the block's space before it: the ground too
-    t.fillRect(BUTTON_X - PX, top, PX, PX, topGround);
-    t.fillRect(BUTTON_X - PX, top + PX, PX, height - PX, ground);
+    t.fillRect(bx - PX, top, PX, PX, topGround);
+    t.fillRect(bx - PX, top + PX, PX, height - PX, ground);
   } else if (!menuOpen()) {
     t.fillRect(BUTTON_X - PX, top, PX, height, round);
   }
   if (bottom < end) {                              // the margin below: the last track's ground's last block row (as under its cells), then black
     int groundEnd = i != STATUS_ROW ? min(end, bottom + PX) : bottom;
-    if (groundEnd > bottom) t.fillRect(BUTTON_X - PX, bottom, BUTTON_W + PX, groundEnd - bottom, ground);
-    if (end > groundEnd) t.fillRect(BUTTON_X - PX, groundEnd, BUTTON_W + PX, end - groundEnd, i == STATUS_ROW ? round : BG);
+    if (groundEnd > bottom) t.fillRect(bx - PX, bottom, BUTTON_W + PX, groundEnd - bottom, ground);
+    if (end > groundEnd) t.fillRect(bx - PX, groundEnd, BUTTON_W + PX, end - groundEnd, i == STATUS_ROW ? round : BG);
   }
 }
 
