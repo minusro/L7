@@ -429,14 +429,17 @@ FLASHMEM static void drawSettings(bool whole) {
     for (int i = 0; i < SET_ITEMS; i++) {
       bool sel = i == setSel;
       if (sel != (pass == 1)) continue;
-      Shape s = {x, setRow(i, yb), w, FONT_H / PX, 0};
-      uint16_t frame = frameColor() == DIM ? DARK : frameColor();   // (on the grey: an action button held, dark grey)
-      fillRing(s, 3, 2, sel ? frame : DIM, true);
-      fillRing(s, 2, 0, DIM);
-      t.fillRect(x * PX, s.y * PX, w * PX, FONT_H, DIM);   // (the line cleared: OFF to ON leaves nothing behind)
       bool help = i == SETTING_COUNT, on = !help && setting(i);
-      int lx = help ? (x + w) * PX - textWidth(SET_LABELS[i]) : x * PX;   // (help: right-aligned, as the values)
-      drawText(lx, s.y * PX, SET_LABELS[i], help ? DARK : sel ? INK : LIGHT, DIM);
+      // A switch: its frame round the whole line, 2 blocks out; HELP (right-aligned,
+      // as the values): round its label alone, a block out.
+      int hw = textWidth(SET_LABELS[SETTING_COUNT]) / PX;
+      Shape s = help ? Shape{x + w - hw, setRow(i, yb), hw, FONT_H / PX, 0} : Shape{x, setRow(i, yb), w, FONT_H / PX, 0};
+      const int d = help ? 1 : 2;
+      uint16_t frame = frameColor() == DIM ? DARK : frameColor();   // (on the grey: an action button held, dark grey)
+      fillRing(s, d + 1, d, sel ? frame : DIM, true);
+      fillRing(s, d, 0, DIM);
+      t.fillRect(s.x * PX, s.y * PX, s.w * PX, FONT_H, DIM);   // (the line cleared: OFF to ON leaves nothing behind)
+      drawText(s.x * PX, s.y * PX, SET_LABELS[i], help ? DARK : sel ? INK : LIGHT, DIM);
       if (!help) {
         const char *v = on ? "ON" : "OFF";
         drawText((x + w) * PX - textWidth(v), s.y * PX, v, on ? (sel ? INK : LIGHT) : DARK, DIM);

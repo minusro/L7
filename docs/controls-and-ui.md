@@ -216,7 +216,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   TRACK (off: the selection stays on the track just recorded), EMPTY PROJECT CLICK (the
   metronome, off, still clicks in a project with no clips), each ON or OFF right of its label
   (on at first; ON light grey, OFF dark grey); at the panel's top, apart from them (a gap), right-aligned, HELP
-  (dark grey: not yet; UP from the top switch goes to it). Its items' frames as the
+  (dark grey: not yet; UP from the top switch goes to it; its frame round its label alone, a block
+  out). Its items' frames as the
   list's, two blocks of space round them (white selected). UP/DOWN go through it; A or B turns
   the item on / off at once, on the press (the action button: a tick); DOWN off its bottom item,
   or LEFT / RIGHT, close it; no edge leads out of the menu while it's open (LEFT + RIGHT held

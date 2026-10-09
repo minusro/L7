@@ -454,6 +454,8 @@ int main(int argc, char **argv) {
   writePng(out + "/ui_menu_settings_closed.png");  // (as drawn, not redrawn: closed, what was under it back)
   menuSettings(true);
   writePng(out + "/ui_menu_settings_opened.png");  // (as drawn: opened over the menu as it was)
+  for (int i = 0; i < 4; i++) menuSettingsKeys(m8::BTN_UP);   // up to HELP
+  render(out + "/ui_menu_settings_help.png");
   menuSettings(false);
   closeMenu();
   return 0;
