@@ -239,53 +239,19 @@ static int shownDepth = 0;
 // The line along the edge of arrow `key` drawn, everything else clipped to
 // the rest of the screen meanwhile.
 FLASHMEM static void paintEdgeLine(uint8_t key) {
+  // A grey line 2 blocks wide, the edge's whole length (the looper's and the menu's alike).
   auto &t = board.tft();
   t.setClipRect();
-  // 8 blocks along the edge, then a block, then another: each a colour along
-  // it, its ends (from the screen's corners in) as a pattern of their own
-  // (T: left as it is): the line's ends stepping in, like a bevel.
-  constexpr int TRANSPARENT = -1;
-  auto strip = [&](int from, int w, uint16_t mid, const char *ends) {
-    from *= PX, w *= PX;
-    const bool across = key == m8::BTN_UP || key == m8::BTN_DOWN;   // (a line across the screen; else down it)
-    const int len = (across ? 320 : 240) / PX, at = key == m8::BTN_LEFT || key == m8::BTN_UP ? from : (across ? 240 : 320) - from - w;
-    auto part = [&](int b0, int n, uint16_t c) {
-      if (across) t.fillRect(b0 * PX, at, n * PX, w, c);
-      else t.fillRect(at, b0 * PX, w, n * PX, c);
-    };
-    const int e = strlen(ends);
-    part(e, len - 2 * e, mid);
-    for (int k = 0; k < e; k++) {
-      int c = ends[k] == 'L' ? DIM : ends[k] == 'J' ? DARK : ends[k] == '0' ? BG : TRANSPARENT;
-      if (c == TRANSPARENT) continue;
-      part(k, 1, (uint16_t)c);
-      part(len - 1 - k, 1, (uint16_t)c);
-    }
-  };
-  if (menuOpen()) {                                // leaving the menu: a grey line 3 blocks wide, the edge's whole length
-    constexpr int W = 3 * PX;
-    if (key == m8::BTN_LEFT) t.fillRect(0, 0, W, 240, DIM);
-    else if (key == m8::BTN_RIGHT) t.fillRect(320 - W, 0, W, 240, DIM);
-    else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, W, DIM);
-    else t.fillRect(0, 240 - W, 320, W, DIM);
-    shownDepth = W;
-    if (key == m8::BTN_LEFT) t.setClipRect(W, 0, 320 - W, 240);
-    else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - W, 240);
-    else if (key == m8::BTN_UP) t.setClipRect(0, W, 320, 240 - W);
-    else t.setClipRect(0, 0, 320, 240 - W);
-    return;
-  }
-  const int thick = key == m8::BTN_UP || key == m8::BTN_DOWN ? 6 : 9;   // (the thick one: 9 blocks; along the top or bottom, 6)
-  strip(0, thick, DARK, "TTTT0LL");                // (0GGJJGG0)
-  strip(thick, 1, DIM, "TTTT00");                  // (00GGGG00)
-  strip(thick + 1, 1, DIM, "TTTT00");              // (00GGGG00)
-  strip(thick + 2, 1, BG, "TTTTT");                // (T000000T)
-  const int D = (thick + 3) * PX;                  // (the clip: the screen less the line)
-  shownDepth = D;
-  if (key == m8::BTN_LEFT) t.setClipRect(D, 0, 320 - D, 240);
-  else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - D, 240);
-  else if (key == m8::BTN_UP) t.setClipRect(0, D, 320, 240 - D);
-  else t.setClipRect(0, 0, 320, 240 - D);
+  constexpr int W = 2 * PX;
+  if (key == m8::BTN_LEFT) t.fillRect(0, 0, W, 240, DIM);
+  else if (key == m8::BTN_RIGHT) t.fillRect(320 - W, 0, W, 240, DIM);
+  else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, W, DIM);
+  else t.fillRect(0, 240 - W, 320, W, DIM);
+  shownDepth = W;
+  if (key == m8::BTN_LEFT) t.setClipRect(W, 0, 320 - W, 240);
+  else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - W, 240);
+  else if (key == m8::BTN_UP) t.setClipRect(0, W, 320, 240 - W);
+  else t.setClipRect(0, 0, 320, 240 - W);
 }
 
 FLASHMEM void drawEdgeLine() {   // (flash: RAM1 is full)
@@ -319,25 +285,6 @@ FLASHMEM void drawEdgeLine() {   // (flash: RAM1 is full)
   shownGen = uiGeneration;
 }
 
-// Back from the menu with its line (drawn first, the looper's rows clipped
-// round it): its two ends' corners drawn too, the looper's there (as
-// everywhere the line leaves as it was, going into the menu), the line again over them.
-FLASHMEM void edgeLineFillEnds() {
-  if (!shownKey) return;
-  auto &t = board.tft();
-  const int E = 5 * PX, D = shownDepth;            // (its ends' longest stretch left as it was: 5 blocks)
-  const bool across = shownKey == m8::BTN_UP || shownKey == m8::BTN_DOWN;
-  const int at = shownKey == m8::BTN_LEFT || shownKey == m8::BTN_UP ? 0 : (across ? 240 : 320) - D;
-  for (int end = 0; end < 2; end++) {
-    int along = end ? (across ? 320 : 240) - E : 0;
-    if (across) t.setClipRect(along, at, E, D);
-    else t.setClipRect(at, along, D, E);
-    uiGeneration++;                                // (the rows whole, only there)
-    for (int i = 0; i < ROWS; i++) drawTrack(i);
-  }
-  paintEdgeLine(shownKey);
-  shownGen = uiGeneration;
-}
 
 void uiRefresh() {
   followProjectColor();
