@@ -168,7 +168,7 @@ bool screenSwitchPending();               // (input.cpp) an arrow held that swit
 bool tempoNudging();                      // (input.cpp) SHIFT+LEFT/RIGHT held on the status row: the tempo nudged
 uint32_t lastTapMs();                     // (input.cpp) millis() of the latest tap tempo tap
 // While an arrow is held off an edge that switches screens once let go: a
-// line 5 blocks thick (in the menu, 4; grey, its innermost block dark grey) along that edge
+// line 4 blocks thick (grey, dark grey, grey, dark grey; on the looper, dark grey and black) along that edge
 // of the screen (on top of everything; let go without switching, what was under it again).
 void drawEdgeLine();
 // The arrows' modifier (input.cpp): SHIFT or B, whichever of the two held was
