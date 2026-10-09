@@ -513,8 +513,9 @@ FLASHMEM bool menuHelpKeys(uint8_t pressed, bool repeat) {
 
 // The battery, top right (two blocks in): a tiny grey one, 11 x 7 blocks, its
 // outline, a block of space, its fill in sevenths (90 % and up: full); its tip
-// a block right, 3 blocks tall. Charging: a plus in its middle instead of the
-// fill. Always shown: with no reading (variant A, no answer), full.
+// a block right, 3 blocks tall. Charging: its inside filled whole (up to the
+// outline), a lightning bolt cut out of it. Always shown: with no reading
+// (variant A, no answer), full.
 // (ink on ground: the menu's grey on its ground; storage mode's dark grey on its grey.)
 FLASHMEM void drawBatteryIcon(bool all, uint16_t ink, uint16_t ground) {
   static int shownFill = -1;
@@ -525,7 +526,7 @@ FLASHMEM void drawBatteryIcon(bool all, uint16_t ink, uint16_t ground) {
   if (!all && fill == shownFill && charging == shownCharging) return;
   shownFill = fill;
   shownCharging = charging;
-  static const char *const PLUS[3] = {".#.", "###", ".#."};   // (rows 2-4, columns 4-6)
+  static const char *const BOLT[5] = {"....#....", "...##....", "..#####..", "....##...", "....#...."};   // (cut out: rows 1-5, columns 1-9)
   auto &t = board.tft();
   constexpr int W = 11, H = 7, X = 320 / PX - 2 - (W + 1), Y = 2;   // (its body, then its tip)
   for (int r = 0; r < H; r++)
@@ -533,7 +534,7 @@ FLASHMEM void drawBatteryIcon(bool all, uint16_t ink, uint16_t ground) {
       bool edge = r == 0 || r == H - 1 || c == 0 || c == W - 1, tip = c == W && r >= 2 && r <= H - 3;
       bool inside = r >= 2 && r <= H - 3 && c >= 2 && c - 2 < fill;
       bool on = c < W ? edge || inside : tip;
-      if (charging && !edge && c < W) on = r >= 2 && r <= 4 && c >= 4 && c <= 6 && PLUS[r - 2][c - 4] == '#';
+      if (charging && !edge && c < W) on = BOLT[r - 1][c - 1] != '#';
       t.fillRect((X + c) * PX, (Y + r) * PX, PX, PX, on ? ink : ground);
     }
 }
