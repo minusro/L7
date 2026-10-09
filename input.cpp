@@ -244,9 +244,6 @@ static void keepColumns(int from, int at) {
 // UP / DOWN do nothing more until A is let go.
 static bool swipeOn = false, swipeMute = false, swipeDone = false;
 static int swipeFrom = -1;
-static int recordArmed = -1;                       // A (or B+A) pressed on an empty track: it records (resamples) once A is let go
-static bool recordArmedResample = false;
-static uint32_t recordArmedAt = 0;                 // (transport.now at the press: the late press's window counts from it)
 
 // An arrow held that switches screens when let go: into the menu, or out of
 // it; or between the looper's two (main and notes, ui.h: UP off its top, DOWN
@@ -668,17 +665,6 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
     pressed &= ~(m8::BTN_UP | m8::BTN_DOWN);         // (nothing else: not the menu's edges either)
   }
-  // A (or B+A: resampling) on an empty track, once let go (nothing else
-  // pressed meanwhile; still empty then): a recording, from the next bar line.
-  if (recordArmed >= 0 && (pressed & ~(m8::BTN_EDIT | m8::BTN_OPT))) recordArmed = -1;   // (another key: not that)
-  if (recordArmed >= 0 && !(keys & m8::BTN_EDIT)) {
-    int t = recordArmed;
-    recordArmed = -1;
-    if (tracks[t].state == TrackState::Empty && !recordingOn(t) && recordQueued() != t &&
-        recordPress(t, recordArmedResample, transport.now - recordArmedAt) &&
-        selected == t)
-      selectedCell = WAVE_CELL;                      // (a new recording: its waveform cell selected)
-  }
   // A on the status row's scene cell: as B+A (the panel); on the clock cell:
   // as START; on the tempo cell: tap tempo.
   bool onScene = onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL;
@@ -1001,11 +987,9 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     } else if (!onStatus && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
                recordQueued() != selected) {
       // An empty track resamples: records the app's output (queued behind a
-      // recording, as A records), whatever is heard (no clip unmuted too: the input).
-      // Once A is let go (above).
-      recordArmed = selected;
-      recordArmedResample = true;
-      recordArmedAt = transport.now;
+      // recording, as A records), whatever is heard (no clip unmuted too: the
+      // input). At once, on the press.
+      if (recordPress(selected, true)) selectedCell = WAVE_CELL;
     }
   }
   bool transportKey = pressed & m8::BTN_PLAY;
@@ -1028,12 +1012,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       if (hasClip(selected)) cutTrack(selected);
       else if (recordingOn(selected) || recordQueued() == selected) cancelRecording(selected);
       else pasteTrack(selected);
-    } else if (tr.state == TrackState::Empty && !recordingOn(selected) && recordQueued() != selected) {
-      recordArmed = selected;                        // a recording: once A is let go (above)
-      recordArmedResample = false;
-      recordArmedAt = transport.now;
     } else if (tr.state == TrackState::Empty || recordingOn(selected)) {
-      if (recordPress(selected)) selectedCell = WAVE_CELL;   // a recording's stop, its cancel, out of the queue: at once
+      if (recordPress(selected)) selectedCell = WAVE_CELL;   // a recording (or its stop, its cancel, out of the queue): at once, on the press
     } else {
       setTrackMuted(selected, !trackMuted(selected));
       swipeOn = true;                                // (held: UP / DOWN carry it on, above)
