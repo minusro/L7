@@ -354,18 +354,19 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     static const char *const METRONOME[10] = {   // (the beats: the bar's first raised, three after it)
         "..........", "..........", "..........", "##........", "##........",
         "..........", "..##.##.##", "..##.##.##", "..........", ".........."};
-    static const char *const EAR[10] = {   // (audio follow: a jack plug coming in from the right, an arrow above it pointing in)
+    static const char *const EAR[11] = {   // (audio follow: a jack plug coming in from the right, an arrow above it pointing in; 11 rows)
         "...#......", "..##......", ".#######..", "..##......", "...#......",
-        "..........", "......###.", ".##.#####.", ".##.#####.", "......###."};
+        "..........", "..........", "......###.", ".##.#####.", ".##.#####.", "......###."};
     const char *const *art = icon == ICON_EAR ? EAR : METRONOME;
-    constexpr int W = 10, H = 10;
-    int c0 = PANEL_LEFT + 1, r0 = (rows - H) / 2;
+    constexpr int W = 10, CH = 10;                 // (the cross: over the first 10 rows)
+    const int H = icon == ICON_EAR ? 11 : 10;
+    int c0 = PANEL_LEFT + 1, r0 = (rows - CH) / 2;
     bool crossed = icon == ICON_EAR ? audioFollowOn() : metronomeOn;   // (the metronome: it would click were the clock running, metronomeOn, kept up to date running or not)
     for (int r = 0; r < H; r++)
       for (int c = 0; c < W; c++) {
         bool on = art[r][c] == '#';
         if (crossed) {                             // the cross: a slash from the top right to the bottom left, a gap either side of it
-          int s = (W - 1) - r * (W - 1) / (H - 1);
+          int s = r < CH ? (W - 1) - r * (W - 1) / (CH - 1) : -9;
           if (c == s) on = true;
           else if (c == s - 1 || c == s + 1) on = false;
         }
