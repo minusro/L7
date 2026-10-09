@@ -325,9 +325,9 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   // digit, two below it), from where a centred 9-tall one would be.
   auto drawBadge = [&](int number, bool filled, bool square, uint16_t frame, uint16_t ink) {
     const int r0 = (rows - 9) / 2 - 1;               // (a block higher)
-    if (square) drawSquare(7, 10, r0, filled, frame);
+    if (square) drawSquare(7, 9, r0 + 1, filled, frame);   // (its top a block down; its bottom where it was)
     const Glyph *g = glyphFor((char)('0' + number));
-    int gc = TRACK_ICON_CENTRE - glyphWidth(*g) / 2, gr = r0 + 2;
+    int gc = TRACK_ICON_CENTRE - glyphWidth(*g) / 2, gr = r0 + 3;   // (a block lower)
     for (int r = 0; r < 5; r++)
       for (int c = 0; c < glyphWidth(*g); c++)
         if (g->rows[r][c] == '#') blockIn(gc + c, gr + r, ink);
