@@ -258,10 +258,16 @@ static uint16_t iconColor(int i, int icon) {
 
 // The selected track's panel: grey; in the
 // accent colour while A is held, with the action button (acting on the track).
-static uint16_t markColor() { return heldAction >= 0 || bOnTrack() ? ACCENT : DIM; }
+static uint16_t markColor() {                     // (B held on a track, or SHIFT the arrows' modifier there: the accent colour too)
+  return heldAction >= 0 || bOnTrack() || (selected != STATUS_ROW && !menuOpen() && shiftArrows()) ? ACCENT : DIM;
+}
 
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
+  // The action button pressed (A held, or B + an arrow adjusting): a block
+  // narrower on the left, its icon a block right; else it reaches the
+  // button's place's left edge.
+  const bool pressed = i == STATUS_ROW && !cannotAct(icon) && (heldAction >= 0 || (icon == ICON_ADJUST && adjusting()));
   // The action button: as tall as the status cells.
   const int height = i == STATUS_ROW ? STATUS_H : ROW_BAND;
   static uint16_t px[BUTTON_W * max(STATUS_H, ROW_BAND)];
@@ -288,7 +294,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     if (color == panel) color = BG;                // (a recording icon in the accent colour, on it)
     if (panel == ACCENT && badge != BADGE_NONE) badge = BADGE_LABEL;   // highlighted: the number alone
   }
-  auto block = [&](int c, int r) { blockIn(c, r, color); };
+  auto block = [&](int c, int r) { blockIn(c + pressed, r, color); };   // (pressed: a block right)
   // A badge: a square w x h blocks with its bottom corners cut (filled, or
   // outlined) from row r0, centred on the icons' column.
   auto drawSquare = [&](int w, int h, int r0, bool filled, uint16_t frame) {
@@ -380,9 +386,9 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     drawBadge(trackNumber(i), badge == BADGE_PLAYING, badge == BADGE_PLAYING || badge == BADGE_MUTED, frame, ink);
   }
   const uint16_t round = i == STATUS_ROW ? (menuOpen() ? MENU_BG : BG) : rowGround(i);   // (round the button: the menu's ground while it's open; a selected track's; the status row's highlight ends at the tempo cell)
-  if (i == STATUS_ROW && bg != round)              // the action button: from a block in (as the
+  if (i == STATUS_ROW && bg != round)              // the action button: from its place's left edge (pressed: a block in, as the
     for (int y = 0; y < height; y++)               // tracks' panels), its top left and bottom left corners cut
-      for (int x = 0; x < (PANEL_LEFT + (y < PX || y >= height - PX)) * PX; x++) px[y * BUTTON_W + x] = round;
+      for (int x = 0; x < ((pressed ? PANEL_LEFT : 0) + (y < PX || y >= height - PX)) * PX; x++) px[y * BUTTON_W + x] = round;
   auto &t = board.tft();
   int top = rowTop(i);
   if (bgTop(i) < top) t.fillRect(BUTTON_X, bgTop(i), BUTTON_W, top - bgTop(i), bg);   // the first row's margin
