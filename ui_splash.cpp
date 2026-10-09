@@ -163,13 +163,17 @@ static_assert(LOGO_W == (int)(55 * LOGO_SCALE + 0.5f) && LOGO_H == (int)(26 * LO
 void drawSmallLogo(int x, int y, uint16_t color) { drawL7(x, y, 1, color); }
 
 static int copyrightX = 0;
+// The line shown under the logo: the copyright, then (start-up beginning)
+// "Loading..." where its "2026" starts; none from just before the fade out.
+static const char *lineText = COPYRIGHT;
+static int lineX = 0, shownTextY = -1;
+static bool lineHidden = false, lineChanged = false;
 
 // The splash now: the logo fading in, then its hue (the accent's, OKLCH 0.824,
 // 0.164, 164.8 deg) turned once round, eased in and out (smoothstep); the
 // copyright line fading in.
 void splashTick() {
   static uint16_t shownLogo = 0, shownText = 0;
-  static int shownTextY = -1;
   static int shownShift = -1;
   uint32_t ms = millis() - shownAt;
   uint16_t logo;
@@ -192,19 +196,23 @@ void splashTick() {
   uint16_t text = blend565(blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / TEXT_FADE_MS)), BG, out);
   float toRise = 1 - min(1.0f, (ms < TEXT_FROM_MS ? 0 : ms - TEXT_FROM_MS) / (float)RISE_MS);   // of the rise
   int y = TEXT_Y_SPLASH - RISE_PX + (int)lroundf(RISE_PX * toRise * toRise * toRise);
-  if (text != shownText || y != shownTextY) {
+  if (!lineHidden && (text != shownText || y != shownTextY || lineChanged)) {
     if (shownTextY >= 0 && y < shownTextY)       // moved up: what it left below cleared
-      board.tft().fillRect(copyrightX, y + TEXT_H, textWidthPx(COPYRIGHT), shownTextY - y, BG);
+      board.tft().fillRect(lineX, y + TEXT_H, textWidthPx(lineText), shownTextY - y, BG);
     shownText = text;
     shownTextY = y;
-    drawLine(copyrightX, y, COPYRIGHT, text);
+    lineChanged = false;
+    drawLine(lineX, y, lineText, text);
   }
 }
 
 void showSplash() {
   auto &t = board.tft();
   t.fillScreen(BG);                                // (logo and line fade in: splashTick())
-  copyrightX = (320 - textWidthPx(COPYRIGHT)) / 2;
+  copyrightX = lineX = (320 - textWidthPx(COPYRIGHT)) / 2;
+  lineText = COPYRIGHT;
+  lineHidden = false;
+  shownTextY = -1;
   shownAt = millis();
   outAt = 0;
   splashTick();
@@ -232,13 +240,23 @@ void splashIntro() {
   splashTick();
 }
 
+void splashLoading() {
+  if (shownTextY >= 0) board.tft().fillRect(lineX, shownTextY, textWidthPx(lineText), TEXT_H, BG);   // (the copyright gone)
+  lineText = "Loading...";
+  lineX = copyrightX + (textCols("\xA9 ") + 1) * TEXT_PX;   // (where its "2026" started)
+  lineChanged = true;
+  splashTick();
+}
+
 // The fade out, from now (the start-up done; not before OUT_FROM_MS), then
-// the screen cleared.
+// the screen cleared; the line under the logo gone just before it.
 void hideSplash() {
   while (!skipped && millis() - shownAt < OUT_FROM_MS) {
     splashTick();
     delay(10);
   }
+  if (shownTextY >= 0) board.tft().fillRect(lineX, shownTextY, textWidthPx(lineText), TEXT_H, BG);
+  lineHidden = true;
   outAt = millis();
   while (millis() - outAt < OUT_MS) {
     splashTick();

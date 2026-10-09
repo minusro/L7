@@ -283,6 +283,7 @@ void showSplash();
 void hideSplash();
 void splashIntro();                      // the intro (the slide, the hue cycle, the copyright line's rise) played through, after showSplash()
 void splashTick();                       // the logo's colour cycle: call while starting up (hideSplash() finishes it)
+void splashLoading();                    // the start-up beginning: "Loading..." in the copyright line's place
 uint16_t hueCycle(float phase);          // the logo's hue at a phase (0-1) of one turn round the hues
 int splashBottom();                    // y just below the logo (for startup messages)
 void drawSmallLogo(int x, int y, uint16_t color);   // the logo small, 55 x 26 px (the menu's corner), top left at (x, y)
