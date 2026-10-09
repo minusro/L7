@@ -224,11 +224,15 @@ static bool cannotAct(int icon) { return unavailable(STATUS_ROW, icon) || action
 static bool bOnTrack() {
   return selected != STATUS_ROW && !menuOpen() && (board.keys() & m8::BTN_OPT) && arrowModifier() != m8::BTN_SHIFT;
 }
+// The same for the action button with B on the clock cell (the master volume; the panel: a track's only).
+static bool bAdjusting() {
+  return bOnTrack() || (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == CLOCK_CELL && !menuOpen() && bAlone());
+}
 
 static uint16_t buttonBackground(int i, int icon) {
   if (i == STATUS_ROW) {
     if (cannotAct(icon)) return DIM;               // (no pressed look either)
-    if (bOnTrack()) return DIM;
+    if (bAdjusting()) return DIM;
     if (heldAction >= 0 || (icon == ICON_ADJUST && adjusting())) return menuOpen() ? BG : DARK;   // pressed (the menu's ground is dark grey: black there)
     return actionColor(icon);
   }
@@ -244,7 +248,7 @@ uint16_t actionRestColor() {
 static uint16_t iconColor(int i, int icon) {
   uint16_t bg = buttonBackground(i, icon);
   if (i == STATUS_ROW) {
-    if (bOnTrack() && !cannotAct(icon)) return ACCENT;
+    if (bAdjusting() && !cannotAct(icon)) return ACCENT;
     if (icon == ICON_ADJUST) return adjusting() ? ACCENT : BG;
     if (cannotAct(icon)) return BG;                // (grey, its icon black, held too)
     return heldAction >= 0 ? actionColor(icon) : BG;
