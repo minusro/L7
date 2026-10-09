@@ -143,7 +143,9 @@ inline bool shownClip(int i) { return shownTrack(i).state != TrackState::Empty &
 // one, all its corners cut a block: not under the button).
 // Black elsewhere.
 bool menuOpen();
-inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() ? DARK : BG; }
+bool screenSwitchPending();               // (input.cpp) an arrow held that switches screens once let go
+// (An arrow held off an edge, the screen about to switch: none.)
+inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && i == selected && !menuOpen() && !screenSwitchPending() ? DARK : BG; }
 // Something drawn dark grey that would vanish on it: black there instead.
 inline uint16_t onGround(uint16_t color, uint16_t ground) { return ground == DARK && color == DARK ? BG : color; }
 inline uint16_t cellBackground(int i, int cell) {
