@@ -260,10 +260,12 @@ static uint16_t iconColor(int i, int icon) {
   return i == STATUS_ROW || icon == ICON_PLAY ? INK : DIM;   // a track playing: white
 }
 
-// The selected track's panel: grey; in the
+// The selected track's panel: light grey on a track playing (none on a muted or empty one); in the
 // accent colour while A is held, with the action button (acting on the track).
 static uint16_t markColor() {                     // (B held on a track, or SHIFT the arrows' modifier there: the accent colour too)
-  return heldAction >= 0 || bOnTrack() || (selected != STATUS_ROW && !menuOpen() && shiftArrows()) ? ACCENT : DIM;
+  if (heldAction >= 0 || bOnTrack() || (selected != STATUS_ROW && !menuOpen() && shiftArrows())) return ACCENT;
+  // Else only on a track playing (unmuted): light grey; none on a muted or empty one.
+  return selected >= 0 && selected < NUM_TRACKS && tracks[selected].state == TrackState::Playing && !recordingOn(selected) ? LIGHT : BG;
 }
 
 // The button, built whole in a buffer and sent at once.
