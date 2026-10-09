@@ -2,7 +2,7 @@
 // the whole screen (no action button). Opened with any arrow off the looper's
 // edges; left by loading a project (A on the loaded one:
 // just back), or any arrow off its edges (menuLeavesOn()). Twelve cards (three rows of
-// four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
+// four), the project slots, and under them a list, "EXPORT ABLETON SET",
 // "STORAGE MODE", "SETTINGS" (the settings popup), "HELP" (not yet,
 // grey); it scrolls once it has more than four. A runs
 // the item's action when let go. On a slot, A loads its project (an
@@ -40,7 +40,7 @@ uint32_t uiGeneration = 1;
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
 static constexpr int CARDS = PROJECTS, LIST = 4, LIST_ROOM = 4, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "STORAGE MODE", "SETTINGS", "HELP"};   // (ui.h MENU_EXPORT...)
+static const char *const LABELS[LIST] = {"EXPORT ABLETON SET", "STORAGE MODE", "SETTINGS", "HELP"};   // (ui.h MENU_EXPORT...)
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), kept (the menu closed and opened again,
 // storage mode too) until the project changes (projectEdits()) or another one
