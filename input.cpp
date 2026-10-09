@@ -965,9 +965,18 @@ static void nudgeService() {
   if (spb != now) transport.pendingSpb = spb;
 }
 
+// A, B and SHIFT pressed while the menu was open: in the looper's view,
+// left out of the keys its looks follow (mainKeys()) until let go.
+static uint8_t heldFromMenu = 0;
+static constexpr uint8_t MODS = m8::BTN_EDIT | m8::BTN_OPT | m8::BTN_SHIFT;
+uint8_t mainKeys() {
+  uint8_t k = board.keys();
+  return menuOpen() ? k : k & ~(heldFromMenu & k);
+}
+
 static uint8_t lastModifier = 0;                   // SHIFT or B, the latest pressed
 uint8_t arrowModifier() {
-  uint8_t k = board.keys();
+  uint8_t k = mainKeys();
   if (lastModifier & k) return lastModifier;
   return k & m8::BTN_SHIFT ? m8::BTN_SHIFT : k & m8::BTN_OPT ? m8::BTN_OPT : 0;   // (the other one, still held)
 }
@@ -982,6 +991,7 @@ void pollKeys() {
   if (board.keysChanged(keys)) {
     debugStage = "key action";
     uint8_t pressed = keys & ~prev;
+    heldFromMenu = (heldFromMenu & keys & ~pressed) | (menuOpen() ? pressed & MODS : 0);
     if (pressed & m8::BTN_SHIFT) lastModifier = m8::BTN_SHIFT;
     if (pressed & m8::BTN_OPT) lastModifier = m8::BTN_OPT;
     if (pressed & ARROWS) {

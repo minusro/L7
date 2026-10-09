@@ -138,7 +138,7 @@ void drawStatus() {
   snprintf(text, sizeof text, "%.1f", shown);
   // B+LEFT/RIGHT held on the tempo cell following an external clock: its
   // offset instead (ms, "MS" in the tag's place), in the accent colour.
-  const uint8_t k = board.keys();
+  const uint8_t k = mainKeys();
   const int src = syncSource();
   const bool offsetShown = selected == STATUS_ROW && !menuOpen() && src != SYNC_NONE && (k & (m8::BTN_LEFT | m8::BTN_RIGHT)) &&
                            !(k & m8::BTN_EDIT) &&

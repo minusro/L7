@@ -170,6 +170,9 @@ void drawEdgeLine();
 // (not the action button's): pressing the other while one is held switches
 // to its arrows; letting it go, back to the first, still held.
 uint8_t arrowModifier();
+// The keys held as the looper's looks follow them (input.cpp): A, B and SHIFT
+// pressed in the menu left out until let go (the menu: all of them).
+uint8_t mainKeys();
 inline bool shiftArrows() { return arrowModifier() == m8::BTN_SHIFT; }
 inline bool bArrows() { return arrowModifier() == m8::BTN_OPT; }
 // The cell framed in row i (the selected row): its selected cell; a track's
@@ -188,7 +191,7 @@ inline uint16_t cellFrame(int i, int cell) {
 }
 // B the arrows' modifier (A and START not held; arrows may be down).
 inline bool bAlone() {
-  return bArrows() && !(board.keys() & (m8::BTN_EDIT | m8::BTN_PLAY));
+  return bArrows() && !(mainKeys() & (m8::BTN_EDIT | m8::BTN_PLAY));
 }
 // The cell is being edited: it's the selected one and B is the arrows'
 // modifier (B + arrows change it). Its markings then show in the accent colour.

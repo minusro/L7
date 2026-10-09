@@ -49,7 +49,7 @@ static bool flashOn() {
 
 // What A does on the selected row (mirrors onKeys()).
 static int actionIcon() {
-  bool shift = board.keys() & m8::BTN_SHIFT;
+  bool shift = mainKeys() & m8::BTN_SHIFT;
   if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
     int slot = menuSlot();
     if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : menuListItem() == 1 ? ICON_USB : ICON_NONE;   // (settings: off for now)
@@ -57,12 +57,12 @@ static int actionIcon() {
     if (slot == projectCurrent()) return ICON_HOME;   // (the loaded one: back to the looper)
     return projectFilled(slot) ? ICON_LOAD : ICON_NEW;
   }
-  if (board.keys() & m8::BTN_OPT) {                // B: adjusting the cell (B + arrows); with SHIFT, the scene
+  if (mainKeys() & m8::BTN_OPT) {                  // B: adjusting the cell (B + arrows); with SHIFT, the scene
     if (shift) return optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
     if (selected != STATUS_ROW && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
         recordQueued() != selected)
       return ICON_RESAMPLE;                          // an empty track: B+A resamples (unavailable with no clip playing unmuted)
-    if (board.keys() & m8::BTN_PLAY) return ICON_NONE;
+    if (mainKeys() & m8::BTN_PLAY) return ICON_NONE;
     const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
     if (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == TEMPO_CELL && !(board.keys() & arrows))
       return ICON_METRO;                             // the tempo cell: B+A, the metronome's next setting
@@ -90,6 +90,7 @@ static int actionIcon() {
 
 // The command A ran, shown dimmed while A is still held (-1: none).
 static int heldAction = -1;
+static bool actionHeldHere();
 
 static bool unavailable(int i, int icon);
 
@@ -102,7 +103,7 @@ void noteActionPress() {
 // B + arrows adjusting a cell: the button looks pressed while an arrow is down,
 // and while A is held with B (A does nothing yet: for finer adjusting later).
 static bool adjusting() {
-  return board.keys() & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN | m8::BTN_EDIT);
+  return mainKeys() & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN | m8::BTN_EDIT);
 }
 
 // The track's own state.
@@ -146,7 +147,7 @@ static int buttonIcon(int i) {
   }
   uint8_t act = menuOpen() ? m8::BTN_EDIT | m8::BTN_OPT : m8::BTN_EDIT;   // (the menu: B acts too)
   if (heldAction >= 0 && !(board.keys() & act)) heldAction = -1;   // released
-  return heldAction >= 0 ? heldAction : actionIcon();
+  return actionHeldHere() ? heldAction : actionIcon();   // (held over from the menu: the looper's own)
 }
 
 // Icons: bitmaps of blocks ('#'), centred in the button. On the action
@@ -221,18 +222,23 @@ static bool cannotAct(int icon) { return unavailable(STATUS_ROW, icon) || action
 // B held on a track (A too or not; SHIFT not the arrows' modifier): its
 // panel in the accent colour, the action button grey with its icon in the accent colour.
 static bool bOnTrack() {
-  return selected != STATUS_ROW && !menuOpen() && (board.keys() & m8::BTN_OPT) && arrowModifier() != m8::BTN_SHIFT;
+  return selected != STATUS_ROW && !menuOpen() && (mainKeys() & m8::BTN_OPT) && arrowModifier() != m8::BTN_SHIFT;
 }
 // The same for the action button with B on the clock cell (the master volume; the panel: a track's only).
 static bool bAdjusting() {
   return bOnTrack() || (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == CLOCK_CELL && !menuOpen() && bArrows());   // (A held too or not)
 }
 
+// The action held, and its press made here (the looper's view: not carried over from the menu).
+static bool actionHeldHere() {
+  return heldAction >= 0 && (mainKeys() & (menuOpen() ? m8::BTN_EDIT | m8::BTN_OPT : m8::BTN_EDIT));
+}
+
 static uint16_t buttonBackground(int i, int icon) {
   if (i == STATUS_ROW) {
     if (cannotAct(icon)) return DIM;               // (no pressed look either)
     if (bAdjusting()) return DIM;
-    if (heldAction >= 0 || (icon == ICON_ADJUST && adjusting())) return DIM;   // pressed: grey
+    if (actionHeldHere() || (icon == ICON_ADJUST && adjusting())) return DIM;   // pressed: grey
     return actionColor(icon);
   }
   return cellBackground(i, -1);
@@ -250,7 +256,7 @@ static uint16_t iconColor(int i, int icon) {
     if (bAdjusting() && !cannotAct(icon)) return ACCENT;
     if (icon == ICON_ADJUST) return adjusting() ? ACCENT : BG;
     if (cannotAct(icon)) return BG;                // (grey, its icon black, held too)
-    return heldAction >= 0 ? actionColor(icon) : BG;
+    return actionHeldHere() ? actionColor(icon) : BG;
   }
   if (unavailable(i, icon)) return DARK;
   if (icon == ICON_MOVE) return ACCENT;            // (on the selected track's grey panel)
@@ -262,7 +268,7 @@ static uint16_t iconColor(int i, int icon) {
 // The selected track's panel: grey on a track playing (none on a muted or empty one); in the
 // accent colour while A is held, with the action button (acting on the track).
 static uint16_t markColor() {                     // (B held on a track, or SHIFT the arrows' modifier there: the accent colour too)
-  if (heldAction >= 0 || bOnTrack() || (selected != STATUS_ROW && !menuOpen() && shiftArrows())) return ACCENT;
+  if (actionHeldHere() || bOnTrack() || (selected != STATUS_ROW && !menuOpen() && shiftArrows())) return ACCENT;
   // Else only on a track playing (unmuted): light grey; none on a muted or empty one.
   return selected >= 0 && selected < NUM_TRACKS && tracks[selected].state == TrackState::Playing && !recordingOn(selected) ? DIM : BG;
 }
@@ -272,7 +278,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   // The action button pressed (A held, or B + an arrow adjusting): grey, a
   // block in from the left (its icon where it was); else it reaches the
   // button's place's left edge.
-  const bool pressed = i == STATUS_ROW && !cannotAct(icon) && (heldAction >= 0 || (icon == ICON_ADJUST && adjusting()));
+  const bool pressed = i == STATUS_ROW && !cannotAct(icon) && (actionHeldHere() || (icon == ICON_ADJUST && adjusting()));
   // The action button: as tall as the status cells.
   const int height = i == STATUS_ROW ? STATUS_H : ROW_BAND;
   static uint16_t px[BUTTON_W * max(STATUS_H, ROW_BAND)];

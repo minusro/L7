@@ -29,6 +29,7 @@ bool arrowsMoved() { return true; }
 bool screenSwitchPending() { return false; }
 bool tempoNudging() { return false; }
 uint32_t lastTapMs() { return 0; }
+uint8_t mainKeys() { return board.keys(); }
 uint8_t arrowModifier() { uint8_t k = board.keys(); return k & m8::BTN_OPT ? m8::BTN_OPT : k & m8::BTN_SHIFT ? m8::BTN_SHIFT : 0; }
 static uint8_t simSwitchKey = 0;                   // (an arrow held that switches screens: the peeps)
 uint8_t screenSwitchKey() { return simSwitchKey; }
