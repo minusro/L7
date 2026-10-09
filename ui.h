@@ -246,7 +246,8 @@ bool menuOpen();
 void openMenu(uint8_t key = 0);
 void closeMenu(bool draw = true);
 int menuFirstEmptySlot();
-float menuCutProgress(int &slot);        // (input.cpp) SHIFT+A held on a project's card: it (slot; -1: none) and how far to its cut (0-1)                // the first slot with no project (-1: none)
+float menuCutProgress(int &slot);
+uint32_t menuCardPressMs();              // (input.cpp) millis() of the latest A or B press on a card (0: none)        // (input.cpp) SHIFT+A held on a project's card: it (slot; -1: none) and how far to its cut (0-1)                // the first slot with no project (-1: none)
 void menuSelectSlot(int k);              // the menu's selection on card k
 void menuNoteLoad(int from);             // a project just loaded from the menu, `from` the one before: its card flashing until it comes in
 bool menuLoadPending();                  // a project loaded from the menu hasn't come in yet (playing: its switch point): the menu can't be left meanwhile

@@ -130,6 +130,8 @@ static int armedItem = -1;                           // or the list item
 static bool loadedOnPress = false;                   // its press loaded the card's project: held on, the menu closes
 static bool openOnLetGo = false;                     // pressed on the loaded project's card or an empty slot: to the looper once let go or held
 static uint32_t armedAt = 0;
+static uint32_t cardPressAt = 0;                     // millis() of the latest A or B press on a card
+uint32_t menuCardPressMs() { return cardPressAt; }
 static constexpr uint32_t LONG_PRESS_MS = 600;
 
 static bool nextSceneArmed = false;               // A pressed on the scene cell: the next scene once it's let go
@@ -447,6 +449,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       armedItem = menuListItem();
       shifted = shift;
       armedAt = millis();
+      if (armedSlot >= 0) cardPressAt = armedAt;      // (its frame white a moment: ui_menu.cpp)
       loadedOnPress = false;
       openOnLetGo = false;
       int slot = armedSlot;
