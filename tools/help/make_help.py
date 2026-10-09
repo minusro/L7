@@ -172,8 +172,8 @@ def page(n, p):
     for j, line in enumerate(p.get("notes", [])):     # (under the strips)
         ops.append(("text", 32, y + j * 14, 2, NAMED["LIGHT"], line))
     ops.append(("rect", 0, 182, 320, 2, acc))
-    ops.append(("text", 8, 188, 2, NAMED["LIGHT"], p["lines"][0]))
-    ops.append(("text", 8, 204, 2, NAMED["LIGHT"], p["lines"][1]))   # (a block below the first's line pitch)
+    ops.append(("text", 8, 190, 2, NAMED["LIGHT"], p["lines"][0]))
+    ops.append(("text", 8, 206, 2, NAMED["LIGHT"], p["lines"][1]))   # (a block more than the first's line pitch)
     return ops, 10
 
 pages = [page(i + 1, p) for i, p in enumerate(PAGES)]
