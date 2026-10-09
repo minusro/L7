@@ -26,7 +26,7 @@ STATUS_LEFT, STATUS_RIGHT = (0, 212, 210, 240), (110, 212, 320, 240)            
 CARDS = (60, 26, 270, 64)                                                         # the menu's top card row
 BOTTOM = (0, 90, 320, 240)                                                        # the screen's lower part (tracks 4-1, the status row)
 PAGES = [
-    dict(title=("L7", "HOW TO"), steps=[], lines=("A LOOPER FOR THE M8", "7 STEREO TRACKS, 200 SCENES AND 12 PROJECTS", "< > TO MOVE")),
+    dict(title=("L7", "HOW TO"), steps=[], lines=("A LOOPER FOR THE M8", "7 STEREO TRACKS, 200 SCENES AND 12 PROJECTS", "< > TO MOVE   A OR B TO EXIT")),
     dict(title=("THE", "SCREEN"), icon="PLAY", whole=("ui_played", BOTTOM),
          lines=("A TRACK: SOUND, FILTER, VOLUME", "BELOW: SCENE, TIME, TEMPO")),
     dict(title=("RECORD", ""), icon="RECORD", steps=[("ui_empty", TRACK(2), "EMPTY"), ("ui_recording", TRACK(2), "RECORD"), ("ui_played", TRACK(2), "PLAY")],
