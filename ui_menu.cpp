@@ -244,6 +244,19 @@ static void drawCutWipe(int k) {
   t.setClipRect();
 }
 
+// The hold through, before the cut itself (which takes a while): the card as
+// an empty slot's, its outline and letter white for 100 ms (the storage kept
+// going meanwhile), then grey.
+static bool cutFlashing = false;
+FLASHMEM void menuCutFlash(int k) {
+  emptyLook = cutFlashing = true;
+  drawItem(k);
+  for (uint32_t at = millis(); millis() - at < 100;) serviceStorage();
+  cutFlashing = false;
+  drawItem(k);
+  emptyLook = false;
+}
+
 static void drawItem(int k) {
   if (!listInView(k)) return;
   auto &t = board.tft();
@@ -264,7 +277,7 @@ static void drawItem(int k) {
          playing = k == playingCard() && transport.running && !emptyLook;   // (emptyLook: as an empty slot's, the cut's wipe)
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
     uint16_t letter = loaded ? BG : filled || (sel && actionHeld() && !emptyLook && !menuJustCut()) ? color : DIM;   // (an empty slot's: grey, as its outline; its colour while an action button is held)
-    const bool cutFlash = !filled && !loaded && k == menuCutFlash();   // (just cut: its outline and letter white for 50 ms)
+    const bool cutFlash = emptyLook && cutFlashing;   // (the hold through: its outline and letter white, menuCutFlash())
     if (cutFlash) letter = INK;
     if (loaded) {                                 // the loaded one: filled
       fillRing(s, 0, -s.w, color);
@@ -336,7 +349,7 @@ static uint32_t itemKey(int k) {
   int loaded = shownLoaded(), playing = playingCard();
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == loaded) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
-         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(sel && menuJustCut()) << 29 | (uint32_t)(k == menuCutFlash()) << 26 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
+         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(sel && menuJustCut()) << 29 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
          (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25;
 }
 
