@@ -145,7 +145,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
                            !(k & m8::BTN_EDIT) &&
                            ((bArrows() && selectedCellIn(STATUS_ROW) == TEMPO_CELL) || shiftArrows()) ||   // (B+LEFT/RIGHT on the tempo cell; SHIFT+LEFT/RIGHT: nudged)
                            (src != SYNC_NONE && !menuOpen() && syncOffsetChangedMs && millis() - syncOffsetChangedMs < 1000);
-  if (offsetShown) snprintf(text, sizeof text, "%+d", syncOffsetMs[src]);
+  if (offsetShown) snprintf(text, sizeof text, syncOffsetMs[src] ? "%+d" : "%d", syncOffsetMs[src]);   // (none: 0, no sign)
   // B then A on a clip's waveform: its fine rotate instead (ms; past half its
   // loop: as earlier), as the offset.
   const bool rotateShown = clipRotating();
@@ -154,7 +154,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
     int32_t f = ((int32_t)((unitOf(selected).rotate + (int64_t)clipRotatePending(selected)) % loop) + loop) % loop;   // (held, not heard yet: counted)
     if (f > loop / 2) f -= loop;
     int ms = (int)lroundf(f * 1000.0f / AUDIO_SAMPLE_RATE_EXACT);
-    if (abs(ms) < 10000) snprintf(text, sizeof text, "%+d", ms);   // (the number's room: "+8888" at most)
+    if (abs(ms) < 10000) snprintf(text, sizeof text, ms ? "%+d" : "%d", ms);   // (the number's room: "+8888" at most; none: 0, no sign)
     else snprintf(text, sizeof text, "%+.1f", ms / 1000.0f);      // (10 s and more: seconds, the tag S)
   }
   const bool inSeconds = rotateShown && strchr(text, '.');
