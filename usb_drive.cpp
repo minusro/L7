@@ -75,33 +75,6 @@ void usbDriveBegin() {
   for (;;) {}
 }
 
-// Leaving by a key: once it's let go; an arrow (its edge line along that edge
-// meanwhile, as the app's screen switches: light grey for 50 ms, then dark
-// grey on this grey) also once held EXIT_HOLD_MS. True: leave now.
-static constexpr uint32_t EXIT_HOLD_MS = 600;      // (the app's SWITCH_HOLD_MS)
-static bool exitKeys() {
-  static uint8_t held = 0, edge = 0;
-  static uint32_t edgeAt = 0;
-  const uint8_t ARROWS = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
-  uint8_t k = board.keys();
-  held |= k;
-  if (!edge && (k & ARROWS)) {
-    edge = k & ARROWS & -(k & ARROWS);             // (one of them)
-    edgeAt = millis();
-  }
-  if (edge && (k & edge)) {                        // its line (every pass: the texts' lines can cross it)
-    auto &t = board.tft();
-    uint16_t c = millis() - edgeAt < 50 ? LIGHT : DARK;
-    if (edge == m8::BTN_LEFT) t.fillRect(0, 0, PX, 240, c);
-    else if (edge == m8::BTN_RIGHT) t.fillRect(320 - PX, 0, PX, 240, c);
-    else if (edge == m8::BTN_UP) t.fillRect(0, 0, 320, PX, c);
-    else t.fillRect(0, 240 - PX, 320, PX, c);
-    if (millis() - edgeAt >= EXIT_HOLD_MS) return held = edge = 0, true;   // (held that long: now)
-  }
-  if (held && !k) return held = edge = 0, true;    // (let go)
-  return false;
-}
-
 // Back from the computer: the card is the app's again, and everything the app
 // knew of it is read again (the computer may have changed any file). Without a
 // reload function: a restart.
@@ -186,7 +159,7 @@ bool usbDriveMode() {
       line(STATE_Y, TEXT[state], INK);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
-    if (exitKeys()) return leave("WAIT");            // any key, once let go (an arrow: or held): back to the app (ejecting on the computer does too)
+    if (board.keys()) return leave("WAIT");          // any key: back to the app (ejecting on the computer does too)
   }
 }
 #elif defined(USB_MTPDISK) || defined(USB_MTPDISK_SERIAL)
@@ -238,7 +211,7 @@ bool usbDriveMode() {
       line(STATE_Y, TEXT[state], INK);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }
-    if (exitKeys()) {                             // any key, once let go (an arrow: or held): back to the app, restarted (the computer may have changed anything)
+    if (board.keys()) {                           // any key: back to the app, restarted (the computer may have changed anything)
       hint("RESTARTING");
       delay(100);
       SCB_AIRCR = 0x05FA0004;

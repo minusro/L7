@@ -259,9 +259,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   replacing it in its place), the
   title at y 78, the state 32 px under it, the menu's battery in its place top right (dark grey), the hint on the screen's bottom line, level with the menu's HELP label (`menuHelpY()`; the status row's text, the corner logo's row), every line left-aligned with HELP's label (the list's edge);
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
-  COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or any key once let go (an
-  arrow: or held 0.6 s, its edge line along that edge meanwhile, light grey for 50 ms then dark
-  grey: `exitKeys()`; still held, the app takes no press of it until it's let go), leaves it with "WAIT" ("EJECTED" after an eject): the app drops everything it knew of the card
+  COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or pressing any key,
+  leaves it with "WAIT" ("EJECTED" after an eject): the app drops everything it knew of the card
   and reads it all again, as at a start (the computer may have changed any
   file), and the menu is back as it was. Four in
   view at a time (an item

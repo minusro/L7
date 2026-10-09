@@ -253,7 +253,6 @@ static uint32_t recordArmedAt = 0;                 // (transport.now at the pres
 // off its bottom).
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
 static uint8_t helpOnRelease = 0;                  // (UP or DOWN in the help pages: back to the menu, the same way)
-static uint8_t ignoreHeld = 0;                     // keys held over from storage mode: no press until let go
 static bool stopRepeat = false;                    // (pollKeys(): that arrow's repeats off)
 // Or held on SWITCH_HOLD_MS (from when it stopped at the edge): it switches
 // then, still held (pollKeys()); held on, it does nothing more (no repeats)
@@ -601,7 +600,6 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
           bool wasRunning = transport.running;
           midiInSuspend(true);                       // (no MIDI taken in meanwhile)
           bool back = usbDriveMode();
-          ignoreHeld = board.keys();                 // (an arrow still held that left it: no press here until let go)
           midiInSuspend(false);
           if (back) {                                // (back from it: everything read from the card again)
             drawMenu();
@@ -1168,8 +1166,7 @@ void pollKeys() {
   const uint8_t ARROWS = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   if (board.keysChanged(keys)) {
     debugStage = "key action";
-    ignoreHeld &= keys;                              // (let go: counted again)
-    uint8_t pressed = keys & ~prev & ~ignoreHeld;
+    uint8_t pressed = keys & ~prev;
     heldFromMenu = (heldFromMenu & keys & ~pressed) | (menuOpen() ? pressed & MODS : 0);
     if (pressed & m8::BTN_SHIFT) lastModifier = m8::BTN_SHIFT;
     if (pressed & m8::BTN_OPT) lastModifier = m8::BTN_OPT;
