@@ -240,7 +240,7 @@ static int shownDepth = 0;
 // the rest of the screen meanwhile.
 FLASHMEM static void paintEdgeLine(uint8_t key) {
   // A line the edge's whole length, 3 blocks wide: its outer two blocks dark grey, its middle one
-  // black (in the menu: grey, its middle one dark grey).
+  // black (in the menu: black, its middle one dark grey).
   auto &t = board.tft();
   t.setClipRect();
   constexpr int W = 3 * PX;
@@ -250,7 +250,7 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
     else if (key == m8::BTN_UP) t.fillRect(0, in, 320, w, c);
     else t.fillRect(0, 240 - in - w, 320, w, c);
   };
-  band(0, W, menuOpen() ? DIM : DARK);
+  band(0, W, menuOpen() ? BG : DARK);
   band(PX, PX, menuOpen() ? DARK : BG);
   shownDepth = W;
   if (key == m8::BTN_LEFT) t.setClipRect(W, 0, 320 - W, 240);
