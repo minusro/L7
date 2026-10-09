@@ -137,12 +137,14 @@ void drawStatus() {
               : tempoWaiting ? roundf(bpmForSpb(playingSpb) * 10) / 10 : bpm;
   snprintf(text, sizeof text, "%.1f", shown);
   // B+LEFT/RIGHT held on the tempo cell following an external clock: its
-  // offset instead (ms, "MS" in the tag's place), in the accent colour.
+  // offset instead (ms, "MS" in the tag's place), in the accent colour; and
+  // for a second after it last changed.
   const uint8_t k = mainKeys();
   const int src = syncSource();
   const bool offsetShown = selected == STATUS_ROW && !menuOpen() && src != SYNC_NONE && (k & (m8::BTN_LEFT | m8::BTN_RIGHT)) &&
                            !(k & m8::BTN_EDIT) &&
-                           ((bArrows() && selectedCellIn(STATUS_ROW) == TEMPO_CELL) || shiftArrows());   // (B+LEFT/RIGHT on the tempo cell; SHIFT+LEFT/RIGHT: nudged)
+                           ((bArrows() && selectedCellIn(STATUS_ROW) == TEMPO_CELL) || shiftArrows()) ||   // (B+LEFT/RIGHT on the tempo cell; SHIFT+LEFT/RIGHT: nudged)
+                           (src != SYNC_NONE && !menuOpen() && syncOffsetChangedMs && millis() - syncOffsetChangedMs < 1000);
   if (offsetShown) snprintf(text, sizeof text, "%+d", syncOffsetMs[src]);
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) && !screenSwitchPending() && !arrivalEdgeKey() ? selectedCellIn(STATUS_ROW) : -1;   // (an arrow held off an edge: no selection shown)
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)

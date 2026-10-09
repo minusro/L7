@@ -43,6 +43,7 @@ enum SyncSource : int8_t { SYNC_NONE = -1, SYNC_SERIAL = 0, SYNC_USB = 1, SYNC_A
 constexpr int SYNC_SOURCES = 3, SYNC_OFFSET_MAX_MS = 250, SYNC_OFFSET_STEP_MS = 10;
 extern int16_t syncOffsetMs[SYNC_SOURCES];
 void syncOffsetChanged(int source);
+extern uint32_t syncOffsetChangedMs;      // millis() of the latest change (0: none yet)
 // B+UP/DOWN on the tempo cell following a MIDI clock: our tempo theirs doubled
 // (by > 0) or halved, again and again (within the clock's range); ours starts
 // again from their next beat that fits. False: not following, or out of range.

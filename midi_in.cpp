@@ -203,7 +203,9 @@ bool midiScale(int by) {
   return true;
 }
 
+uint32_t syncOffsetChangedMs = 0;
 void syncOffsetChanged(int src) {
+  syncOffsetChangedMs = max(1u, millis());
   if (src == SYNC_SERIAL || src == SYNC_USB) changing = CHANGE_TICKS;   // (caught up as after a start: within a few beats)
   else audioFollowOffsetChanged();
 }
