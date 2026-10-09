@@ -149,6 +149,7 @@ def page(n, p):
     title = (t1 + " " + t2).strip()                  # (one line, in the page's colour; no page number)
     if text_w(title, 4) > 304: sys.exit(f"title too wide: {title}")
     ops.append(("text", 8, 8, 4, acc, title))
+    ops.append(("rect", 0, 30, 320, 152, NAMED["BG"]))   # (the content's area, under the title down to the rule: black)
     # The steps: strips, each its part of a screenshot at the screen's size in a
     # black frame a block wide, its number in a circle left of it, its caption
     # right of it; centred together between the title and the rule. A page
