@@ -161,6 +161,8 @@ static_assert(LOGO_W == (int)(55 * LOGO_SCALE + 0.5f) && LOGO_H == (int)(26 * LO
 
 // The logo small, for the menu's corner: 55 x 26 px (the status row's height).
 void drawSmallLogo(int x, int y, uint16_t color) { drawL7(x, y, 1, color); }
+// The logo `scale` times that (whole: its shape drawn at that size, not stretched).
+void drawLogoScaled(int x, int y, int scale, uint16_t color) { drawL7(x, y, scale, color); }
 
 static int copyrightX = 0;
 // The line shown under the logo: the copyright, then (start-up beginning)

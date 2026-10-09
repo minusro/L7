@@ -58,6 +58,7 @@ for line in [l for p in PAGES for l in p["lines"] + tuple(p.get("notes", [])) + 
         if ch not in GLYPHS and ch.upper() not in GLYPHS: sys.exit(f"not in the font: {ch!r} ({line})")
 
 def rgb(h): return ((h >> 16) & 255, (h >> 8) & 255, h & 255)
+def ev(v): return v // 2 * 2                         # (on the 2 px grid)
 PROJ = [rgb(h) for h in (0xB5E3C4, 0xD6EBA8, 0xF7EDA3, 0xFAD9A1, 0xF8C8A8, 0xF4B6C2,
                          0xF2B8D8, 0xE3B5E6, 0xCDB8EE, 0xB7C4F0, 0xA9D6EE, 0xA8E0D8)]
 def c565(c): return ((c[0] >> 3) << 11) | ((c[1] >> 2) << 5) | (c[2] >> 3)
@@ -108,10 +109,17 @@ def image(key, im):
     image_keys[key] = name
     return name
 
-# The numbered circle: the page's colour, a black ring 2 px, 21 x 21.
+# The numbered circle, blocky (on the 2 px grid): 11 x 11 blocks, the page's
+# colour, a black ring a block wide.
 def circle(acc):
-    im = Image.new("RGBA", (21, 21), (0, 0, 0, 0))
-    ImageDraw.Draw(im).ellipse([0, 0, 20, 20], fill=acc + (255,), outline=(0, 0, 0, 255), width=2)
+    im = Image.new("RGBA", (22, 22), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    inside = lambda r, c: ((r - 5) ** 2 + (c - 5) ** 2) ** 0.5 <= 5.4
+    for r in range(11):
+        for c in range(11):
+            if not inside(r, c): continue
+            ring = any(not inside(r + dr, c + dc) for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+            d.rectangle([c * 2, r * 2, c * 2 + 1, r * 2 + 1], fill=(0, 0, 0, 255) if ring else acc + (255,))
     return image(("circle", acc), im)
 
 # ---- A page's steps: ("rect", x, y, w, h, colour) / ("text", x, y, k, colour, text) / ("image", x, y, name)
@@ -120,10 +128,9 @@ def page(n, p):
     ops = [("rect", 0, 0, 320, 240, NAMED["MENU_BG"])]
     t1, t2 = p["title"]
     if n == 1:
-        ops.append(("rect", 40, 12, 240, 107, NAMED["BG"]))
-        logo = shot("ui_splash", acc).crop((60, 40, 260, 160)).resize((150, 90), Image.NEAREST)
-        ops.append(("image", 85, 20, image(("logo", acc), logo)))
-        ops.append(("text", 160 - text_w("HOW TO", 4) // 2, 126, 4, acc, "HOW TO"))
+        # The logo as the menu's (drawn from its shape, not an image), twice its size: 110 x 52, on the ground.
+        ops.append(("logo", 160 - 110 // 2 // 2 * 2, 36, 2, acc))
+        ops.append(("text", ev(160 - text_w("HOW TO", 4) // 2), 104, 4, acc, "HOW TO"))
         lines = []
         for line, ink in zip(p["lines"], ("LIGHT", "LIGHT", "DIM")):
             if text_w(line, 2) > 304 and " AND " in line:      # (a natural break: before its last "and")
@@ -132,31 +139,29 @@ def page(n, p):
             else:
                 lines.append((line, ink))
         for j, (line, ink) in enumerate(lines):
-            ops.append(("text", 160 - text_w(line, 2) // 2, 156 + j * 14, 2, NAMED[ink], line))
+            ops.append(("text", ev(160 - text_w(line, 2) // 2), 140 + j * 14, 2, NAMED[ink], line))
         return ops, 80
     ops.append(("text", 8, 8, 4, acc, t1))
     if t2: ops.append(("text", 8, 32, 4, NAMED["INK"], t2))
     ops.append(("rect", 254, 6, 60, 48, acc))
-    ops.append(("text", 284 - text_w(str(n), 6) // 2, 15, 6, NAMED["BG"], str(n)))
+    ops.append(("text", ev(284 - text_w(str(n), 6) // 2), 16, 6, NAMED["BG"], str(n)))
     count = len(p["panels"])
     places = {1: [(8, 64, 144, 108)], 2: [(12, 66, 128, 96), (180, 66, 128, 96)], 3: [(8 + i * 104, 68, 96, 72) for i in range(3)]}[count]
     for i, ((name, lab), (x, y, w, h)) in enumerate(zip(p["panels"], places)):
-        ops.append(("rect", x - 3, y - 3, w + 6, h + 6, NAMED["BG"]))
+        ops.append(("rect", x - 2, y - 2, w + 4, h + 4, NAMED["BG"]))   # (a black frame a block wide)
         ops.append(("image", x, y, image((name, acc, w, h), shot(name, acc).resize((w, h), Image.NEAREST))))
         if count > 1:
-            cx = max(x, 11)                                   # (on the screen: the first one in from its edge)
-            ops.append(("image", cx - 10, y - 12, circle(acc)))
-            ops.append(("text", cx - text_w(str(i + 1), 2) // 2 + 1, y - 7, 2, NAMED["BG"], str(i + 1)))
+            cx = ev(max(x - 10, 2))                           # (on the screen: the first one in from its edge)
+            ops.append(("image", cx, ev(y - 12), circle(acc)))
+            ops.append(("text", cx + 8, ev(y - 12) + 6, 2, NAMED["BG"], str(i + 1)))   # (its digit: 4 blocks in, 3 down)
             ops.append(("text", x, y + h + 6, 2, NAMED["LIGHT"], lab))
     if p.get("notes"):
         ops.append(("text", 164, 66, 2, NAMED["INK"], p["panels"][0][1]))
         for j, line in enumerate(p["notes"]):
             ops.append(("text", 164, 86 + j * 14, 2, acc if j == 0 else NAMED["LIGHT"], line))
     ops.append(("rect", 0, 182, 320, 2, acc))
-    ops.append(("text", 8, 189, 2, NAMED["LIGHT"], p["lines"][0]))
-    ops.append(("text", 8, 203, 2, NAMED["LIGHT"], p["lines"][1]))
-    pg = f"{n}/12"
-    ops.append(("text", 320 - 6 - text_w(pg), 226, 1, NAMED["LIGHT"], pg))
+    ops.append(("text", 8, 188, 2, NAMED["LIGHT"], p["lines"][0]))
+    ops.append(("text", 8, 202, 2, NAMED["LIGHT"], p["lines"][1]))
     return ops, 10
 
 pages = [page(i + 1, p) for i, p in enumerate(PAGES)]
@@ -167,7 +172,7 @@ out = ["// help_slides.h — the help pages, generated by tools/help/make_help.p
        "// (Included after ui.h: PROGMEM and the types from there.)",
        "#pragma once", "",
        "struct HelpImage { uint16_t w, h; const uint16_t *pal; const uint8_t *runs; uint32_t runCount; };",
-       "enum { HELP_RECT, HELP_TEXT, HELP_IMAGE };",
+       "enum { HELP_RECT, HELP_TEXT, HELP_IMAGE, HELP_LOGO };   // (the logo: drawLogoScaled(), k its scale)",
        "struct HelpOp { uint8_t op, k; int16_t x, y, w, h; uint16_t color; const char *text; const HelpImage *img; };",
        "struct HelpPage { const HelpOp *ops; uint8_t count; int16_t dotsX; };", ""]
 total = 0
@@ -187,6 +192,7 @@ for n, (ops, dx) in enumerate(pages, 1):
     rows = []
     for op in ops:
         if op[0] == "rect": rows.append(f"{{HELP_RECT, 0, {op[1]}, {op[2]}, {op[3]}, {op[4]}, 0x{c565(op[5]):04X}, nullptr, nullptr}}")
+        elif op[0] == "logo": rows.append(f"{{HELP_LOGO, {op[3]}, {op[1]}, {op[2]}, 0, 0, 0x{c565(op[4]):04X}, nullptr, nullptr}}")
         elif op[0] == "text": rows.append(f"{{HELP_TEXT, {op[3]}, {op[1]}, {op[2]}, 0, 0, 0x{c565(op[4]):04X}, {string(op[5])}, nullptr}}")
         else: rows.append(f"{{HELP_IMAGE, 0, {op[1]}, {op[2]}, 0, 0, 0, nullptr, &{op[3]}}}")
     page_ops.append((n, rows, dx))

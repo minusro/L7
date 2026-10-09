@@ -86,6 +86,7 @@ FLASHMEM void drawHelpPage(int page) {
     const HelpOp &op = p.ops[i];
     if (op.op == HELP_RECT) t.fillRect(op.x, op.y, op.w, op.h, op.color);
     else if (op.op == HELP_TEXT) helpText(op.x, op.y, op.k, op.color, op.text);
+    else if (op.op == HELP_LOGO) drawLogoScaled(op.x, op.y, op.k, op.color);
     else helpImage(op.x, op.y, *op.img);
   }
   helpDots(p.dotsX, page);
