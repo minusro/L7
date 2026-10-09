@@ -551,8 +551,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
     const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
     if (pressed & act) noteActionPress();            // (the icon: what letting go will do)
-    if (menuHelpOpen() && !armed) {                  // the help pages: LEFT / RIGHT turn them, A or B back to the menu
-      if (pressed & act) menuHelp(false);
+    if (menuHelpOpen() && !armed) {                  // the help pages: LEFT / RIGHT turn them, A, B, UP or DOWN back to the menu
+      if (pressed & (act | m8::BTN_UP | m8::BTN_DOWN)) menuHelp(false);
       else if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) moved = menuHelpKeys(pressed, repeat);
       return;
     }

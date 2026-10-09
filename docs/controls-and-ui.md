@@ -230,8 +230,8 @@ A recording track's waveform area is in the accent colour (a block of black betw
   of text under a rule of that colour (the first page: the logo, HOW TO and three lines); then
   the page row: a square each, the pages seen filled in their colour, the others a grey outline,
   the shown one in a light grey line 2 px out (its corners cut). LEFT / RIGHT turn the pages,
-  wrapping round; a held arrow's repeats stop at the title page (a fresh press goes on); A or B
-  goes back to the menu; no edge leads out meanwhile. The pages seen and the last one shown are
+  wrapping round; a held arrow's repeats stop at the title page (a fresh press goes on); A, B, UP
+  or DOWN go back to the menu; no edge leads out meanwhile. The pages seen and the last one shown are
   saved with the session (`helpseen=`, a bit each; `helppage=`).
   Left with A or B on a card (to the looper: the loaded one, a new project, or held after a
   load), the menu comes back on the loaded project's card, whichever edge it's opened from
