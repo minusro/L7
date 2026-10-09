@@ -24,6 +24,7 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
     return theirs != BG ? theirs : ground;
   }
   if (own != BG && !corner) return own;
+  if (corner && l && cellRect(i, cell).x == 0) return BG;   // (the selected row's ground: its left corners cut, the screen's edge)
   if (t || b) {
     // Shared with the row above / below: its selected cell's frame where it
     // runs over this column (not at that cell's own corners: cut there too),
