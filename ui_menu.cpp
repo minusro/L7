@@ -133,7 +133,7 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 // cells are hidden in the menu; the action button is clear to the right), its frame
 // round its label with 3 blocks of space.
 static constexpr int CARD_W = 21, CARD_H = 15, CARD_CUT = 3, CARD_GAP = 3, CARD_VGAP = 3;
-static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 13 + 1;   // (a block lower)
+static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 13 + 2;   // (2 blocks lower)
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
 // The first place where it was with four places, the last of them level with
 // the action button (from the status row's top); the fourth place gone (the
