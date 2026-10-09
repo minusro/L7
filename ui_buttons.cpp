@@ -375,8 +375,8 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
     int c0 = (track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE)) +
-             2 * (icon == ICON_ADJUST),
-      r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge; B's arrows: two blocks right)
+             0,
+      r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge)
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
         if (ic.rows[r][c] == '#') block(c0 + c, r0 + r);
