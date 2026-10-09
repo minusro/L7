@@ -14,10 +14,7 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
   uint16_t own = cellFrame(i, cell);
   if (i == STATUS_ROW) {                           // (its cells only share sides with each other)
     int nc = l ? cell - 1 : rt ? cell + 1 : cell;
-    if (corner) {                                  // all corners cut (the highlight's own outer ones too: black)
-      bool outer = (l && cell == SCENE_CELL) || (rt && cell == TEMPO_CELL);
-      return outer ? BG : ground;
-    }
+    if (corner) return BG;                         // all corners cut, the ground's too (the outer ones, and the columns between the cells)
     if (own != BG) return own;
     if (t || b || nc < 0 || nc >= cellCount(i)) return ground;
     uint16_t theirs = cellFrame(i, nc);
@@ -25,6 +22,13 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
   }
   if (own != BG && !corner) return own;
   if (corner && l && cellRect(i, cell).x == 0) return BG;   // (the selected row's ground: its left corners cut, the screen's edge)
+  if (corner) {                                    // the column between two cells (their shared side): its top and bottom blocks cut from the ground too
+    int nc = l ? cell - 1 : cell + 1;
+    if (nc >= 0 && nc < cellCount(i)) {
+      const Cell &a = cellRect(i, min(cell, nc)), &n = cellRect(i, max(cell, nc));
+      if (a.x + a.w - PX == n.x) return BG;
+    }
+  }
   if (t || b) {
     // Shared with the row above / below: its selected cell's frame where it
     // runs over this column (not at that cell's own corners: cut there too),

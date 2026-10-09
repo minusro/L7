@@ -106,7 +106,7 @@ with three (borders shared with the rows above and below are drawn by place on t
 (the frame stays on the selected one, and B's editing look too), on a dark grey ground
 (`rowGround()`): a rectangle as tall as the frame (its band and the block below; shared border
 rows go dark grey when either row is selected), the screen's whole width, under the button
-too (round its panel and badges); the status row's ground the same when it's selected (from the scene cell's left edge to the tempo cell's right one, all its corners cut a block, the selection frame's too; but only its
+too (round its panel and badges); the status row's ground the same when it's selected (from the scene cell's left edge to the tempo cell's right one, all its corners cut a block, the selection frame's too; on both, the top and bottom blocks of each column between two cells cut, and a track row's left corners; but only its
 selected cell takes the selected look); anything dark grey on it is drawn black instead (a
 muted clip's filter fill and volume level, its waveform outside the range). The selected track's button gets a 50% grey panel behind its number (from a block in to a block short of the screen's right edge,
 the button's height: two blocks of border above, left and below the 7×9
