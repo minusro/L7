@@ -275,10 +275,9 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
     return;
   }
   const int thick = key == m8::BTN_UP || key == m8::BTN_DOWN ? 6 : 9;   // (the thick one: 9 blocks; along the top or bottom, 6)
-  // (Each from 4 blocks in from the perpendicular edges to 4 blocks short of the far one.)
-  strip(0, thick, DARK, "TTTTL");                  // (LJJJJL)
-  strip(thick, 1, LIGHT, "TTTT");                  // (LLLL)
-  strip(thick + 1, 1, BG, "TTTT");                 // (0000)
+  strip(0, thick, DARK, "TTTT0L");                 // (0LJJJJL0)
+  strip(thick, 1, LIGHT, "TTTT00");                // (00LLLL00)
+  strip(thick + 1, 1, BG, "TTTTT");                // (T000000T)
   const int D = (thick + 2) * PX;                  // (the clip: the screen less the line)
   shownDepth = D;
   if (key == m8::BTN_LEFT) t.setClipRect(D, 0, 320 - D, 240);
@@ -324,7 +323,7 @@ FLASHMEM void drawEdgeLine() {   // (flash: RAM1 is full)
 FLASHMEM void edgeLineFillEnds() {
   if (!shownKey) return;
   auto &t = board.tft();
-  const int E = 4 * PX, D = shownDepth;            // (its ends' stretch left as it was: 4 blocks)
+  const int E = 5 * PX, D = shownDepth;            // (its ends' longest stretch left as it was: 5 blocks)
   const bool across = shownKey == m8::BTN_UP || shownKey == m8::BTN_DOWN;
   const int at = shownKey == m8::BTN_LEFT || shownKey == m8::BTN_UP ? 0 : (across ? 240 : 320) - D;
   for (int end = 0; end < 2; end++) {
