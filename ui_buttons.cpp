@@ -356,7 +356,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
         "..........", "..##.##.##", "..##.##.##", "..........", ".........."};
     static const char *const EAR[10] = {   // (audio follow: a jack plug coming in from the right, an arrow above it pointing in)
         "...#......", "..##......", ".#######..", "..##......", "...#......",
-        "..........", "......####", ".##.######", ".##.######", "......####"};
+        "..........", "......###.", ".##.#####.", ".##.#####.", "......###."};
     const char *const *art = icon == ICON_EAR ? EAR : METRONOME;
     constexpr int W = 10, H = 10;
     int c0 = PANEL_LEFT + 1, r0 = (rows - H) / 2;
