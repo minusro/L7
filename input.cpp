@@ -171,6 +171,7 @@ static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
 // The arrow that just left the menu (on its press), while still held: the
 // looper's edge line on the opposite edge (the one it came in by).
 static uint8_t arrivedKey = 0;
+static uint32_t arrivedAt = 0;                     // (held SWITCH_HOLD_MS from then: as if let go)
 static bool stopRepeat = false;                    // (pollKeys(): that arrow's repeats off)
 uint8_t arrivalEdgeKey() {
   if (!arrivedKey || menuOpen() || !(board.keys() & arrivedKey)) return 0;
@@ -433,6 +434,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   for (uint8_t key : {m8::BTN_RIGHT, m8::BTN_UP, m8::BTN_DOWN, m8::BTN_LEFT})
     if (menuLeavesOn(key) && (pressed & key) && !repeat && !(keys & (m8::BTN_SHIFT | m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY))) {
       arrivedKey = key;                              // (first: the looper drawn without highlights)
+      arrivedAt = millis();
       if (leaveMenu(key)) stopRepeat = true;
       else arrivedKey = 0;
       return;
@@ -1061,6 +1063,7 @@ void pollKeys() {
     edgeWaiting = false;
     repeatKey = 0;
   }
+  if (arrivedKey && millis() - arrivedAt >= SWITCH_HOLD_MS) arrivedKey = 0;   // (back from the menu, held on: as if let go, its line gone; still no repeats)
   menuHold();
   switchHold();
   nudgeService();
