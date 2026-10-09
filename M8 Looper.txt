@@ -141,10 +141,13 @@ no dropouts or overruns
 	- plus a lot of other tweaks and combos V
 - compressor limiter / distortion when the line goes beyond
 - more audio testing and fixes
-	- 
+	- more than one recording at once bug
+	- check for more spurious metronome sounds
 
 
-
+TTTT0LXXXXL0TTTT 
+TTTT00LLLL00TTTT 
+TTTTT000000TTTTT 
 
 # Feature backlog
 - track ms offset

@@ -269,8 +269,8 @@ void drawEdgeLine() {
     }
   };
   strip(0, 5, menuOpen() ? BG : DARK, "TTTT0L");   // (LJJJJL, the thick one: 5 blocks; leaving the menu, black)
-  strip(5, 1, LIGHT, "TTTTT0");                    // (0LLLL0)
-  strip(6, 1, BG, "TTTTTT");                       // (T0000T)
+  strip(5, 1, LIGHT, "TTTT00");                    // (00LLLL00)
+  strip(6, 1, BG, "TTTTT");                        // (T000000T)
   constexpr int D = 7 * PX;                        // (the clip: the screen less the line)
   if (key == m8::BTN_LEFT) t.setClipRect(D, 0, 320 - D, 240);
   else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - D, 240);
