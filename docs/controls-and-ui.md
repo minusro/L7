@@ -100,8 +100,7 @@ and a scene change on its way). Everything sits on a grid of 2×2-pixel blocks
 selected cell only (grey while B is held, with or without other keys:
 adjusting; white while only arrows are held and the last press moved the
 selection: not at an edge). An empty track (no clip, not recording) has its three cells too,
-all empty for now (its filter and mixer cells as while recording; `spanRow()`, ui.h, false:
-the one-cell `SPAN` row kept for later) (borders shared with the rows above and below are drawn by place on the screen); all the selected track's cells take their selected look
+all empty for now (its filter and mixer cells as while recording) (borders shared with the rows above and below are drawn by place on the screen); all the selected track's cells take their selected look
 (the frame stays on the selected one, and B's editing look too), on a dark grey ground
 (`rowGround()`): a rectangle as tall as the frame (its band and the block below; shared border
 rows go dark grey when either row is selected), the screen's whole width, under the button

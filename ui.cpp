@@ -25,7 +25,7 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
   }
   if (own != BG && !corner) return own;
   if (corner && ((l && cellRect(i, cell).x == 0) ||   // (the selected row's ground: all its corners cut, at the screen's
-                 (rt && cellRect(i, cell).x + cellRect(i, cell).w == SPAN.x + SPAN.w))) return BG;   //  edge and its last cell's)
+                 (rt && cellRect(i, cell).x + cellRect(i, cell).w == CELLS_RIGHT))) return BG;   //  edge and its last cell's)
   if (t || b) {
     // Shared with the row above / below: its selected cell's frame where it
     // runs over this column (not at that cell's own corners: cut there too),
@@ -61,43 +61,9 @@ uint64_t bordersOf(int i, int cell) {
   if (i != STATUS_ROW) {
     bool near = selected == rowAbove(i) || selected == rowBelow(i);
     k = k * 31 + (near ? (uint64_t)(frameCell(selected) + 1) << 20 | cellFrame(selected, frameCell(selected)) |
-                             (uint64_t)spanRow(selected) << 24 | (uint64_t)(selected == rowAbove(i)) << 25 : 0);
-    k = k * 31 + spanRow(i);
+                             (uint64_t)(selected == rowAbove(i)) << 25 : 0);
   }
   return k;
-}
-
-// An empty track's one cell (spanRow()): its border round the whole row and
-// the ground inside, a block row at a time.
-static void drawSpan(int i) {
-  static uint64_t shown[NUM_TRACKS];
-  static uint32_t drawn[NUM_TRACKS];
-  uint64_t key = bordersOf(i, 0) * 31 + rowGround(i);
-  if (drawn[i] == uiGeneration && shown[i] == key) return;
-  drawn[i] = uiGeneration;
-  shown[i] = key;
-  constexpr int COLS = SPAN.w / PX, ROWS_B = CELL_H / PX;
-  static uint16_t line[SPAN.w * PX];
-  uint16_t ground = rowGround(i);
-  const bool arrows = i == selected && shiftArrows() && !recordingOn(i) && cellFrame(i, 0) == ACCENT;
-  constexpr int MID = 7;                             // (the arrows' tips: rows 7-8, the waveform's middle)
-  auto &t = board.tft();
-  for (int r = 0; r < ROWS_B; r++) {
-    for (int c = 0; c < COLS; c++) {
-      int b = borderAt(i, 0, r, c, ROWS_B, COLS);
-      uint16_t color = b >= 0 ? (uint16_t)b : ground;
-      // SHIFT held on it (framed in the accent colour: LEFT/RIGHT step its
-      // sample): an arrow out of each side, as the waveform cell's (ui_wave.cpp).
-      if (arrows && (c <= 1 || c >= COLS - 2) && r >= MID - 2 && r <= MID + 3) {
-        bool edge = c == 0 || c == COLS - 1, tip = r == MID || r == MID + 1, back = r >= MID - 1 && r <= MID + 2;
-        if (edge) color = tip ? ACCENT : ground;
-        else if (back) color = ACCENT;
-      }
-      for (int dy = 0; dy < PX; dy++)
-        for (int dx = 0; dx < PX; dx++) line[dy * SPAN.w + c * PX + dx] = color;
-    }
-    t.writeRect(SPAN.x, rowTop(i) + r * PX, SPAN.w, PX, line);
-  }
 }
 
 // ---- The tracks as the rows show them (ui.h).
@@ -172,7 +138,7 @@ static void drawGaps(int i) {
   };
   uint32_t key = (uint32_t)mid << 2 | (topG == DARK) << 1 | (botG == DARK);
   for (int ni : {rowAbove(i), rowBelow(i)})
-    if (ni == selected) key = key * 31 + ((uint32_t)cellFrame(ni, frameCell(ni)) << 4 | spanRow(ni) << 1 | (ni == rowAbove(i)));
+    if (ni == selected) key = key * 31 + ((uint32_t)cellFrame(ni, frameCell(ni)) << 4 | (ni == rowAbove(i)));
   if (drawn[i] == uiGeneration && shown[i] == key) return;
   drawn[i] = uiGeneration;
   shown[i] = key;
@@ -196,16 +162,6 @@ void drawTrack(int i) {
   drawCells(i);
   if (i == STATUS_ROW) {
     drawStatus();
-    return;
-  }
-  // One cell or three: a change redraws everything (the rows next to it share borders).
-  static bool wasSpan[NUM_TRACKS];
-  if (spanRow(i) != wasSpan[i]) {
-    wasSpan[i] = spanRow(i);
-    uiGeneration++;
-  }
-  if (spanRow(i)) {
-    drawSpan(i);
     return;
   }
   drawFilter(i);
@@ -259,7 +215,7 @@ FLASHMEM static void paintEdgeLine(uint8_t key, uint16_t color) {
 }
 
 FLASHMEM void drawEdgeLine() {   // (flash: RAM1 is full)
-  uint8_t key = screenSwitchPending() ? screenSwitchKey() : arrivalEdgeKey();   // (just back from the menu, its arrow held: the edge it came in by)
+  uint8_t key = screenSwitchPending() ? screenSwitchKey() : 0;
   if (key != m8::BTN_LEFT && key != m8::BTN_RIGHT && key != m8::BTN_UP && key != m8::BTN_DOWN) key = 0;   // (LEFT+RIGHT held: no one edge)
   auto &t = board.tft();
   if (!key) {

@@ -33,7 +33,6 @@ uint32_t lastTapMs() { return 0; }
 uint8_t mainKeys() { return board.keys(); }
 uint32_t menuCardPressMs() { return 0; }
 bool menuJustCut() { return false; }
-uint8_t arrivalEdgeKey() { return 0; }
 float menuCutProgress(int &slot) { slot = -1; return 0; }
 uint8_t arrowModifier() { uint8_t k = board.keys(); return k & m8::BTN_OPT ? m8::BTN_OPT : k & m8::BTN_SHIFT ? m8::BTN_SHIFT : 0; }
 uint8_t screenSwitchKey() { return simSwitchKey; }

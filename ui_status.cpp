@@ -146,7 +146,7 @@ void drawStatus() {
                            ((bArrows() && selectedCellIn(STATUS_ROW) == TEMPO_CELL) || shiftArrows()) ||   // (B+LEFT/RIGHT on the tempo cell; SHIFT+LEFT/RIGHT: nudged)
                            (src != SYNC_NONE && !menuOpen() && syncOffsetChangedMs && millis() - syncOffsetChangedMs < 1000);
   if (offsetShown) snprintf(text, sizeof text, "%+d", syncOffsetMs[src]);
-  int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) && !screenSwitchPending() && !arrivalEdgeKey() ? selectedCellIn(STATUS_ROW) : -1;   // (an arrow held off an edge: no selection shown)
+  int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) && !screenSwitchPending() ? selectedCellIn(STATUS_ROW) : -1;   // (an arrow held off an edge: no selection shown)
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {

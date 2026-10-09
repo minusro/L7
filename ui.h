@@ -63,17 +63,14 @@ struct ShownTrack {
   uint8_t overview[OVERVIEW_COLS];
 };
 const ShownTrack &shownTrack(int i);
-// A row with one cell spanning it whole (SPAN: the cells' width; drawn by
-// drawSpan()): its outline round all of it. None for now: an empty track has
-// its three cells too (its filter and mixer cells empty, as while recording).
-constexpr Cell SPAN = {0, CELL[CELLS - 1].x + CELL[CELLS - 1].w};
-inline bool spanRow(int) { return false; }
+// The track cells' right edge (the last one's).
+constexpr int CELLS_RIGHT = CELL[CELLS - 1].x + CELL[CELLS - 1].w;
 // The cells a row has (the status row's: as many as a track row's; an empty track's: one).
-inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : spanRow(i) ? 1 : CELLS; }
+inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // The most a row ever has (for a saved selection).
 inline int maxCells(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : CELLS; }
 // A track row's cell's place (its x and width).
-inline const Cell &cellRect(int i, int cell) { return spanRow(i) ? SPAN : CELL[cell]; }
+inline const Cell &cellRect(int, int cell) { return CELL[cell]; }
 // The selected cell in row i's terms (on the status row, never MENU_CELL: none).
 inline int selectedCellIn(int i) {
   int c = min(selectedCell, cellCount(i) - 1);
@@ -142,11 +139,9 @@ inline bool shownClip(int i) { return shownTrack(i).state != TrackState::Empty &
 bool menuOpen();
 bool screenSwitchPending();               // (input.cpp) an arrow held that switches screens once let go
 // (An arrow held off an edge, the screen about to switch: none.)
-uint8_t arrivalEdgeKey();                // (input.cpp: just back from the menu, its arrow held)
-// (An edge line shown, either way: none.)
 // Row i shows as selected: the selected one, but while an edge line's shown
 // (it then looks as the others).
-inline bool shownSelected(int i) { return i == selected && !menuOpen() && !screenSwitchPending() && !arrivalEdgeKey(); }
+inline bool shownSelected(int i) { return i == selected && !menuOpen() && !screenSwitchPending(); }
 inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && shownSelected(i) ? DARK : BG; }
 // Something drawn dark grey that would vanish on it: black there instead.
 inline uint16_t onGround(uint16_t color, uint16_t ground) { return ground == DARK && color == DARK ? BG : color; }
@@ -186,7 +181,7 @@ inline int frameCell(int i) {
 }
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != frameCell(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
-  if (screenSwitchPending() || arrivalEdgeKey()) return BG;   // (an edge line shown: no frame meanwhile)
+  if (screenSwitchPending()) return BG;            // (an edge line shown: no frame meanwhile)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
   if (i != STATUS_ROW && shiftArrows() && !recordingOn(i)) return ACCENT;   // (SHIFT: its waveform cell)

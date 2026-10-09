@@ -51,7 +51,6 @@ static void drawHalf(int i, int r, int c, int dx, uint16_t color) {   // (block 
 }
 
 void drawMix(int i) {
-  if (spanRow(i)) return;                          // (an empty track: one cell, drawSpan())
   static bool built = false;
   if (!built) { buildArcs(); built = true; }
   static uint64_t shownFrame[NUM_TRACKS];

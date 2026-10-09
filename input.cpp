@@ -168,16 +168,7 @@ static uint32_t recordArmedAt = 0;                 // (transport.now at the pres
 // it; or between the looper's two (main and notes, ui.h: UP off its top, DOWN
 // off its bottom).
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
-// The arrow that just left the menu (on its press), while still held: the
-// looper's edge line on the opposite edge (the one it came in by).
-static uint8_t arrivedKey = 0;
-static uint32_t arrivedAt = 0;                     // (held SWITCH_HOLD_MS from then: as if let go)
 static bool stopRepeat = false;                    // (pollKeys(): that arrow's repeats off)
-uint8_t arrivalEdgeKey() {
-  if (!arrivedKey || menuOpen() || !(board.keys() & arrivedKey)) return 0;
-  return arrivedKey == m8::BTN_LEFT ? m8::BTN_RIGHT : arrivedKey == m8::BTN_RIGHT ? m8::BTN_LEFT
-       : arrivedKey == m8::BTN_UP ? m8::BTN_DOWN : m8::BTN_UP;
-}
 // Or held on SWITCH_HOLD_MS (from when it stopped at the edge): it switches
 // then, still held (pollKeys()); held on, it does nothing more (no repeats)
 // until let go.
@@ -1055,7 +1046,6 @@ void pollKeys() {
     } else if (!(keys & repeatKey)) {
       repeatKey = 0;                                 // released
     }
-    if (arrivedKey && !(keys & arrivedKey)) arrivedKey = 0;   // (let go)
     onKeys(keys, pressed, false);
     if (stopRepeat) { repeatKey = 0; stopRepeat = false; }
     prev = keys;
@@ -1078,7 +1068,6 @@ void pollKeys() {
     edgeWaiting = false;
     repeatKey = 0;
   }
-  if (arrivedKey && millis() - arrivedAt >= SWITCH_HOLD_MS) arrivedKey = 0;   // (back from the menu, held on: as if let go, its line gone; still no repeats)
   menuHold();
   switchHold();
   nudgeService();
