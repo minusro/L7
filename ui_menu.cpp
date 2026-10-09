@@ -447,22 +447,6 @@ bool menuKeys(uint8_t pressed) {
 // selected; LEFT off the looper's left edge: the menu's right side, RIGHT: its
 // left side, in its own row, where its selection was: a card row, a list item,
 // or its status row).
-// The corner logo's colour once the menu is opened by that arrow: the item
-// it lands on's (as landInMenu() picks it; grey where it can't act now).
-FLASHMEM uint16_t menuLandingColor(uint8_t key) {
-  const bool vertical = key == m8::BTN_UP || key == m8::BTN_DOWN;
-  if (onStatus && !vertical) return ACCENT;        // (its status row again)
-  int k = menuSel;
-  if (key == m8::BTN_UP) k = ITEMS - 1;
-  else if (key == m8::BTN_DOWN) k = cardCol;
-  else if (k < CARDS) k = k / COLS * COLS + (key == m8::BTN_LEFT ? COLS - 1 : 0);
-  if (k < CARDS)                                   // (load or new: not while recording, nor while it's being copied)
-    return (recording.mode != Recording::Idle && k != projectCurrent()) || projectCopying(k) ? DIM : PROJECT_COLORS[k];
-  if (k - CARDS == 2) return DIM;
-  if (k - CARDS >= 1) return LIGHT;
-  return projectHasClips() ? ACCENT : DIM;
-}
-
 static void landInMenu(uint8_t key) {
   const bool vertical = key == m8::BTN_UP || key == m8::BTN_DOWN;
   if (onStatus && vertical) {                      // (off its status row, onto its items)

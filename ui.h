@@ -168,7 +168,7 @@ bool screenSwitchPending();               // (input.cpp) an arrow held that swit
 bool tempoNudging();                      // (input.cpp) SHIFT+LEFT/RIGHT held on the status row: the tempo nudged
 uint32_t lastTapMs();                     // (input.cpp) millis() of the latest tap tempo tap
 // While an arrow is held off an edge that switches screens once let go: a
-// line 4 blocks thick (grey, dark grey, grey, dark grey from the edge; on the looper its grey the colour the menu's logo will be) along that edge
+// line 4 blocks thick (the loaded project's colour, black, its colour, dark grey from the edge; in the menu, dark grey for black) along that edge
 // of the screen (on top of everything; let go without switching, what was under it again).
 void drawEdgeLine();
 // The arrows' modifier (input.cpp): SHIFT or B, whichever of the two held was
@@ -269,7 +269,6 @@ void menuLeaveStatus();                  // from the status row back up to the m
 int menuSlot();                          // the project slot selected in the menu (0-11), or -1
 bool menuOnList();                       // the selection on the menu's list (EXPORT ABLETON PROJECT ...)
 uint16_t menuActionColor();
-uint16_t menuLandingColor(uint8_t key);  // (ui_menu.cpp) the menu's corner logo's colour once opened by that arrow
 uint16_t actionRestColor();              // the action button's colour when not pressed (ui_buttons.cpp; grey: it can't act)              // the action button's colour (the accent, a card's, light grey)
 int menuListItem();                      // which of its items (0: export, 1: storage mode, 2: settings), or -1
 int menuListX();                         // the list's left edge, px (storage mode's texts start there too)
