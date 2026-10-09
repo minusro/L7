@@ -359,7 +359,7 @@ static uint32_t itemKey(int k) {
 // it, ON or OFF (HELP: grey, not yet). A or B on SETTINGS opens it (once let
 // go); UP/DOWN go through it, A or B turns the item on or off (on the press),
 // DOWN off its bottom one or LEFT/RIGHT close it (the menu's own selection
-// frame hidden meanwhile). Grey all over, from the screen's top, each corner
+// frame hidden meanwhile). Grey all over, from two blocks under the screen's top, each corner
 // cut (its block and the two next to it); its items' frames as the list's, two
 // blocks of space round them; OFF and HELP dark grey.
 static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
@@ -383,7 +383,7 @@ static void setBox(int &x0, int &y0, int &x1, int &y1) {
   setLayout(x, yb, w);
   x0 = x - 5;
   x1 = x + w + 4;
-  y0 = 0;                                          // (up to the screen's top)
+  y0 = 2;                                          // (up to two blocks short of the screen's top)
   y1 = yb + 9;
 }
 // An item's place overlapping the popup (its frame's too): not drawn while it's open.
