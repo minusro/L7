@@ -138,7 +138,7 @@ static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames 
 // The first place where it was with four places, the last of them level with
 // the action button (from the status row's top); the fourth place gone (the
 // logo's row clear).
-static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - 3 * LIST_PITCH + 4;   // 79 (4 blocks lower)
+static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - 3 * LIST_PITCH + 3;   // 78 (3 blocks lower)
 
 // The logo in the bottom left corner (CORNER_LOGO_X / Y: a block in, on the status row's line).
 static constexpr int LOGO_X = CORNER_LOGO_X, LOGO_Y = CORNER_LOGO_Y;
