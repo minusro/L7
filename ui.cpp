@@ -151,7 +151,19 @@ static void drawGaps(int i) {
   static uint32_t drawn[NUM_TRACKS], shown[NUM_TRACKS];
   uint16_t mid = rowGround(i), topG = mid == DARK || rowGround(rowAbove(i)) == DARK ? DARK : BG,
            botG = mid == DARK || rowGround(rowBelow(i)) == DARK ? DARK : BG;
+  // The selected row above / below: its frame runs along the shared block row
+  // by place (an empty track's one cell spans the gaps too), as in borderAt().
+  auto frameOver = [&](int ni, int x) -> int {
+    if (ni < 0 || ni != selected) return -1;
+    int nc = frameCell(ni);
+    const Cell &n = cellRect(ni, nc);
+    int first = n.x / PX, last = (n.x + n.w) / PX - 1;
+    uint16_t f = cellFrame(ni, nc);
+    return x > first && x < last && f != BG ? f : -1;
+  };
   uint32_t key = (uint32_t)mid << 2 | (topG == DARK) << 1 | (botG == DARK);
+  for (int ni : {rowAbove(i), rowBelow(i)})
+    if (ni == selected) key = key * 31 + ((uint32_t)cellFrame(ni, frameCell(ni)) << 4 | spanRow(ni) << 1 | (ni == rowAbove(i)));
   if (drawn[i] == uiGeneration && shown[i] == key) return;
   drawn[i] = uiGeneration;
   shown[i] = key;
@@ -160,9 +172,12 @@ static void drawGaps(int i) {
   for (int k = 0; k + 1 < CELLS; k++) {
     int x = CELL[k].x + CELL[k].w, w = CELL[k + 1].x - x;
     if (w <= 0) continue;
-    t.fillRect(x, top, w, PX, topG);
     t.fillRect(x, top + PX, w, CELL_H - 2 * PX, mid);
-    t.fillRect(x, top + CELL_H - PX, w, PX, botG);
+    for (int c = x / PX; c < (x + w) / PX; c++) {  // (the shared block rows, a block at a time)
+      int a = frameOver(rowAbove(i), c), b = frameOver(rowBelow(i), c);
+      t.fillRect(c * PX, top, PX, PX, a >= 0 ? (uint16_t)a : topG);
+      t.fillRect(c * PX, top + CELL_H - PX, PX, PX, b >= 0 ? (uint16_t)b : botG);
+    }
   }
 }
 
