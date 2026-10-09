@@ -268,7 +268,7 @@ void drawEdgeLine() {
       part(len - 1 - k, 1, (uint16_t)c);
     }
   };
-  const int thick = key == m8::BTN_UP || key == m8::BTN_DOWN ? 6 : 8;   // (the thick one: 8 blocks; along the top or bottom, 6)
+  const int thick = key == m8::BTN_UP || key == m8::BTN_DOWN ? 6 : 9;   // (the thick one: 9 blocks; along the top or bottom, 6)
   strip(0, thick, menuOpen() ? BG : DARK, "TTTT0L");   // (LJJJJL; leaving the menu, black)
   strip(thick, 1, LIGHT, "TTTT00");                // (00LLLL00)
   strip(thick + 1, 1, BG, "TTTTT");                // (T000000T)
