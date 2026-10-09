@@ -44,7 +44,10 @@ reaches `startBeat`. Every beat, a live track's `tail` is snapped to
   loop's end. `rangeAnchorQ` = transport quarter beat at which the range is at
   its first beat (the alignment); stored in units as `rangePhase`.
 * Changing a range while playing is queued (`rangePending`) and switches on
-  the first quarter beat the stream hasn't buffered (`applyQueuedRange`).
+  the first quarter beat the stream hasn't buffered (`applyQueuedRange`). Its
+  start moved (its length as it was): the playhead moves with it, as far into
+  the new range as it was into the old (crossfaded); else the playhead carries
+  on from the same spot if the new range holds it.
 * **Start position** (`startPosition()`): where the transport starting at
   1.1.1 plays each track from — a range of 1 beat: its start; shorter than a
   bar, or in a loop of up to 8 bars (`BEAT_STEP_MAX_BARS`, where the range

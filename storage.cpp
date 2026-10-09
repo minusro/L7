@@ -1803,18 +1803,21 @@ static void crossfadeInto(Track &tr, uint32_t at, uint32_t entry, uint32_t *save
   haveSaved = true;
 }
 
-// The stream has reached the queued range's switch point. If the new range
-// contains the spot that would have played next, carry on from it (the range
-// is re-anchored around the playhead); otherwise start the new range in
-// phase with the existing anchor.
+// The stream has reached the queued range's switch point. Its start moved
+// (its length as it was): the playhead moves with it (the new range in phase
+// with the existing anchor: as far into it as it was into the old one).
+// Otherwise, if the new range contains the spot that would have played next,
+// carry on from it (the range is re-anchored around the playhead); else start
+// the new range in phase with the existing anchor.
 static void applyQueuedRange(Track &tr) {
   uint32_t before[XFADE_FRAMES];
   bool saved = false;
+  const bool startMoved = tr.pendingStartBeat != tr.rangeStartBeat && tr.pendingBeats == tr.rangeBeats;
   tr.rangeStartBeat = tr.pendingStartBeat;
   tr.rangeBeats = tr.pendingBeats;
   tr.rangePending = false;
   uint32_t offset = tr.rangeOffset(tr.fileFrame);
-  if (offset < tr.rangeFrames()) {
+  if (!startMoved && offset < tr.rangeFrames()) {
     // Playhead position in the new range, in quarter beats (switches fall on
     // quarter beats; round away the per-quarter rounding of frames).
     int32_t posQ = (int32_t)(((uint64_t)offset * 4 + tr.spbNative / 2) / tr.spbNative);

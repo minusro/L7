@@ -146,7 +146,8 @@ bool sampleExists(uint32_t n);
 // up to the whole loop. It may run past the loop's end and carry on from its
 // start. While playing, the change is queued and takes over at
 // the next quarter beat the track hasn't buffered yet (usually within a beat);
-// trackRange() reports the queued range if any.
+// its start moved (its length as it was), the playhead moves with it (as far
+// into the new range as into the old). trackRange() reports the queued range if any.
 bool setRange(int t, uint32_t startBeat, uint32_t beats);
 void trackRange(int t, uint32_t &startBeat, uint32_t &beats);
 // A change on its way to track t (a scene's, a project's, a move): requested,

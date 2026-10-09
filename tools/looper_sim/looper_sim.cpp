@@ -557,22 +557,21 @@ int main(int argc, char **argv) {
     runBeats(6);
     checkSync(0, "1-bar range starting at beat 4");
 
-    // Slide it one beat right: if the spot due at the switch is inside the new
-    // range, playback must carry on from it instead of jumping.
+    // Slide it one beat right: the playhead moves with the start (as far into
+    // the new range as it was into the old one: a beat further into the file).
     Track &tr = tracks[0];
     for (int slide = 0; slide < 3; slide++) {
       uint32_t oldStart = tr.rangeStartBeat;
       int32_t oldAnchor = tr.rangeAnchorQ;
       setRange(0, oldStart + 1, 4);
       int32_t sw = tr.switchQ;
-      uint32_t due = 4 * oldStart + pmod(sw - oldAnchor, 16);          // file quarter the old range would play
+      uint32_t due = 4 * oldStart + pmod(sw - oldAnchor, 16) + 4;      // file quarter the old range would play, a beat on
       runBeats(8);
       uint32_t got = 4 * tr.rangeStartBeat + pmod(sw - tr.rangeAnchorQ, 16);
-      bool inside = due >= 4 * (oldStart + 1) && due < 4 * (oldStart + 5);
       char m[128];
-      snprintf(m, sizeof m, "slide (switch at beat %.2f): plays file beat %.2f (%s, expected %.2f)",
-               sw / 4.0, got / 4.0, inside ? "kept" : "outside the new range", (inside ? due : got) / 4.0);
-      check(!inside || got == due, m);
+      snprintf(m, sizeof m, "slide (switch at beat %.2f): plays file beat %.2f (expected %.2f: moved with the start)",
+               sw / 4.0, got / 4.0, due / 4.0);
+      check(got == due, m);
       checkSync(0, "after the slide");
     }
     // Ranges running past the loop's end carry on from its start.
