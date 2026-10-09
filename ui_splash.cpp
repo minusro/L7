@@ -72,7 +72,7 @@ static constexpr int RISE_PX = 8;
 // and the copyright line in place), everything still meanwhile; the fade out
 // (OUT_MS) starts once it's done, and not before OUT_FROM_MS.
 static constexpr uint32_t INTRO_MS = max(LOGO_FADE_MS + HUE_MS, TEXT_FROM_MS + RISE_MS);   // 2.5 s
-static constexpr uint32_t OUT_FROM_MS = 3500, OUT_MS = 500;
+static constexpr uint32_t OUT_FROM_MS = 3500, OUT_MS = 1000;
 static uint32_t shownAt = 0, outAt = 0;            // (outAt: the fade out's start; 0: not yet)
 
 static const char COPYRIGHT[] = "\xA9 2026 Daniel Stanciu";
