@@ -240,6 +240,11 @@ void splashIntro() {
   splashTick();
 }
 
+void splashHideLine() {
+  if (shownTextY >= 0 && !lineHidden) board.tft().fillRect(lineX, shownTextY, textWidthPx(lineText), TEXT_H, BG);
+  lineHidden = true;
+}
+
 void splashLoading() {
   if (shownTextY >= 0) board.tft().fillRect(lineX, shownTextY, textWidthPx(lineText), TEXT_H, BG);   // (the copyright gone)
   lineText = "Loading...";
@@ -255,8 +260,7 @@ void hideSplash() {
     splashTick();
     delay(10);
   }
-  if (shownTextY >= 0) board.tft().fillRect(lineX, shownTextY, textWidthPx(lineText), TEXT_H, BG);
-  lineHidden = true;
+  splashHideLine();
   outAt = millis();
   while (millis() - outAt < OUT_MS) {
     splashTick();
