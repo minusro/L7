@@ -43,7 +43,7 @@ constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
 // (MENU_CELL: no cell any more, nothing in its place: kept, empty, so the others keep their numbers.)
-constexpr Cell MENU_BOX = {0, 0}, SCENE_BOX = {0, 120}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 82};
+constexpr Cell MENU_BOX = {0, 0}, SCENE_BOX = {0, 120}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 80};
 // ---- What the rows show of each track (ui.cpp): a copy of its looks, taken
 // as they're drawn. While a change is on its way to any track (a scene's, a
 // project's, a move: from its request until its switch point has passed, the
