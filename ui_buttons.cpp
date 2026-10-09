@@ -299,15 +299,17 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     if (panel == ACCENT && badge != BADGE_NONE) badge = BADGE_LABEL;   // highlighted: the number alone
   }
   auto block = [&](int c, int r) { blockIn(c, r, color); };
-  // A badge: a square w x h blocks with its left corners cut (filled, or
-  // outlined) from row r0, centred on the icons' column.
+  // A badge: from where a w-wide square centred on the icons' column would
+  // start to the screen's right edge, h blocks from row r0, its left corners
+  // cut (filled; or outlined: its left side, top and bottom, open to the
+  // right, the right side only its two ends, the top's and bottom's).
   auto drawSquare = [&](int w, int h, int r0, bool filled, uint16_t frame) {
-    const int c0 = TRACK_ICON_CENTRE - w / 2;
+    const int c0 = TRACK_ICON_CENTRE - w / 2, wide = cols - c0;
     for (int r = 0; r < h; r++)
-      for (int c = 0; c < w; c++) {
-        bool side = c == 0 || c == w - 1, edge = r == 0 || r == h - 1;
-        if (c == 0 && edge) continue;                // (the left corners cut; the right ones kept)
-        if (filled || side || edge) blockIn(c0 + c, r0 + r, frame);
+      for (int c = 0; c < wide; c++) {
+        bool edge = r == 0 || r == h - 1;
+        if (c == 0 && edge) continue;                // (the left corners cut)
+        if (filled || c == 0 || edge) blockIn(c0 + c, r0 + r, frame);
       }
   };
   // A track's badge: its number, in a square (filled, or outlined) or alone.
