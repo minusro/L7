@@ -322,8 +322,29 @@ void drawMenu() {
   bool all = drawn != uiGeneration;
   auto &t = board.tft();
   if (all) {
+    // The ground: everywhere but the items' places (each drawn whole over
+    // its own just after: nothing on screen wiped first, no flicker; the
+    // track rows' place and the status row's: no action button in the menu).
     drawn = uiGeneration;
-    t.fillRect(0, 0, 320, 240, MENU_BG);         // (the track rows' place and the status row's: no action button in the menu)
+    for (int r = 0; r < 240 / PX; r++) {
+      int spans[ITEMS][2], n = 0;
+      for (int k = 0; k < ITEMS; k++) {
+        if (!listInView(k)) continue;
+        int c0, c1;
+        if (rowSpan(itemShape(k), k < CARDS ? 2 : LIST_SPACE + 1, r, c0, c1, true)) {
+          int i = n++;
+          while (i > 0 && spans[i - 1][0] > c0) { spans[i][0] = spans[i - 1][0]; spans[i][1] = spans[i - 1][1]; i--; }
+          spans[i][0] = c0;
+          spans[i][1] = c1;
+        }
+      }
+      int at = 0;                                  // (the first column not filled yet)
+      for (int i = 0; i <= n; i++) {
+        int end = i < n ? spans[i][0] : 320 / PX;
+        if (end > at) t.fillRect(at * PX, r * PX, (end - at) * PX, PX, MENU_BG);
+        if (i < n) at = max(at, spans[i][1] + 1);
+      }
+    }
   }
   // Scrolled: the items in view redraw over each other's places (their keys
   // hold the place), each label drawn the box's whole width; no clearing

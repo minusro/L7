@@ -225,35 +225,31 @@ void drawEdgeLine() {
     shownGen = uiGeneration;
     return;
   }
-  // 4 blocks along the edge, then a block, then another, each with its own
-  // colour at its two ends along the edge (stepping in, like a bevel).
-  // A strip `w` blocks deep, `from` blocks in from the edge, along it: `mid`,
-  // its first and last blocks along the edge `end` (TRANSPARENT: left as they are).
+  // 6 blocks along the edge, then a block, then another: each a colour along
+  // it, its ends (from the screen's corners in) as a pattern of their own
+  // (T: left as it is): the line's ends stepping in, like a bevel.
   constexpr int TRANSPARENT = -1;
-  auto strip = [&](int from, int w, uint16_t mid, int end) {
+  auto strip = [&](int from, int w, uint16_t mid, const char *ends) {
     from *= PX, w *= PX;
     const bool across = key == m8::BTN_UP || key == m8::BTN_DOWN;   // (a line across the screen; else down it)
-    const int len = across ? 320 : 240, at = key == m8::BTN_LEFT || key == m8::BTN_UP ? from : (across ? 240 : 320) - from - w;
-    auto part = [&](int p0, int n, uint16_t c) {
-      if (across) t.fillRect(p0, at, n, w, c);
-      else t.fillRect(at, p0, w, n, c);
+    const int len = (across ? 320 : 240) / PX, at = key == m8::BTN_LEFT || key == m8::BTN_UP ? from : (across ? 240 : 320) - from - w;
+    auto part = [&](int b0, int n, uint16_t c) {
+      if (across) t.fillRect(b0 * PX, at, n * PX, w, c);
+      else t.fillRect(at, b0 * PX, w, n * PX, c);
     };
-    part(PX, len - 2 * PX, mid);
-    if (end != TRANSPARENT) {
-      part(0, PX, (uint16_t)end);
-      part(len - PX, PX, (uint16_t)end);
+    const int e = strlen(ends);
+    part(e, len - 2 * e, mid);
+    for (int k = 0; k < e; k++) {
+      int c = ends[k] == 'L' ? LIGHT : ends[k] == 'J' ? DARK : ends[k] == '0' ? BG : TRANSPARENT;
+      if (c == TRANSPARENT) continue;
+      part(k, 1, (uint16_t)c);
+      part(len - 1 - k, 1, (uint16_t)c);
     }
   };
-  if (menuOpen()) {                                // leaving the menu: black, light grey, black
-    strip(0, 4, BG, BG);
-    strip(4, 1, LIGHT, LIGHT);
-    strip(5, 1, BG, BG);
-  } else {                                         // to the menu: dark grey (light grey ends), light grey (black ends), black (ends as they are)
-    strip(0, 4, DARK, LIGHT);
-    strip(4, 1, LIGHT, BG);
-    strip(5, 1, BG, TRANSPARENT);
-  }
-  constexpr int D = 6 * PX;                        // (the clip: the screen less the line)
+  strip(0, 6, DARK, "TTTT0L");                     // (LJJJJL, the thick one: 6 blocks)
+  strip(6, 1, LIGHT, "TTTTT0");                    // (0LLLL0)
+  strip(7, 1, BG, "TTTTTT");                       // (T0000T)
+  constexpr int D = 8 * PX;                        // (the clip: the screen less the line)
   if (key == m8::BTN_LEFT) t.setClipRect(D, 0, 320 - D, 240);
   else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - D, 240);
   else if (key == m8::BTN_UP) t.setClipRect(0, D, 320, 240 - D);
