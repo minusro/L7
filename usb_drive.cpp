@@ -24,11 +24,12 @@ static const char HINT[] = "PRESS ANY KEY TO EXIT";
 // when a two-line hint was 56 px under that and the three were together a
 // line lower than centred top to bottom, on the block grid); the hint (and
 // the messages in its place) on the screen's bottom line, level with the
-// status row's text (the corner logo's row); left-aligned with the menu's list.
+// menu's HELP label (the status row's text, the corner logo's row); all
+// left-aligned with the menu's list (HELP's label too).
 static constexpr int LINE = FONT_H + 3 * PX;
 static constexpr int STATE_DY = 32, OLD_HINT2_DY = STATE_DY + 56 + LINE;   // (for the title's place)
 static constexpr int TITLE_Y = (240 - (OLD_HINT2_DY + FONT_H)) / 2 / PX * PX + LINE;
-static constexpr int STATE_Y = TITLE_Y + STATE_DY, HINT_Y = STATUS_TOP + (STATUS_H - FONT_H) / 2 / PX * PX;
+static constexpr int STATE_Y = TITLE_Y + STATE_DY;
 static int textX() { return menuListX(); }
 
 static void line(int y, const char *text, uint16_t ink) {
@@ -37,7 +38,7 @@ static void line(int y, const char *text, uint16_t ink) {
 }
 
 // The bottom line: the hint, or a message in its place.
-static void hint(const char *text = nullptr, uint16_t ink = BG) { line(HINT_Y, text ? text : HINT, ink); }
+static void hint(const char *text = nullptr, uint16_t ink = BG) { line(menuHelpY(), text ? text : HINT, ink); }
 
 // The title and the corner logo (where and as big as the menu's), in one colour (light grey until the
 // computer is connected, then the hue cycle); drawn over

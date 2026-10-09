@@ -281,6 +281,7 @@ uint16_t actionRestColor();              // the action button's colour when not 
 int menuListItem();                      // which of its items (MENU_EXPORT...), or -1
 enum { MENU_EXPORT, MENU_STORAGE, MENU_SETTINGS, MENU_HELP };   // the menu's list items, top first
 int menuListX();                         // the list's left edge, px (storage mode's texts start there too)
+int menuHelpY();                         // the HELP item's label's top, px (storage mode's bottom line there too)
 bool menuExportShown();                  // the export item shows its label (exporting is off until it goes)
 void menuExportStatus(const char *text, int nameAt = -1);   // the export item's label ("EXPORTING 3/14"; nullptr: its own), kept until the
                                                             // project changes or another is loaded (a failure's: until the menu closes);

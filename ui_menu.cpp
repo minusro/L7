@@ -156,6 +156,7 @@ static Shape itemShape(int k) {
 }
 
 int menuListX() { return itemShape(CARDS).x * PX; }
+int menuHelpY() { return (LIST_Y + MENU_HELP * LIST_PITCH) * PX; }   // (its place with the list unscrolled: all four in view)
 
 // The selected item's frame, as the looper's cells': light grey; white while
 // only arrows are held and the last press moved the selection; grey while A
