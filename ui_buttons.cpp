@@ -269,26 +269,26 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   const int cols = BUTTON_W / PX, rows = height / PX;
   // The selected track's panel, under its number or icons: from a block in to
   // a block short of the right edge, the button's height but its top block row, its bottom
-  // left corner cut (a border round the badge: a block on top, two on the left and
+  // corners cut (a border round the badge: a block on top, two on the left and
   // bottom). Grey; the accent
   // colour while A is held, showing just the track's number then, in black.
   uint16_t panel = i == selected && i != STATUS_ROW ? markColor() : BG;
   if (panel != BG) {
     for (int r = 1; r < rows; r++)                // (not the top block row)
       for (int c = PANEL_LEFT; c < cols - 1; c++)     // (not the rightmost column)
-        if (!(c == PANEL_LEFT && r == rows - 1)) blockIn(c, r, panel);   // (the bottom left corner cut)
+        if (!((c == PANEL_LEFT || c == cols - 2) && r == rows - 1)) blockIn(c, r, panel);   // (the bottom corners cut)
     if (color == panel) color = BG;                // (a recording icon in the accent colour, on it)
     if (panel == ACCENT && badge != BADGE_NONE) badge = BADGE_LABEL;   // highlighted: the number alone
   }
   auto block = [&](int c, int r) { blockIn(c, r, color); };
-  // A badge: a square w x h blocks with its corners cut (filled, or
+  // A badge: a square w x h blocks with its bottom corners cut (filled, or
   // outlined) from row r0, centred on the icons' column.
   auto drawSquare = [&](int w, int h, int r0, bool filled, uint16_t frame) {
     const int c0 = TRACK_ICON_CENTRE - w / 2;
     for (int r = 0; r < h; r++)
       for (int c = 0; c < w; c++) {
         bool side = c == 0 || c == w - 1, edge = r == 0 || r == h - 1;
-        if (side && edge) continue;                  // (corners cut)
+        if (side && edge && r == h - 1) continue;    // (the bottom corners cut; the top ones kept)
         if (filled || side || edge) blockIn(c0 + c, r0 + r, frame);
       }
   };
