@@ -140,6 +140,20 @@ sound is made differently (engine.cpp `stretchSample()`):
 * The Live Set export warps the clips in Complex mode (`WarpMode 4`), the
   same: their own pitch at Live's tempo.
 
+## Fine rotate
+
+A clip can be turned later or earlier against the clock without touching
+its audio (B + A + arrows on its waveform cell, controls-and-ui.md): its
+unit keeps `rotate`, the frames it's turned later (0 up to its loop's
+length; in the upper 24 bits of the old 32-bit mute, so older units read 0).
+`Track::rangeStartFrame()` takes it off (every place played is that much
+earlier in the file), so the range's start, its wraps, the planned switches
+and the stream all follow; the waveform's overview is drawn turned as far
+right (ui.cpp `takeLooks()`). A change while playing is a switch like a
+moved range (`sameClip()` counts it), on the next quarter beat after the lead,
+crossfaded, the clip in step with the clock. The simulator checks the output
+at each beat turned a quarter beat, a millisecond more, and back.
+
 ## Metronome
 
 A setting (the session's `metro=`; B+A on the tempo cell): off or on (an
@@ -150,7 +164,7 @@ small wood block (two damped sines, ~1.15 kHz with a harder partial; 1.6 kHz
 and louder on the bar's first beat). Its level follows what's heard: the
 peak of the mix after the master volume (the click left out) over the last
 ~3 s (six ~0.5 s buckets, the oldest dropped), the bar's first beat at that
-peak and the others at 3/4 of it, never under -12 dBFS at the master volume
+peak and the others at 3/4 of it, never under -24 dBFS at the master volume
 (all the way down: silent) (`clickLevel()`, engine.cpp). It's added after the master volume and
 left out of what a resampling records. Stopped, it clicks on each of tap tempo's first four taps too (the first as a bar's first beat), the 5th starting the clock on its own click (`metronomeClick()`). A recording started with it clicking keeps it
 until it's completely recorded: on auto it stops on the bar line where that

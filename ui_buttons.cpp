@@ -107,11 +107,12 @@ static bool adjusting() {
   return mainKeys() & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN | m8::BTN_EDIT);
 }
 
-// B then A held on the selected track with a clip (B + A + UP/DOWN move it;
-// A first: a swipe): its panel shown, the up and down arrows on it in black.
+// B then A held on the selected track with a clip, on its filter or volume
+// cell (B + A + UP/DOWN move it; on its waveform: the fine rotate; A first: a
+// swipe): its panel shown, the up and down arrows on it in black.
 static bool movingClip(int i) {
   return shownSelected(i) && i != STATUS_ROW && bArrows() && (mainKeys() & m8::BTN_EDIT) && hasClip(i) && heldAction < 0 &&
-         !(mainKeys() & m8::BTN_PLAY);
+         !(mainKeys() & m8::BTN_PLAY) && selectedCellIn(i) != WAVE_CELL;   // (on its waveform: the fine rotate instead)
 }
 
 // The track's own state.

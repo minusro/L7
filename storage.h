@@ -13,7 +13,10 @@ struct TrackUnit {
   char magic[4];                                 // "M8TU"
   uint32_t version, sample;                      // sample 0: empty track
   uint32_t rangeStart, rangeLen, rangePhase;     // beats; position in the range at transport beat 0, in quarters
-  uint32_t muted;
+  // Muted (0/1), and the clip's fine rotate: turned this many frames later
+  // (its audio as it was; < its loop's frames). The rotate in the bits a
+  // 32-bit mute left unused: units saved before it read 0.
+  uint32_t muted : 8, rotate : 24;
   int8_t filterLo, filterHi, volume, balance;
 };
 TrackUnit unitOf(int t);
@@ -108,6 +111,11 @@ bool clipboardFull();
 // the lead, each clip in step with the clock as it was (no gap); the scene
 // follows. Not with a recording on (or queued for) either.
 bool swapTracks(int a, int b);
+// Track t's clip turned `by` frames later (negative: earlier), round its loop
+// (its audio as it was: TrackUnit's rotate): at once while stopped, else on
+// the next quarter beat after the lead (no gap); the scene follows. false:
+// no clip (or another on its way).
+bool rotateTrack(int t, int32_t by);
 // Samples are known by an id: the name's tag (project letter, track) and
 // number ("A30012.wav"; older ones: the number alone, "0012.wav").
 // Marks on the samples in use (clearSampleMarks(), markSample() each), then

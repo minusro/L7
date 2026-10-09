@@ -3238,6 +3238,43 @@ for f in os.listdir("."):
           v3 == std::make_pair(VOLUME_UNITY, 4) && v3max == std::make_pair(VOLUME_MAX, -BALANCE_MAX), m16);
   }
 
+  printf("fine rotate: the clip turned, its audio as it was, played in step\n");
+  {
+    int t = -1;
+    if (!transport.running) transportStart();
+    for (int i = 0; i < NUM_TRACKS && t < 0; i++)   // (a clip of its own: recorded here)
+      if (tracks[i].state == TrackState::Empty) t = i;
+    if (t >= 0) {
+      feedRamp = true;
+      recordPress(t);
+      for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+      runBeats(7);
+      recordPress(t);
+      runUntilIdle();
+      runBeats(4);
+      feedRamp = false;
+    }
+    check(t >= 0 && tracks[t].state == TrackState::Playing && tracks[t].live, "a track playing (recorded here)");
+    if (t >= 0) {
+      Track &tr = tracks[t];
+      const uint32_t loop = tr.loopFrames(), quarter = tr.spbNative / 4, start = tr.rangeStartBeat * tr.spbNative;
+      check(rotateTrack(t, (int32_t)quarter), "turned a quarter beat later");
+      runBeats(3);
+      char msg[160];
+      snprintf(msg, sizeof msg, "its unit and track: %u frames (a quarter beat: %u); the range starts that much earlier in the file",
+               (unsigned)unitOf(t).rotate, (unsigned)quarter);
+      check(unitOf(t).rotate == quarter && tr.rotate == quarter && tr.rangeStartFrame() == (start + loop - quarter) % loop, msg);
+      checkSync(t, "a quarter beat later");
+      rotateTrack(t, 44);                          // (a millisecond more)
+      runBeats(3);
+      checkSync(t, "a millisecond more");
+      rotateTrack(t, -(int32_t)quarter - 44);       // back
+      runBeats(3);
+      check(tr.rotate == 0 && unitOf(t).rotate == 0 && tr.rangeStartFrame() == start, "turned back: none");
+      checkSync(t, "back as it was");
+    }
+  }
+
   printf("\"play newly recorded\" off: a new clip comes in muted\n");
   {
     int t = -1;

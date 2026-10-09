@@ -146,6 +146,14 @@ void drawStatus() {
                            ((bArrows() && selectedCellIn(STATUS_ROW) == TEMPO_CELL) || shiftArrows()) ||   // (B+LEFT/RIGHT on the tempo cell; SHIFT+LEFT/RIGHT: nudged)
                            (src != SYNC_NONE && !menuOpen() && syncOffsetChangedMs && millis() - syncOffsetChangedMs < 1000);
   if (offsetShown) snprintf(text, sizeof text, "%+d", syncOffsetMs[src]);
+  // B then A on a clip's waveform: its fine rotate instead (ms; past half its
+  // loop: as earlier), as the offset.
+  const bool rotateShown = clipRotating();
+  if (rotateShown) {
+    int32_t f = unitOf(selected).rotate, loop = tracks[selected].loopFrames();
+    if (f > loop / 2) f -= loop;
+    snprintf(text, sizeof text, "%+d", (int)lroundf(f * 1000.0f / AUDIO_SAMPLE_RATE_EXACT));
+  }
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) && !screenSwitchPending() ? selectedCellIn(STATUS_ROW) : -1;   // (an arrow held off an edge: no selection shown)
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
@@ -155,21 +163,21 @@ void drawStatus() {
     // cell (B + arrows change the tempo).
     const Cell &box = TEMPO_BOX;
     int right = box.x + box.w - INSET;
-    uint16_t ink = (cell == TEMPO_CELL && bAlone()) || offsetShown ? ACCENT : labelInk(TEMPO_CELL);
+    uint16_t ink = (cell == TEMPO_CELL && bAlone()) || offsetShown || rotateShown ? ACCENT : labelInk(TEMPO_CELL);
     // Tap tempo (A on the cell): the tag in the accent colour while A is held,
     // the number for TAP_FLASH_MS after each tap.
     constexpr uint32_t TAP_FLASH_MS = 50;
     const bool tapHeld = cell == TEMPO_CELL && (k & m8::BTN_EDIT) && !(k & (m8::BTN_OPT | m8::BTN_SHIFT)) && !audioFollowOn();
     const bool tapped = cell == TEMPO_CELL && lastTapMs() && millis() - lastTapMs() < TAP_FLASH_MS;
     int tagX = right - tagWidth("BPM");
-    drawTag(tagX, tagY, offsetShown ? "MS" : "BPM", TAG_INVERTED, tapHeld ? ACCENT : ink, G, tagWidth("BPM"));
+    drawTag(tagX, tagY, offsetShown || rotateShown ? "MS" : "BPM", TAG_INVERTED, tapHeld ? ACCENT : ink, G, tagWidth("BPM"));
     static const int tempoW = textWidth("888.8");  // the widest tempo: its box clears any other
     int numRight = tagX - PX, numLeft = numRight - tempoW, w = textWidth(text);
     t.fillRect(numLeft, tagY, numRight - numLeft + PX, textY - tagY, G);   // round the text: what was there
     t.fillRect(numLeft, textY + FONT_H, numRight - numLeft + PX, tagY + TAG_H - textY - FONT_H, G);
     t.fillRect(numLeft, textY, tempoW - w, FONT_H, G);
     t.fillRect(numRight, textY, PX, FONT_H, G);
-    uint16_t numInk = offsetShown || tempoNudging() || tapped ? ACCENT                      // (nudged, the offset, or just tapped: the accent colour)
+    uint16_t numInk = offsetShown || rotateShown || tempoNudging() || tapped ? ACCENT                      // (nudged, the offset, or just tapped: the accent colour)
                     : audioFollowFlash() ? (audioFollowLocked() ? ACCENT : BG) : ink;   // (audio follow: the beat; black until locked)
     drawText(numRight - w, textY, text, numInk, G);
   }

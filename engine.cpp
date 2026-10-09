@@ -150,7 +150,7 @@ volatile int32_t clickFromBeat = INT32_MIN;
 static constexpr float CLICK_BAR_HZ = 1600, CLICK_BEAT_HZ = 1150;
 // Its level (the metronome's auto volume): the peak of what's heard (after the
 // master volume, the click left out) over the last ~3 s (REF_BUCKETS of ~0.5 s,
-// the oldest dropped), at least -12 dBFS at the master volume (all the way
+// the oldest dropped), at least -24 dBFS at the master volume (all the way
 // down: none); the bar's first beat at it, the others 3/4 of it.
 static constexpr int REF_BUCKETS = 6;
 static constexpr uint32_t REF_BUCKET_BLOCKS = 172;   // (~0.5 s of blocks)
@@ -158,7 +158,7 @@ static float refPeak[REF_BUCKETS];
 static int refAt = 0;
 static uint32_t refBlocks = 0;
 static float clickLevel() {
-  float m = 0.25f * 32767 * outputGain;            // (-12 dBFS, at the master volume)
+  float m = 0.0631f * 32767 * outputGain;          // (-24 dBFS, at the master volume)
   for (float p : refPeak) m = max(m, p);
   return min(m, 32767.0f) / 1.4f;                  // (the two partials' peak together: ~1.4 of the body's)
 }

@@ -86,7 +86,9 @@ static void takeLooks(int t, ShownTrack &s) {
   s.rangeBeats = tr.rangeBeats;
   s.rangeAnchorQ = tr.rangeAnchorQ;
   float norm = overviewNormOf(tr.overview);        // drawn normalised: its peak the full height
-  for (int c = 0; c < OVERVIEW_COLS; c++) s.overview[c] = (uint8_t)min(255.0f, tr.overview[c] * norm + 0.5f);
+  uint32_t loop = tr.loopFrames();                 // (its fine rotate: the waveform turned as far right)
+  int shift = loop ? (int)((uint64_t)tr.rotate * OVERVIEW_COLS / loop) : 0;
+  for (int c = 0; c < OVERVIEW_COLS; c++) s.overview[(c + shift) % OVERVIEW_COLS] = (uint8_t)min(255.0f, tr.overview[c] * norm + 0.5f);
 }
 
 // Takes the tracks' looks (held ones as above); the rows that changed are

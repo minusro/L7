@@ -56,7 +56,13 @@ struct Track {
   uint8_t overview[OVERVIEW_BYTES] = {};
   uint8_t overviewVersion = 0;
 
-  uint32_t rangeStartFrame() const { return rangeStartBeat * spbNative; }
+  // The fine rotate (TrackUnit): the clip turned this many frames later, its
+  // audio as it was: every place played is that much earlier in the file.
+  uint32_t rotate = 0;
+  uint32_t rangeStartFrame() const {
+    uint32_t loop = loopFrames(), f = rangeStartBeat * spbNative;
+    return loop ? (f + loop - rotate % loop) % loop : f;
+  }
   uint32_t rangeFrames() const { return rangeBeats * spbNative; }
   uint32_t loopFrames() const { return loopBars * BEATS_PER_BAR * spbNative; }
   // Loop frame `offset` frames into the range (offset < rangeFrames()).

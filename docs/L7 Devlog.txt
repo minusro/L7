@@ -176,8 +176,8 @@ TTTTT000000TTTTT
 	- select next free track *
 	- empty project click *
 	(* items are on by default)
-	
-- 12 slide manual showing the basic operating principles of the app, in full m8 resolution, using l7 screenshots in a diagram lego ikea instructions kind of style, utilizing all the 12 project colors as accent colors in the slides. cycle trhrough the slides with arrows, wrapping but breaking autohold at the title page. show me 4 variations first 
+
+- 12 slide manual showing the basic operating principles of the app, in full m8 resolution, using l7 screenshots in a diagram lego ikea instructions kind of style, utilizing all the 12 project colors as accent colors in the slides. cycle trhrough the slides with arrows, wrapping but breaking autohold at the title page. show me 4 variations first - we have something but it needs further tweaks V
 
 - metronome auto volume
 - clip ms fine rotate
@@ -185,6 +185,7 @@ TTTTT000000TTTTT
 
 # Backlog
 
+- further manual tweaks
 - midi clips page
 	- prototype second screen V (off for now)
 	- mute played midi clips after finishing audio recording

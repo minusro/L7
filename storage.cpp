@@ -496,12 +496,13 @@ static bool applyingUnit = false;                // setTrackUnit() at work: not 
 TrackUnit unitOf(int t) {
   const Track &tr = tracks[t];
   if (changes[t].on) return changes[t].u;        // a change on its way counts
-  TrackUnit u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, 0, 0, 0, 0, 0, tr.filterLo, tr.filterHi, tr.volume, tr.balance};
+  TrackUnit u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, 0, 0, 0, 0, 0, 0, tr.filterLo, tr.filterHi, tr.volume, tr.balance};
   if (tr.state == TrackState::Empty) return u;
   u.sample = tr.sample;
   trackRange(t, u.rangeStart, u.rangeLen);       // a queued range counts
   u.rangePhase = (uint32_t)posMod(-tr.rangeAnchorQ, 4 * u.rangeLen);
   u.muted = tr.state == TrackState::Muted;
+  u.rotate = tr.rotate;
   return u;
 }
 
@@ -616,6 +617,11 @@ static void applyRange(int t, const TrackUnit &u) {
   tr.rangeStartBeat = u.rangeStart < loopBeats ? u.rangeStart : 0;
   tr.rangeBeats = len;
   tr.rangeAnchorQ = -(int32_t)(u.rangePhase % (4 * len));
+  uint32_t loop = tr.loopFrames(), rotate = loop ? u.rotate % loop : 0;
+  if (rotate != tr.rotate) {
+    tr.rotate = rotate;
+    tr.overviewVersion++;                          // (the waveform drawn turned too)
+  }
 }
 
 // The range placed as starting from 1.1.1 at quarter beat q (a bar line):
@@ -726,7 +732,7 @@ static int32_t beatAfterLead() { return (quarterAfterLead(0) + 3) / 4; }
 
 static bool sameClip(const TrackUnit &a, const TrackUnit &b) {
   return a.sample == b.sample && (!a.sample || (a.rangeStart == b.rangeStart && a.rangeLen == b.rangeLen &&
-                                                a.rangePhase == b.rangePhase));
+                                                a.rangePhase == b.rangePhase && a.rotate == b.rotate));   // (turned: a switch too)
 }
 
 // The unit as the track has it (no change on its way).
@@ -1231,7 +1237,7 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
     buildOverview(tr, recPeaks, info.recordedFrames);
   }
   TrackUnit u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, nextSample, info.rangeStart, info.rangeLen, info.rangePhase,
-                info.muted, 0, FILTER_MAX, VOLUME_UNITY, 0};
+                info.muted, 0, 0, FILTER_MAX, VOLUME_UNITY, 0};
   const uint32_t FILTER_AT = INFO_OFFSET + sizeof(LegacyInfo) + OVERVIEW_COLS, MIX_AT = FILTER_AT + 2;
   if (info.version >= 8) { u.filterLo = (int8_t)h[FILTER_AT]; u.filterHi = (int8_t)h[FILTER_AT + 1]; }
   else if (info.version == 7) { u.filterLo = h[FILTER_AT]; u.filterHi = h[FILTER_AT] + h[FILTER_AT + 1]; }
@@ -1315,6 +1321,19 @@ bool pasteTrack(int t) {
   return true;
 }
 
+bool rotateTrack(int t, int32_t by) {
+  Track &tr = tracks[t];
+  TrackUnit u = unitOf(t);                       // (a planned change counts)
+  if (!u.sample || u.sample != tr.sample || recordingTrack(t)) return false;
+  int64_t loop = tr.loopFrames();
+  if (loop <= 0) return false;
+  int64_t r = ((int64_t)u.rotate + by) % loop;
+  u.rotate = (uint32_t)(r < 0 ? r + loop : r);
+  bool ok = setTrackUnit(t, u);
+  sceneStateChanged();                           // (setTrackUnit() alone leaves the scene to its caller)
+  return ok;
+}
+
 bool swapTracks(int a, int b) {
   if (a == b || recordingTrack(a) || recordingTrack(b)) return false;
   TrackUnit ua = unitOf(a), ub = unitOf(b);      // (changes on their way count)
@@ -1364,6 +1383,7 @@ int takeEmptySamples(uint32_t *ids, int most) {
 bool stepSample(int t, int dir) {
   if (sampleTotal < 2 || recordingTrack(t)) return false;
   TrackUnit u = unitOf(t);                       // (a planned change counts)
+  u.rotate = 0;                                  // (another recording: not turned)
   // In the order of the names from the track's sample, wrapping around: this
   // track's recordings in this project, then its other tracks', then other
   // projects'. An empty track starts from the first of its own (going
@@ -2003,6 +2023,7 @@ static void armRecordedLoop(bool endAhead) {
   tr.rangeBeats = tr.loopBars * BEATS_PER_BAR;
   tr.rangePending = false;
   tr.rangeAnchorQ = 4 * recording.startBeat;
+  tr.rotate = 0;                                 // (a new recording: not turned)
   tr.state = newClipsPlay ? TrackState::Playing : TrackState::Muted;   // (off: it comes in muted)
   if (!transport.running) return;
   if (!endAhead) {
@@ -2067,6 +2088,7 @@ static void finishRecording() {
   tr.rangeStartBeat = 0;
   tr.rangeBeats = tr.loopBars * BEATS_PER_BAR;
   tr.rangeAnchorQ = 4 * recording.startBeat;
+  tr.rotate = 0;                                 // (a new recording: not turned)
   tr.state = newClipsPlay ? TrackState::Playing : TrackState::Muted;   // (off: it comes in muted)
   if (recording.written > tr.recordedFrames && tr.recordedFrames % PEAK_BIN_FRAMES) {
     // Trimmed: the last bin also saw audio past the new end. Re-measure it.

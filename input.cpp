@@ -118,6 +118,15 @@ static void exportToAbleton() {
 
 static bool optFirst = false;
 bool optBeforeShift() { return optFirst; }
+// A pressed while B was held (B then A: the clip's fine rotate, moving a track
+// with a clip; A first: a swipe).
+static bool editAfterOpt = false;
+// B then A held on a clip's waveform cell: its fine rotate (the arrows turn it).
+bool clipRotating() {
+  uint8_t k = mainKeys();
+  return editAfterOpt && (k & m8::BTN_OPT) && (k & m8::BTN_EDIT) && selected != STATUS_ROW && !menuOpen() &&
+         selectedCellIn(selected) == WAVE_CELL && hasClip(selected);
+}
 
 // The last arrow press moved the selection (not: already at the edge that way).
 static bool moved = false;
@@ -364,6 +373,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   const bool shiftA = arrowModifier() == m8::BTN_SHIFT, optA = arrowModifier() == m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
+  if (pressed & m8::BTN_EDIT) editAfterOpt = opt && !(pressed & m8::BTN_OPT);
   // LEFT+RIGHT (switchHold()): the second one pressed within LR_WINDOW_MS of
   // the first, with only it down; any other key meanwhile, or one let go: off
   // (once done, the arrows still do nothing until both are let go).
@@ -689,17 +699,30 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         if (pressed & m8::BTN_RIGHT) masterBalance() >= MASTER_BALANCE_MAX ? stepMasterVolume(1) : stepMasterBalance(1);
       }
     } else if ((pressed & (m8::BTN_UP | m8::BTN_DOWN)) && !recordingOn(selected) && recordQueued() != selected &&
-               (unitOf(selected).sample == 0 || ((keys & m8::BTN_EDIT) && hasClip(selected)))) {
+               (unitOf(selected).sample == 0 || ((keys & m8::BTN_EDIT) && editAfterOpt && hasClip(selected) && selectedCell != WAVE_CELL))) {
       // An empty track (a change on its way counts): B + UP/DOWN moves it up /
       // down, the track in its way taking its place (wrapping round the 7);
       // the selection goes with it. A track with a clip: the same with A
-      // pressed while B is held (B + A + UP/DOWN; B alone: its range; A
-      // first: a swipe, above, which takes UP/DOWN).
+      // pressed while B is held, on its filter or volume cell (B + A +
+      // UP/DOWN; on its waveform: the fine rotate, below; B alone: its range;
+      // A first: a swipe, above, which takes UP/DOWN).
       int to = (pressed & m8::BTN_UP) ? (selected + NUM_TRACKS - 1) % NUM_TRACKS : (selected + 1) % NUM_TRACKS;   // (row 0: track 7, at the top)
       if (swapTracks(selected, to)) {
         drawTrack(selected);
         selected = to;
       }
+    } else if (clipRotating()) {
+      // B then A on a clip's waveform: its fine rotate (the clip turned, its
+      // audio as it was: what plays and the waveform drawn move together):
+      // LEFT/RIGHT a millisecond earlier / later (repeats too), UP/DOWN a
+      // quarter beat later / earlier (a fresh press each).
+      const Track &tr = tracks[selected];
+      int32_t by = 0;
+      if (pressed & m8::BTN_RIGHT) by += (int32_t)lroundf(AUDIO_SAMPLE_RATE_EXACT / 1000);
+      if (pressed & m8::BTN_LEFT) by -= (int32_t)lroundf(AUDIO_SAMPLE_RATE_EXACT / 1000);
+      if (!repeat && (pressed & m8::BTN_UP)) by += (int32_t)(tr.spbNative / 4);
+      if (!repeat && (pressed & m8::BTN_DOWN)) by -= (int32_t)(tr.spbNative / 4);
+      if (by && rotateTrack(selected, by)) drawTrack(selected);
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats: any whole number of beats, up to the whole loop.
       //   LEFT/RIGHT: move its start a step, wrapping around the loop (a range
