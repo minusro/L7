@@ -239,42 +239,19 @@ static int shownDepth = 0;
 // The line along the edge of arrow `key` drawn, everything else clipped to
 // the rest of the screen meanwhile.
 FLASHMEM static void paintEdgeLine(uint8_t key) {
-  // A grey line 5 blocks wide, the edge's whole length, an arrow pointing at
-  // the edge cut out of its middle (not drawn: what's under it shows; 4
-  // blocks deep, 7 long, its tip a block in from the edge). Both screens alike.
+  // A grey line 4 blocks wide, the edge's whole length; the looper's
+  // innermost block dark grey.
   auto &t = board.tft();
   t.setClipRect();
-  const bool outline = false;                      // (no outline, either screen)
-  const int depth = outline ? 6 : 5;               // (blocks; the outline's the 6th)
-  const bool across = key == m8::BTN_UP || key == m8::BTN_DOWN;
-  const int len = (across ? 320 : 240) / PX, mid = len / 2;
-  auto put = [&](int d, int b0, int n, uint16_t c) {   // d blocks in from the edge, along from block b0, n blocks
-    int in = d * PX, along = b0 * PX, w = n * PX;
-    if (key == m8::BTN_LEFT) t.fillRect(in, along, PX, w, c);
-    else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX - in, along, PX, w, c);
-    else if (key == m8::BTN_UP) t.fillRect(along, in, w, PX, c);
-    else t.fillRect(along, 240 - PX - in, w, PX, c);
+  constexpr int W = 4 * PX;
+  auto band = [&](int in, int w, uint16_t c) {     // (w px, in px from the edge)
+    if (key == m8::BTN_LEFT) t.fillRect(in, 0, w, 240, c);
+    else if (key == m8::BTN_RIGHT) t.fillRect(320 - in - w, 0, w, 240, c);
+    else if (key == m8::BTN_UP) t.fillRect(0, in, 320, w, c);
+    else t.fillRect(0, 240 - in - w, 320, w, c);
   };
-  auto arrow = [&](int d, int a) {                 // (4 deep, 7 long: 1, 3, 5, 7 blocks from its tip, a block in, to its base)
-    int r = d - 1;
-    return r >= 0 && r <= 3 && abs(a) <= r;
-  };
-  auto colour = [&](int d, int a) -> int {         // (-1: not drawn)
-    if (arrow(d, a)) return -1;
-    if (outline && (d == depth - 1 || arrow(d - 1, a) || arrow(d + 1, a) || arrow(d, a - 1) || arrow(d, a + 1))) return BG;
-    return DIM;
-  };
-  constexpr int WIN = 9;                           // (round the arrow: block by block; the rest in runs)
-  for (int d = 0; d < depth; d++) {
-    uint16_t run = outline && d == depth - 1 ? BG : DIM;
-    put(d, 0, mid - WIN, run);
-    put(d, mid + WIN + 1, len - mid - WIN - 1, run);
-    for (int a = -WIN; a <= WIN; a++) {
-      int c = colour(d, a);
-      if (c >= 0) put(d, mid + a, 1, (uint16_t)c);
-    }
-  }
-  const int W = depth * PX;
+  band(0, W - PX, DIM);
+  band(W - PX, PX, menuOpen() ? DIM : DARK);
   shownDepth = W;
   if (key == m8::BTN_LEFT) t.setClipRect(W, 0, 320 - W, 240);
   else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - W, 240);
