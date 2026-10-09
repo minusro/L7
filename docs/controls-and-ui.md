@@ -230,8 +230,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   of text under a rule of that colour (the first page: the logo, HOW TO and three lines); then
   the page row: a square each, the pages seen filled in their colour, the others a grey outline,
   the shown one in a light grey line 2 px out (its corners cut). LEFT / RIGHT turn the pages,
-  wrapping round; a held arrow's repeats stop at the title page (a fresh press goes on); A, B, UP
-  or DOWN go back to the menu; no edge leads out meanwhile. The pages seen and the last one shown are
+  wrapping round; a held arrow's repeats stop at the title page (a fresh press goes on); A or B go
+  back to the menu, and UP or DOWN too, once let go or held 0.6 s, its edge line meanwhile (as a
+  screen switch's: `helpOnRelease`); no edge leads out meanwhile. The pages seen and the last one shown are
   saved with the session (`helpseen=`, a bit each; `helppage=`).
   Left with A or B on a card (to the looper: the loaded one, a new project, or held after a
   load), the menu comes back on the loaded project's card, whichever edge it's opened from
@@ -258,8 +259,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   replacing it in its place), the
   title at y 78, the state 32 px under it, the menu's battery in its place top right (dark grey), the hint on the screen's bottom line, level with the menu's HELP label (`menuHelpY()`; the status row's text, the corner logo's row), every line left-aligned with HELP's label (the list's edge);
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
-  COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or pressing any key,
-  leaves it with "WAIT" ("EJECTED" after an eject): the app drops everything it knew of the card
+  COMPUTER" / "CONNECTED"); ejecting the drive on the computer, or any key once let go (an
+  arrow: or held 0.6 s, its edge line along that edge meanwhile, light grey for 50 ms then dark
+  grey: `exitKeys()`; still held, the app takes no press of it until it's let go), leaves it with "WAIT" ("EJECTED" after an eject): the app drops everything it knew of the card
   and reads it all again, as at a start (the computer may have changed any
   file), and the menu is back as it was. Four in
   view at a time (an item

@@ -268,7 +268,10 @@ void uiRefresh() {
   static int nextRow = 0;
   if (millis() - lastDraw >= 30) {
     lastDraw = millis();
-    if (menuHelpOpen()) return;                      // (the help pages: drawn as they're turned)
+    if (menuHelpOpen()) {                            // (the help pages: drawn as they're turned; UP or DOWN held: its edge line)
+      drawEdgeLine();
+      return;
+    }
     if (menuOpen()) {                                // the menu and the status row
       drawCells(STATUS_ROW);
       drawStatus();
