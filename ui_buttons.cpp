@@ -185,7 +185,7 @@ PROGMEM static const Icon ICONS[] = {
   {9, 7, {"..#.#....", "..#.##...", "..#.###..", "..#.####.", "..#.###..", "..#.##...", "..#.#...."}},   // RESTART (|>: start from 1.1.1; a block right of centre)
   {9, 9, {"#.#.#.#.#", ".........", "#...#...#", "....#....", "#.#####.#",
           "....#....", "#...#...#", ".........", "#.#.#.#.#"}},   // SCENE_DUP (a + in a checkered square, as SCENE_CUT / PASTE)
-  {7, 5, {"#...#..", "##..##.", "###.###", "##..##.", "#...#.."}},   // NEXT (two small plays, a block apart: the next scene; a block right of centre)
+  {7, 5, {"#...#..", "##..##.", "###.###", "##..##.", "#...#.."}},   // NEXT (two small plays, a block apart: the next scene)
   {0, 0, {}},                                                                  // METRO (drawn on its own: a metronome and the next setting)
   {3, 5, {".#.", "###", "...", "###", ".#."}},   // MOVE (a track's: up and down, a block apart: B + UP/DOWN moves the empty track)
   {0, 0, {}},                                                                  // EAR (drawn on its own: the input, a jack plug, crossed while following)
@@ -374,7 +374,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
-    int c0 = (track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE || icon == ICON_NEXT)) +
+    int c0 = (track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB || icon == ICON_RESAMPLE)) +
              (icon == ICON_SCENE_CUT || icon == ICON_SCENE_PASTE || icon == ICON_SCENE_DUP) + 2 * (icon == ICON_ADJUST),
       r0 = (rows - ic.h) / 2;   // (a block clear of the backdrop's edge; the scene's cut, paste and copy: a block right; B's arrows: two)
     for (int r = 0; r < ic.h; r++)
