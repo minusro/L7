@@ -195,7 +195,7 @@ PROGMEM static const Icon ICONS[] = {
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
 PROGMEM static const Icon SMALL_PLAY = {3, 5, {"#..", "##.", "###", "##.", "#.."}};
 PROGMEM static const Icon SMALL_PAUSE = {3, 5, {"#.#", "#.#", "#.#", "#.#", "#.#"}};
-static constexpr int TRACK_ICON_CENTRE = 6;       // the column track rows' icons and number centre on
+static constexpr int TRACK_ICON_CENTRE = 5;       // the column track rows' icons and number centre on
 static constexpr int PANEL_LEFT = 1;              // the selected track's panel's first column (a block in)
 
 static bool unavailable(int i, int icon) {
