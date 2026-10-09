@@ -241,7 +241,7 @@ static int shownDepth = 0;
 FLASHMEM static void paintEdgeLine(uint8_t key) {
   // A grey line 5 blocks wide, the edge's whole length, an arrow pointing at
   // the edge cut out of its middle (not drawn: what's under it shows; 4
-  // blocks deep, 14 long, its tip a block in from the edge). Both screens alike.
+  // blocks deep, 7 long, its tip a block in from the edge). Both screens alike.
   auto &t = board.tft();
   t.setClipRect();
   const bool outline = false;                      // (no outline, either screen)
@@ -255,9 +255,9 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
     else if (key == m8::BTN_UP) t.fillRect(along, in, w, PX, c);
     else t.fillRect(along, 240 - PX - in, w, PX, c);
   };
-  auto arrow = [&](int d, int a) {                 // (4 deep, 14 long: 2, 6, 10, 14 blocks from its tip, a block in, to its base)
+  auto arrow = [&](int d, int a) {                 // (4 deep, 7 long: 1, 3, 5, 7 blocks from its tip, a block in, to its base)
     int r = d - 1;
-    return r >= 0 && r <= 3 && a >= -(2 * r + 1) && a <= 2 * r;
+    return r >= 0 && r <= 3 && abs(a) <= r;
   };
   auto colour = [&](int d, int a) -> int {         // (-1: not drawn)
     if (arrow(d, a)) return -1;
