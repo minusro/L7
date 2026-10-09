@@ -231,7 +231,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   of text under a rule of that colour (the first page: the logo, HOW TO and three lines); then
   the page row (from x 10, the first page's too: its content left-aligned as the others'): a
   square each, 16 px apart, the pages seen filled in their colour, the others a grey outline, the shown one on
-  a solid light grey square two blocks wider all round (white for 100 ms after LEFT/RIGHT). LEFT / RIGHT turn the pages,
+  a solid light grey square two blocks wider all round (light grey for 100 ms after a turn). LEFT / RIGHT turn the pages,
   wrapping round, a page a press (held, they don't repeat); A or B go
   back to the menu; UP / DOWN as LEFT / RIGHT; no edge leads out meanwhile. The pages seen and the last one shown are
   saved with the session (`helpseen=`, a bit each; `helppage=`).
