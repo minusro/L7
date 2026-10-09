@@ -222,9 +222,9 @@ void drawStatus() {
   // The tag and position in the accent colour: SHIFT held (SHIFT + UP/DOWN
   // step through the scenes), or B alone on the cell (B + UP/DOWN do).
   bool sceneAccent = shiftArrows() || (cell == SCENE_CELL && bAlone());
-  // (Stepping: the tag 4 blocks wider, the up and down arrows at its left
+  // (Stepping: the tag 5 blocks wider, the up and down arrows at its left
   // inside its border, a block of space, then SCN; drawn below, with them.)
-  static constexpr int ARROWS_W = 4 * PX;          // (the arrows, 3 blocks, and a block of space)
+  static constexpr int ARROWS_W = 5 * PX;          // (a block, the arrows, 3 blocks, and a block of space)
   const int tagW = tagWidth("SCN") + (sceneAccent ? ARROWS_W : 0);
   static bool wasWide = false;                     // (the wider tag shown: once narrow again, what it covered past the plain one cleared)
   if (!sceneAccent && (wasWide || cleared)) t.fillRect(box.x + INSET + tagWidth("SCN"), tagY, ARROWS_W + PX, TAG_H, G);
@@ -252,7 +252,7 @@ void drawStatus() {
     static const char *const ARROWS[5] = {".#.", "###", "...", "###", ".#."};
     const int top = count ? count + 1 : 0;           // (no scenes: no copy after the last)
     const bool up = scene < top, down = scene > 0;   // (black where that way goes on; none where it doesn't)
-    const int ax = tx + PX, ay = tagY + 2 * PX;      // (a block in from the tag's edge; its text's rows)
+    const int ax = tx + 2 * PX, ay = tagY + 2 * PX;  // (two blocks in from the tag's edge; its text's rows)
     for (int r = 0; r < 5; r++)
       for (int c = 0; c < 3; c++)
         if (ARROWS[r][c] == '#' && (r < 2 ? up : down)) t.fillRect(ax + c * PX, ay + r * PX, PX, PX, BG);
