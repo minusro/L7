@@ -209,15 +209,13 @@ A recording track's waveform area is in the accent colour (a block of black betw
   CHRG_STAT: a lightning bolt in it instead) (`board.batteryPercent()`: the
   fuel gauge's state of charge while it runs, else from the charger's battery voltage, read
   every 5 s; variant A: none). The settings popup (`menuSettings()`, app.h's settings, saved with the session: `monitor=`,
-  `playnew=`, `nextfree=`, `emptyclick=`): over the menu, rising from MORE (a small grey
-  arrow down to its label, over its M), grey all over, from four blocks under the screen's top (each corner cut: its block and the two next to it), centred; the menu's own selection frame (round MORE) hidden while it's open; its items from
+  `playnew=`, `nextfree=`, `emptyclick=`): over the menu, rising from SETTINGS (a small grey
+  arrow down to its label, over its first S), grey all over, from four blocks under the screen's top (each corner cut: its block and the two next to it), centred; the menu's own selection frame (round SETTINGS) hidden while it's open; its items from
   the bottom up: MONITOR AUDIO IN (the input heard in the mix: the line out and USB 1-2;
   recorded either way), PLAY NEWLY RECORDED (off: a new clip comes in muted), SELECT NEXT FREE
   TRACK (off: the selection stays on the track just recorded), EMPTY PROJECT CLICK (the
   metronome, off, still clicks in a project with no clips), each ON or OFF right of its label
-  (on at first; ON light grey, OFF dark grey); at the panel's top, apart from them (a gap), right-aligned, HELP
-  (dark grey: not yet; UP from the top switch goes to it; its frame round its label alone, a block
-  out). Its items' frames as the
+  (on at first; ON light grey, OFF dark grey). Its items' frames as the
   list's, two blocks of space round them (white selected). UP/DOWN go through it; A or B turns
   the item on / off at once, on the press (the action button: a tick); DOWN off its bottom item,
   or LEFT / RIGHT, close it; no edge leads out of the menu while it's open (LEFT + RIGHT held
@@ -228,7 +226,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   No mark for the
   way out (any edge, `menuLeavesOn()`); while an arrow is held that leaves it once let go,
   the selection frame is hidden. Under them
-  a list, "EXPORT ABLETON PROJECT", "ENTER STORAGE MODE" and "MORE" (the settings: A or B, once let go, the settings popup, below; a small up triangle after the label, its colour, while they're closed), up to three in view at a time (scrolling once it has more; the row level with the logo left clear). Export
+  a list, "EXPORT ABLETON PROJECT", "ENTER STORAGE MODE", "SETTINGS" (A or B, once let go: the settings popup, below) and "HELP" (not yet: grey, the action button grey with no icon; still selectable), up to four in view at a time (scrolling once it has more; the last level with the logo; `MENU_EXPORT`... in ui.h). Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
   3/14" (samples copied, then the set) and then "SAVED AS L7 A005" ("SAVED AS" grey,

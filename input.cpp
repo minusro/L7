@@ -499,9 +499,9 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       armed = false;
       int slot = armedSlot;
       if (slot < 0) {                                // the list's items: export, storage mode, the settings
-        if (armedItem == 0 && !shifted && projectCurrent() >= 0 && projectHasClips() && !menuExportShown()) exportToAbleton();
-        if (armedItem == 2 && !shifted) menuSettings(true);
-        if (armedItem == 1 && !shifted) {
+        if (armedItem == MENU_EXPORT && !shifted && projectCurrent() >= 0 && projectHasClips() && !menuExportShown()) exportToAbleton();
+        if (armedItem == MENU_SETTINGS && !shifted) menuSettings(true);
+        if (armedItem == MENU_STORAGE && !shifted) {
           bool wasRunning = transport.running;
           midiInSuspend(true);                       // (no MIDI taken in meanwhile)
           bool back = usbDriveMode();

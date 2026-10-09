@@ -53,7 +53,7 @@ static int actionIcon() {
   if (menuOpen() && !menuOnStatus()) {             // a project slot, or the list's items
     int slot = menuSlot();
     if (slot < 0) return menuListItem() == 0 ? ICON_SAVE : menuListItem() == 1 ? ICON_USB
-                       : menuSettingsItem() == SETTING_COUNT ? ICON_NONE : ICON_CHECK;   // (settings: open them, an item on / off; help: not yet)
+                       : menuListItem() == MENU_SETTINGS ? ICON_CHECK : ICON_NONE;   // (settings: open them, an item on / off; help: not yet)
     if (shift) return projectFilled(slot) ? ICON_CUT : ICON_PASTE;
     if (slot == projectCurrent()) return ICON_HOME;   // (the loaded one: back to the looper)
     return projectFilled(slot) ? ICON_LOAD : ICON_NEW;

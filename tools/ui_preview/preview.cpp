@@ -441,7 +441,9 @@ int main(int argc, char **argv) {
     render(out + "/ui_menu_leaving_" + name + ".png");
   }
   simSwitchKey = 0;
-  for (int i = 0; i < 6; i++) menuKeys(m8::BTN_DOWN);   // the settings: open, the second item selected, one off
+  for (int i = 0; i < 6; i++) menuKeys(m8::BTN_DOWN);   // (the list's last item: help)
+  render(out + "/ui_menu_help.png");
+  menuKeys(m8::BTN_UP);                            // the settings: open, the second item selected, one off
   menuSettings(true);
   menuSettingsKeys(m8::BTN_UP);
   setSetting(SET_NEXT_FREE, false);
@@ -454,8 +456,6 @@ int main(int argc, char **argv) {
   writePng(out + "/ui_menu_settings_closed.png");  // (as drawn, not redrawn: closed, what was under it back)
   menuSettings(true);
   writePng(out + "/ui_menu_settings_opened.png");  // (as drawn: opened over the menu as it was)
-  for (int i = 0; i < 4; i++) menuSettingsKeys(m8::BTN_UP);   // up to HELP
-  render(out + "/ui_menu_settings_help.png");
   menuSettings(false);
   closeMenu();
   return 0;

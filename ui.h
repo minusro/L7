@@ -251,7 +251,7 @@ float menuCutProgress(int &slot);        // (input.cpp) SHIFT+A held on a projec
 uint32_t menuCardPressMs();              // (input.cpp) millis() of the latest A or B press on a card (0: none)
 bool menuJustCut();                      // (input.cpp) a project just cut by holding, its keys still held
 // The menu's settings popup (ui_menu.cpp, app.h's settings): open or closed;
-// its selected item (0: the bottom one; SETTING_COUNT: help; -1: closed); the
+// its selected item (0: the bottom one; -1: closed); the
 // arrows in it (true: it moved); A or B in it; how the menu was last left (by
 // A or B on a card: back on the loaded project's card).
 bool menuSettingsOpen();
@@ -278,7 +278,8 @@ int menuSlot();                          // the project slot selected in the men
 bool menuOnList();                       // the selection on the menu's list (EXPORT ABLETON PROJECT ...)
 uint16_t menuActionColor();
 uint16_t actionRestColor();              // the action button's colour when not pressed (ui_buttons.cpp; grey: it can't act)              // the action button's colour (the accent, a card's, light grey)
-int menuListItem();                      // which of its items (0: export, 1: storage mode, 2: settings), or -1
+int menuListItem();                      // which of its items (MENU_EXPORT...), or -1
+enum { MENU_EXPORT, MENU_STORAGE, MENU_SETTINGS, MENU_HELP };   // the menu's list items, top first
 int menuListX();                         // the list's left edge, px (storage mode's texts start there too)
 bool menuExportShown();                  // the export item shows its label (exporting is off until it goes)
 void menuExportStatus(const char *text, int nameAt = -1);   // the export item's label ("EXPORTING 3/14"; nullptr: its own), kept until the
