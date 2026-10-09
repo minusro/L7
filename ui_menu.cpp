@@ -224,6 +224,26 @@ static int playingCard() {
   return menuLoadPending() ? loadFrom : projectCurrent();
 }
 
+// SHIFT+A held on a project's card (to cut it): from its left, as far as
+// the hold, the card as an empty slot's (its outline and letter), drawn over
+// it clipped to those columns.
+static bool emptyLook = false;
+static void drawItem(int k);
+static void drawCutWipe(int k) {
+  int slot;
+  float cut = menuCutProgress(slot);
+  if (slot != k || cut <= 0) return;
+  Shape s = itemShape(k);
+  int cols = (int)(cut * s.w);
+  if (cols <= 0) return;
+  auto &t = board.tft();
+  t.setClipRect(s.x * PX, s.y * PX, cols * PX, s.h * PX);   // (the card's own area: its frame round it as it is)
+  emptyLook = true;
+  drawItem(k);
+  emptyLook = false;
+  t.setClipRect();
+}
+
 static void drawItem(int k) {
   if (!listInView(k)) return;
   auto &t = board.tft();
@@ -240,9 +260,10 @@ static void drawItem(int k) {
       if (rowSpan(s, 2, r, c0, c1, true)) t.fillRect((c1 + 1) * PX, r * PX, PX, PX, frame);
     }
     uint16_t color = PROJECT_COLORS[k];
-    bool filled = projectFilled(k), loaded = k == shownLoaded(), playing = k == playingCard() && transport.running;
+    bool filled = projectFilled(k) && !emptyLook, loaded = k == shownLoaded() && !emptyLook,
+         playing = k == playingCard() && transport.running && !emptyLook;   // (emptyLook: as an empty slot's, the cut's wipe)
     // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
-    uint16_t letter = loaded ? BG : filled || (sel && actionHeld()) ? color : DIM;   // (an empty slot's: grey, as its outline; its colour while an action button is held)
+    uint16_t letter = loaded ? BG : filled || (sel && actionHeld() && !emptyLook) ? color : DIM;   // (an empty slot's: grey, as its outline; its colour while an action button is held)
     if (loaded) {                                 // the loaded one: filled
       fillRing(s, 0, -s.w, color);
     } else if (filled) {                          // a project: a thick outline, two blocks
@@ -268,12 +289,7 @@ static void drawItem(int k) {
             if (PLAY[r][c] == '#') t.fillRect((x0 + w + 1 + c) * PX, (y0 + r) * PX, PX, PX, letter);
       }
     }
-    int cutSlot;                                  // SHIFT+A held on it (to cut it): wiped away from the left, as far as the hold
-    float cut = menuCutProgress(cutSlot);
-    if (cutSlot == k && cut > 0) {
-      int cols = (int)(cut * s.w);
-      if (cols > 0) t.fillRect(s.x * PX, s.y * PX, cols * PX, s.h * PX, MENU_BG);
-    }
+    if (!emptyLook) drawCutWipe(k);                 // (SHIFT+A held on it: as far as the hold, an empty slot's look)
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
     fillRing(s, LIST_SPACE, 0, MENU_BG);
@@ -372,11 +388,10 @@ void drawMenu() {
     if (shownCut >= 0) shownKey[shownCut] = ~0u;
     shownCut = cutSlot;
   }
-  if (cutSlot >= 0 && listInView(cutSlot)) {       // wiping: only as far as it's got, over the card as drawn (no flicker)
-    Shape cs = itemShape(cutSlot);
-    int cols = (int)(cut * cs.w);
-    if (cols > 0) t.fillRect(cs.x * PX, cs.y * PX, cols * PX, cs.h * PX, MENU_BG);
-  }
+  static int shownCols = -1;                       // (wiping: redrawn as it gets further, over the card as drawn: no flicker)
+  int cols = cutSlot >= 0 ? (int)(cut * CARD_W) : -1;
+  if (cutSlot >= 0 && cols != shownCols) drawCutWipe(cutSlot);
+  shownCols = cols;
   for (int pass = 0; pass < 2; pass++)
     for (int k = 0; k < ITEMS; k++) {
       uint32_t key = itemKey(k);
