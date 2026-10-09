@@ -386,9 +386,10 @@ static void setBox(int &x0, int &y0, int &x1, int &y1) {
   y0 = 2;                                          // (up to two blocks short of the screen's top)
   y1 = yb + 9;
 }
-// An item's place overlapping the popup (its frame's too): not drawn while it's open.
-static bool underSettings(int k) {
-  if (!setOpen) return false;
+// An item's place overlapping the popup's (its frame's too): not drawn while
+// it's open; once it closes, drawn again (the popup's place cleared first).
+static bool redrawUnder = false;
+static bool underBox(int k) {
   int x0, y0, x1, y1;
   setBox(x0, y0, x1, y1);
   y1 += 3;                                         // (the arrow)
@@ -396,6 +397,7 @@ static bool underSettings(int k) {
   int d = k < CARDS ? 2 : LIST_SPACE + 1;
   return s.x - d <= x1 && s.x + s.w - 1 + d >= x0 && s.y - d <= y1 && s.y + s.h - 1 + d >= y0;
 }
+static bool underSettings(int k) { return setOpen && underBox(k); }
 
 FLASHMEM static void drawSettings(bool whole) {
   auto &t = board.tft();
@@ -412,7 +414,7 @@ FLASHMEM static void drawSettings(bool whole) {
         t.fillRect((c + dc) * PX, r * PX, PX, PX, MENU_BG);
         t.fillRect(c * PX, (r + dr) * PX, PX, PX, MENU_BG);
       }
-    int ax = itemShape(CARDS + LIST - 1).x + 4;    // the arrow: down to SETTINGS, under its label's start
+    int ax = itemShape(CARDS + LIST - 1).x + 1;    // the arrow: down to SETTINGS, over its first S (3 blocks wide: its middle)
     for (int r = 0; r < 3; r++) t.fillRect((ax - 2 + r) * PX, (y1 + 1 + r) * PX, (5 - 2 * r) * PX, PX, DIM);
     shownKey = ~0u;
   }
@@ -438,12 +440,19 @@ FLASHMEM static void drawSettings(bool whole) {
     }
 }
 
+// Opened: drawn over the menu as it is; closed: its place cleared, the items
+// under it drawn again (nothing else redrawn: no flicker).
 FLASHMEM void menuSettings(bool open) {
   if (!shown || setOpen == open) return;
+  if (!open) {
+    int x0, y0, x1, y1;
+    setBox(x0, y0, x1, y1);
+    board.tft().fillRect(x0 * PX, y0 * PX, (x1 - x0 + 1) * PX, (y1 + 3 - y0 + 1) * PX, MENU_BG);   // (the arrow's rows too)
+    redrawUnder = true;
+  }
   setOpen = open;
   setSel = 0;
   setDrawn = false;
-  uiGeneration++;                                  // (the menu whole: the items under it gone, or back)
   drawMenu();
 }
 
@@ -544,6 +553,10 @@ FLASHMEM void drawMenu() {
   int cols = cutSlot >= 0 ? (int)(cut * CARD_W) : -1;
   if (cutSlot >= 0 && cols != shownCols) drawCutWipe(cutSlot);
   shownCols = cols;
+  if (redrawUnder)                                 // (the settings just closed: what was under them)
+    for (int k = 0; k < ITEMS; k++)
+      if (underBox(k)) shownKey[k] = ~0u;
+  redrawUnder = false;
   for (int pass = 0; pass < 2; pass++)
     for (int k = 0; k < ITEMS; k++) {
       uint32_t key = itemKey(k);

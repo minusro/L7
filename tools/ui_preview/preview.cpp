@@ -451,6 +451,10 @@ int main(int argc, char **argv) {
   setSetting(SET_NEXT_FREE, true);
   board.charging = false;
   menuSettings(false);
+  writePng(out + "/ui_menu_settings_closed.png");  // (as drawn, not redrawn: closed, what was under it back)
+  menuSettings(true);
+  writePng(out + "/ui_menu_settings_opened.png");  // (as drawn: opened over the menu as it was)
+  menuSettings(false);
   closeMenu();
   return 0;
 }
