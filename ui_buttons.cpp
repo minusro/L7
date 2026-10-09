@@ -222,11 +222,12 @@ static bool cannotAct(int icon) { return unavailable(STATUS_ROW, icon) || action
 // B held on a track (A too or not; SHIFT not the arrows' modifier): its
 // panel in the accent colour, the action button grey with its icon in the accent colour.
 static bool bOnTrack() {
-  return selected != STATUS_ROW && !menuOpen() && (mainKeys() & m8::BTN_OPT) && arrowModifier() != m8::BTN_SHIFT;
+  return selected != STATUS_ROW && !menuOpen() && (mainKeys() & m8::BTN_OPT) && !(mainKeys() & m8::BTN_SHIFT);   // (SHIFT held too, either first: the normal look)
 }
 // The same for the action button with B on the clock cell (the master volume; the panel: a track's only).
 static bool bAdjusting() {
-  return bOnTrack() || (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == CLOCK_CELL && !menuOpen() && bArrows());   // (A held too or not)
+  return bOnTrack() || (selected == STATUS_ROW && selectedCellIn(STATUS_ROW) == CLOCK_CELL && !menuOpen() && bArrows() &&
+                        !(mainKeys() & m8::BTN_SHIFT));   // (A held too or not; SHIFT too: the normal look)
 }
 
 // The action held, and its press made here (the looper's view: not carried over from the menu).
