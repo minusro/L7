@@ -55,6 +55,8 @@ static int listTop = 0;                          // the list's first item in vie
 
 static bool shown = false;
 static int menuSel = 0;                          // the selected item
+static bool setOpen = false, setDrawn = false;   // the settings popup open (below); setDrawn: its box on screen (else drawn whole next)
+static int setSel = 0;                           // its selected item (0: the bottom one)
 static int cardCol = 0;                          // the card column last selected (UP from the list goes back to it)
 static bool onStatus = false;                    // the selection is on the status row (selected = STATUS_ROW meanwhile)
 static int statusCell = SCENE_CELL;              // where on it, while the menu's closed (or the selection's up in the menu)
@@ -262,7 +264,7 @@ static void drawItem(int k) {
   auto &t = board.tft();
   Shape s = itemShape(k);
   bool sel = k == menuSel && !onStatus;
-  uint16_t frame = sel ? frameColor() : MENU_BG;
+  uint16_t frame = sel && !setOpen ? frameColor() : MENU_BG;   // (the settings open: theirs instead)
   if (k < CARDS) {                                // a project slot: its frame a block out
     fillRing(s, 2, 1, frame, true);
     fillRing(s, 1, 0, MENU_BG);
@@ -348,7 +350,7 @@ static uint32_t itemKey(int k) {
   int loaded = shownLoaded(), playing = playingCard();
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == loaded) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
-         (uint32_t)(sel ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(sel && menuJustCut()) << 29 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
+         (uint32_t)(sel && !setOpen ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(sel && menuJustCut()) << 29 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
          (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25;
 }
 
@@ -356,14 +358,13 @@ static uint32_t itemKey(int k) {
 // arrow down to it), its items from the bottom up, each a label and, right of
 // it, ON or OFF (HELP: grey, not yet). A or B on SETTINGS opens it (once let
 // go); UP/DOWN go through it, A or B turns the item on or off (on the press),
-// DOWN off its bottom one or LEFT/RIGHT close it. Grey all over, each corner
+// DOWN off its bottom one or LEFT/RIGHT close it (the menu's own selection
+// frame hidden meanwhile). Grey all over, from the screen's top, each corner
 // cut (its block and the two next to it); its items' frames as the list's, two
 // blocks of space round them; OFF and HELP dark grey.
 static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
                                                           "EMPTY PROJECT CLICK", "HELP"};
 static constexpr int SET_ITEMS = SETTING_COUNT + 1, SET_PITCH = 10;
-static bool setOpen = false, setDrawn = false;  // (setDrawn: its box on screen; else drawn whole next)
-static int setSel = 0;                           // (0: the bottom one)
 
 bool menuSettingsOpen() { return shown && setOpen; }
 int menuSettingsItem() { return menuSettingsOpen() ? setSel : -1; }
@@ -382,7 +383,7 @@ static void setBox(int &x0, int &y0, int &x1, int &y1) {
   setLayout(x, yb, w);
   x0 = x - 5;
   x1 = x + w + 4;
-  y0 = yb - (SET_ITEMS - 1) * SET_PITCH - 5;
+  y0 = 0;                                          // (up to the screen's top)
   y1 = yb + 9;
 }
 // An item's place overlapping the popup (its frame's too): not drawn while it's open.
