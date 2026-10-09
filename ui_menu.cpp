@@ -3,7 +3,8 @@
 // edges; left by loading a project (A on the loaded one:
 // just back), or any arrow off its edges (menuLeavesOn()). Twelve cards (three rows of
 // four), the project slots, and under them a list, "EXPORT ABLETON PROJECT",
-// "ENTER STORAGE MODE", "SETTINGS" (off for now, grey); it scrolls once it has
+// "ENTER STORAGE MODE", "MORE" (the settings; a small up triangle after it
+// while they're closed); it scrolls once it has
 // more than three. A runs
 // the item's action when let go. On a slot, A loads its project (an
 // empty one: a new project there), the menu staying open; on the loaded
@@ -40,7 +41,7 @@ uint32_t uiGeneration = 1;
 // The list: its items, LIST_ROOM of them in view at a time (scrolling; with
 // no more than that, from the top of its room).
 static constexpr int CARDS = PROJECTS, LIST = 3, LIST_ROOM = 3, ITEMS = CARDS + LIST, COLS = 4, CARD_ROWS = CARDS / COLS;
-static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE", "SETTINGS"};
+static const char *const LABELS[LIST] = {"EXPORT ABLETON PROJECT", "ENTER STORAGE MODE", "MORE"};
 // The export item's label while exporting and after it ("EXPORTING 3/14",
 // "SAVED AS L7 A005"; none: its own), kept (the menu closed and opened again,
 // storage mode too) until the project changes (projectEdits()) or another one
@@ -321,6 +322,10 @@ static void drawItem(int k) {
       drawText(s.x * PX + w1, s.y * PX, exportText + exportNameAt, PROJECT_COLORS[exportFor], MENU_BG, s.w * PX - w1);
     } else {
       drawText(s.x * PX, s.y * PX, label, ink, MENU_BG, s.w * PX);   // (the whole box: a longer label scrolled away is covered)
+      if (k == CARDS + LIST - 1 && !setOpen) {       // MORE: a small up triangle after it (the settings, above; gone while they're open)
+        int tx = s.x + textWidth(label) / PX + 2;
+        for (int r = 0; r < 3; r++) t.fillRect((tx + 2 - r) * PX, (s.y + 1 + r) * PX, (1 + 2 * r) * PX, PX, ink);
+      }
     }
   }
 }
@@ -350,13 +355,13 @@ static uint32_t itemKey(int k) {
   int loaded = shownLoaded(), playing = playingCard();
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == loaded) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
-         (uint32_t)(sel && !setOpen ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(sel && menuJustCut()) << 29 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
+         (uint32_t)(sel && !setOpen ? frameColor() : 0) << 8 | (uint32_t)(k == CARDS + LIST - 1 && setOpen) << 27 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(sel && menuJustCut()) << 29 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
          (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25;
 }
 
-// ---- The settings (app.h): a popup over the menu, rising from SETTINGS (an
+// ---- The settings (app.h): a popup over the menu, rising from MORE (an
 // arrow down to it), its items from the bottom up, each a label and, right of
-// it, ON or OFF; HELP at its top, right-aligned, a gap below it (grey, not yet). A or B on SETTINGS opens it (once let
+// it, ON or OFF; HELP at its top, right-aligned, a gap below it (grey, not yet). A or B on MORE opens it (once let
 // go); UP/DOWN go through it, A or B turns the item on or off (on the press),
 // DOWN off its bottom one or LEFT/RIGHT close it (the menu's own selection
 // frame hidden meanwhile). Grey all over, from four blocks under the screen's top, each corner
@@ -379,7 +384,7 @@ static void setLayout(int &x, int &yb, int &w) {
   for (const char *l : SET_LABELS) lw = max(lw, textWidth(l) / PX);
   w = lw + 4 + textWidth("OFF") / PX;
   x = (320 / PX - w) / 2;
-  yb = itemShape(CARDS + LIST - 1).y - 17;       // (its border 8 rows above SETTINGS' label: the arrow between)
+  yb = itemShape(CARDS + LIST - 1).y - 17;       // (its border 8 rows above MORE's label: the arrow between)
 }
 static void setBox(int &x0, int &y0, int &x1, int &y1) {
   int x, yb, w;
@@ -417,7 +422,7 @@ FLASHMEM static void drawSettings(bool whole) {
         t.fillRect((c + dc) * PX, r * PX, PX, PX, MENU_BG);
         t.fillRect(c * PX, (r + dr) * PX, PX, PX, MENU_BG);
       }
-    int ax = itemShape(CARDS + LIST - 1).x + 1;    // the arrow: down to SETTINGS, over its first S (3 blocks wide: its middle)
+    int ax = itemShape(CARDS + LIST - 1).x + 2;    // the arrow: down to MORE, over its M (5 blocks wide: its middle)
     for (int r = 0; r < 3; r++) t.fillRect((ax - 2 + r) * PX, (y1 + 1 + r) * PX, (5 - 2 * r) * PX, PX, DIM);
     shownKey = ~0u;
   }
