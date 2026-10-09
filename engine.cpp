@@ -148,18 +148,19 @@ volatile int32_t clickFromBeat = INT32_MIN;
 // The metronome's wood block: two damped sines (its body and a harder upper
 // partial), started on a beat.
 static constexpr float CLICK_BAR_HZ = 1600, CLICK_BEAT_HZ = 1150;
-// Its level (the metronome's auto volume): what's heard (after the master
-// volume, the click left out) followed by its peak, rising at once and falling
-// REF_FALL_DB a second; the click CLICK_OVER_DB over it, at least -16 dBFS at
-// the master volume (all the way down: none), at most full scale; the bar's
-// first beat at it, the others 3/4 of it.
+// Its level (the metronome's auto volume): the mix before the master volume
+// (the tracks and the monitored input, the click left out) followed by its
+// peak, rising at once and falling REF_FALL_DB a second; the click
+// CLICK_OVER_DB over it, at least -16 dBFS, at most full scale, then the master
+// volume on it as on the mix (at once: turned down, the click with it); the
+// bar's first beat at it, the others 3/4 of it.
 static constexpr float REF_FALL_DB = 6;
 static const float REF_FALL = powf(10, -REF_FALL_DB / 20 * AUDIO_BLOCK_SAMPLES / AUDIO_SAMPLE_RATE_EXACT);   // (a block's)
 static constexpr float CLICK_OVER_DB = 2, CLICK_FLOOR_DB = -16;
 static const float CLICK_OVER = powf(10, CLICK_OVER_DB / 20), CLICK_FLOOR = powf(10, CLICK_FLOOR_DB / 20);
 static float refPeak = 0;
 static float clickLevel() {
-  float m = max(CLICK_FLOOR * 32767 * outputGain, refPeak * CLICK_OVER);   // (the floor at the master volume)
+  float m = max(CLICK_FLOOR * 32767, refPeak * CLICK_OVER);   // (before the master volume)
   return min(m, 32767.0f) / 1.4f;                  // (the two partials' peak together: ~1.4 of the body's)
 }
 static const float CLICK_DECAY = expf(-1.0f / (0.012f * AUDIO_SAMPLE_RATE_EXACT));      // body, ~12 ms
@@ -791,7 +792,7 @@ void LooperEngine::update() {
   const uint32_t blockNow = transport.now;
   // Resampling: the output goes in the input history (what's recorded) instead.
   const bool captureOutput = recording.resample && recording.mode != Recording::Idle;
-  const float outTo[4] = {outLL, outLR, outRL, outRR};
+  const float outGain = outputGain, outTo[4] = {outLL, outLR, outRL, outRR};
   static float outNow[4] = {1, 0, 0, 1};           // (the master's mix as it glides, MASTER_GLIDE_MS)
   for (auto &tr : tracks) glideFilters(tr);
   float outPeak[2] = {0, 0};
@@ -927,10 +928,11 @@ void LooperEngine::update() {
       int16_t cr = (int16_t)constrain(mixR + monR, -32767.0f, 32767.0f);
       inputRing[at % INPUT_FRAMES] = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
     }
-    float click = clickSample();                     // (its level the mix's peak: the master volume in it already)
+    float click = clickSample() * outGain;           // (its level from the mix before the master volume: the master volume on it now)
     {                                                // the master volume and balance
       for (int k = 0; k < 4; k++) outNow[k] += (outTo[k] - outNow[k]) * MASTER_GLIDE;
       float l = mixL + monL, r = mixR + monR;
+      blockPeak = max(blockPeak, max(fabsf(l), fabsf(r)));   // (the click's reference: before the master volume, the click left out)
       mixL = l * outNow[0] + r * outNow[1];
       mixR = l * outNow[2] + r * outNow[3];
     }
@@ -939,7 +941,6 @@ void LooperEngine::update() {
       usbFrame[0] = (int16_t)constrain(mixL + uc, -32767.0f, 32767.0f);
       usbFrame[1] = (int16_t)constrain(mixR + uc, -32767.0f, 32767.0f);
     }
-    blockPeak = max(blockPeak, max(fabsf(mixL), fabsf(mixR)));   // (what's heard, the click left out: its level)
     mixL += click;
     mixR += click;
     outPeak[0] = max(outPeak[0], fabsf(mixL));
