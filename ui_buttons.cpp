@@ -219,9 +219,16 @@ static uint16_t actionColor(int) { return menuActionColor(); }
 // An action that can't act now: grey (a menu item's own grey too: export with nothing to export).
 static bool cannotAct(int icon) { return unavailable(STATUS_ROW, icon) || actionColor(icon) == DIM; }
 
+// B held on a track (A too or not; SHIFT not the arrows' modifier): its
+// panel in the accent colour, the action button grey with its icon in the accent colour.
+static bool bOnTrack() {
+  return selected != STATUS_ROW && !menuOpen() && (board.keys() & m8::BTN_OPT) && arrowModifier() != m8::BTN_SHIFT;
+}
+
 static uint16_t buttonBackground(int i, int icon) {
   if (i == STATUS_ROW) {
     if (cannotAct(icon)) return DIM;               // (no pressed look either)
+    if (bOnTrack()) return DIM;
     if (heldAction >= 0 || (icon == ICON_ADJUST && adjusting())) return menuOpen() ? BG : DARK;   // pressed (the menu's ground is dark grey: black there)
     return actionColor(icon);
   }
@@ -237,6 +244,7 @@ uint16_t actionRestColor() {
 static uint16_t iconColor(int i, int icon) {
   uint16_t bg = buttonBackground(i, icon);
   if (i == STATUS_ROW) {
+    if (bOnTrack() && !cannotAct(icon)) return ACCENT;
     if (icon == ICON_ADJUST) return adjusting() ? ACCENT : BG;
     if (cannotAct(icon)) return BG;                // (grey, its icon black, held too)
     return heldAction >= 0 ? actionColor(icon) : BG;
@@ -250,7 +258,7 @@ static uint16_t iconColor(int i, int icon) {
 
 // The selected track's panel: grey; in the
 // accent colour while A is held, with the action button (acting on the track).
-static uint16_t markColor() { return heldAction >= 0 ? ACCENT : DIM; }
+static uint16_t markColor() { return heldAction >= 0 || bOnTrack() ? ACCENT : DIM; }
 
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
