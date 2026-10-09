@@ -152,14 +152,21 @@ TTTTT000000TTTTT
 
 
 9oct26
+- various fixes V
+	- hide copyright before starting loading
+	- move menu list 2 blocks up
+	- draw left/right arrows on accent wave switch outline
+	- draw small up/down arrow icons in accent at the end of the scene list is shift held
+		- unavailable direction
+	- hold press shift+A to cut project
+		- show indicator, maybe the card is wiped left to right?
 
-- hide copyright before starting loading
-- move menu list 2 blocks up
-- draw left/right arrows on accent wave switch outline
-- draw small up/down arrow icons in accent at the end of the scene list is shift held
-	- unavailable direction
-- hold press shift+A to cut project
-	- show indicator, maybe the card is wiped left to right?
+- think about fx page
+
+TTTT0GGJJGG0TTTT
+TTTT00GGGG00TTTT
+TTTT00GGGG00TTTT
+TTTTT000000TTTTT  
 
 # Feature backlog
 - track ms offset
