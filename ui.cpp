@@ -241,11 +241,10 @@ static int shownDepth = 0;
 FLASHMEM static void paintEdgeLine(uint8_t key) {
   // A grey line 5 blocks wide, the edge's whole length, an arrow pointing at
   // the edge cut out of its middle (not drawn: what's under it shows; 4
-  // blocks deep, 14 long, its tip a block in from the edge). The looper's: a
-  // black outline on its inner side too, a block wide, round the arrow as well.
+  // blocks deep, 14 long, its tip a block in from the edge). Both screens alike.
   auto &t = board.tft();
   t.setClipRect();
-  const bool outline = !menuOpen();
+  const bool outline = false;                      // (no outline, either screen)
   const int depth = outline ? 6 : 5;               // (blocks; the outline's the 6th)
   const bool across = key == m8::BTN_UP || key == m8::BTN_DOWN;
   const int len = (across ? 320 : 240) / PX, mid = len / 2;
