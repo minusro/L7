@@ -203,9 +203,9 @@ A recording track's waveform area is in the accent colour (a block of black betw
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; a block
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). In the top right
-  corner, two blocks in, a tiny grey battery (10 × 7 blocks and a tip a block wide, 3 tall): its
-  outline, a block of space, its fill in sixths of its charge (90 % and up: full; charging, `board.batteryCharging()`, the fuel gauge's current
-  flowing in (the charger's CHRG_STAT without it): a lightning bolt in it instead) (`board.batteryPercent()`: the
+  corner, two blocks in, a tiny grey battery (11 × 7 blocks and a tip a block wide, 3 tall): its
+  outline, a block of space, its fill in sevenths of its charge (90 % and up: full; charging, `board.batteryCharging()`, the fuel gauge's current
+  flowing in (the charger's CHRG_STAT without it): a plus in its middle instead) (`board.batteryPercent()`: the
   fuel gauge's state of charge while it runs, else from the charger's battery voltage, read
   every 5 s; variant A: none). The settings popup (`menuSettings()`, app.h's settings, saved with the session: `monitor=`,
   `playnew=`, `nextfree=`, `emptyclick=`): over the menu, rising from SETTINGS (a small grey

@@ -481,27 +481,28 @@ FLASHMEM void menuSettingsAct() {
   drawSettings(false);
 }
 
-// The battery, top right (two blocks in): a tiny grey one, its outline, a block
-// of space, its fill in sixths (90 % and up: full); its tip a block right, 3
-// blocks tall. Charging: a lightning bolt in it instead of the fill.
+// The battery, top right (two blocks in): a tiny grey one, 11 x 7 blocks, its
+// outline, a block of space, its fill in sevenths (90 % and up: full); its tip
+// a block right, 3 blocks tall. Charging: a plus in its middle instead of the fill.
 // (ink on ground: the menu's grey on its ground; storage mode's dark grey on its grey.)
 FLASHMEM void drawBatteryIcon(bool all, uint16_t ink, uint16_t ground) {
   static int shownFill = -2;                       // (-1: not known, none)
   static bool shownCharging = false;
-  int pct = board.batteryPercent(), fill = pct < 0 ? -1 : pct >= 90 ? 6 : (pct * 6 + 50) / 100;
+  constexpr int STEPS = 7;
+  int pct = board.batteryPercent(), fill = pct < 0 ? -1 : pct >= 90 ? STEPS : (pct * STEPS + 50) / 100;
   bool charging = fill >= 0 && board.batteryCharging();
   if (!all && fill == shownFill && charging == shownCharging) return;
   shownFill = fill;
   shownCharging = charging;
-  static const char *const BOLT[5] = {"....##", "...##.", "..####", ".##...", "##...."};   // (rows 1-5, columns 2-7)
+  static const char *const PLUS[3] = {".#.", "###", ".#."};   // (rows 2-4, columns 4-6)
   auto &t = board.tft();
-  constexpr int W = 10, H = 7, X = 320 / PX - 2 - (W + 1), Y = 2;   // (its body, then its tip)
+  constexpr int W = 11, H = 7, X = 320 / PX - 2 - (W + 1), Y = 2;   // (its body, then its tip)
   for (int r = 0; r < H; r++)
     for (int c = 0; c <= W; c++) {
       bool edge = r == 0 || r == H - 1 || c == 0 || c == W - 1, tip = c == W && r >= 2 && r <= H - 3;
       bool inside = r >= 2 && r <= H - 3 && c >= 2 && c - 2 < fill;
       bool on = fill >= 0 && (c < W ? edge || inside : tip);
-      if (charging && !edge && c < W) on = r >= 1 && r <= 5 && c >= 2 && c <= 7 && BOLT[r - 1][c - 2] == '#';
+      if (charging && !edge && c < W) on = r >= 2 && r <= 4 && c >= 4 && c <= 6 && PLUS[r - 2][c - 4] == '#';
       t.fillRect((X + c) * PX, (Y + r) * PX, PX, PX, on ? ink : ground);
     }
 }
