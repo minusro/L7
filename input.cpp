@@ -527,7 +527,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     int t = recordArmed;
     recordArmed = -1;
     if (tracks[t].state == TrackState::Empty && !recordingOn(t) && recordQueued() != t &&
-        (!recordArmedResample || anyClipHeard()) && recordPress(t, recordArmedResample, transport.now - recordArmedAt) &&
+        recordPress(t, recordArmedResample, transport.now - recordArmedAt) &&
         selected == t)
       selectedCell = WAVE_CELL;                      // (a new recording: its waveform cell selected)
   }
@@ -823,9 +823,9 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       setMetronomeMode(nextMetronomeMode());       // B+A on the tempo cell: the metronome's next setting
       metronomeOn = metronomeWanted();             // (at once: the next beat too)
     } else if (!onStatus && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
-               recordQueued() != selected && anyClipHeard()) {
+               recordQueued() != selected) {
       // An empty track resamples: records the app's output (queued behind a
-      // recording, as A records), if there's anything to: a clip not muted.
+      // recording, as A records), whatever is heard (no clip unmuted too: the input).
       // Once A is let go (above).
       recordArmed = selected;
       recordArmedResample = true;

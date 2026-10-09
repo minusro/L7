@@ -130,12 +130,6 @@ inline bool hasClip(int i) { return tracks[i].state != TrackState::Empty && !rec
 // The same for what the row shows (shownTrack()).
 inline bool shownClip(int i) { return shownTrack(i).state != TrackState::Empty && !recordingOn(i); }
 
-// Something to resample: a clip on a track that isn't muted.
-inline bool anyClipHeard() {
-  for (int t = 0; t < NUM_TRACKS; t++)
-    if (hasClip(t) && tracks[t].state == TrackState::Playing) return true;
-  return false;
-}
 
 // Background of a cell in row i (cell -1: the button): black, but the accent colour
 // for the status row's button (the action button; ui_buttons.cpp has its

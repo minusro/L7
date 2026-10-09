@@ -206,8 +206,7 @@ static bool unavailable(int i, int icon) {
       return (recording.mode != Recording::Idle && menuSlot() != projectCurrent()) || projectCopying(menuSlot());
     return false;
   }
-  return (icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()) ||
-         (icon == ICON_RESAMPLE && !anyClipHeard());
+  return (icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull());
 }
 
 // The action button (the status row's): the accent colour with black icons; dark grey
