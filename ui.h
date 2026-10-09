@@ -63,14 +63,11 @@ struct ShownTrack {
   uint8_t overview[OVERVIEW_COLS];
 };
 const ShownTrack &shownTrack(int i);
-// An empty track (no clip, not recording) has one cell spanning the whole
-// row (SPAN: the cells' width; drawn by drawSpan()): its outline round all of
-// it. The column selected is kept for the rows with three.
+// A row with one cell spanning it whole (SPAN: the cells' width; drawn by
+// drawSpan()): its outline round all of it. None for now: an empty track has
+// its three cells too (its filter and mixer cells empty, as while recording).
 constexpr Cell SPAN = {0, CELL[CELLS - 1].x + CELL[CELLS - 1].w};
-inline bool spanRow(int i) {
-  return i >= 0 && i < NUM_TRACKS && shownTrack(i).state == TrackState::Empty &&
-         !(recording.track == i && recording.mode != Recording::Idle);
-}
+inline bool spanRow(int) { return false; }
 // The cells a row has (the status row's: as many as a track row's; an empty track's: one).
 inline int cellCount(int i) { return i == STATUS_ROW ? TEMPO_CELL + 1 : spanRow(i) ? 1 : CELLS; }
 // The most a row ever has (for a saved selection).
