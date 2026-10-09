@@ -990,6 +990,19 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     } else if (onTempo) {
       setMetronomeMode(nextMetronomeMode());       // B+A on the tempo cell: the metronome's next setting
       metronomeOn = metronomeWanted();             // (at once: the next beat too)
+    } else if (!onStatus && selectedCellIn(selected) == WAVE_CELL && hasClip(selected)) {
+      // B + A twice on a clip's waveform (within DOUBLE_TAP_MS): its fine
+      // rotate back to none (the range as it is: B twice resets both).
+      static uint32_t lastTapAt = 0;
+      static int lastTapTrack = -1;
+      if (lastTapTrack == selected && millis() - lastTapAt < DOUBLE_TAP_MS) {
+        if (rotateT == selected) rotateBy = 0;     // (one held, not heard yet: gone too)
+        if (rotateTrack(selected, -(int32_t)unitOf(selected).rotate)) drawTrack(selected);
+        lastTapTrack = -1;
+      } else {
+        lastTapTrack = selected;
+        lastTapAt = millis();
+      }
     } else if (!onStatus && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
                recordQueued() != selected) {
       // An empty track resamples: records the app's output (queued behind a
