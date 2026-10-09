@@ -323,25 +323,15 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
         if (g->rows[r][c] == '#') blockIn(gc + c, gr + r, ink);
   };
   if (icon == ICON_TAP) {
-    // Condensed: T and A touch (T's stem and A's point keep them apart), 10
-    // blocks; the letters plain, in the icon's colour (black), their bottom
-    // row left out (4 rows), once, centred in the backdrop; a block lower
-    // while A is held (pressed).
-    const char *text = "TAP";
-    const int w = textWidth(text) / PX - 1, ROWS4 = 4, h = ROWS4;
-    int c0 = PANEL_LEFT + (cols - PANEL_LEFT - w) / 2 - 1, r0 = (rows - h) / 2 + (heldAction >= 0);   // (a block left of centre)
-    bool on[5][16] = {};                           // the word's blocks
-    int x = 0;
-    for (const char *p = text; *p; p++) {
-      const Glyph *g = glyphFor(*p);
-      for (int r = 0; r < 5; r++)
-        for (int c = 0; c < glyphWidth(*g); c++)
-          if (g->rows[r][c] == '#') on[r][x + c] = true;
-      x += glyphWidth(*g) + (*p == 'T' ? 0 : 1);
-    }
-    for (int r = 0; r < ROWS4; r++)
+    // "TAP" in the font's letters, a block apart (11 x 5 blocks, the P's bowl
+    // closed), in the icon's colour (black), from the button's left block
+    // column in; a block lower while A is held (pressed).
+    static const char *const TAP[5] = {"###.###.###", ".#..#.#.#.#", ".#..###.###", ".#..#.#.#..", ".#..#.#.#.."};
+    const int w = 11, h = 5;
+    int c0 = PANEL_LEFT, r0 = (rows - h) / 2 + (heldAction >= 0);
+    for (int r = 0; r < h; r++)
       for (int c = 0; c < w; c++)
-        if (on[r][c]) block(c0 + c, r0 + r);
+        if (TAP[r][c] == '#') block(c0 + c, r0 + r);
   } else if (icon == ICON_METRO || icon == ICON_EAR) {
     // The metronome: four beats as dots (2 x 2), the bar's first raised above
     // the other three, 10 x 10, a block of margin round it at least;
