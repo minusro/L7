@@ -195,7 +195,7 @@ uint8_t screenSwitchKey() { return menuOnRelease | leaveOnRelease | flipOnReleas
 // A project with no clips (a new one too) comes in at once, not on the next
 // bar line: the clock (running) stopped, the project loaded (at once, the
 // clock stopped), and started again from 1.1.1 (as a load restarts it anyway).
-static bool loadFromMenu(int p) {
+static bool loadFromMenu(int p, bool keepSelection = false) {   // (keepSelection: a new one too keeps the looper's selection)
   bool fresh = !projectFilled(p);
   int from = projectCurrent();
   bool now = p != from && transport.running && recording.mode == Recording::Idle && !projectHasClipsIn(p);
@@ -206,7 +206,7 @@ static bool loadFromMenu(int p) {
   }
   if (now) startByHand();
   menuNoteLoad(from);                              // (its card and the old one's take turns until it comes in)
-  if (fresh) setMainSelection(NUM_TRACKS - 1, WAVE_CELL);
+  if (fresh && !keepSelection) setMainSelection(NUM_TRACKS - 1, WAVE_CELL);
   metronomeOn = metronomeWanted();                 // (now: its first beat clicks too)
   clickFromBeat = sceneSwitchBeat();               // (playing: silent until the switch)
   return true;
@@ -226,7 +226,7 @@ static bool leaveMenu(uint8_t key = 0) {
   if (!back) {
     int slot = menuFirstEmptySlot();
     if (slot < 0) return false;
-    if (loadFromMenu(slot)) back = true;             // (the menu's selection stays where it was: its column kept)
+    if (loadFromMenu(slot, true)) back = true;       // (the menu's selection stays where it was: its column kept; the looper's too)
   }
   if (back) {
     closeMenu(false);                                // (drawn below, where it lands)
