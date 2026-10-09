@@ -1255,7 +1255,7 @@ PROGMEM static const HelpOp HELP_PAGE_1[] = {
   {HELP_TEXT, 2, 8, 140, 0, 0, 0xCE79, HELP_STR_1, nullptr},
   {HELP_TEXT, 2, 8, 154, 0, 0, 0xCE79, HELP_STR_2, nullptr},
   {HELP_TEXT, 2, 8, 168, 0, 0, 0xCE79, HELP_STR_3, nullptr},
-  {HELP_TEXT, 2, 8, 182, 0, 0, 0x738E, HELP_STR_4, nullptr},
+  {HELP_TEXT, 2, 8, 196, 0, 0, 0x738E, HELP_STR_4, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_2[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},

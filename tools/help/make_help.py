@@ -143,8 +143,8 @@ def page(n, p):
                 lines += [(a, ink), ("AND " + b, ink)]
             else:
                 lines.append((line, ink))
-        for j, (line, ink) in enumerate(lines):
-            ops.append(("text", 8, 140 + j * 14, 2, NAMED[ink], line))
+        for j, (line, ink) in enumerate(lines):           # (the last, how to move, a line lower: apart)
+            ops.append(("text", 8, 140 + (j + (j == len(lines) - 1)) * 14, 2, NAMED[ink], line))
         return ops, 10
     ops.append(("text", 8, 8, 4, acc, t1))
     if t2: ops.append(("text", 8, 32, 4, NAMED["INK"], t2))
