@@ -359,7 +359,7 @@ static uint32_t itemKey(int k) {
 // it, ON or OFF; HELP at its top, right-aligned, a gap below it (grey, not yet). A or B on SETTINGS opens it (once let
 // go); UP/DOWN go through it, A or B turns the item on or off (on the press),
 // DOWN off its bottom one or LEFT/RIGHT close it (the menu's own selection
-// frame hidden meanwhile). Grey all over, from two blocks under the screen's top, each corner
+// frame hidden meanwhile). Grey all over, from four blocks under the screen's top, each corner
 // cut (its block and the two next to it); its items' frames as the list's, two
 // blocks of space round them; OFF and HELP dark grey.
 static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
@@ -372,7 +372,7 @@ int menuSettingsItem() { return menuSettingsOpen() ? setSel : -1; }
 // Its content's place (blocks): x, the bottom item's label row, the width;
 // its box (the border's outer edge). An item's label row: the switches up from
 // the bottom; HELP at the top, a gap below it.
-static constexpr int SET_TOP = 2;                // (the box's top row: two blocks under the screen's)
+static constexpr int SET_TOP = 4;                // (the box's top row: four blocks under the screen's)
 static int setRow(int i, int yb) { return i == SETTING_COUNT ? SET_TOP + 5 : yb - i * SET_PITCH; }
 static void setLayout(int &x, int &yb, int &w) {
   int lw = 0;
@@ -386,7 +386,7 @@ static void setBox(int &x0, int &y0, int &x1, int &y1) {
   setLayout(x, yb, w);
   x0 = x - 5;
   x1 = x + w + 4;
-  y0 = SET_TOP;                                    // (up to two blocks short of the screen's top)
+  y0 = SET_TOP;                                    // (up to four blocks short of the screen's top)
   y1 = yb + 9;
 }
 // An item's place overlapping the popup's (its frame's too): not drawn while
