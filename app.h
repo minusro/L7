@@ -45,6 +45,12 @@ bool metronomeWanted();                  // the click, by the setting now (a rec
 enum { SET_MONITOR, SET_PLAY_NEW, SET_NEXT_FREE, SET_EMPTY_CLICK, SETTING_COUNT };
 bool setting(int which);
 void setSetting(int which, bool on);
+// The help pages (the menu's HELP, ui_help.cpp): those seen (a bit each, the
+// first page bit 0) and the one last shown (0: the title page), saved with
+// the session; setHelpPage() shows another, marking it seen.
+uint16_t helpSeen();
+int helpPage();
+void setHelpPage(int page);
 // The session: the tempo, the master volume, the loaded project and the
 // selected row and cell (the app's: loading a project or changing scene
 // leaves it as it is), kept in SESSION.DAT. beginSession() loads it (none

@@ -219,13 +219,24 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the item on / off at once, on the press (the action button: a tick); DOWN off its bottom item,
   or LEFT / RIGHT, close it; no edge leads out of the menu while it's open (LEFT + RIGHT held
   still does, closing it). The items under it aren't drawn meanwhile.
+  The help pages (`menuHelp()`, ui_help.cpp, drawn from help_slides.h: tools/help/make_help.py):
+  12 pages over the whole screen, from HELP, on the page last shown. Each page: the menu's ground,
+  a big title top left (its first line in the page's project colour, A-L by page, the second
+  white), the page's number in a tile of that colour top right, one to three screenshots
+  (numbered in circles of that colour; their accent turned to its hue) with captions, two lines
+  of text under a rule of that colour (the first page: the logo, HOW TO and three lines); then
+  the page row: a square each, the pages seen filled in their colour, the others a grey outline,
+  the shown one in a light grey line 2 px out (its corners cut). LEFT / RIGHT turn the pages,
+  wrapping round; a held arrow's repeats stop at the title page (a fresh press goes on); A or B
+  goes back to the menu; no edge leads out meanwhile. The pages seen and the last one shown are
+  saved with the session (`helpseen=`, a bit each; `helppage=`).
   Left with A or B on a card (to the looper: the loaded one, a new project, or held after a
   load), the menu comes back on the loaded project's card, whichever edge it's opened from
   (`menuNoteLeave()`); left off an edge, it lands where that arrow leads, as ever.
   No mark for the
   way out (any edge, `menuLeavesOn()`); while an arrow is held that leaves it once let go,
   the selection frame is hidden. Under them
-  a list, "EXPORT ABLETON PROJECT", "STORAGE MODE", "SETTINGS" (A or B, once let go: the settings popup, below) and "HELP" (not yet: grey, the action button grey with no icon; still selectable), up to four in view at a time (scrolling once it has more; the last level with the logo; `MENU_EXPORT`... in ui.h). Export
+  a list, "EXPORT ABLETON PROJECT", "STORAGE MODE", "SETTINGS" (A or B, once let go: the settings popup, below) and "HELP" (A or B, once let go: the help pages, below; the action button a question mark), up to four in view at a time (scrolling once it has more; the last level with the logo; `MENU_EXPORT`... in ui.h). Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
   3/14" (samples copied, then the set) and then "SAVED AS L7 A005" ("SAVED AS" grey,

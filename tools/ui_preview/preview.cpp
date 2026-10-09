@@ -456,6 +456,11 @@ int main(int argc, char **argv) {
   menuSettings(true);
   writePng(out + "/ui_menu_settings_opened.png");  // (as drawn: opened over the menu as it was)
   menuSettings(false);
+  for (int n = 0; n < helpPages(); n++) {          // the help pages, as drawn
+    setHelpPage(n);
+    drawHelpPage(n);
+    writePng(out + "/ui_help_" + std::to_string(n + 1) + ".png");
+  }
   closeMenu();
   return 0;
 }

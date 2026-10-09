@@ -96,6 +96,21 @@ its own project, colour, tempo, scenes and tracks: a groove, range and filter
 and volume edits, a recording, tap tempo, the menu, a new project waiting to
 record) as `show_*.png`; the last set is in `docs/design/showcase/`.
 
+## Help pages (`tools/help/make_help.py`)
+
+The menu's HELP pages are drawn from `help_slides.h`, which this script
+writes from the pages' content (in the script) and the UI preview's
+screenshots. After changing either (or anything the screenshots show), render
+the screenshots and run it again:
+
+```sh
+tools/ui_preview/build.sh && mkdir -p /tmp/l7prev && (cd /tmp/l7prev && "$OLDPWD/tools/ui_preview/ui_preview")
+python3 tools/help/make_help.py /tmp/l7prev
+```
+
+The preview renders the pages themselves too (`ui_help_1.png` ...), as the
+firmware draws them.
+
 ## On the device
 
 Serial (115200) logs worth asking for when something glitches:

@@ -461,6 +461,11 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
     const uint8_t act = m8::BTN_EDIT | m8::BTN_OPT;
     if (pressed & act) noteActionPress();            // (the icon: what letting go will do)
+    if (menuHelpOpen() && !armed) {                  // the help pages: LEFT / RIGHT turn them, A or B back to the menu
+      if (pressed & act) menuHelp(false);
+      else if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) moved = menuHelpKeys(pressed, repeat);
+      return;
+    }
     if (menuSettingsOpen() && !armed) {              // the settings popup: A or B turns its item on / off (on the
       if (pressed & act) menuSettingsAct();          // press); the arrows go through it (DOWN off its bottom, LEFT / RIGHT: closed)
       else if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) moved = menuSettingsKeys(pressed);
@@ -489,9 +494,10 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     if (armed && !(keys & (m8::BTN_EDIT | m8::BTN_OPT))) {   // all let go: act
       armed = false;
       int slot = armedSlot;
-      if (slot < 0) {                                // the list's items: export, storage mode, the settings
+      if (slot < 0) {                                // the list's items: export, storage mode, the settings, help
         if (armedItem == MENU_EXPORT && !shifted && projectCurrent() >= 0 && projectHasClips() && !menuExportShown()) exportToAbleton();
         if (armedItem == MENU_SETTINGS && !shifted) menuSettings(true);
+        if (armedItem == MENU_HELP && !shifted) menuHelp(true);
         if (armedItem == MENU_STORAGE && !shifted) {
           bool wasRunning = transport.running;
           midiInSuspend(true);                       // (no MIDI taken in meanwhile)

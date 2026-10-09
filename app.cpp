@@ -89,6 +89,16 @@ static void applySettings() {
   inputMonitored = settings[SET_MONITOR];
   newClipsPlay = settings[SET_PLAY_NEW];
 }
+static uint16_t seenPages = 0, savedSeenPages = 0;
+static int shownPage = 0, savedShownPage = 0;
+uint16_t helpSeen() { return seenPages; }
+int helpPage() { return shownPage; }
+void setHelpPage(int page) {
+  if (page < 0 || page > 15) return;
+  shownPage = page;
+  seenPages |= 1 << page;
+  changedMs = millis();
+}
 void setSetting(int which, bool on) {
   if (which < 0 || which >= SETTING_COUNT) return;
   settings[which] = on;
@@ -118,6 +128,8 @@ void beginSession() {
   if (s.metro >= METRO_OFF && s.metro <= METRO_ON) metroMode = savedMetro = s.metro == METRO_ON ? METRO_ON : METRO_OFF;   // (auto: off, the setting below)
   for (int i = 0; i < SETTING_COUNT; i++) settings[i] = savedSettings[i] = s.settings[i];
   applySettings();
+  seenPages = savedSeenPages = (uint16_t)s.helpSeen;
+  shownPage = savedShownPage = s.helpPage;
   audioFollowBegin(s.follow);
   savedFollow = s.follow;
   for (int i = 0; i < SYNC_SOURCES; i++) syncOffsetMs[i] = savedOffsets[i] = (int16_t)s.offsets[i];
@@ -132,7 +144,7 @@ static bool sessionDirty() {
   mainSelection(row, cell);                        // (the looper's, not the menu's)
   return tempoDirty || masterVolume() != savedMaster || masterBalance() != savedBalance || projectCurrent() != savedProject ||
          menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell ||
-         metroMode != savedMetro || audioFollowOn() != savedFollow || memcmp(settings, savedSettings, sizeof settings) ||
+         metroMode != savedMetro || audioFollowOn() != savedFollow || memcmp(settings, savedSettings, sizeof settings) || seenPages != savedSeenPages || shownPage != savedShownPage ||
          memcmp(syncOffsetMs, savedOffsets, sizeof savedOffsets);
 }
 
@@ -149,6 +161,8 @@ static void writeSession() {
   s.metro = metroMode;
   s.follow = audioFollowOn();
   for (int i = 0; i < SETTING_COUNT; i++) s.settings[i] = savedSettings[i] = settings[i];
+  s.helpSeen = savedSeenPages = seenPages;
+  s.helpPage = savedShownPage = shownPage;
   for (int i = 0; i < SYNC_SOURCES; i++) s.offsets[i] = savedOffsets[i] = syncOffsetMs[i];
   saveSession(s);
   savedMetro = s.metro;

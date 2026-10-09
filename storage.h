@@ -174,6 +174,7 @@ struct Session {
   bool follow = false;                             // audio follow (audio_follow.h)
   int offsets[3] = {0, 0, 0};                      // the external clocks' offsets, ms (midi_in.h syncOffsetMs: serial MIDI, USB MIDI, audio)
   bool settings[4] = {true, true, true, true};     // app.h's settings: monitor, play new, next free, empty project click
+  int helpSeen = 0, helpPage = 0;                  // the help pages seen (a bit each) and the one last shown (app.h)
 };
 Session loadSession();
 // A new recording plays once it's done (false: it comes in muted; app.h's setting).

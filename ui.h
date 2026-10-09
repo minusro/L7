@@ -255,6 +255,14 @@ void menuSettings(bool open);
 bool menuSettingsKeys(uint8_t pressed);
 void menuSettingsAct();
 void menuNoteLeave(bool byAction);
+// The help pages (the menu's HELP): open (over the whole screen) or closed;
+// the arrows in them (LEFT/RIGHT: the page before / after, wrapping; held, a
+// repeat stops at the title page); drawing a page (ui_help.cpp); their number.
+bool menuHelpOpen();
+void menuHelp(bool open);
+bool menuHelpKeys(uint8_t pressed, bool repeat);
+void drawHelpPage(int page);
+int helpPages();
 void menuCutFlash(int k);                // (ui_menu.cpp) the hold to cut through: card k flashed white 100 ms as an empty slot's
 void menuSelectSlot(int k);              // the menu's selection on card k
 void menuNoteLoad(int from);             // a project just loaded from the menu, `from` the one before: its card flashing until it comes in

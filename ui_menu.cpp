@@ -58,6 +58,7 @@ static int menuSel = 0;                          // the selected item
 static bool setOpen = false, setDrawn = false;   // the settings popup open (below); setDrawn: its box on screen (else drawn whole next)
 static int setSel = 0;                           // its selected item (0: the bottom one)
 static uint32_t setPressAt = 0;                  // millis() of the latest A or B press in it (0: none)
+static bool helpOpen = false;                    // the help pages open (over the whole screen)
 static int cardCol = 0;                          // the card column last selected (UP from the list goes back to it)
 static bool onStatus = false;                    // the selection is on the status row (selected = STATUS_ROW meanwhile)
 static int statusCell = SCENE_CELL;              // where on it, while the menu's closed (or the selection's up in the menu)
@@ -312,7 +313,7 @@ static void drawItem(int k) {
   } else {                                        // a list item: its frame round its label, rounded
     fillRing(s, LIST_SPACE + 1, LIST_SPACE, frame, true);
     fillRing(s, LIST_SPACE, 0, MENU_BG);
-    bool off = (k - CARDS == MENU_EXPORT && !projectHasClips()) || k - CARDS == MENU_HELP;   // export: nothing to export (no clips, or the dummy project); help: not yet
+    bool off = k - CARDS == MENU_EXPORT && !projectHasClips();   // export: nothing to export (no clips, or the dummy project)
     const char *label = k == CARDS && exportText[0] ? exportText : LABELS[k - CARDS];
     uint16_t ink = off ? DIM : sel ? INK : LIGHT;
     if (k == CARDS && exportText[0] && exportNameAt > 0 && exportFor >= 0) {   // "SAVED AS " grey, the name in the project's colour
@@ -334,8 +335,7 @@ uint16_t menuActionColor() {
   dropStaleExport();
   if (!shown || onStatus) return ACCENT;
   if (menuSel < CARDS) return PROJECT_COLORS[menuSel];
-  if (menuSel - CARDS == MENU_HELP) return DIM;    // (help: not yet)
-  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode, settings: system-level)
+  if (menuSel - CARDS >= 1) return LIGHT;          // (storage mode, settings, help: system-level)
   return projectHasClips() && !exportText[0] ? ACCENT : DIM;   // export: grey with nothing to export, or while its label shows
 }
 
@@ -481,6 +481,36 @@ FLASHMEM void menuSettingsAct() {
   drawSettings(false);
 }
 
+// ---- The help pages: over the whole screen, from the menu's HELP (once let
+// go), on the page last shown; LEFT/RIGHT the page before / after (wrapping
+// round; a held arrow's repeats stop at the title page, a fresh press goes on),
+// A or B back to the menu. Each page drawn whole as it's turned to (ui_help.cpp).
+bool menuHelpOpen() { return shown && helpOpen; }
+
+FLASHMEM void menuHelp(bool open) {
+  if (!shown || helpOpen == open) return;
+  helpOpen = open;
+  if (open) {
+    setHelpPage(constrain(helpPage(), 0, helpPages() - 1));   // (seen)
+    drawHelpPage(helpPage());
+    return;
+  }
+  uiGeneration++;                                  // (the menu whole again)
+  drawMenu();
+}
+
+FLASHMEM bool menuHelpKeys(uint8_t pressed, bool repeat) {
+  const int n = helpPages(), p = helpPage();
+  if (repeat && p == 0) return false;              // (held on: it stops at the title page)
+  int to = p;
+  if (pressed & m8::BTN_RIGHT) to = (p + 1) % n;
+  if (pressed & m8::BTN_LEFT) to = (p + n - 1) % n;
+  if (to == p) return false;
+  setHelpPage(to);
+  drawHelpPage(to);
+  return true;
+}
+
 // The battery, top right (two blocks in): a tiny grey one, 11 x 7 blocks, its
 // outline, a block of space, its fill in sevenths (90 % and up: full); its tip
 // a block right, 3 blocks tall. Charging: a plus in its middle instead of the
@@ -512,7 +542,7 @@ static void drawBattery(bool all) { drawBatteryIcon(all, DIM, MENU_BG); }
 FLASHMEM void drawMenu() {
   static uint32_t shownKey[ITEMS];
   static uint32_t drawn = 0;                     // uiGeneration when last drawn whole
-  if (!shown) return;
+  if (!shown || helpOpen) return;                // (the help pages: drawn when they change, drawHelpPage())
   dropStaleExport();                             // (the project changed, or another one loaded: the export's message goes)
   bool all = drawn != uiGeneration;
   auto &t = board.tft();
@@ -682,7 +712,7 @@ int menuFirstEmptySlot() {
 bool menuLeavesOn(uint8_t key) {
   // (No project loaded: leaving makes a new one in the first empty slot; with none, nowhere to go.)
   if (!shown || onStatus || (projectCurrent() < 0 && menuFirstEmptySlot() < 0)) return false;
-  if (menuLoadPending() || setOpen) return false;   // (the settings open: DOWN, LEFT and RIGHT close them)           // (a project on its way: not until it has come in)
+  if (menuLoadPending() || setOpen || helpOpen) return false;   // (the settings open: DOWN, LEFT and RIGHT close them; help: the arrows turn its pages)           // (a project on its way: not until it has come in)
   // RIGHT off the screen's right edge (the looper's that way): off a card
   // row's right end, or a list item's side; LEFT off its left edge; UP off its
   // top: the top card row (A-D); DOWN off its bottom: the list's last item.
@@ -719,6 +749,7 @@ FLASHMEM void openMenu(uint8_t key) {
     selectedCell = statusCell;
   }
   setOpen = false;
+  helpOpen = false;
   if (backToCard && projectCurrent() >= 0) {      // left with A or B on a card: back on the loaded project's card
     menuSel = projectCurrent();
     cardCol = menuSel % COLS;
@@ -740,6 +771,7 @@ void closeMenu(bool draw) {
   selectedCell = mainCell;
   shown = false;
   setOpen = false;
+  helpOpen = false;
   notesLayout = notesScreen;                     // (back to the screen it came from: notes, or main)
   // (Not the whole screen wiped first, which flickered: the looper's rows,
   // drawn whole below, cover all of it but the strip under the last track's
