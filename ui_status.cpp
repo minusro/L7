@@ -53,7 +53,7 @@ static constexpr int MV_HALF = (MV_ROWS - 4 - 1) / 2;                       // r
 static_assert(MV_LEFT >= 2, "the lines inside the border's block of space");
 static constexpr float MV_FALL_DB_PER_S = 24;
 
-static void drawMasterVolume(bool full) {
+FLASHMEM static void drawMasterVolume(bool full) {   // (flash: RAM1 is full)
   static uint16_t shown[MV_LINES][2];
   static float meterDb[2] = {-200, -200};
   static uint32_t lastMs = 0;
@@ -101,7 +101,7 @@ static void drawFrame(int cell) {
       t.fillRect(c.x + k * PX, top + r * PX, PX, PX, borderAt(STATUS_ROW, cell, r, k, rows, cols));
 }
 
-void drawStatus() {
+FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the status row is drawn every 30 ms at most)
   if (menuOpen()) return;                          // (the menu: only the action button shows on the status row)
   static uint64_t shownBorders = 0;                // the cells' borders (bordersOf())
   static uint32_t drawn = 0;                       // uiGeneration when the cells were last cleared
