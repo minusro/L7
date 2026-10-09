@@ -333,8 +333,8 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     // cross: a slash from the top right to the bottom left, cleared a block
     // either side.
     static const char *const METRONOME[10] = {   // (the beats: the bar's first raised, three after it)
-        "..........", "..........", "##........", "##........", "..........",
-        "..##.##.##", "..##.##.##", "..........", "..........", ".........."};
+        "..........", "..........", "..........", "##........", "##........",
+        "..........", "..##.##.##", "..##.##.##", "..........", ".........."};
     static const char *const EAR[10] = {   // (audio follow: a jack plug coming in from the right, an arrow above it pointing in)
         "...#......", "..##......", ".#######..", "..##......", "...#......",
         "..........", "......####", ".##.######", ".##.######", "......####"};
