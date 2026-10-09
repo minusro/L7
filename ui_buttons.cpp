@@ -405,7 +405,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   }
   int bottom = top + height, end = bgTop(i) + bgHeight(i);
   if (i == STATUS_ROW && !menuOpen()) {            // (a track's: its volume cell right up to it)
-    t.fillRect(TEMPO_BOX.x + TEMPO_BOX.w, top, bx - TEMPO_BOX.x - TEMPO_BOX.w, height, round);   // (from the tempo cell's right edge)
+    t.fillRect(BUTTON_X - PX, top, PX, height, round);
   }
   if (bottom < end) {                              // the margin below: the last track's ground's last block row (as under its cells), then black
     int groundEnd = i != STATUS_ROW ? min(end, bottom + PX) : bottom;
