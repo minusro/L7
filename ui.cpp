@@ -256,17 +256,17 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
     const int e = strlen(ends);
     part(e, len - 2 * e, mid);
     for (int k = 0; k < e; k++) {
-      int c = ends[k] == 'L' ? LIGHT : ends[k] == 'J' ? DARK : ends[k] == '0' ? BG : TRANSPARENT;
+      int c = ends[k] == 'L' ? DIM : ends[k] == 'J' ? DARK : ends[k] == '0' ? BG : TRANSPARENT;
       if (c == TRANSPARENT) continue;
       part(k, 1, (uint16_t)c);
       part(len - 1 - k, 1, (uint16_t)c);
     }
   };
-  if (menuOpen()) {                                // leaving the menu: a light grey line a block wide, the edge's whole length
-    if (key == m8::BTN_LEFT) t.fillRect(0, 0, PX, 240, LIGHT);
-    else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX, 0, PX, 240, LIGHT);
-    else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, PX, LIGHT);
-    else t.fillRect(0, 240 - PX, 320, PX, LIGHT);
+  if (menuOpen()) {                                // leaving the menu: a grey line a block wide, the edge's whole length
+    if (key == m8::BTN_LEFT) t.fillRect(0, 0, PX, 240, DIM);
+    else if (key == m8::BTN_RIGHT) t.fillRect(320 - PX, 0, PX, 240, DIM);
+    else if (key == m8::BTN_UP) t.fillRect(0, 0, 320, PX, DIM);
+    else t.fillRect(0, 240 - PX, 320, PX, DIM);
     shownDepth = PX;
     if (key == m8::BTN_LEFT) t.setClipRect(PX, 0, 320 - PX, 240);
     else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - PX, 240);
@@ -276,7 +276,7 @@ FLASHMEM static void paintEdgeLine(uint8_t key) {
   }
   const int thick = key == m8::BTN_UP || key == m8::BTN_DOWN ? 6 : 9;   // (the thick one: 9 blocks; along the top or bottom, 6)
   strip(0, thick, DARK, "TTTT0L");                 // (0LJJJJL0)
-  strip(thick, 1, LIGHT, "TTTT00");                // (00LLLL00)
+  strip(thick, 1, DIM, "TTTT00");                 // (00LLLL00)
   strip(thick + 1, 1, BG, "TTTTT");                // (T000000T)
   const int D = (thick + 2) * PX;                  // (the clip: the screen less the line)
   shownDepth = D;
