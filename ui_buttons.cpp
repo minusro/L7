@@ -282,16 +282,21 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   // The action button: as tall as the status cells.
   const int height = i == STATUS_ROW ? STATUS_H : ROW_BAND;
   static uint16_t px[BUTTON_W * max(STATUS_H, ROW_BAND)];
-  // A track's: on the selected track's dark grey ground (rowGround(); its
-  // top block row shared with the row above's ground, as the cells' borders).
-  const uint16_t ground = i != STATUS_ROW && bg == BG ? rowGround(i) : bg;
-  const uint16_t topGround = i != STATUS_ROW && bg == BG && rowGround(rowAbove(i)) == DARK ? DARK : ground;
-  for (int p = 0; p < BUTTON_W * height; p++) px[p] = p < BUTTON_W * PX ? topGround : ground;
+  // A track's: black (the selected row's dark grey ground ends at its last
+  // cell); its top block row the panel's of the selected track above, if that
+  // one shows (its bottom block row: the selected row's ground shares it).
+  const uint16_t ground = bg;
+  const uint16_t topGround = ground;
+  for (int p = 0; p < BUTTON_W * height; p++) px[p] = ground;
   auto blockIn = [&](int c, int r, uint16_t ink) {
     for (int dy = 0; dy < PX; dy++)
       for (int dx = 0; dx < PX; dx++) px[(r * PX + dy) * BUTTON_W + c * PX + dx] = ink;
   };
   const int cols = BUTTON_W / PX, rows = height / PX;
+  const int PANEL_C0 = PANEL_LEFT + 1;            // (the panel's first column)
+  const uint16_t abovePanel = i != STATUS_ROW && rowAbove(i) == selected && selected < NUM_TRACKS ? markColor() : BG;
+  if (abovePanel != BG)
+    for (int c = PANEL_C0 + 1; c < cols; c++) blockIn(c, 0, abovePanel);   // (its bottom left corner cut)
   // The selected track's panel, under its number or icons: from a block in to
   // the right edge, the button's height but its top and bottom block rows, its left
   // corners cut (a border round the badge: a block on top, two on the left and
@@ -299,9 +304,9 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   // colour while A is held, showing just the track's number then, in black.
   uint16_t panel = i == selected && i != STATUS_ROW ? markColor() : BG;
   if (panel != BG) {
-    for (int r = 1; r < rows - 1; r++)            // (not the top block row, nor the bottom one)
-      for (int c = PANEL_LEFT + 1; c < cols; c++)     // (from two blocks in, to the right edge)
-        if (!(c == PANEL_LEFT + 1 && (r == 1 || r == rows - 2))) blockIn(c, r, panel);   // (the left corners cut)
+    for (int r = 0; r < rows; r++)                // (the row's ground's height: its bottom block row the next row's top one)
+      for (int c = PANEL_C0; c < cols; c++)           // (from two blocks in, to the right edge)
+        if (!(c == PANEL_C0 && r == 0)) blockIn(c, r, panel);   // (the top left corner cut; the bottom left one in the next row)
     if (color == panel) color = BG;                // (a recording icon in the accent colour, on it)
     if (panel == ACCENT && badge != BADGE_NONE) badge = BADGE_LABEL;   // highlighted: the number alone
   }
@@ -386,7 +391,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     // black, its number in the accent colour, on the panel in the accent colour.)
     uint16_t frame = badge == BADGE_PLAYING ? (panel == ACCENT ? BG : ACCENT) : (panel != BG ? BG : DIM);
     uint16_t ink = badge == BADGE_PLAYING ? (panel == ACCENT ? ACCENT : BG)
-                 : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL || panel != BG || i == selected ? BG : DARK;   // (empty: black on the panel, or on the selected row's ground)
+                 : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL || panel != BG ? BG : DARK;   // (empty: black on the panel)
     drawBadge(trackNumber(i), badge == BADGE_PLAYING, badge == BADGE_PLAYING || badge == BADGE_MUTED, frame, ink);
   }
   const uint16_t round = i == STATUS_ROW ? (menuOpen() ? MENU_BG : BG) : rowGround(i);   // (round the button: the menu's ground while it's open; a selected track's; the status row's highlight ends at the tempo cell)
@@ -406,6 +411,8 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     int groundEnd = i != STATUS_ROW ? min(end, bottom + PX) : bottom;
     const int gx = i == STATUS_ROW ? bx - PX : bx;   // (a track's: from the button, its volume cell's below it its own)
     if (groundEnd > bottom) t.fillRect(gx, bottom, BUTTON_W + bx - gx, groundEnd - bottom, ground);
+    if (i != STATUS_ROW && groundEnd > bottom && panel != BG)   // (the last track's: its panel's bottom block row in the margin, its left corner cut)
+      t.fillRect(bx + (PANEL_C0 + 1) * PX, bottom, BUTTON_W - (PANEL_C0 + 1) * PX, groundEnd - bottom, panel);
     if (end > groundEnd) t.fillRect(gx, groundEnd, BUTTON_W + bx - gx, end - groundEnd, i == STATUS_ROW ? round : BG);
   }
 }
@@ -427,7 +434,7 @@ void drawCells(int i) {
   k.metro = k.icon == ICON_METRO ? (uint8_t)(metronomeMode() + 4 * metronomeOn)   // (its look: the setting now, crossed while clicking;
           : k.icon == ICON_EAR ? (uint8_t)(8 + audioFollowOn()) : 0;                   // the input: crossed while following)
   k.ground = rowGround(i);                         // (the selected row's ground, under the button too)
-  if (i != STATUS_ROW) k.topGround = rowGround(rowAbove(i));
+  if (i != STATUS_ROW) k.topGround = rowAbove(i) == selected && selected < NUM_TRACKS ? markColor() : BG;   // (the selected panel above's bottom row)
   bool first = drawn[i] != uiGeneration;
   if (!first && !memcmp(&k, &shown[i], sizeof k)) return;
   drawn[i] = uiGeneration;
