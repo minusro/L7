@@ -18,31 +18,36 @@ from PIL import Image, ImageDraw
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 PREV = sys.argv[1]
 
-# ---- The pages: the title (two lines), the screenshots (preview name, caption),
-# notes beside a lone screenshot, two lines of text (the first page: three).
+# ---- The pages: the title (two lines), the steps (a preview screenshot, the
+# part of it shown, its caption), notes under them, two lines of text (the
+# first page: three). The parts, at the screen's size (px, on the 2 px grid):
+def TRACK(t, x0=110): top = (7 - t) * 30; return (x0, top, x0 + 210, top + 30)   # track t's row (from x0: its right part)
+STATUS_LEFT, STATUS_RIGHT = (0, 212, 210, 240), (110, 212, 320, 240)            # the status row: the scene's end, the tempo's
+CARDS = (60, 26, 270, 64)                                                         # the menu's top card row
+BOTTOM = (0, 120, 320, 240)                                                       # the screen's bottom half (tracks 3-1, the status row)
 PAGES = [
-    dict(title=("L7", "HOW TO"), panels=[], lines=("A LOOPER FOR THE M8", "7 STEREO TRACKS, 200 SCENES AND 12 PROJECTS", "< > TO MOVE")),
-    dict(title=("THE", "SCREEN"), panels=[("ui_wave", "7 TRACKS")],
-         lines=("A TRACK: SOUND, FILTER, VOLUME", "BELOW: SCENE, TIME, TEMPO"), notes=["^v<> SELECT", "A: DO IT"]),
-    dict(title=("RECORD", ""), panels=[("ui_empty", "EMPTY"), ("ui_recording", "RECORD"), ("ui_wave", "PLAY")],
+    dict(title=("L7", "HOW TO"), steps=[], lines=("A LOOPER FOR THE M8", "7 STEREO TRACKS, 200 SCENES AND 12 PROJECTS", "< > TO MOVE")),
+    dict(title=("THE", "SCREEN"), whole=("ui_played", BOTTOM),
+         lines=("A TRACK: SOUND, FILTER, VOLUME", "BELOW: SCENE, TIME, TEMPO")),
+    dict(title=("RECORD", ""), steps=[("ui_empty", TRACK(2), "EMPTY"), ("ui_recording", TRACK(2), "RECORD"), ("ui_played", TRACK(2), "PLAY")],
          lines=("A: RECORD", "A AGAIN: STOP. IT PLAYS")),
-    dict(title=("MUTE", ""), panels=[("ui_wave", "PLAY"), ("ui_muted", "MUTE")],
+    dict(title=("MUTE", ""), steps=[("ui_wave", TRACK(6), "PLAY"), ("ui_muted", TRACK(5), "MUTE")],
          lines=("A: MUTE OR PLAY", "HOLD A, PRESS ^v: MORE TRACKS")),
-    dict(title=("LENGTH", ""), panels=[("ui_wave", "LONG"), ("ui_wave_edit", "SHORT")],
+    dict(title=("LENGTH", ""), steps=[("ui_wave", TRACK(6, 0), "LONG"), ("ui_wave_edit", TRACK(6, 0), "SHORT")],
          lines=("HOLD B, PRESS ^v: LONGER OR SHORTER", "HOLD B, PRESS < >: MOVE IT")),
-    dict(title=("FILTER", "VOLUME"), panels=[("ui_filter_edit", "FILTER"), ("ui_mix_edit", "VOLUME")],
+    dict(title=("FILTER", "VOLUME"), steps=[("ui_filter_edit", TRACK(4), "FILTER"), ("ui_mix_edit", TRACK(3), "VOLUME")],
          lines=("HOLD B ON A FILTER OR VOLUME", "PRESS THE ARROWS TO CHANGE IT")),
-    dict(title=("CLIPS", ""), panels=[("ui_cut", "CUT"), ("ui_paste", "PASTE"), ("ui_shift_track", "CHANGE")],
+    dict(title=("CLIPS", ""), steps=[("ui_cut", TRACK(6), "CUT"), ("ui_paste", TRACK(2), "PASTE"), ("ui_shift_track", TRACK(5, 0), "CHANGE")],
          lines=("SHIFT+A: CUT OR PASTE", "SHIFT+< >: OTHER SOUNDS")),
-    dict(title=("SCENES", ""), panels=[("ui_wave", "SCENE 1"), ("ui_status_scene_edit", "SCENE 2")],
+    dict(title=("SCENES", ""), steps=[("ui_played", STATUS_LEFT, "SCENE 1"), ("ui_status_scene_edit", STATUS_LEFT, "SCENE 2")],
          lines=("A SCENE KEEPS ALL TRACKS", "SHIFT+^v: NEXT SCENE")),
-    dict(title=("TEMPO", ""), panels=[("ui_status_tap_held", "TAP"), ("ui_status_metro_on", "CLICK")],
+    dict(title=("TEMPO", ""), steps=[("ui_status_tap_held", STATUS_RIGHT, "TAP"), ("ui_status_metro_on", STATUS_RIGHT, "CLICK")],
          lines=("START: PLAY OR STOP", "A ON TEMPO: TAP. B+A: CLICK")),
-    dict(title=("RESAMPLE", "AND MOVE"), panels=[("ui_resampling", "RESAMPLE"), ("ui_move", "MOVE")],
+    dict(title=("RESAMPLE", "AND MOVE"), steps=[("ui_resampling", TRACK(2), "RESAMPLE"), ("ui_move", TRACK(2), "MOVE")],
          lines=("B+A: RECORD WHAT YOU HEAR", "B+^v: MOVE A TRACK")),
-    dict(title=("SYNC", ""), panels=[("ui_status_follow_on", "FOLLOW")],
+    dict(title=("SYNC", ""), steps=[("ui_status_follow_on", STATUS_RIGHT, "FOLLOW")],
          lines=("L7 FOLLOWS MIDI AND USB CLOCK", "SHIFT+A ON TEMPO: FOLLOW AUDIO"), notes=["MIDI", "USB", "AUDIO"]),
-    dict(title=("PROJECTS", ""), panels=[("ui_menu_load", "OPEN"), ("ui_menu_cut", "CUT")],
+    dict(title=("PROJECTS", ""), steps=[("ui_menu_load", CARDS, "OPEN"), ("ui_menu_cut", CARDS, "CUT")],
          lines=("ARROW OFF THE EDGE: MENU", "A: OPEN. SHIFT+A: CUT")),
 ]
 
@@ -53,7 +58,7 @@ for m in re.finditer(r"\{'(.)',\s*\{((?:\"[.#]*\",?\s*)+)\}", src):
     GLYPHS[m.group(1)] = re.findall(r'"([.#]*)"', m.group(2))
 def g(ch): return GLYPHS.get(ch) or GLYPHS.get(ch.upper()) or GLYPHS[' ']
 def text_w(s, k=1): return max(0, sum((len(g(c)[0]) + 1) * k for c in s) - k)
-for line in [l for p in PAGES for l in p["lines"] + tuple(p.get("notes", [])) + p["title"]] + [c for p in PAGES for _, c in p["panels"]]:
+for line in [l for p in PAGES for l in p["lines"] + tuple(p.get("notes", [])) + p["title"]] + [c for p in PAGES for _, _, c in p.get("steps", [])]:
     for ch in line:
         if ch not in GLYPHS and ch.upper() not in GLYPHS: sys.exit(f"not in the font: {ch!r} ({line})")
 
@@ -145,20 +150,27 @@ def page(n, p):
     if t2: ops.append(("text", 8, 32, 4, NAMED["INK"], t2))
     ops.append(("rect", 254, 6, 60, 48, acc))
     ops.append(("text", ev(284 - text_w(str(n), 6) // 2), 16, 6, NAMED["BG"], str(n)))
-    count = len(p["panels"])
-    places = {1: [(8, 64, 144, 108)], 2: [(12, 66, 128, 96), (180, 66, 128, 96)], 3: [(8 + i * 104, 68, 96, 72) for i in range(3)]}[count]
-    for i, ((name, lab), (x, y, w, h)) in enumerate(zip(p["panels"], places)):
-        ops.append(("rect", x - 2, y - 2, w + 4, h + 4, NAMED["BG"]))   # (a black frame a block wide)
-        ops.append(("image", x, y, image((name, acc, w, h), shot(name, acc).resize((w, h), Image.NEAREST))))
-        if count > 1:
-            cx = ev(max(x - 10, 2))                           # (on the screen: the first one in from its edge)
-            ops.append(("image", cx, ev(y - 12), circle(acc)))
-            ops.append(("text", cx + 8, ev(y - 12) + 6, 2, NAMED["BG"], str(i + 1)))   # (its digit: 4 blocks in, 3 down)
-            ops.append(("text", x, y + h + 6, 2, NAMED["LIGHT"], lab))
-    if p.get("notes"):
-        ops.append(("text", 164, 66, 2, NAMED["INK"], p["panels"][0][1]))
-        for j, line in enumerate(p["notes"]):
-            ops.append(("text", 164, 86 + j * 14, 2, acc if j == 0 else NAMED["LIGHT"], line))
+    # The steps: strips, each its part of a screenshot at the screen's size in a
+    # black frame a block wide, its number in a circle left of it, its caption
+    # right of it; centred together between the title and the rule. A page
+    # without steps: its screenshot's part whole, the screen's width.
+    if p.get("whole"):
+        name, crop = p["whole"]
+        ops.append(("image", 0, 60, image((name, acc, crop), shot(name, acc).crop(crop))))
+    steps = p.get("steps", [])
+    PITCH, TOP, ROOM = 42, 60, 118                     # (a strip every 42 px, in y 60-178)
+    y = ev(TOP + (ROOM - (len(steps) * PITCH - 12)) // 2) if not p.get("notes") else 62
+    for i, (name, crop, lab) in enumerate(steps):
+        w, h = crop[2] - crop[0], crop[3] - crop[1]
+        ops.append(("rect", 30, y - 2, w + 4, h + 4, NAMED["BG"]))
+        ops.append(("image", 32, y, image((name, acc, crop), shot(name, acc).crop(crop))))
+        cy = ev(y + h // 2 - 11)
+        ops.append(("image", 4, cy, circle(acc)))
+        ops.append(("text", 12, cy + 6, 2, NAMED["BG"], str(i + 1)))   # (its digit: 4 blocks in, 3 down)
+        ops.append(("text", 32 + w + 8, ev(y + h // 2 - 5), 2, NAMED["LIGHT"], lab))
+        y += PITCH
+    for j, line in enumerate(p.get("notes", [])):     # (under the strips)
+        ops.append(("text", 32, y + j * 14, 2, NAMED["LIGHT"], line))
     ops.append(("rect", 0, 182, 320, 2, acc))
     ops.append(("text", 8, 188, 2, NAMED["LIGHT"], p["lines"][0]))
     ops.append(("text", 8, 202, 2, NAMED["LIGHT"], p["lines"][1]))

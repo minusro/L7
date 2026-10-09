@@ -389,6 +389,24 @@ int main(int argc, char **argv) {
   recording.resample = true;                       // resampling: the record dot with a plus on its button
   render(out + "/ui_resampling.png");
   recording.resample = false;
+  {                                                // the recording done: track 2 playing it (a clip as track 1's), then empty again
+    recording.mode = Recording::Idle;
+    Track &tr = tracks[5];
+    const Track &from = tracks[6];
+    tr.state = TrackState::Playing;
+    memcpy(tr.overview, from.overview, sizeof tr.overview);
+    tr.overviewVersion++;
+    tr.loopBars = from.loopBars;
+    tr.rangeStartBeat = from.rangeStartBeat;
+    tr.rangeBeats = from.rangeBeats;
+    tr.rangeAnchorQ = from.rangeAnchorQ;
+    tr.sample = from.sample;
+    render(out + "/ui_played.png");
+    tr.state = TrackState::Empty;
+    tr.sample = 0;
+    tr.overviewVersion++;
+    recording.mode = Recording::Running;
+  }
   selected = 1;                                    // A held on track 7: its panel and the action button highlighted
   selectedCell = WAVE_CELL;
   board.heldKeys = m8::BTN_EDIT;
