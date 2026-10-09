@@ -168,8 +168,6 @@ static int copyrightX = 0;
 static const char *lineText = COPYRIGHT;
 static int lineX = 0, shownTextY = -1;
 static bool lineHidden = false, lineChanged = false;
-static uint32_t lineOutAt = 0;                     // (its fade out's start, LINE_OUT_MS; 0: not yet)
-static constexpr uint32_t LINE_OUT_MS = 500;
 
 // The splash now: the logo fading in, then its hue (the accent's, OKLCH 0.824,
 // 0.164, 164.8 deg) turned once round, eased in and out (smoothstep); the
@@ -196,7 +194,6 @@ void splashTick() {
   }
   uint32_t into = ms < TEXT_FROM_MS ? 0 : min(ms - TEXT_FROM_MS, TEXT_FADE_MS);
   uint16_t text = blend565(blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / TEXT_FADE_MS)), BG, out);
-  if (lineOutAt) text = blend565(text, BG, 255 - (uint8_t)(255 * min(millis() - lineOutAt, LINE_OUT_MS) / LINE_OUT_MS));   // (the line's own fade out)
   float toRise = 1 - min(1.0f, (ms < TEXT_FROM_MS ? 0 : ms - TEXT_FROM_MS) / (float)RISE_MS);   // of the rise
   int y = TEXT_Y_SPLASH - RISE_PX + (int)lroundf(RISE_PX * toRise * toRise * toRise);
   if (!lineHidden && (text != shownText || y != shownTextY || lineChanged)) {
@@ -215,7 +212,6 @@ void showSplash() {
   copyrightX = lineX = (320 - textWidthPx(COPYRIGHT)) / 2;
   lineText = COPYRIGHT;
   lineHidden = false;
-  lineOutAt = 0;
   shownTextY = -1;
   shownAt = millis();
   outAt = 0;
@@ -258,18 +254,13 @@ void splashLoading() {
 }
 
 // The fade out, from now (the start-up done; not before OUT_FROM_MS), then
-// the screen cleared; the line under the logo gone just before it.
+// the screen cleared; the line under the logo fading with it.
 void hideSplash() {
   while (!skipped && millis() - shownAt < OUT_FROM_MS) {
     splashTick();
     delay(10);
   }
-  lineOutAt = millis();                            // the line under the logo fading out first
-  while (millis() - lineOutAt < LINE_OUT_MS) {
-    splashTick();
-    delay(10);
-  }
-  splashHideLine();
+  // (The line under the logo fades out with it: splashTick() blends both by the same fade.)
   outAt = millis();
   while (millis() - outAt < OUT_MS) {
     splashTick();
