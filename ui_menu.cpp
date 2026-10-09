@@ -479,7 +479,8 @@ FLASHMEM void menuSettingsAct() {
 // The battery, top right (two blocks in): a tiny grey one, its outline, a block
 // of space, its fill in sixths (90 % and up: full); its tip a block right, 3
 // blocks tall. Charging: a lightning bolt in it instead of the fill.
-FLASHMEM static void drawBattery(bool all) {
+// (ink on ground: the menu's grey on its ground; storage mode's dark grey on its grey.)
+FLASHMEM void drawBatteryIcon(bool all, uint16_t ink, uint16_t ground) {
   static int shownFill = -2;                       // (-1: not known, none)
   static bool shownCharging = false;
   int pct = board.batteryPercent(), fill = pct < 0 ? -1 : pct >= 90 ? 6 : (pct * 6 + 50) / 100;
@@ -496,9 +497,10 @@ FLASHMEM static void drawBattery(bool all) {
       bool inside = r >= 2 && r <= H - 3 && c >= 2 && c - 2 < fill;
       bool on = fill >= 0 && (c < W ? edge || inside : tip);
       if (charging && !edge && c < W) on = r >= 1 && r <= 5 && c >= 2 && c <= 7 && BOLT[r - 1][c - 2] == '#';
-      t.fillRect((X + c) * PX, (Y + r) * PX, PX, PX, on ? DIM : MENU_BG);
+      t.fillRect((X + c) * PX, (Y + r) * PX, PX, PX, on ? ink : ground);
     }
 }
+static void drawBattery(bool all) { drawBatteryIcon(all, DIM, MENU_BG); }
 
 FLASHMEM void drawMenu() {
   static uint32_t shownKey[ITEMS];

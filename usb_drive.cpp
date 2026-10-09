@@ -106,6 +106,7 @@ bool usbDriveMode() {
   t.fillScreen(SCREEN);
   line(TITLE_Y, "STORAGE MODE", LIGHT);
   drawSmallLogo(CORNER_LOGO_X, CORNER_LOGO_Y, LIGHT);
+  drawBatteryIcon(true, DARK, SCREEN);             // (the menu's battery, dark grey)
   hint();
   uiGeneration++;
 
@@ -145,6 +146,7 @@ bool usbDriveMode() {
     int state = !usb_configuration ? 0 : usb_msc_host_seen() ? 2 : 1;
     if (millis() - hueAt >= 40) {                   // the title and logo: light grey, and once connected the hue goes round, once in 4 s
       hueAt = millis();
+      drawBatteryIcon(false, DARK, SCREEN);          // (its charge read every few seconds: redrawn as it changes)
       uint16_t c = state == 2 ? hueCycle((millis() % 4000) / 4000.0f) : LIGHT;
       if (c != hue) {
         hue = c;
@@ -175,6 +177,7 @@ bool usbDriveMode() {
   t.fillScreen(SCREEN);
   line(TITLE_Y, "STORAGE MODE", LIGHT);
   drawSmallLogo(CORNER_LOGO_X, CORNER_LOGO_Y, LIGHT);
+  drawBatteryIcon(true, DARK, SCREEN);             // (the menu's battery, dark grey)
   hint();
   uiGeneration++;
 
@@ -195,6 +198,7 @@ bool usbDriveMode() {
     int state = !usb_configuration ? 0 : MTP ? 2 : 1;
     if (millis() - hueAt >= 40) {                   // the title and logo: light grey, and once connected the hue goes round, once in 4 s
       hueAt = millis();
+      drawBatteryIcon(false, DARK, SCREEN);          // (its charge read every few seconds: redrawn as it changes)
       uint16_t c = state == 2 ? hueCycle((millis() % 4000) / 4000.0f) : LIGHT;
       if (c != hue) {
         hue = c;

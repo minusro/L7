@@ -282,6 +282,9 @@ int menuListItem();                      // which of its items (MENU_EXPORT...),
 enum { MENU_EXPORT, MENU_STORAGE, MENU_SETTINGS, MENU_HELP };   // the menu's list items, top first
 int menuListX();                         // the list's left edge, px (storage mode's texts start there too)
 int menuHelpY();                         // the HELP item's label's top, px (storage mode's bottom line there too)
+// The menu's battery (top right), in ink on ground; all: drawn whatever was
+// shown (else only when its charge or charging changed). Storage mode's too.
+void drawBatteryIcon(bool all, uint16_t ink, uint16_t ground);
 bool menuExportShown();                  // the export item shows its label (exporting is off until it goes)
 void menuExportStatus(const char *text, int nameAt = -1);   // the export item's label ("EXPORTING 3/14"; nullptr: its own), kept until the
                                                             // project changes or another is loaded (a failure's: until the menu closes);
