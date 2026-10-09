@@ -226,7 +226,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   No mark for the
   way out (any edge, `menuLeavesOn()`); while an arrow is held that leaves it once let go,
   the selection frame is hidden. Under them
-  a list, "EXPORT ABLETON PROJECT", "ENTER STORAGE MODE", "SETTINGS" (A or B, once let go: the settings popup, below) and "HELP" (not yet: grey, the action button grey with no icon; still selectable), up to four in view at a time (scrolling once it has more; the last level with the logo; `MENU_EXPORT`... in ui.h). Export
+  a list, "EXPORT ABLETON PROJECT", "STORAGE MODE", "SETTINGS" (A or B, once let go: the settings popup, below) and "HELP" (not yet: grey, the action button grey with no icon; still selectable), up to four in view at a time (scrolling once it has more; the last level with the logo; `MENU_EXPORT`... in ui.h). Export
   (the loaded project, if it has clips; on release) writes it as an Ableton
   Live Set to `/L7/EXPORTS/L7 A005 Project/` (ableton.h), its label showing "EXPORTING
   3/14" (samples copied, then the set) and then "SAVED AS L7 A005" ("SAVED AS" grey,
@@ -241,7 +241,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in the menu's corner place and size, in the same colour at all times):
   light grey until the computer is connected, then going round the hues; the
   connection's state under it in white, the hint in black (the messages that replace it, "EJECTED", "RESTARTING", too),
-  all left-aligned with the menu's list ("ENTER STORAGE MODE"), the hint ("PRESS ANY KEY TO EXIT"; the messages
+  all left-aligned with the menu's list ("STORAGE MODE"), the hint ("PRESS ANY KEY TO EXIT"; the messages
   replacing it in its place), the
   title at y 78, the state 32 px under it, the hint on the screen's bottom line (level with the status row's text, the corner logo's row);
   and the connection ("CONNECT A USB CABLE" / "WAITING FOR THE
