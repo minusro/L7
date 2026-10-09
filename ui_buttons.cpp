@@ -385,9 +385,9 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   if (badge != BADGE_NONE) {                       // the track's number, maybe in a square
     // (On the panel: a muted one's outline black; a playing one's square
     // black, its number in the accent colour, on the panel in the accent colour.)
-    uint16_t frame = badge == BADGE_PLAYING ? (panel == ACCENT ? BG : ACCENT) : (panel != BG ? BG : DIM);
+    uint16_t frame = badge == BADGE_PLAYING ? (panel == ACCENT ? BG : ACCENT) : (panel != BG ? BG : badge == BADGE_MUTED ? ACCENT : DIM);
     uint16_t ink = badge == BADGE_PLAYING ? (panel == ACCENT ? ACCENT : BG)
-                 : badge == BADGE_MUTED ? (panel != BG ? BG : DIM) : badge == BADGE_LABEL || panel != BG ? BG : DARK;   // (empty: black on the panel)
+                 : badge == BADGE_MUTED ? (panel != BG ? BG : ACCENT) : badge == BADGE_LABEL || panel != BG ? BG : DARK;   // (empty: black on the panel)
     drawBadge(trackNumber(i), badge == BADGE_PLAYING, badge == BADGE_PLAYING || badge == BADGE_MUTED, frame, ink);
   }
   const uint16_t round = i == STATUS_ROW ? (menuOpen() ? MENU_BG : BG) : rowGround(i);   // (round the button: the menu's ground while it's open; a selected track's; the status row's highlight ends at the tempo cell)
