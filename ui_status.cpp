@@ -235,7 +235,22 @@ void drawStatus() {
     ink = firstHalf ? ACCENT : DIM;
   }
   int x = box.x + INSET + tagWidth("SCN") + PX;
-  drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
+  // Stepping (the accent colour on): a small up and down arrow stacked at the
+  // cell's right end, each in the accent colour where that way goes on, grey
+  // where it doesn't (up: past the copy after the last; down: below the empty scene 0*).
+  static constexpr int ARROW_W = 3 * PX;
+  const int arrowX = box.x + box.w - INSET - ARROW_W;
+  drawText(x, textY, text, ink, G, (sceneAccent ? arrowX - PX : box.x + box.w - INSET) - x);
+  if (sceneAccent) {
+    static const char *const UP[2] = {".#.", "###"}, *const DOWN[2] = {"###", ".#."};
+    const int top = count ? count + 1 : 0;           // (no scenes: no copy after the last)
+    const uint16_t upInk = scene < top ? ACCENT : DIM, downInk = scene > 0 ? ACCENT : DIM;
+    for (int r = 0; r < 5; r++)
+      for (int c = 0; c < 3; c++) {
+        bool on = r < 2 ? UP[r][c] == '#' : r > 2 && DOWN[r - 3][c] == '#';
+        t.fillRect(arrowX + c * PX, textY + r * PX, PX, PX, on ? (r < 2 ? upInk : downInk) : G);
+      }
+  }
 
 }
 
