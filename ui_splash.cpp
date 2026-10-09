@@ -72,7 +72,7 @@ static constexpr int RISE_PX = 8;
 // and the copyright line in place), everything still meanwhile; the fade out
 // (OUT_MS) starts once it's done, and not before OUT_FROM_MS.
 static constexpr uint32_t INTRO_MS = max(LOGO_FADE_MS + HUE_MS, TEXT_FROM_MS + RISE_MS);   // 2.5 s
-static constexpr uint32_t OUT_FROM_MS = 3500, OUT_MS = 1000;
+static constexpr uint32_t OUT_FROM_MS = 3500, OUT_MS = 1000, TEXT_OUT_MS = 500;   // (the logo's fade out, the line's: from the same moment)
 static uint32_t shownAt = 0, outAt = 0;            // (outAt: the fade out's start; 0: not yet)
 
 static const char COPYRIGHT[] = "\xA9 2026 Daniel Stanciu";
@@ -193,7 +193,8 @@ void splashTick() {
     drawLogo(logo, shift);
   }
   uint32_t into = ms < TEXT_FROM_MS ? 0 : min(ms - TEXT_FROM_MS, TEXT_FADE_MS);
-  uint16_t text = blend565(blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / TEXT_FADE_MS)), BG, out);
+  uint8_t textOut = !outAt ? 255 : 255 - (uint8_t)(255 * min(millis() - outAt, TEXT_OUT_MS) / TEXT_OUT_MS);   // (the line's, quicker)
+  uint16_t text = blend565(blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / TEXT_FADE_MS)), BG, textOut);
   float toRise = 1 - min(1.0f, (ms < TEXT_FROM_MS ? 0 : ms - TEXT_FROM_MS) / (float)RISE_MS);   // of the rise
   int y = TEXT_Y_SPLASH - RISE_PX + (int)lroundf(RISE_PX * toRise * toRise * toRise);
   if (!lineHidden && (text != shownText || y != shownTextY || lineChanged)) {
