@@ -1601,16 +1601,16 @@ PROGMEM static const HelpOp HELP_PAGE_12[] = {
 };
 constexpr int HELP_PAGES = 12;
 PROGMEM static const HelpPage HELP[HELP_PAGES] = {
-  {HELP_PAGE_1, 7, 10},
-  {HELP_PAGE_2, 8, 10},
-  {HELP_PAGE_3, 22, 10},
-  {HELP_PAGE_4, 17, 10},
-  {HELP_PAGE_5, 17, 10},
-  {HELP_PAGE_6, 17, 10},
-  {HELP_PAGE_7, 22, 10},
-  {HELP_PAGE_8, 17, 10},
-  {HELP_PAGE_9, 17, 10},
-  {HELP_PAGE_10, 17, 10},
-  {HELP_PAGE_11, 15, 10},
-  {HELP_PAGE_12, 17, 10},
+  {HELP_PAGE_1, 7, 8},
+  {HELP_PAGE_2, 8, 8},
+  {HELP_PAGE_3, 22, 8},
+  {HELP_PAGE_4, 17, 8},
+  {HELP_PAGE_5, 17, 8},
+  {HELP_PAGE_6, 17, 8},
+  {HELP_PAGE_7, 22, 8},
+  {HELP_PAGE_8, 17, 8},
+  {HELP_PAGE_9, 17, 8},
+  {HELP_PAGE_10, 17, 8},
+  {HELP_PAGE_11, 15, 8},
+  {HELP_PAGE_12, 17, 8},
 };

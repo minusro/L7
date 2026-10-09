@@ -153,7 +153,7 @@ def page(n, p):
                 lines.append((line, ink))
         for j, (line, ink) in enumerate(lines):           # (the last, how to move, a line lower: apart)
             ops.append(("text", 8, 140 + (j + (j == len(lines) - 1)) * 14, 2, NAMED[ink], line))
-        return ops, 10
+        return ops, 8
     title = (t1 + " " + t2).strip()                  # (one line, in the page's colour; no page number)
     # Its icon left of it (the action button's, a block a dot: 2 px), in the
     # page's colour, centred on the title's 15 px; the title 3 blocks after it.
@@ -199,7 +199,7 @@ def page(n, p):
     ops.append(("rect", 0, 182, 320, 2, acc))
     ops.append(("text", 8, 190, 2, NAMED["LIGHT"], p["lines"][0]))
     ops.append(("text", 8, 206, 2, NAMED["LIGHT"], p["lines"][1]))   # (a block more than the first's line pitch)
-    return ops, 10
+    return ops, 8
 
 pages = [page(i + 1, p) for i, p in enumerate(PAGES)]
 

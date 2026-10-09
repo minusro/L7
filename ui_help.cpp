@@ -61,17 +61,17 @@ FLASHMEM static void helpImage(int x0, int y0, const HelpImage &im) {
   }
 }
 
-// The page row: a square each, 16 px apart, 8 px square, from (x, 224).
+// The page row: a square each, 16 px apart, 8 px square, from (x, 226).
 static constexpr uint32_t HELP_FLASH_MS = 100;
 static uint32_t flashAt = 0;                     // millis() of the last turn (0: none showing)
 static int dotsX = 10;
 FLASHMEM static void helpDots(int x, int shown) {
   auto &t = board.tft();
-  constexpr int Y = 224, SIZE = 8, STEP = 16;
+  constexpr int Y = 226, SIZE = 8, STEP = 16;
   uint16_t seen = helpSeen();
   for (int i = 0; i < HELP_PAGES; i++) {
     int x0 = x + i * STEP;
-    if (i == shown) t.fillRect(x0 - 2 * PX, Y - 2 * PX, SIZE + 4 * PX, SIZE + 4 * PX, flashAt ? LIGHT : DIM);
+    if (i == shown) t.fillRect(x0 - 2 * PX, Y - 2 * PX, SIZE + 4 * PX, SIZE + 4 * PX, DIM);
     if (seen & (1 << i)) {
       t.fillRect(x0, Y, SIZE, SIZE, PROJECT_COLORS[i]);
     } else {
