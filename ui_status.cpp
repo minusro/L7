@@ -142,8 +142,7 @@ void drawStatus() {
   const int src = syncSource();
   const bool offsetShown = selected == STATUS_ROW && !menuOpen() && src != SYNC_NONE && (k & (m8::BTN_LEFT | m8::BTN_RIGHT)) &&
                            !(k & m8::BTN_EDIT) &&
-                           (((k & m8::BTN_OPT) && !(k & m8::BTN_SHIFT) && selectedCellIn(STATUS_ROW) == TEMPO_CELL) ||   // (B+LEFT/RIGHT on the tempo cell;
-                            ((k & m8::BTN_SHIFT) && !(k & m8::BTN_OPT)));                                                    //  SHIFT+LEFT/RIGHT: nudged)
+                           ((bArrows() && selectedCellIn(STATUS_ROW) == TEMPO_CELL) || shiftArrows());   // (B+LEFT/RIGHT on the tempo cell; SHIFT+LEFT/RIGHT: nudged)
   if (offsetShown) snprintf(text, sizeof text, "%+d", syncOffsetMs[src]);
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) ? selectedCellIn(STATUS_ROW) : -1;
   auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
@@ -217,7 +216,7 @@ void drawStatus() {
   const Cell &box = SCENE_BOX;
   // The tag and position in the accent colour: SHIFT held (SHIFT + UP/DOWN
   // step through the scenes), or B alone on the cell (B + UP/DOWN do).
-  bool sceneAccent = (board.keys() & m8::BTN_SHIFT) || (cell == SCENE_CELL && bAlone());
+  bool sceneAccent = shiftArrows() || (cell == SCENE_CELL && bAlone());
   drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneAccent ? ACCENT : labelInk(SCENE_CELL), G);
   int scene = sceneCurrent(), count = sceneCount();
   bool temporary = scene == 0 || scene > count;

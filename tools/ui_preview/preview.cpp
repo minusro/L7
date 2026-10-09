@@ -28,6 +28,7 @@ bool optBeforeShift() { return true; }             // (input.cpp isn't built her
 bool arrowsMoved() { return true; }
 bool screenSwitchPending() { return false; }
 bool tempoNudging() { return false; }
+uint8_t arrowModifier() { uint8_t k = board.keys(); return k & m8::BTN_OPT ? m8::BTN_OPT : k & m8::BTN_SHIFT ? m8::BTN_SHIFT : 0; }
 static uint8_t simSwitchKey = 0;                   // (an arrow held that switches screens: the peeps)
 uint8_t screenSwitchKey() { return simSwitchKey; }
 
@@ -323,6 +324,14 @@ int main(int argc, char **argv) {
   render(out + "/ui_status_scene.png");
   selectedCell = MENU_CELL;                        // LEFT to the menu cell: not selectable (stays on the scene cell)
   render(out + "/ui_status_menu.png");
+  {                                                // SHIFT held on a track's filter cell: its waveform cell framed (accent), the filter's not
+    int wasSel = selected, wasCell = selectedCell;
+    selected = 2; selectedCell = FILTER_CELL;
+    board.heldKeys = m8::BTN_SHIFT;
+    render(out + "/ui_shift_track.png");
+    board.heldKeys = 0;
+    selected = wasSel; selectedCell = wasCell;
+  }
   selectedCell = CLOCK_CELL;                       // the clock: A starts / stops (as START)
   render(out + "/ui_status_clock.png");
   setMasterVolume(MASTER_VOLUME_UNITY - 4);          // B held on it: the master volume and balance, and its meter

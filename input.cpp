@@ -316,6 +316,8 @@ static void switchHold() {
 
 FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (flash: on key presses only; RAM1 is full)
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
+  // The arrows' modifier (exclusive: the one pressed last; ui.h arrowModifier()).
+  const bool shiftA = arrowModifier() == m8::BTN_SHIFT, optA = arrowModifier() == m8::BTN_OPT;
   if (pressed & m8::BTN_OPT) optFirst = !(shift && !(pressed & m8::BTN_SHIFT));
   if (pressed & m8::BTN_SHIFT) optFirst = opt && !(pressed & m8::BTN_OPT);
   // LEFT+RIGHT (switchHold()): the second one pressed within LR_WINDOW_MS of
@@ -531,7 +533,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   if (pressed && !(onTempo && pressed == m8::BTN_EDIT && keys == m8::BTN_EDIT)) tapCount = 0;
   bool sceneChanged = false;                         // every row to redraw
   // The scene keys' modifier: SHIFT, or B on the status row's scene cell.
-  bool sceneMod = shift || (opt && onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL);
+  bool sceneMod = shiftA || (optA && onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL);
   // Held while playing: scene steps only move the label; the scene changes
   // once it's let go (see the end).
   if (sceneMod && transport.running) sceneHold(true);
@@ -593,7 +595,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
   };
 
-  if (opt) {
+  if (optA) {
     // OPT (B) + arrows: the current cell's parameters (none on empty tracks).
     if (onStatus) {
       if (selectedCellIn(STATUS_ROW) == SCENE_CELL) {   // scene: UP/DOWN as SHIFT+UP/DOWN
@@ -759,12 +761,12 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         trackChanged(selected);
       }
     }
-  } else if (shift) {
+  } else if (shiftA) {
     sceneKeys();
     // (SHIFT+LEFT/RIGHT on the status row: the tempo nudged while held, nudgeService().)
-    // SHIFT+LEFT/RIGHT on a track's waveform cell, or an empty track: its
-    // sample, the previous / next on the card.
-    if (!onStatus && !recordingOn(selected) && (selectedCellIn(selected) == WAVE_CELL || !hasClip(selected))) {
+    // SHIFT+LEFT/RIGHT on a track (any of its cells; its waveform cell framed
+    // meanwhile, ui.h frameCell()): its sample, the previous / next on the card.
+    if (!onStatus && !recordingOn(selected)) {
       // (another sample: the waveform cell selected, to see it)
       if ((pressed & m8::BTN_LEFT) && stepSample(selected, -1)) selectedCell = WAVE_CELL;
       if ((pressed & m8::BTN_RIGHT) && stepSample(selected, 1)) selectedCell = WAVE_CELL;
@@ -866,9 +868,11 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   if (sceneChanged)
     for (int i = 0; i < ROWS; i++) drawTrack(i);
   drawTrack(selected);
-  static bool wasPending = false;                  // (the frame hidden or back: the rows sharing its borders too)
-  if (screenSwitchPending() != wasPending) {
+  static bool wasPending = false;                  // (the frame hidden or back, or moved by SHIFT: the rows sharing its borders too)
+  static uint8_t wasModifier = 0;
+  if (screenSwitchPending() != wasPending || arrowModifier() != wasModifier) {
     wasPending = screenSwitchPending();
+    wasModifier = arrowModifier();
     if (!menuOpen())
       for (int r : {rowAbove(selected), rowBelow(selected)})
         if (r >= 0 && r < NUM_TRACKS) drawTrack(r);
@@ -916,7 +920,7 @@ static void nudgeService() {
   uint8_t k = board.keys();
   int dir = ((k & m8::BTN_RIGHT) ? 1 : 0) - ((k & m8::BTN_LEFT) ? 1 : 0);
   int src = syncSource();
-  bool want = (k & m8::BTN_SHIFT) && dir && !(k & (m8::BTN_OPT | m8::BTN_EDIT | m8::BTN_PLAY)) && selected == STATUS_ROW &&
+  bool want = arrowModifier() == m8::BTN_SHIFT && dir && !(k & (m8::BTN_EDIT | m8::BTN_PLAY)) && selected == STATUS_ROW &&
               !menuOpen() && transport.running;
   static int nudgeSrc = SYNC_NONE;
   static uint32_t lastMs = 0;
@@ -950,6 +954,13 @@ static void nudgeService() {
   if (spb != now) transport.pendingSpb = spb;
 }
 
+static uint8_t lastModifier = 0;                   // SHIFT or B, the latest pressed
+uint8_t arrowModifier() {
+  uint8_t k = board.keys();
+  if (lastModifier & k) return lastModifier;
+  return k & m8::BTN_SHIFT ? m8::BTN_SHIFT : k & m8::BTN_OPT ? m8::BTN_OPT : 0;   // (the other one, still held)
+}
+
 void pollKeys() {
   // Arrows repeat while held: the press acts at once, then again after
   // REPEAT_DELAY_MS and every REPEAT_PERIOD_MS (the most recently pressed one).
@@ -960,6 +971,8 @@ void pollKeys() {
   if (board.keysChanged(keys)) {
     debugStage = "key action";
     uint8_t pressed = keys & ~prev;
+    if (pressed & m8::BTN_SHIFT) lastModifier = m8::BTN_SHIFT;
+    if (pressed & m8::BTN_OPT) lastModifier = m8::BTN_OPT;
     if (pressed & ARROWS) {
       repeatKey = pressed & ARROWS & -(pressed & ARROWS);   // one of them, if several
       repeatAt = millis() + REPEAT_DELAY_MS;

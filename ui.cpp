@@ -30,7 +30,7 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
     // by place on the screen (an empty track's one cell spans the row).
     int ni = t ? rowAbove(i) : rowBelow(i);
     if (ni >= 0 && ni == selected) {
-      int x = cellRect(i, cell).x / PX + c, nc = selectedCellIn(ni);
+      int x = cellRect(i, cell).x / PX + c, nc = frameCell(ni);
       const Cell &n = cellRect(ni, nc);
       int first = n.x / PX, last = (n.x + n.w) / PX - 1;
       if (x > first && x < last) {
@@ -58,7 +58,7 @@ uint64_t bordersOf(int i, int cell) {
   // row is drawn by place, not by those middle blocks), and its own shape.
   if (i != STATUS_ROW) {
     bool near = selected == rowAbove(i) || selected == rowBelow(i);
-    k = k * 31 + (near ? (uint64_t)(selectedCellIn(selected) + 1) << 20 | cellFrame(selected, selectedCellIn(selected)) |
+    k = k * 31 + (near ? (uint64_t)(frameCell(selected) + 1) << 20 | cellFrame(selected, frameCell(selected)) |
                              (uint64_t)spanRow(selected) << 24 | (uint64_t)(selected == rowAbove(i)) << 25 : 0);
     k = k * 31 + spanRow(i);
   }

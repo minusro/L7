@@ -166,24 +166,35 @@ bool tempoNudging();                      // (input.cpp) SHIFT+LEFT/RIGHT held o
 // block-wide one inside it, then a black block-wide one, along that edge of the screen (on top of
 // everything; let go without switching, what was under it again).
 void drawEdgeLine();
+// The arrows' modifier (input.cpp): SHIFT or B, whichever of the two held was
+// pressed last (0: neither). They're exclusive for the arrows and the looks
+// (not the action button's): pressing the other while one is held switches
+// to its arrows; letting it go, back to the first, still held.
+uint8_t arrowModifier();
+inline bool shiftArrows() { return arrowModifier() == m8::BTN_SHIFT; }
+inline bool bArrows() { return arrowModifier() == m8::BTN_OPT; }
+// The cell framed in row i (the selected row): its selected cell; a track's
+// with SHIFT the arrows' modifier, its waveform cell (SHIFT+LEFT/RIGHT step
+// its sample, from any of its cells), in the accent colour, the other hidden.
+inline int frameCell(int i) {
+  return i != STATUS_ROW && shiftArrows() && !recordingOn(i) ? WAVE_CELL : selectedCellIn(i);
+}
 inline uint16_t cellFrame(int i, int cell) {
-  if (i != selected || cell != selectedCellIn(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
+  if (i != selected || cell != frameCell(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
   if (screenSwitchPending()) return BG;            // (going to the other screen: no frame meanwhile, the edge arrow bright)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
-  if ((k & m8::BTN_SHIFT) && !(k & m8::BTN_OPT) && i != STATUS_ROW && cell == WAVE_CELL && !recordingOn(i))
-    return ACCENT;                                 // (SHIFT held on a waveform cell or an empty track: LEFT/RIGHT step its sample)
-  return k & m8::BTN_OPT ? DIM : k && !(k & ~arrows) && arrowsMoved() ? INK : LIGHT;
+  if (i != STATUS_ROW && shiftArrows() && !recordingOn(i)) return ACCENT;   // (SHIFT: its waveform cell)
+  return bArrows() ? DIM : k && !(k & ~arrows) && arrowsMoved() ? INK : LIGHT;
 }
-// B held as a modifier on its own (no SHIFT, A or START; arrows may be down).
+// B the arrows' modifier (A and START not held; arrows may be down).
 inline bool bAlone() {
-  uint8_t k = board.keys();
-  return (k & m8::BTN_OPT) && !(k & (m8::BTN_SHIFT | m8::BTN_EDIT | m8::BTN_PLAY));
+  return bArrows() && !(board.keys() & (m8::BTN_EDIT | m8::BTN_PLAY));
 }
-// The cell is being edited: it's the selected one and B is held (B + arrows
-// change it). Its markings then show in the accent colour.
+// The cell is being edited: it's the selected one and B is the arrows'
+// modifier (B + arrows change it). Its markings then show in the accent colour.
 inline bool editingCell(int i, int cell) {
-  return i == selected && cell == selectedCellIn(i) && (board.keys() & m8::BTN_OPT);
+  return i == selected && cell == selectedCellIn(i) && bArrows();
 }
 // The colour of block (r, c) of row i's cell (rows x cols blocks, its border
 // included) if it's on the border (corners: always BG), from its own frame or
