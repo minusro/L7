@@ -233,7 +233,7 @@ static uint16_t buttonBackground(int i, int icon) {
   if (i == STATUS_ROW) {
     if (cannotAct(icon)) return DIM;               // (no pressed look either)
     if (bAdjusting()) return DIM;
-    if (heldAction >= 0 || (icon == ICON_ADJUST && adjusting())) return menuOpen() ? BG : DARK;   // pressed (the menu's ground is dark grey: black there)
+    if (heldAction >= 0 || (icon == ICON_ADJUST && adjusting())) return DIM;   // pressed: grey
     return actionColor(icon);
   }
   return cellBackground(i, -1);
@@ -268,9 +268,9 @@ static uint16_t markColor() {                     // (B held on a track, or SHIF
 
 // The button, built whole in a buffer and sent at once.
 static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t badge) {
-  // The action button pressed (A held, or B + an arrow adjusting): a block
-  // narrower on the left (its icon where it was); else it reaches the
-  // button's place's left edge.
+  // The action button pressed (A held, or B + an arrow adjusting): grey, a
+  // block in from the left (moved right, the screen's edge cutting it), its
+  // icon a block right with it; else it reaches the button's place's left edge.
   const bool pressed = i == STATUS_ROW && !cannotAct(icon) && (heldAction >= 0 || (icon == ICON_ADJUST && adjusting()));
   // The action button: as tall as the status cells.
   const int height = i == STATUS_ROW ? STATUS_H : ROW_BAND;
@@ -298,7 +298,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     if (color == panel) color = BG;                // (a recording icon in the accent colour, on it)
     if (panel == ACCENT && badge != BADGE_NONE) badge = BADGE_LABEL;   // highlighted: the number alone
   }
-  auto block = [&](int c, int r) { blockIn(c, r, color); };
+  auto block = [&](int c, int r) { blockIn(c + pressed, r, color); };   // (pressed: the icon a block right, with the button)
   // A badge: a square w x h blocks with its bottom corners cut (filled, or
   // outlined) from row r0, centred on the icons' column.
   auto drawSquare = [&](int w, int h, int r0, bool filled, uint16_t frame) {
@@ -325,10 +325,10 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
   if (icon == ICON_TAP) {
     // "TAP" in the font's letters, a block apart (11 x 5 blocks, the P's bowl
     // closed), in the icon's colour (black), from the button's left block
-    // column in; a block lower while A is held (pressed).
+    // column in.
     static const char *const TAP[5] = {"###.###.###", ".#..#.#.#.#", ".#..###.###", ".#..#.#.#..", ".#..#.#.#.."};
     const int w = 11, h = 5;
-    int c0 = PANEL_LEFT, r0 = (rows - h) / 2 + (heldAction >= 0);
+    int c0 = PANEL_LEFT, r0 = (rows - h) / 2;
     for (int r = 0; r < h; r++)
       for (int c = 0; c < w; c++)
         if (TAP[r][c] == '#') block(c0 + c, r0 + r);
