@@ -27,6 +27,7 @@ static void resetCell() {
   const Track &tr = tracks[selected];
   if (selectedCell == WAVE_CELL) {
     setRange(selected, 0, tr.loopBars * BEATS_PER_BAR);
+    rotateTrack(selected, -(int32_t)unitOf(selected).rotate);   // (and its fine rotate: none)
   } else if (selectedCell == FILTER_CELL) {
     setTrackFilter(selected, 0, FILTER_MAX);
     trackChanged(selected);
@@ -124,9 +125,12 @@ static bool editAfterOpt = false;
 // The fine rotate while its keys are held: turned this far more (frames) on
 // track rotateT, shown (the waveform drawn, the ms) but not heard until a key
 // of the combo (B, A or the arrow) is let go: then applied (rotateTrack()).
+// While held and playing, what's turned so far is heard at each quarter beat
+// crossing (serviceRotate()).
 static int32_t rotateBy = 0;
 static int rotateT = -1;
 static uint8_t rotateKey = 0;
+static int32_t rotateQ = 0;                        // (the quarter beat last seen: a crossing, what's turned heard)
 int32_t clipRotatePending(int t) { return t == rotateT ? rotateBy : 0; }
 static void applyRotate() {
   if (rotateT >= 0 && rotateBy) rotateTrack(rotateT, rotateBy);
@@ -134,6 +138,27 @@ static void applyRotate() {
   rotateBy = 0;
   rotateT = -1;
   rotateKey = 0;
+}
+static int32_t quarterNow() {
+  noInterrupts();
+  int32_t q = transport.beat * 4 + (int32_t)((uint64_t)transport.sampleInBeat * 4 / transport.spb);
+  interrupts();
+  return q;
+}
+static void serviceRotate() {                      // (every pass: pollKeys())
+  if (rotateT < 0) return;
+  int32_t q = quarterNow();
+  if (q == rotateQ) return;
+  rotateQ = q;
+  if (rotateBy && transport.running) {
+    rotateTrack(rotateT, rotateBy);                // (heard from the next quarter beat after the lead)
+    rotateBy = 0;
+  }
+}
+// A turn as signed frames: past half the loop, as earlier.
+static int32_t signedTurn(int64_t f, int64_t loop) {
+  int64_t r = (f % loop + loop) % loop;
+  return (int32_t)(r > loop / 2 ? r - loop : r);
 }
 // B then A held on a clip's waveform cell: its fine rotate (the arrows turn it).
 bool clipRotating() {
@@ -729,21 +754,41 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       }
     } else if (clipRotating()) {
       // B then A on a clip's waveform: its fine rotate (the clip turned, its
-      // audio as it was): LEFT/RIGHT a millisecond earlier / later, UP/DOWN a
+      // audio as it was): LEFT/RIGHT 5 ms earlier / later, UP/DOWN a
       // quarter beat later / earlier, each held repeating; while held only
       // the waveform drawn (and the ms shown) turn: heard once a key of the
       // combo is let go (applyRotate(), above).
+      // Both LEFT and RIGHT (or UP and DOWN) held: back to none. Reaching none
+      // (or passing it, either way): there, a held arrow's repeats stopped
+      // (a fresh press goes on).
       const Track &tr = tracks[selected];
       int32_t by = 0;
-      if (pressed & m8::BTN_RIGHT) by += (int32_t)lroundf(AUDIO_SAMPLE_RATE_EXACT / 1000);
-      if (pressed & m8::BTN_LEFT) by -= (int32_t)lroundf(AUDIO_SAMPLE_RATE_EXACT / 1000);
+      const int64_t loop = tr.loopFrames();
+      const int32_t now = signedTurn((int64_t)unitOf(selected).rotate + (rotateT == selected ? rotateBy : 0), loop);
+      const uint8_t LR = m8::BTN_LEFT | m8::BTN_RIGHT, UD = m8::BTN_UP | m8::BTN_DOWN;
+      constexpr float NUDGE_MS = 5;
+      if (pressed & m8::BTN_RIGHT) by += (int32_t)lroundf(AUDIO_SAMPLE_RATE_EXACT * NUDGE_MS / 1000);
+      if (pressed & m8::BTN_LEFT) by -= (int32_t)lroundf(AUDIO_SAMPLE_RATE_EXACT * NUDGE_MS / 1000);
       if (pressed & m8::BTN_UP) by += (int32_t)(tr.spbNative / 4);
       if (pressed & m8::BTN_DOWN) by -= (int32_t)(tr.spbNative / 4);
+      bool reset = ((keys & LR) == LR || (keys & UD) == UD) && (pressed & (LR | UD));
+      if (reset) by = -now;
+      else if (by && now != 0) {
+        int32_t next = signedTurn((int64_t)now + by, loop);
+        bool crossed = next == 0 || ((now < 0) != (next < 0) && llabs((int64_t)next - now) < loop / 2);
+        if (crossed) {
+          by = -now;                               // (to none: there)
+          stopRepeat = true;
+        }
+      }
       if (by) {
-        if (rotateT != selected) applyRotate();
+        if (rotateT != selected) {
+          applyRotate();
+          rotateQ = quarterNow();                  // (heard from the next crossing on)
+        }
         rotateT = selected;
         rotateBy += by;
-        rotateKey = pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN);
+        rotateKey = pressed & (LR | UD);
         drawTrack(selected);
       }
     } else if (selectedCell == WAVE_CELL) {
@@ -1122,6 +1167,7 @@ void pollKeys() {
   }
   menuHold();
   switchHold();
+  serviceRotate();
   nudgeService();
 }
 

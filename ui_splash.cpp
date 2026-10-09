@@ -270,6 +270,6 @@ void hideSplash() {
     delay(10);
   }
   splashTick();                                    // (faded out)
-  board.tft().fillScreen(BG);
+  board.tft().fillScreen(MENU_BG);                 // (the menu comes next, on its ground: its items drawn onto it, no black under them first)
   uiGeneration++;                                // (the menu comes next: nothing of the looper's view drawn first)
 }
