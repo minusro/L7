@@ -525,7 +525,10 @@ void closeMenu(bool draw) {
   selectedCell = mainCell;
   shown = false;
   notesLayout = notesScreen;                     // (back to the screen it came from: notes, or main)
-  board.tft().fillScreen(BG);                    // (the menu's ground everywhere: the gap before the action button too)
+  // (Not the whole screen wiped first, which flickered: the looper's rows,
+  // drawn whole below, cover all of it but the strip under the last track's
+  // cells, above the status row.)
+  board.tft().fillRect(0, rowTop(LAST_TRACK_ROW) + CELL_H, 320, STATUS_TOP - rowTop(LAST_TRACK_ROW) - CELL_H, BG);
   uiGeneration++;                                // everything redraws in full
   if (draw)
     for (int i = 0; i < ROWS; i++) drawTrack(i);
