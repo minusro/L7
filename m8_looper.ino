@@ -292,6 +292,7 @@ void loop() {
   static bool clickedRecording = false;            // a recording started with the click on
   if (recording.mode == Recording::Idle) clickedRecording = false;
   else if (metronomeOn) clickedRecording = true;
+  metronomeSteady = metronomeMode() == METRO_ON;
   metronomeOn = (clickedRecording || metronomeWanted()) && !menuOpen();   // (the metronome setting, app.h; not in the dummy project, nor while the clock isn't shown: the menu)
   clickFromBeat = sceneSwitchBeat();               // a scene or project switch waiting for its bar line: no click until it, whatever the setting
 

@@ -258,6 +258,7 @@ int masterBalance();
 // bar's first beat. In the output, after the master volume; not in what a
 // resampling records.
 extern volatile bool metronomeOn;
+extern volatile bool metronomeSteady;          // (loop()) the metronome set on, not auto: it clicks on through a recording's end
 // The input: the line input and USB audio from a computer, mixed. While USB
 // audio comes in, the line input is left out once it has been quiet (peaks
 // under LINE_GATE_LEVEL) for LINE_GATE_HOLD_MS (nothing plugged in: its

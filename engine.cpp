@@ -124,6 +124,7 @@ static int masterStep = MASTER_VOLUME_UNITY, masterBal = 0;
 static volatile float outputGain = 1.0f;          // the master volume's
 static volatile float outLL = 1, outLR = 0, outRL = 0, outRR = 1;   // and with its balance (as a track's: setTrackMix())
 volatile bool metronomeOn = false;
+volatile bool metronomeSteady = false;
 volatile float lineInPeak = 0, lineInFloor = 1;
 volatile bool usbAudioIn = false;
 bool (*usbAudioRead)(uint32_t *frames) = nullptr;
@@ -611,10 +612,11 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
   int32_t beat = transport.beat;
   tickInBeat_ = 0;
   nextTickAt_ = 0;
-  // The click (an empty project's), but not from where a finishing recording
-  // ends: its clip plays from there (loop() turns the click off a little later,
-  // once the recording is completely done).
-  bool recorded = recording.mode == Recording::Finishing &&
+  // The click, but on auto (only in a silent scene) not from where a
+  // finishing recording ends: its clip plays from there (loop() turns the
+  // click off a little later, once the recording is completely done). On
+  // (metronomeSteady): it goes on.
+  bool recorded = !metronomeSteady && recording.mode == Recording::Finishing &&
                   beat >= recording.startBeat + (int32_t)(recording.loopBars * BEATS_PER_BAR);
   if (metronomeOn && !recorded && beat >= clickFromBeat) startClick(beat % BEATS_PER_BAR == 0);   // (a switch waiting: not until it)
   if (beat == transport.midiRestartBeat) {           // the clock back to 1.1.1 here (a project's switch): MIDI followers too,
