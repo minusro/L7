@@ -139,15 +139,18 @@ no dropouts or overruns
 - adjusting the tempo during audio in follow halves or doubles it V
 - B + L/R on clock nudges tempo for beatmatching V
 	- plus a lot of other tweaks and combos V
+
+- settings menu
 - compressor limiter / distortion when the line goes beyond
 - more audio testing and fixes
-	- more than one recording at once bug
-	- check for more spurious metronome sounds
+	- more than one recording at once bug !
+	- check for more spurious metronome sounds V seems fine
 
 
 TTTT0LXXXXL0TTTT 
 TTTT00LLLL00TTTT 
 TTTTT000000TTTTT 
+
 
 # Feature backlog
 - track ms offset
