@@ -79,11 +79,20 @@ static void drawSpan(int i) {
   constexpr int COLS = SPAN.w / PX, ROWS_B = CELL_H / PX;
   static uint16_t line[SPAN.w * PX];
   uint16_t ground = rowGround(i);
+  const bool arrows = i == selected && shiftArrows() && !recordingOn(i) && cellFrame(i, 0) == ACCENT;
+  constexpr int MID = 7;                             // (the arrows' tips: rows 7-8, the waveform's middle)
   auto &t = board.tft();
   for (int r = 0; r < ROWS_B; r++) {
     for (int c = 0; c < COLS; c++) {
       int b = borderAt(i, 0, r, c, ROWS_B, COLS);
       uint16_t color = b >= 0 ? (uint16_t)b : ground;
+      // SHIFT held on it (framed in the accent colour: LEFT/RIGHT step its
+      // sample): an arrow out of each side, as the waveform cell's (ui_wave.cpp).
+      if (arrows && (c <= 1 || c >= COLS - 2) && r >= MID - 2 && r <= MID + 3) {
+        bool edge = c == 0 || c == COLS - 1, tip = r == MID || r == MID + 1, back = r >= MID - 1 && r <= MID + 2;
+        if (edge) color = tip ? ACCENT : ground;
+        else if (back) color = ACCENT;
+      }
       for (int dy = 0; dy < PX; dy++)
         for (int dx = 0; dx < PX; dx++) line[dy * SPAN.w + c * PX + dx] = color;
     }
