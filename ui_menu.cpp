@@ -772,8 +772,11 @@ FLASHMEM void openMenu(uint8_t key) {
   if (shown) return;
   // A project with no clips at all (none recorded since it was made): gone,
   // the dummy project instead (one has to be chosen before leaving the menu).
-  if (projectCurrent() >= 0 && recording.mode == Recording::Idle && recordQueued() < 0 && !projectHasClips())
-    projectDelete(projectCurrent());
+  int emptied = -1;                              // (its slot: selected below, however the menu was entered)
+  if (projectCurrent() >= 0 && recording.mode == Recording::Idle && recordQueued() < 0 && !projectHasClips()) {
+    emptied = projectCurrent();
+    projectDelete(emptied);
+  }
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();   // recordings no project uses: gone
   shown = true;                                  // (where it was last left: an item, or its status row)
   notesLayout = false;                           // (the menu: main's layout, whichever screen it came from)
@@ -785,9 +788,15 @@ FLASHMEM void openMenu(uint8_t key) {
   }
   setOpen = false;
   helpOpen = false;
-  if (backToCard && projectCurrent() >= 0) {      // left with A or B on a card: back on the loaded project's card
-    menuSel = projectCurrent();
+  if (emptied >= 0 || (backToCard && projectCurrent() >= 0)) {   // left with A or B on a card: back on the loaded project's card
+    menuSel = emptied >= 0 ? emptied : projectCurrent();   // (one made and left empty: its slot, empty again)
     cardCol = menuSel % COLS;
+    if (onStatus) {                              // (off its status row, onto the card)
+      onStatus = false;
+      statusCell = selectedCellIn(STATUS_ROW);
+      selected = mainRow;
+      selectedCell = mainCell;
+    }
     movedHere = false;
   } else if (key) {
     landInMenu(key);                             // (before it's drawn: once, where it lands)
