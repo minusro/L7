@@ -144,6 +144,8 @@ static constexpr float LINE_GATE_LEVEL = 0.0015f;   // ~ -56 dBFS (as measured o
 static constexpr uint32_t LINE_GATE_HOLD_MS = 2000;
 static constexpr bool USB_OUT_CLICK = false;          // the metronome on the USB output too (measuring: tools/latency/clocksync.c)
 volatile int32_t clickFromBeat = INT32_MIN;
+volatile const char *underrunStage = "";          // (debugStage at the last underrun)
+extern volatile const char *debugStage;
 
 // The metronome's wood block: two damped sines (its body and a harder upper
 // partial), started on a beat.
@@ -865,7 +867,7 @@ void LooperEngine::update() {
           if (!tr.live) continue;
           speed[t] = (double)tr.playSpb / spb;
         }
-        if (tr.head - tail < 2) { tr.underruns++; continue; }
+        if (tr.head - tail < 2) { tr.underruns++; underrunStage = debugStage; continue; }   // (what loop() was doing as it ran short: the log)
         float sl, sr;
         if (tr.stretch) {
           stretchSample(tr, tail, speed[t], sl, sr);

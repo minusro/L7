@@ -309,8 +309,8 @@ void loop() {
     for (int t = 0; t < NUM_TRACKS; t++) {
       uint32_t d = tracks[t].underruns;
       if (d != lastDrops[t]) {
-        Serial.printf("dropout: track %d +%lu samples (loop in: %s, recording: %d)\n", t + 1,
-                      d - lastDrops[t], (const char *)debugStage, (int)recording.mode);
+        Serial.printf("dropout: track %d +%lu samples (loop was in: %s, recording: %d)\n", t + 1,
+                      d - lastDrops[t], (const char *)underrunStage, (int)recording.mode);
         lastDrops[t] = d;
       }
     }

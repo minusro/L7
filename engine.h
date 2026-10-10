@@ -297,6 +297,7 @@ extern void (*usbAudioWritten)();
 // switch waits for its bar line, the switch's beat: silent meanwhile, the
 // new one's first beat clicks if it should).
 extern volatile int32_t clickFromBeat;
+extern volatile const char *underrunStage;        // loop()'s step (debugStage) as a track last ran short: the dropout log
 // A click now (the next block), as the metronome's on a beat (bar: the bar's
 // first beat's): tap tempo's taps, stopped (input.cpp).
 void metronomeClick(bool bar);

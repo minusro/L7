@@ -177,6 +177,7 @@ static void commit() {
 // playing, all of it changes on the next bar line with time to load (quick:
 // the next beat).
 static void apply(const SceneInfo &s, bool quick, bool restart = false, float tempo = 0) {
+  debugStage = "scene apply";
   loading = true;
   int32_t at = beginSceneChange(quick, unitsPrepared(), restart);
   for (int t = 0; t < NUM_TRACKS; t++) setTrackUnit(t, s.units[t]);   // (they take the prepared files)
@@ -649,9 +650,14 @@ bool projectLoad(int p) {
   if (p < 0 || p >= PROJECTS || busy() || projectCopying(p)) return false;
   if (p == project) return true;
   target = -1;
+  debugStage = "project load: closing prepared files";
   prepareUnits(nullptr);
+  debugStage = "project load: saving the old one";
   flushProject();
-  return openAs(p, true);
+  debugStage = "project load: opening";
+  bool ok = openAs(p, true);
+  debugStage = "project load: done";
+  return ok;
 }
 
 bool projectHasClipsIn(int p) {

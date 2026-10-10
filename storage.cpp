@@ -598,6 +598,7 @@ static bool takePrepared(int t, uint32_t n, FsFile &f, SampleInfo &info, uint8_t
 // Opens sample n for track t and takes on its recording (length, tempo,
 // overview). The track's settings are left to the caller.
 static bool loadSample(int t, uint32_t n) {
+  debugStage = "SD open (a clip, at its switch)";
   Track &tr = tracks[t];
   SampleInfo info;
   if (!takePrepared(t, n, tr.file, info, tr.overview) && !openSample(n, tr.file, info, tr.overview)) return false;
