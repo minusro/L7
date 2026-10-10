@@ -303,9 +303,9 @@ static void drawItem(int k) {
       for (int r = 0; r < 5 && g->rows[r]; r++)
         for (int c = 0; c < w; c++)
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
-      if (playing) {                              // the clock running: a small play icon right of the letter, in the letter's colour, light grey a moment on each beat
+      if (playing) {                              // the clock running: a small play icon right of the letter, grey, black a moment on each beat
         static const char *const PLAY[5] = {"#..", "##.", "###", "##.", "#.."};
-        const uint16_t ink = playPulse() ? LIGHT : letter;
+        const uint16_t ink = playPulse() ? BG : DIM;   // (black a moment on each beat, grey otherwise)
         for (int r = 0; r < 5; r++)
           for (int c = 0; c < 3; c++)
             if (PLAY[r][c] == '#') t.fillRect((x0 + w + 2 + c) * PX, (y0 + r) * PX, PX, PX, ink);   // (two blocks after the letter)
@@ -342,7 +342,7 @@ uint16_t menuActionColor() {
   return projectHasClips() && !exportText[0] ? ACCENT : DIM;   // export: grey with nothing to export, or while its label shows
 }
 
-// The playing card's play icon (the clock running): light grey for PLAY_FLASH_MS from each beat.
+// The playing card's play icon (the clock running): black for PLAY_FLASH_MS from each beat.
 static constexpr uint32_t PLAY_FLASH_MS = 100;
 static bool playPulse() {
   noInterrupts();
