@@ -268,8 +268,8 @@ void menuHelp(bool open);
 bool menuHelpKeys(uint8_t pressed, bool repeat);
 void drawHelpPage(int page);
 int helpPages();
-void helpTurned();                       // a page turned: its square in the page row white a moment
-void helpService(int page);              // every pass while the help shows (the flash over: drawn again)
+void helpTurned();                       // a page turned (nothing more for now)
+void helpService(int page);              // every pass while the help shows (its rainbow text animated)
 void menuCutFlash(int k);                // (ui_menu.cpp) the hold to cut through: card k flashed white 100 ms as an empty slot's
 void menuSelectSlot(int k);              // the menu's selection on card k
 void menuNoteLoad(int from);             // a project just loaded from the menu, `from` the one before: its card flashing until it comes in

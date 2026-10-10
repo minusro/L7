@@ -2,8 +2,8 @@
 // (tools/help/make_help.py), each page a list of steps (rectangles, text in
 // L7's font at 1-6 px a dot, run-length coded images), then the page row:
 // a square each, the pages seen (app.h helpSeen()) filled in their project's
-// colour, the others a grey outline; the page shown on a solid light grey
-// square two blocks wider all round (white for HELP_FLASH_MS after a turn).
+// colour, the others a grey outline; the page shown in its colour, wider,
+// down to the screen's bottom. Rainbow text animated (helpService()).
 #include "ui.h"
 #include "ui_font.h"
 #include "help_slides.h"
@@ -62,8 +62,6 @@ FLASHMEM static void helpImage(int x0, int y0, const HelpImage &im) {
 }
 
 // The page row: a square each, 16 px apart, 8 px square, from (x, 226).
-static constexpr uint32_t HELP_FLASH_MS = 100;
-static uint32_t flashAt = 0;                     // millis() of the last turn (0: none showing)
 static int dotsX = 10;
 FLASHMEM static void helpDots(int x, int shown) {
   auto &t = board.tft();
@@ -85,13 +83,24 @@ FLASHMEM static void helpDots(int x, int shown) {
   }
 }
 
-// A turn (LEFT/RIGHT): the shown page's square white a moment.
-void helpTurned() { flashAt = max(1u, millis()); }
-// Every pass while the help shows: the flash over, the square light grey again.
+// A turn (LEFT/RIGHT): nothing more now (the square drawn with the page).
+void helpTurned() {}
+
+// The rainbow text ([...] in make_help.py: "L7" on the sync page): in the
+// projects' colours in turn, a colour every RAINBOW_MS.
+static constexpr uint32_t RAINBOW_MS = 120;
+static int rainbowShown = -1;                    // (the colour it was drawn in)
+static uint16_t rainbowColor() { return PROJECT_COLORS[millis() / RAINBOW_MS % 12]; }
+FLASHMEM static void drawRainbow(int page) {
+  const HelpPage &p = HELP[page];
+  rainbowShown = millis() / RAINBOW_MS % 12;
+  for (int i = 0; i < p.count; i++)
+    if (p.ops[i].op == HELP_RAINBOW) helpText(p.ops[i].x, p.ops[i].y, p.ops[i].k, rainbowColor(), p.ops[i].text);
+}
+// Every pass while the help shows: the rainbow text on to its next colour.
 FLASHMEM void helpService(int page) {
-  if (!flashAt || millis() - flashAt < HELP_FLASH_MS) return;
-  flashAt = 0;
-  helpDots(dotsX, page);
+  if (page < 0 || page >= HELP_PAGES || (int)(millis() / RAINBOW_MS % 12) == rainbowShown) return;
+  drawRainbow(page);
 }
 
 FLASHMEM void drawHelpPage(int page) {
@@ -104,6 +113,7 @@ FLASHMEM void drawHelpPage(int page) {
     if (op.op == HELP_RECT) t.fillRect(op.x, op.y, op.w, op.h, op.color);
     else if (op.op == HELP_TEXT) helpText(op.x, op.y, op.k, op.color, op.text, op.w);   // (w: squeezed)
     else if (op.op == HELP_LOGO) drawLogoScaled(op.x, op.y, op.k, op.color);
+    else if (op.op == HELP_RAINBOW) helpText(op.x, op.y, op.k, rainbowColor(), op.text);
     else helpImage(op.x, op.y, *op.img);
   }
   dotsX = p.dotsX;

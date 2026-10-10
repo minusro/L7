@@ -4,7 +4,7 @@
 #pragma once
 
 struct HelpImage { uint16_t w, h; const uint16_t *pal; const uint8_t *runs; uint32_t runCount; };
-enum { HELP_RECT, HELP_TEXT, HELP_IMAGE, HELP_LOGO };   // (the logo: drawLogoScaled(), k its scale)
+enum { HELP_RECT, HELP_TEXT, HELP_IMAGE, HELP_LOGO, HELP_RAINBOW };   // (the logo: drawLogoScaled(), k its scale; rainbow: text in the projects' colours in turn)
 struct HelpOp { uint8_t op, k; int16_t x, y, w, h; uint16_t color; const char *text; const HelpImage *img; };
 struct HelpPage { const HelpOp *ops; uint8_t count; int16_t dotsX; };
 
@@ -1391,14 +1391,15 @@ PROGMEM static const char HELP_STR_66[] = "FOLLOW";
 PROGMEM static const char HELP_STR_67[] = "MIDI";
 PROGMEM static const char HELP_STR_68[] = "USB";
 PROGMEM static const char HELP_STR_69[] = "AUDIO";
-PROGMEM static const char HELP_STR_70[] = "L7 FOLLOWS MIDI AND USB CLOCK";
-PROGMEM static const char HELP_STR_71[] = " ON TEMPO: FOLLOW AUDIO";
-PROGMEM static const char HELP_STR_72[] = "PROJECTS";
-PROGMEM static const char HELP_STR_73[] = "OPEN";
-PROGMEM static const char HELP_STR_74[] = "ARROW";
-PROGMEM static const char HELP_STR_75[] = " OFF THE EDGE: MENU";
-PROGMEM static const char HELP_STR_76[] = ": OPEN. ";
-PROGMEM static const char HELP_STR_77[] = ": CUT";
+PROGMEM static const char HELP_STR_70[] = "L7";
+PROGMEM static const char HELP_STR_71[] = " FOLLOWS MIDI AND USB CLOCK";
+PROGMEM static const char HELP_STR_72[] = " ON TEMPO: FOLLOW AUDIO";
+PROGMEM static const char HELP_STR_73[] = "PROJECTS";
+PROGMEM static const char HELP_STR_74[] = "OPEN";
+PROGMEM static const char HELP_STR_75[] = "ARROW";
+PROGMEM static const char HELP_STR_76[] = " OFF THE EDGE: MENU";
+PROGMEM static const char HELP_STR_77[] = ": OPEN. ";
+PROGMEM static const char HELP_STR_78[] = ": CUT";
 PROGMEM static const HelpOp HELP_PAGE_1[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_LOGO, 2, 8, 36, 0, 0, 0xB718, nullptr, nullptr},
@@ -1625,32 +1626,33 @@ PROGMEM static const HelpOp HELP_PAGE_11[] = {
   {HELP_TEXT, 2, 32, 106, 0, 0, 0xCE79, HELP_STR_68, nullptr},
   {HELP_TEXT, 2, 32, 120, 0, 0, 0xCE79, HELP_STR_69, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xAEBD, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_70, nullptr},
+  {HELP_RAINBOW, 2, 8, 190, 0, 0, 0xB718, HELP_STR_70, nullptr},
+  {HELP_TEXT, 2, 24, 190, 0, 0, 0xCE79, HELP_STR_71, nullptr},
   {HELP_TEXT, 2, 8, 206, 0, 0, 0xFFFF, HELP_STR_41, nullptr},
-  {HELP_TEXT, 2, 64, 206, 0, 0, 0xCE79, HELP_STR_71, nullptr},
+  {HELP_TEXT, 2, 64, 206, 0, 0, 0xCE79, HELP_STR_72, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_12[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 10, 0, 0, 0, nullptr, &HELP_IMG_39},
-  {HELP_TEXT, 3, 24, 8, 0, 0, 0xAF1B, HELP_STR_72, nullptr},
+  {HELP_TEXT, 3, 24, 8, 0, 0, 0xAF1B, HELP_STR_73, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 42, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_40},
   {HELP_IMAGE, 0, 4, 76, 0, 0, 0, nullptr, &HELP_IMG_41},
   {HELP_TEXT, 2, 12, 82, 0, 0, 0x0000, HELP_STR_14, nullptr},
-  {HELP_TEXT, 2, 250, 82, 0, 0, 0xCE79, HELP_STR_73, nullptr},
+  {HELP_TEXT, 2, 250, 82, 0, 0, 0xCE79, HELP_STR_74, nullptr},
   {HELP_RECT, 0, 30, 114, 214, 42, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 116, 0, 0, 0, nullptr, &HELP_IMG_42},
   {HELP_IMAGE, 0, 4, 124, 0, 0, 0, nullptr, &HELP_IMG_41},
   {HELP_TEXT, 2, 12, 130, 0, 0, 0x0000, HELP_STR_16, nullptr},
   {HELP_TEXT, 2, 250, 130, 0, 0, 0xCE79, HELP_STR_38, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xAF1B, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xFFFF, HELP_STR_74, nullptr},
-  {HELP_TEXT, 2, 52, 190, 0, 0, 0xCE79, HELP_STR_75, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xFFFF, HELP_STR_75, nullptr},
+  {HELP_TEXT, 2, 52, 190, 0, 0, 0xCE79, HELP_STR_76, nullptr},
   {HELP_TEXT, 2, 8, 206, 0, 0, 0xFFFF, HELP_STR_6, nullptr},
-  {HELP_TEXT, 2, 16, 206, 0, 0, 0xCE79, HELP_STR_76, nullptr},
+  {HELP_TEXT, 2, 16, 206, 0, 0, 0xCE79, HELP_STR_77, nullptr},
   {HELP_TEXT, 2, 70, 206, 0, 0, 0xFFFF, HELP_STR_41, nullptr},
-  {HELP_TEXT, 2, 126, 206, 0, 0, 0xCE79, HELP_STR_77, nullptr},
+  {HELP_TEXT, 2, 126, 206, 0, 0, 0xCE79, HELP_STR_78, nullptr},
 };
 constexpr int HELP_PAGES = 12;
 PROGMEM static const HelpPage HELP[HELP_PAGES] = {
@@ -1664,6 +1666,6 @@ PROGMEM static const HelpPage HELP[HELP_PAGES] = {
   {HELP_PAGE_8, 18, 8},
   {HELP_PAGE_9, 21, 8},
   {HELP_PAGE_10, 19, 8},
-  {HELP_PAGE_11, 16, 8},
+  {HELP_PAGE_11, 17, 8},
   {HELP_PAGE_12, 21, 8},
 };
