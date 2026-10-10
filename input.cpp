@@ -644,7 +644,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // clip), wrapping round; back on the track it started on, it stops there
   // (held: no more repeats). The other way from the first step's: each step
   // undoes one (that track's mute as it was when A was pressed), and back
-  // past the start, the press's own.
+  // on the start, the press's own too, stopping there.
   if (swipeOn && !(keys & m8::BTN_EDIT)) swipeOn = false;
   if (swipeOn && (pressed & (m8::BTN_UP | m8::BTN_DOWN))) {
     if (!shift && !opt) {
@@ -666,6 +666,10 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         if (hasClip(t)) setTrackMuted(t, swipeWas[t]);
         swipePos--;
         selected = (swipeFrom + swipePos * swipeDir) % NUM_TRACKS;
+        if (!swipePos) {                           // back on the start: the press's own undone too, stopped there
+          if (hasClip(swipeFrom)) setTrackMuted(swipeFrom, swipeWas[swipeFrom]);
+          stopRepeat = true;
+        }
       } else if (hasClip(swipeFrom) && trackMuted(swipeFrom) != swipeWas[swipeFrom]) {
         setTrackMuted(swipeFrom, swipeWas[swipeFrom]);   // (past the start: the press's own undone)
         stopRepeat = true;
