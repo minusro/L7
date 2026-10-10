@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include "app.h"
 #include "engine.h"
+#include "ui.h"
 
 void setup();
 void loop();
@@ -157,6 +158,22 @@ int main(int argc, char **argv) {
     SDL_RenderCopy(ren, tex, nullptr, nullptr);
     SDL_RenderPresent(ren);
   };
+
+  // The app's icon: the L7 logo in white on black (drawn by the splash's own
+  // code, 4x, into the screen's buffer, then copied out; the screen cleared).
+  {
+    constexpr int ICON = 256, K = 4, LW = 55 * K, LH = 26 * K;
+    auto &d = board.tft();
+    d.fillScreen(0);
+    drawLogoScaled(0, 0, K, 0xFFFF);
+    static uint16_t icon[ICON * ICON];
+    for (int y = 0; y < LH; y++)
+      for (int x = 0; x < LW; x++) icon[(y + (ICON - LH) / 2) * ICON + x + (ICON - LW) / 2] = d.px[y * m8::Display::W + x];
+    d.fillScreen(0);
+    SDL_Surface *sf = SDL_CreateRGBSurfaceWithFormatFrom(icon, ICON, ICON, 16, ICON * 2, SDL_PIXELFORMAT_RGB565);
+    SDL_SetWindowIcon(win, sf);
+    SDL_FreeSurface(sf);
+  }
 
   SDL_AudioSpec want = {}, got;
   want.freq = 44100;                              // (the stand-in's AUDIO_SAMPLE_RATE_EXACT: the engine's timing at it)
