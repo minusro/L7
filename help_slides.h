@@ -1656,7 +1656,7 @@ PROGMEM static const HelpOp HELP_PAGE_12[] = {
 };
 constexpr int HELP_PAGES = 12;
 PROGMEM static const HelpPage HELP[HELP_PAGES] = {
-  {HELP_PAGE_1, 12, 8},
+  {HELP_PAGE_1, 12, 12},
   {HELP_PAGE_2, 8, 8},
   {HELP_PAGE_3, 24, 8},
   {HELP_PAGE_4, 22, 8},

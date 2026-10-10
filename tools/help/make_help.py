@@ -164,7 +164,7 @@ def page(n, p):
                 lines.append((line, ink))
         for j, (line, ink) in enumerate(lines):           # (the last, how to move, a line lower: apart)
             ops += say(8, 140 + (j + (j == len(lines) - 1)) * 14, 2, NAMED[ink], line)
-        return ops, 8
+        return ops, 12                                 # (its square, two blocks wider, from x 8: as the first one is on the other pages)
     title = (t1 + " " + t2).strip()                  # (one line, in the page's colour; no page number)
     # Its icon left of it (the action button's, a block a dot: 2 px), in the
     # page's colour, centred on the title's 15 px; the title 3 blocks after it.
