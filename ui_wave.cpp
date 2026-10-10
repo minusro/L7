@@ -9,7 +9,7 @@
 // space. Rows of blocks (16 in the cell):
 //   0, 15   the border
 //   1, 14   space (the playheads reach into it)
-// A black line the waveform's height, two pixels wide, just before each bar's
+// A black line the waveform's height, a pixel wide, just before each bar's
 // start (but the first's), on every track, while recording too.
 //   2 - 13  the waveform, in pixels (the only part not in blocks): a 2-pixel
 //           line along the middle, the peaks reaching up to 11 pixels above
@@ -96,7 +96,7 @@ static uint8_t pixelLevel(const uint8_t *src, int p) {
 // k - 1 and k. Range edges, bar starts and the start position all snap to
 // these, so they agree.
 static constexpr int PX_COLS = WAVE_COLS * PX;                  // 180
-static constexpr int LINE_W = 2;                               // a bar line's, the start position's and the playhead's width, pixels
+static constexpr int LINE_W = 2;                               // the start position's and the playhead's width, pixels (a bar line: 1)
 static int edgePx(uint32_t beat, uint32_t loopBeats) {
   return (int)(((uint64_t)beat * PX_COLS + loopBeats / 2) / loopBeats);
 }
@@ -144,8 +144,8 @@ static void drawColumn(int i, int bc) {
     int bars = v.live ? (int)v.liveBars : (int)tr.loopBars;      // (recording: as it's shown so far)
     for (int sub = 0; sub < PX; sub++) {
       const int p = c * PX + sub;                                 // (this pixel column)
-      for (int b = 1; b < bars; b++)                              // bars 2 on: a black line just before each start
-        if (covers(edgePx(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) - LINE_W, p)) {
+      for (int b = 1; b < bars; b++)                              // bars 2 on: a black line a pixel wide just before each start
+        if ((edgePx(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) - 1 + PX_COLS) % PX_COLS == p) {
           for (int y = (MID_ROW - WAVE_REACH) * PX; y < (MID_ROW + 2 + WAVE_REACH) * PX; y++) px[y * PX + sub] = v.live ? ACCENT_DARK : v.bg;   // (recording: the dark accent)
           break;
         }
