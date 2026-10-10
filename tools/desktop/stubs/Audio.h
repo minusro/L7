@@ -12,7 +12,7 @@
 #include <algorithm>
 
 #define AUDIO_BLOCK_SAMPLES 128
-#define AUDIO_SAMPLE_RATE_EXACT 44117.64706f
+#define AUDIO_SAMPLE_RATE_EXACT 44100.0f                 // (the desktop app's; the M8: 44117.64706)
 #define DMAMEM
 #define FLASHMEM
 #define FASTRUN
