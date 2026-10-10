@@ -2572,7 +2572,8 @@ void transportStartAt(int32_t beat, uint32_t (*inBeat)()) {
     if (tr.state != TrackState::Empty) {
       uint32_t rs, rb;
       trackRange(t, rs, rb);                     // a queued range: startTrack() takes it now
-      tr.rangeAnchorQ = -4 * (int32_t)(startPosition(tr.loopBars * BEATS_PER_BAR, rs, rb) - rs);
+      const uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;   // (the start position past the loop's end, wrapped round to its start: still ahead of the range's start)
+      tr.rangeAnchorQ = -4 * (int32_t)posMod((int32_t)startPosition(loopBeats, rs, rb) - (int32_t)rs, loopBeats);
     }
     startTrack(t, beat, true);                   // (from beat 0's alignment: where they'd be at `beat`)
   }
