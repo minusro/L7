@@ -367,7 +367,7 @@ static int fuzz(int seconds, unsigned seed) {
   float bpm = 120;
   for (uint64_t i = 0; i < blocks; i++) {
     if (i % 2000 == 0) alarm(10);
-    if (int r = takeResampled(); r >= 0 && !sceneFromResample(r)) endSilencing();   // (as followRecording())
+    if (int r = takeResampled(); r >= 0 && sceneFromResample(r) < 0) endSilencing();   // (as followRecording())
     if (rand() % 300 == 0) {
       sel = rand() % NUM_TRACKS;
       Track &tr = tracks[sel];
@@ -1539,7 +1539,7 @@ int main(int argc, char **argv) {
     check(takeResampled() == 6 && takeResampled() == -1, "reported once as resampled");
     uint32_t sample = tracks[6].sample;
     int count = sceneCount(), pos = sceneCurrent();
-    check(sceneFromResample(6) && sceneCount() == count + 1 && sceneCurrent() == pos + 1,
+    check(sceneFromResample(6) >= 0 && sceneCount() == count + 1 && sceneCurrent() == pos + 1,
           "a new scene inserted after the current one, and selected");
     waitScene();
     runBeats(2);

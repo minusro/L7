@@ -303,21 +303,26 @@ bool sceneDuplicate() {
   return true;
 }
 
-bool sceneFromResample(int t) {
+int sceneFromResample(int t) {
   takeHeld();
   commit();                                        // (the current scene, the resampling on it)
   SceneInfo from = snapshot(), to = emptyScene();
   to.tempo = resampleTempo > 0 ? resampleTempo : getTempo();   // (made by the resampling: its tempo)
   resampleTempo = 0;
-  to.units[t] = from.units[t];                     // (on the same track)
+  // On track 1 (the bottom row), unless another recording runs there (then
+  // its own); a muted clip on track 1 swaps places with it.
+  const int one = NUM_TRACKS - 1;
+  const int d = recording.mode != Recording::Idle && recording.track == one && t != one ? t : one;
+  if (list.count >= MAX_SCENES) return -1;
+  to.units[d] = from.units[t];
   from.units[t] = emptyScene().units[t];
   for (int u = 0; u < NUM_TRACKS; u++)              // the muted clips come along, still muted (and stay here too)
     if (u != t && from.units[u].sample && from.units[u].muted) {
-      to.units[u] = from.units[u];
-      hearAgain(u);                                  // (silenced with the others: its clip doesn't change, so it's heard once unmuted)
+      int at = u == d ? t : u;                     // (track 1's: where the resampling was)
+      to.units[at] = from.units[u];
+      if (at == u) hearAgain(u);                   // (silenced with the others: its clip doesn't change, so it's heard once unmuted)
     }
   int pos = list.current == list.count + 1 ? list.count + 1 : list.current + 1;
-  if (list.count >= MAX_SCENES) return false;
   if (list.current >= 1 && list.current <= list.count) {   // the current scene, without it
     int slot = list.slot[list.current - 1];
     if (recordSlot >= 0 && recordSlot != slot) writeRecordNow();
@@ -331,7 +336,7 @@ bool sceneFromResample(int t) {
   list.current = pos;
   sceneTempo = to.tempo;
   apply(to, true);                                 // on the next beat
-  return true;
+  return d;
 }
 
 static bool copyOn();

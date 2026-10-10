@@ -1223,10 +1223,11 @@ void followRecording() {
   // selected.
   int resampled = takeResampled();
   if (resampled >= 0) {
-    if (sceneFromResample(resampled)) {
-      selected = resampled;
+    int on = sceneFromResample(resampled);         // (on track 1)
+    if (on >= 0) {
+      selected = on;
       for (int i = 0; i < ROWS; i++) drawTrack(i);
-      selectAfterRecording(resampled);             // (the setting on: on to the next free track there)
+      selectAfterRecording(on);             // (the setting on: on to the next free track there)
     } else {
       endSilencing();                              // (scene list full: it stays where it is)
     }
