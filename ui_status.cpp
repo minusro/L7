@@ -203,7 +203,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   bool running = transport.running;
   interrupts();
   if (running)
-    snprintf(text, sizeof text, "%ld.%ld.%lu", beat / BEATS_PER_BAR % CLOCK_BARS + 1, beat % BEATS_PER_BAR + 1, step + 1);
+    snprintf(text, sizeof text, "%ld.%ld.%lu", (long)(beat / BEATS_PER_BAR % CLOCK_BARS + 1), (long)(beat % BEATS_PER_BAR + 1), (unsigned long)(step + 1));
   else
     snprintf(text, sizeof text, "1.1.1");          // where it starts from
   // Stopped: as the scene's and tempo's labels (grey; light grey selected). Running: grey, light grey on each
