@@ -181,7 +181,8 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
     t.fillRect(numLeft, textY + FONT_H, numRight - numLeft + PX, tagY + TAG_H - textY - FONT_H, G);
     t.fillRect(numLeft, textY, tempoW - w, FONT_H, G);
     t.fillRect(numRight, textY, PX, FONT_H, G);
-    uint16_t numInk = offsetShown || rotateShown || tempoNudging() || tapped ? ACCENT                      // (nudged, the offset, or just tapped: the accent colour)
+    uint16_t numInk = rotateShown && clipRotateFlash() ? INK                                             // (the fine rotate's steps starting, a tap taken: white a moment)
+                    : offsetShown || rotateShown || tempoNudging() || tapped ? ACCENT                      // (nudged, the offset, or just tapped: the accent colour)
                     : audioFollowFlash() ? (audioFollowLocked() ? ACCENT : BG) : ink;   // (audio follow: the beat; black until locked)
     drawText(numRight - w, textY, text, numInk, G);
   }

@@ -154,6 +154,11 @@ static bool rotateStopped = false;                 // (at none: the held arrow's
 static uint32_t stepAt = 0;                        // (millis() of the held arrow's next step; 0: none)
 static int32_t quarterFrames(const Track &tr) { return (int32_t)(tr.spbNative / 4); }
 static int heldSteps = 0;                          // (the held arrow's steps so far: five of 1 ms, five of 2, five of 4, then 10 ms each)
+// The tempo cell's ms flashed white a moment: as the held arrow's ms steps
+// start, and as a tap's quarter beat is taken (let go).
+static constexpr uint32_t ROTATE_FLASH_MS = 100;
+static uint32_t rotateFlashAt = 0;
+bool clipRotateFlash() { return rotateFlashAt && millis() - rotateFlashAt < ROTATE_FLASH_MS; }
 static int32_t msFrames(const Track &tr, int ms) {
   return (int32_t)((uint64_t)tr.spbNative * (uint32_t)(AUDIO_SAMPLE_RATE_EXACT * ms / 1000) / (transport.spb ? transport.spb : 1));
 }
@@ -190,7 +195,7 @@ static void serviceRotate() {                      // (every pass: pollKeys())
   if (rotateHeld && !rotateStopped && (int32_t)(millis() - stepAt) >= 0 && (mainKeys() & rotateKey)) {   // held: five 1 ms repeats, five 2, five 4, then 10 ms
     stepAt += REPEAT_PERIOD_MS;
     rotateStepped = true;
-    heldSteps++;
+    if (++heldSteps == 1) rotateFlashAt = max(1u, millis());
     int ms = heldSteps <= 5 ? 1 : heldSteps <= 10 ? 2 : heldSteps <= 15 ? 4 : 10;
     nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false, msFrames(tracks[rotateT], ms));
   }
@@ -459,6 +464,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   // The fine rotate's keys: one let go, what was shown is heard.
   if (rotateHeld && (!(keys & m8::BTN_EDIT) || !(keys & m8::BTN_OPT) || !(keys & rotateKey))) {
+    if (!rotateStepped && rotateKey) rotateFlashAt = max(1u, millis());
     if (!rotateStepped && rotateKey) nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false, quarterFrames(tracks[rotateT]));   // (a tap: a quarter beat)
     rotateHeld = false;
     serviceRotate();
