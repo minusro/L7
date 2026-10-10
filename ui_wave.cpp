@@ -71,11 +71,11 @@ struct WaveView {
   uint32_t drawn = 0;                              // uiGeneration when last drawn whole
   uint32_t rs = 0, rb = 0;
   char label[24] = "";                             // the sample's label (SHIFT held: its name, X/N; "": none)
-  bool labelFlash = false;                         // (its name and number white: the sample just stepped)
+  bool labelFlash = false;                         // (its name and number dark grey: the sample just stepped)
   int labelX = 0, labelW = 0;                      // its box: first block column, width in blocks
 };
 static WaveView views[NUM_TRACKS];
-static constexpr uint32_t LABEL_FLASH_MS = 100;           // (a sample step: its label's name and number white this long)
+static constexpr uint32_t LABEL_FLASH_MS = 100;           // (a sample step: its label's name and number dark grey this long)
 static constexpr int LABEL_TOP = BAND_ROWS - 7;             // the sample label's box: rows 9-15 (over the bottom border, its own bottom row)
 // The record head's look (not a colour the playheads use): its column inverted.
 static constexpr uint16_t INVERT_HEAD = 0x0001;
@@ -179,7 +179,7 @@ static void drawColumn(int i, int bc) {
     bool count = false;                            // (past the '/': the count, never flashed)
     for (const char *p = v.label; *p && c >= 0; p++) {
       if (*p == '/') count = true;
-      const uint16_t ink = v.labelFlash && !count ? INK : BG;   // (a step: the name and number white a moment)
+      const uint16_t ink = v.labelFlash && !count ? DARK : BG;   // (a step: the name and number dark grey a moment)
       const Glyph *g = glyphFor(*p);
       int w = g ? glyphWidth(*g) : 2;
       if (c < w) {
