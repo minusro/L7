@@ -270,6 +270,8 @@ static bool swipeWas[NUM_TRACKS];                  // each track's mute when A w
 // it; or between the looper's two (main and notes, ui.h: UP off its top, DOWN
 // off its bottom).
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
+static bool nextChosen = false;                    // (a recording's stop pressed: the next track chosen then, not again once it's saved)
+static void selectAfterRecording(int t, bool fromScene = false);
 static bool dupJustMade = false;                   // (SHIFT+A duplicated the scene, SHIFT still held: A again clears it)
 bool sceneDupMade() { return dupJustMade && (mainKeys() & m8::BTN_SHIFT); }
 static uint8_t helpOnRelease = 0;                  // (UP or DOWN in the help pages: back to the menu, the same way)
@@ -1061,7 +1063,16 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       else if (recordingOn(selected) || recordQueued() == selected) cancelRecording(selected);
       else pasteTrack(selected);
     } else if (tr.state == TrackState::Empty || recordingOn(selected)) {
-      if (recordPress(selected)) selectedCell = WAVE_CELL;   // a recording (or its stop, its cancel, out of the queue): at once, on the press
+      // (A recording told to stop, not a resampling: on to the next free track
+      // now, as the setting says, not once it has finished.)
+      const bool stopping = recording.mode == Recording::Running && recording.track == selected && !recording.resample;
+      if (recordPress(selected)) {                   // a recording (or its stop, its cancel, out of the queue): at once, on the press
+        selectedCell = WAVE_CELL;
+        if (stopping) {
+          nextChosen = true;
+          selectAfterRecording(selected);
+        }
+      }
     } else {
       for (int k = 0; k < NUM_TRACKS; k++) swipeWas[k] = trackMuted(k);   // (to undo to)
       setTrackMuted(selected, !trackMuted(selected));
@@ -1106,7 +1117,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
 // next muted one, else stay.
 // fromScene: as the new scene has them (a resampling's: its switch still to
 // come on the next beat), not as the tracks play now.
-static void selectAfterRecording(int t, bool fromScene = false) {
+static void selectAfterRecording(int t, bool fromScene) {
   if (selected != t || !setting(SET_NEXT_FREE)) return;   // the user has moved on already (the setting off: it stays)
   for (TrackState want : {TrackState::Empty, TrackState::Muted}) {
     for (int k = 1; k < NUM_TRACKS; k++) {
@@ -1259,7 +1270,8 @@ void followRecording() {
     recTrack = recording.track;
     recResample = recording.resample;
   } else if (recTrack >= 0) {
-    if (!recResample && tracks[recTrack].state != TrackState::Empty) selectAfterRecording(recTrack);
+    if (!recResample && !nextChosen && tracks[recTrack].state != TrackState::Empty) selectAfterRecording(recTrack);   // (ended by itself)
+    nextChosen = false;
     recTrack = -1;
   }
 }

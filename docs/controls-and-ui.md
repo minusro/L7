@@ -215,7 +215,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   arrow down to its label, over its first S), grey all over, from four blocks under the screen's top (each corner cut: its block and the two next to it), centred; the menu's own selection frame (round SETTINGS) hidden while it's open; its items from
   the bottom up: MONITOR AUDIO IN (the input heard in the mix: the line out and USB 1-2;
   recorded either way), PLAY NEWLY RECORDED (off: a new clip comes in muted), SELECT NEXT FREE
-  TRACK (on: after a recording or a resampling, once in its scene, the next empty track up is selected, none empty: the next muted one, `selectAfterRecording()`; off: the selection stays on the track just recorded), EMPTY PROJECT CLICK (the
+  TRACK (on: as a recording's stop is pressed, or after a resampling once in its scene, the next empty track up is selected, none empty: the next muted one, `selectAfterRecording()`; off: the selection stays on the track just recorded), EMPTY PROJECT CLICK (the
   metronome, off, still clicks in a project with no clips), each ON or OFF right of its label
   (on at first; ON light grey, OFF dark grey). Its items' frames as the
   list's, two blocks of space round them (white selected; while A or B is held, dark grey, light grey for the press's first 100 ms). UP/DOWN go through it; A or B turns
