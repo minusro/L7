@@ -308,7 +308,7 @@ static void drawItem(int k) {
         const uint16_t ink = playPulse() ? LIGHT : letter;
         for (int r = 0; r < 5; r++)
           for (int c = 0; c < 3; c++)
-            if (PLAY[r][c] == '#') t.fillRect((x0 + w + 1 + c) * PX, (y0 + r) * PX, PX, PX, ink);
+            if (PLAY[r][c] == '#') t.fillRect((x0 + w + 2 + c) * PX, (y0 + r) * PX, PX, PX, ink);   // (two blocks after the letter)
       }
     }
     if (!emptyLook) drawCutWipe(k);                 // (SHIFT+A held on it: as far as the hold, an empty slot's look)
