@@ -303,10 +303,10 @@ static void drawItem(int k) {
       for (int r = 0; r < 5 && g->rows[r]; r++)
         for (int c = 0; c < w; c++)
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
-      if (playing) {                              // the clock running: a small play icon right of the letter, in the letter's colour, light grey a moment on each beat, white on a bar's first
+      if (playing) {                              // the clock running: a small play icon right of the letter, in the letter's colour, light grey a moment on each beat, white on the clock's 1.1.1
         static const char *const PLAY[5] = {"#..", "##.", "###", "##.", "#.."};
         const int pulse = playPulse();
-        const uint16_t ink = pulse == 2 ? INK : pulse ? LIGHT : letter;   // (a bar's first beat: white)
+        const uint16_t ink = pulse == 2 ? INK : pulse ? LIGHT : letter;   // (the clock's 1.1.1: white)
         for (int r = 0; r < 5; r++)
           for (int c = 0; c < 3; c++)
             if (PLAY[r][c] == '#') t.fillRect((x0 + w + 1 + c) * PX, (y0 + r) * PX, PX, PX, ink);
@@ -344,12 +344,12 @@ uint16_t menuActionColor() {
 }
 
 // The playing card's play icon (the clock running): for PLAY_FLASH_MS from
-// each beat, 1 (light grey); from a bar's first beat, 2 (white); else 0.
+// each beat, 1 (light grey); from the clock's 1.1.1, 2 (white); else 0.
 static constexpr uint32_t PLAY_FLASH_MS = 100;
 static int playPulse() {
   noInterrupts();
   int on = transport.running && transport.sampleInBeat < (uint32_t)(PLAY_FLASH_MS * AUDIO_SAMPLE_RATE_EXACT / 1000)
-             ? (transport.beat % BEATS_PER_BAR == 0 ? 2 : 1) : 0;
+             ? ((transport.beat - transportOrigin()) % (BEATS_PER_BAR * 256) == 0 ? 2 : 1) : 0;   // (256: the clock's bars, ui_status.cpp)
   interrupts();
   return on;
 }
