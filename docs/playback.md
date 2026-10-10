@@ -420,9 +420,8 @@ macOS and Windows 10 (1703) and later have the class driver built in.
   volume's 100 % the tracks add up to channels 1-2, without the monitored
   input; a track not playing: silent); the line out and headphones have the
   metronome too. `USB_OUT_CLICK` (engine.cpp) puts the metronome on
-  USB too, for measuring (tools/latency/clocksync.c). While a computer records
-  it (its streaming interface selected, `usb_audio_transmit_setting`), the
-  speaker is off (headphones as ever); the serial log says so.
+  USB too, for measuring (tools/latency/clocksync.c). The speaker stays on
+  while a computer records it (only headphones turn it off).
 * In: mixed into the input with the line input (what's
   monitored and recorded, `inputRing`; clipped to 16 bits). While USB audio
   comes in, the line input is left out once it has been quiet (block peaks

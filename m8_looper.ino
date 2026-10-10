@@ -220,8 +220,8 @@ void loop() {
   debugStage = "storage";
   serviceStorage();
 
-  // Speaker off while headphones are plugged in, or while a computer records
-  // the M8's USB audio (its streaming interface selected).
+  // Speaker off while headphones are plugged in (a computer recording the
+  // M8's USB audio leaves it on).
   static bool phonesIn = false, speakerOn = true, first = true;
   bool phones;
   if (board.headphonesChanged(phones)) {
@@ -232,9 +232,9 @@ void loop() {
 #if defined(AUDIO_INTERFACE)
   usbRecording = usb_audio_transmit_setting != 0;
 #endif
-  if (first || speakerOn != (!phonesIn && !usbRecording)) {
+  if (first || speakerOn != !phonesIn) {
     first = false;
-    speakerOn = !phonesIn && !usbRecording;
+    speakerOn = !phonesIn;
     board.setSpeaker(speakerOn);
     Serial.printf("speaker %s%s%s\n", speakerOn ? "on" : "off", phonesIn ? " (headphones in)" : "", usbRecording ? " (streaming to USB)" : "");
   }
