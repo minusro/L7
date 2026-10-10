@@ -203,7 +203,11 @@ inline bool bAlone() {
 }
 // The cell is being edited: it's the selected one and B is the arrows'
 // modifier (B + arrows change it). Its markings then show in the accent colour.
+// B then A on a track (its fine rotate, from any of its cells): its
+// waveform cell's instead, whichever cell is selected (a clip; none else).
+bool clipRotating();                      // (input.cpp)
 inline bool editingCell(int i, int cell) {
+  if (i != STATUS_ROW && optThenEdit()) return shownSelected(i) && cell == WAVE_CELL && clipRotating();
   return shownSelected(i) && cell == selectedCellIn(i) && bArrows();
 }
 // The colour of block (r, c) of row i's cell (rows x cols blocks, its border
