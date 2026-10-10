@@ -339,11 +339,14 @@ int main(int argc, char **argv) {
   render(out + "/ui_status_scene.png");
   selectedCell = MENU_CELL;                        // LEFT to the menu cell: not selectable (stays on the scene cell)
   render(out + "/ui_status_menu.png");
-  {                                                // SHIFT held on a track's filter cell: its waveform cell framed (accent), the filter's not
+  {                                                // SHIFT held on a track's filter cell: its frame grey; on its waveform cell: accent, the sample's label
     int wasSel = selected, wasCell = selectedCell;
     selected = 2; selectedCell = FILTER_CELL;
     board.heldKeys = m8::BTN_SHIFT;
     render(out + "/ui_shift_track.png");
+    selectedCell = WAVE_CELL;
+    render(out + "/ui_shift_wave.png");
+    selectedCell = FILTER_CELL;
     board.heldKeys = 0;
     selected = wasSel; selectedCell = wasCell;
   }

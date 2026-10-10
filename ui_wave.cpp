@@ -1,5 +1,6 @@
 // ui_wave.cpp — waveforms, loop range markers and playheads (see ui.h)
 #include "ui.h"
+#include "ui_font.h"
 
 // ---- Waveforms
 // Each track's whole loop in WAVE_COLS columns of blocks, inside the cell's
@@ -68,8 +69,11 @@ struct WaveView {
   bool rec = false;
   uint32_t drawn = 0;                              // uiGeneration when last drawn whole
   uint32_t rs = 0, rb = 0;
+  char label[24] = "";                             // the sample's label (SHIFT held: its name, X/N; "": none)
+  int labelX = 0, labelW = 0;                      // its box: first block column, width in blocks
 };
 static WaveView views[NUM_TRACKS];
+static constexpr int LABEL_TOP = BAND_ROWS - 1 - 2 - 7;     // the sample label's box: rows 6-12 (two blocks of space over the bottom border)
 // The record head's look (not a colour the playheads use): its column inverted.
 static constexpr uint16_t INVERT_HEAD = 0x0001;
 
@@ -162,6 +166,23 @@ static void drawColumn(int i, int bc) {
       else if (back) block(r, ACCENT);
     }
   }
+  // SHIFT held (the frame's arrows above): the sample's label, in the accent
+  // colour on a black box (a block round the text), two blocks above the
+  // bottom border.
+  if (v.label[0] && bc >= v.labelX && bc < v.labelX + v.labelW) {
+    for (int r = LABEL_TOP; r < LABEL_TOP + 7; r++) block(r, BG);
+    int c = bc - v.labelX - 1;                     // (the text's column)
+    for (const char *p = v.label; *p && c >= 0; p++) {
+      const Glyph *g = glyphFor(*p);
+      int w = g ? glyphWidth(*g) : 2;
+      if (c < w) {
+        for (int r = 0; g && r < 5 && g->rows[r]; r++)
+          if (g->rows[r][c] == '#') block(LABEL_TOP + 1 + r + g->top, ACCENT);
+        break;
+      }
+      c -= w + 1;
+    }
+  }
   auto &t = board.tft();
   int x = WAVE_X + bc * PX, top = rowTop(i);
   t.writeRect(x, top, PX, CELL_H, px);
@@ -182,7 +203,15 @@ void drawWave(int i, bool recordingHere) {
   if (recordingHere) rangeInk = INK;                 // the recording's waveform: white
   uint16_t ground = rowGround(i);
   uint16_t outInk = onGround(muted ? DARK : DIM, ground);   // outside it: grey (muted: dark grey; black on the selected track's ground)
-  if (v.drawn == uiGeneration && v.version == tr.overviewVersion && v.turn == tr.turn && v.state == (uint8_t)tr.state &&
+  char label[24] = "";                             // (SHIFT held on the waveform cell: the sample's label)
+  if (i == selected && shiftArrows() && !recordingOn(i) && cellFrame(i, WAVE_CELL) == ACCENT) sampleLabel(i, label, sizeof label);
+  bool labelSame = !strcmp(label, v.label);
+  if (!labelSame) {
+    strcpy(v.label, label);
+    v.labelW = textWidth(label) / PX + 2;
+    v.labelX = (BLOCK_COLS - v.labelW) / 2;
+  }
+  if (labelSame && v.drawn == uiGeneration && v.version == tr.overviewVersion && v.turn == tr.turn && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.ground == ground && v.borders == borders &&
       v.rangeInk == rangeInk && v.outInk == outInk)
     return;

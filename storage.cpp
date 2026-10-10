@@ -1385,6 +1385,14 @@ int takeEmptySamples(uint32_t *ids, int most) {
   return n;
 }
 
+FLASHMEM void sampleLabel(int t, char *buf, size_t size) {
+  uint32_t id = unitOf(t).sample;
+  if (!id) { snprintf(buf, size, "-/%d", sampleTotal); return; }
+  char name[16];
+  sampleName(id, name, sizeof name);
+  snprintf(buf, size, "%s %d/%d", name, sampleIndex(id) + 1, sampleTotal);
+}
+
 bool stepSample(int t, int dir) {
   if (sampleTotal < 2 || recordingTrack(t)) return false;
   TrackUnit u = unitOf(t);                       // (a planned change counts)
