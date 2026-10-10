@@ -2036,7 +2036,7 @@ static bool streamsTopped() {
 
 // ---- Recording
 // Loop length in bars for a recording stopped after `beats` beats: the whole
-// bars done, if the stop came at most SNAP_THRESHOLD_BEATS past the last bar
+// bars done, if the stop came at most SNAP_THRESHOLD_MS past the last bar
 // line; otherwise one more (the recording then carries on to the end of that
 // bar). Under one bar it carries on to one bar.
 // The longest recording, in bars: MAX_BARS (32) at 60 BPM and over, half
@@ -2045,7 +2045,8 @@ static uint32_t maxBarsNow() { return transport.spb > spbForBpm(60.0f) ? MAX_BAR
 static uint32_t targetBars(double beats) {
   const uint32_t most = maxBarsNow();
   uint32_t p = min((uint32_t)(beats / BEATS_PER_BAR), most);   // whole bars done
-  if (p >= 1 && (beats <= p * BEATS_PER_BAR + SNAP_THRESHOLD_BEATS || p == most)) return p;
+  const double grace = SNAP_THRESHOLD_MS / 1000 * AUDIO_SAMPLE_RATE_EXACT / transport.spb;   // (in beats at the tempo now)
+  if (p >= 1 && (beats <= p * BEATS_PER_BAR + grace || p == most)) return p;
   return p + 1;
 }
 

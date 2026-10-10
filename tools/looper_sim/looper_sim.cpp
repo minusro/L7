@@ -482,7 +482,7 @@ int main(int argc, char **argv) {
   int fsChangesAtStart = simFsChanges;
   midiBegin(&midi);
 
-  recordTrack(0, 4 * 4 + 0.5, 4, "track 1: stop 4 bars + 0.5 beats in, from stopped (trims to 4 bars)");
+  recordTrack(0, 4 * 4 + 0.2, 4, "track 1: stop 4 bars + 0.2 beats in (100 ms: within the 200 ms grace), from stopped (trims to 4 bars)");
   recordTrack(1, 2 * 4 + 3, 3, "track 2: stop 2 bars + 3 beats in (carries on to the end of bar 3)");
   recordTrack(2, 3, 1, "track 3: stop 3 beats in (carries on to 1 bar)");
 
@@ -763,7 +763,7 @@ int main(int argc, char **argv) {
     clearTrack(6);
     recordPress(5);
     for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
-    runBeats(4.5);
+    runBeats(4.15);                                // (just past the bar line: within the 200 ms grace)
     recordPress(6);
     int32_t bar = recording.startBeat + 4;
     for (int i = 0; i < 20000 && recording.track != 6; i++) block();
@@ -1573,7 +1573,7 @@ int main(int argc, char **argv) {
   {
     lastAction = "naming";
     clearTrack(3);
-    recordTrack(3, 4.5, 1, "  (track 4 recorded)");
+    recordTrack(3, 4.15, 1, "  (track 4 recorded)");
     uint32_t n = tracks[3].sample;
     // Its name: the project's letter, track 4's number on the screen (4), and
     // the next number for those two (counting per project and track).

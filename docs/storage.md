@@ -87,7 +87,7 @@ ms to seconds and starves the streams. So:
   changes to 100 and 140 BPM). With no change, nothing differs from before
   and no bar lines are stored.
 * Stop: the loop is whole bars. `targetBars()`: if stopped within
-  `SNAP_THRESHOLD_BEATS` (1 beat) after a bar line it ends there (trimmed),
+  `SNAP_THRESHOLD_MS` (200 ms) after a bar line it ends there (trimmed),
   otherwise it carries on to the end of the current bar (`Finishing`).
   Longest: 32 bars at 60 BPM and over, 16 bars below (`maxBarsNow()`: 16 bars at 30 BPM still fit a file).
 * Playback of the new loop is gapless: the loop's beginning is copied into the

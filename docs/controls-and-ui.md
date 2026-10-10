@@ -31,7 +31,7 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 Tap tempo (A on the status row): the tempo follows the taps, each tap in a
 series refining it (a least-squares fit of every tap since the series began,
 not only the last few; a pause over 2.1 s or another key starts a new one); with the
-clock stopped, the 5th tap starts it from 1.1.1 (running: the clock is left as it is,
+clock stopped, the 5th tap starts it from 1.1.1 (that tap not in the estimate: a fresh one starts from it) (running: the clock is left as it is,
 no snapping to the taps).
 
 ### B + arrows on the waveform (loop range)

@@ -43,7 +43,8 @@ static void resetCell() {
 // jitter of single taps. Taps further apart than TAP_TIMEOUT_MS start a new
 // run, and so does any other key press in between. The 5th tap lands on a
 // bar line: a stopped clock starts there, from 1.1.1 (running, it's left as it
-// is: no snapping to the taps).
+// is: no snapping to the taps). That 5th tap isn't part of the estimate: a
+// fresh one starts from it.
 static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // a little over a beat at the slowest tempo (30 BPM)
 
 static int tapCount = 0;                            // taps in this run (0: the next is the first)
@@ -59,6 +60,14 @@ static void tapTempo() {
   static double sumT, sumIT;                        // over the taps: t (ms after the first), i * t
   uint32_t now = millis();
   if (tapCount > 0 && now - last > TAP_TIMEOUT_MS) tapCount = 0;
+  // Stopped, the 5th tap starts the clock: not part of the estimate so far
+  // (left as it was); a fresh one starts from it (it the new run's first).
+  const bool starts = tapCount == 4 && !transport.running;
+  if (starts) {
+    last = now;
+    tapCount = 0;
+    transportStart();                               // (a bar line now)
+  }
   if (tapCount == 0) {
     first = now;
     sumT = sumIT = 0;
@@ -78,7 +87,6 @@ static void tapTempo() {
   // Stopped, the metronome on: each of the first four taps clicks (the
   // first as a bar's first beat); the 5th starts the clock, which clicks itself.
   if (!transport.running && metronomeOn && n < 5) metronomeClick(n == 1);
-  if (n == 5 && !transport.running) transportStart();   // the 5th: a bar line now
 }
 
 // The clock started by hand (START, A on the clock cell; SHIFT: from 1.1.1
