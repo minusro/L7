@@ -14,7 +14,8 @@
 //   2 - 13  the waveform, in pixels (the only part not in blocks): a 2-pixel
 //           line along the middle, the peaks reaching up to 11 pixels above
 //           and below it, symmetric; 180 pixel columns. Heights go with the
-//           square root of the peak level (as the overview stores it).
+//           peak level (the overview's square root squared back), times the
+//           track's volume, at most the cell's.
 // Its heights follow the track's volume (as it plays it). The waveform is light grey inside the loop range (white on the selected
 // track) and 50% grey outside; on a muted clip the range is 50% grey and the
 // rest dark grey. While B is held on the selected waveform cell (other keys too; B +
@@ -44,8 +45,7 @@ static constexpr int MID_ROW = 7, WAVE_REACH = 5;              // the line: rows
 static constexpr int WAVE_MID_Y = (MID_ROW + 1) * PX - 1;        // 15: the line's upper pixel row
 static constexpr int WAVE_REACH_PX = WAVE_REACH * PX + 1;      // 11
 static_assert(WAVE_MID_Y - WAVE_REACH_PX == (MID_ROW - WAVE_REACH) * PX, "the peaks reach the top of row 2");
-// Reach (pixels each way) for a stored overview level (the square root of the
-// peak, 0-255): in proportion.
+// Reach (pixels each way) for a level (0-255): in proportion.
 static int pixelReach(uint8_t level) { return (level * WAVE_REACH_PX + 127) / 255; }
 
 struct WaveView {
@@ -61,7 +61,7 @@ struct WaveView {
   uint16_t rangeInk = INK;                         // the waveform inside the loop range
   uint16_t outInk = DARK;                          // the waveform outside the loop range
   uint16_t turn = 0;                               // turned right this many columns (the fine rotate)
-  uint16_t scale = 256;                            // its heights x scale / 256: the track's volume (the square root of its gain)
+  uint16_t scale = 256;                            // its heights x scale / 256: the track's volume (its gain)
   // live view
   uint32_t liveBars = 0;
   int liveFilled = 0;                              // columns with recorded audio
@@ -81,13 +81,13 @@ static constexpr int LABEL_TOP = BAND_ROWS - 7;             // the sample label'
 // The record head's look (not a colour the playheads use): its column inverted.
 static constexpr uint16_t INVERT_HEAD = 0x0001;
 
-// Level shown in pixel column p (0 .. WAVE_COLS * PX - 1): the peak of the
-// stored overview columns (OVERVIEW_COLS of them) that it covers.
+// Level shown in pixel column p (0 .. WAVE_COLS * PX - 1): the smallest of
+// the stored overview columns (OVERVIEW_COLS of them) that it covers.
 static uint8_t pixelLevel(const uint8_t *src, int p) {
   const int cols = WAVE_COLS * PX;
   int a = p * OVERVIEW_COLS / cols, b = max(a + 1, (p + 1) * OVERVIEW_COLS / cols);
-  uint8_t m = 0;
-  for (int k = a; k < b; k++) m = max(m, src[k]);
+  uint8_t m = 255;
+  for (int k = a; k < b; k++) m = min(m, src[k]);   // (several: the smallest)
   return m;
 }
 
@@ -135,6 +135,7 @@ static void drawColumn(int i, int bc) {
         bool in = v.live || (c * PX + sub - v.rangeFirstPx + pxCols) % pxCols < v.rangePx;
         uint16_t ink = !in ? v.outInk : v.rangeInk;
         int level = pixelLevel(v.live ? v.liveData : tr.overview, c * PX + sub);
+        level = level * level / 255;               // (the stored square root back to the peak: quiet lower, loud higher; the cell's height kept)
         if (!v.live) level = min(255, (level * v.scale) >> 8);   // (the track's volume)
         int reach = pixelReach(level);
         for (int y = WAVE_MID_Y - reach; y <= WAVE_MID_Y + 1 + reach; y++) px[y * PX + sub] = ink;
@@ -223,9 +224,8 @@ FLASHMEM void drawWave(int i, bool recordingHere) {   // (flash: RAM1 is full; i
     v.labelW = textWidth(label) / PX + 2;          // (a block either side of the text)
     v.labelX = (BLOCK_COLS - v.labelW) / 2;
   }
-  // Heights as the track's volume plays it (the overview: as recorded; its
-  // square root, as the overview stores levels).
-  uint16_t scale = tr.state == TrackState::Empty ? 256 : (uint16_t)min(1024.0f, sqrtf(volumeGainOf(tr.volume, headroomDbOf(tr.overview))) * 256 + 0.5f);
+  // Heights as the track's volume plays it (the overview: as recorded).
+  uint16_t scale = tr.state == TrackState::Empty ? 256 : (uint16_t)min(1024.0f, volumeGainOf(tr.volume, headroomDbOf(tr.overview)) * 256 + 0.5f);
   if (labelSame && scale == v.scale && v.drawn == uiGeneration && v.version == tr.overviewVersion && v.turn == tr.turn && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.ground == ground && v.borders == borders &&
       v.rangeInk == rangeInk && v.outInk == outInk)
