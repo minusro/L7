@@ -5,7 +5,8 @@
 //
 //   ./build.sh && ./L7 [card-folder]      (default: ~/Documents/L7 Desktop)
 //
-// Keys: arrows; X or Left Ctrl: A (edit); Z or Left Alt: B (option);
+// Keys: arrows; X, Enter (or on a Mac Left Ctrl): A (edit); Z, Left Alt,
+// Command on a Mac or Ctrl elsewhere: B (option);
 // Left/Right Shift: SHIFT; Space: PLAY. Esc quits.
 #include <SDL.h>
 #include <atomic>
@@ -115,8 +116,14 @@ static uint8_t keyBit(SDL_Keycode k) {
     case SDLK_DOWN: return m8::BTN_DOWN;
     case SDLK_LEFT: return m8::BTN_LEFT;
     case SDLK_RIGHT: return m8::BTN_RIGHT;
-    case SDLK_x: case SDLK_LCTRL: return m8::BTN_EDIT;
+    case SDLK_x: case SDLK_RETURN: case SDLK_KP_ENTER: return m8::BTN_EDIT;
     case SDLK_z: case SDLK_LALT: return m8::BTN_OPT;
+#ifdef __APPLE__
+    case SDLK_LCTRL: return m8::BTN_EDIT;
+    case SDLK_LGUI: case SDLK_RGUI: return m8::BTN_OPT;   // (Command)
+#else
+    case SDLK_LCTRL: case SDLK_RCTRL: return m8::BTN_OPT;
+#endif
     case SDLK_LSHIFT: case SDLK_RSHIFT: return m8::BTN_SHIFT;
     case SDLK_SPACE: return m8::BTN_PLAY;
     default: return 0;
