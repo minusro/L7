@@ -34,7 +34,7 @@
 // start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_METRO, ICON_MOVE, ICON_EAR, ICON_HELP };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_METRO, ICON_MOVE, ICON_EAR, ICON_HELP, ICON_SCENE_CLEAR };
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -72,7 +72,7 @@ static int actionIcon() {
   }
   if (selected == STATUS_ROW) {                    // restart / duplicate / play-stop / tap tempo
     int cell = selectedCellIn(STATUS_ROW);
-    if (shift) return cell == SCENE_CELL ? ICON_SCENE_DUP : cell == TEMPO_CELL ? ICON_EAR : ICON_RESTART;   // (SHIFT: the scene cell duplicates it; the tempo cell: audio follow)
+    if (shift) return cell == SCENE_CELL ? (sceneDupMade() ? ICON_SCENE_CLEAR : ICON_SCENE_DUP) : cell == TEMPO_CELL ? ICON_EAR : ICON_RESTART;   // (SHIFT: the scene cell duplicates it; the tempo cell: audio follow)
     return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_NEXT;   // the scene cell: the next scene
   }
   const Track &tr = tracks[selected];
@@ -200,6 +200,8 @@ PROGMEM static const Icon ICONS[] = {
   {3, 5, {".#.", "###", "...", "###", ".#."}},   // MOVE (a track's: up and down, a block apart: B + UP/DOWN moves the empty track)
   {0, 0, {}},                                                                  // EAR (drawn on its own: the input, a jack plug, crossed while following)
   {5, 7, {".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."}},   // HELP (a question mark: the help pages)
+  {9, 9, {"#.#.#.#.#", ".........", "#.......#", ".........", "#.......#",
+          ".........", "#.......#", ".........", "#.#.#.#.#"}},   // SCENE_CLEAR (SCENE_DUP's checkered square alone: the copy just made cleared)
 };
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};

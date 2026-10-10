@@ -303,6 +303,20 @@ bool sceneDuplicate() {
   return true;
 }
 
+bool sceneClear() {
+  takeHeld();
+  commit();
+  if (busy() || list.current < 1 || list.current > list.count) return false;
+  SceneInfo e = emptyScene();
+  e.tempo = sceneTempo;                            // (its tempo kept)
+  int slot = list.slot[list.current - 1];
+  if (recordSlot >= 0 && recordSlot != slot) writeRecordNow();
+  record = e;
+  recordSlot = slot;
+  apply(e, true);                                  // on the next beat
+  return true;
+}
+
 int sceneFromResample(int t) {
   takeHeld();
   commit();                                        // (the current scene, the resampling on it)

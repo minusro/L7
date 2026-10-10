@@ -183,6 +183,11 @@ TTTTT000000TTTTT
 - clip ms fine rotate V
 
 
+#10oct26
+
+- when first showing the wave shift outline, don't show the label first but wait .5s and then cycle through all labels every second (name number/count, original bpm, date time recorded) (?)
+
+
 # Backlog
 
 - further manual tweaks
@@ -192,12 +197,6 @@ TTTTT000000TTTTT
 	- mute played midi and audio clips after finishing resampling
 	- midi resampling
 - think about fx page
-
-
-#10oct26
-
-- when first showing the wave shift outline, don't show the label first but wait .5s and then cycle through all labels every second (name number/count, original bpm, date time recorded) (?)
-
 
 
 # Graveyard

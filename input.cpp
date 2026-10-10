@@ -270,6 +270,8 @@ static bool swipeWas[NUM_TRACKS];                  // each track's mute when A w
 // it; or between the looper's two (main and notes, ui.h: UP off its top, DOWN
 // off its bottom).
 static uint8_t menuOnRelease = 0, leaveOnRelease = 0, flipOnRelease = 0;
+static bool dupJustMade = false;                   // (SHIFT+A duplicated the scene, SHIFT still held: A again clears it)
+bool sceneDupMade() { return dupJustMade && (mainKeys() & m8::BTN_SHIFT); }
 static uint8_t helpOnRelease = 0;                  // (UP or DOWN in the help pages: back to the menu, the same way)
 static bool stopRepeat = false;                    // (pollKeys(): that arrow's repeats off)
 // Or held on SWITCH_HOLD_MS (from when it stopped at the edge): it switches
@@ -367,15 +369,17 @@ static void closeToLooper() {
 
 // A or B let go (or held) on the loaded project's card: back to the looper
 // (one on its way: once it has come in); on an empty slot: a new project there,
-// opened (on track 1). False: nothing done.
+// opened. Either way the looper's selection on the clock cell. False: nothing done.
 static bool openCard(int slot) {
   openOnLetGo = false;
   menuNoteLeave(true);                               // (back in: on the loaded project's card)
   if (slot == projectCurrent()) {
+    setMainSelection(STATUS_ROW, CLOCK_CELL);      // (from a card: the clock cell selected)
     closeToLooper();
     return true;
   }
   if (projectFilled(slot) || !loadFromMenu(slot)) return false;
+  setMainSelection(STATUS_ROW, CLOCK_CELL);
   closeMenu();
   return true;
 }
@@ -428,6 +432,7 @@ static void menuHold() {
   loadedOnPress = false;
   armed = false;                                     // (letting go: nothing more)
   menuNoteLeave(true);                               // (back in: on the loaded project's card)
+  setMainSelection(STATUS_ROW, CLOCK_CELL);        // (from a card: the clock cell selected)
   closeToLooper();
   if (!transport.running) startByHand();
 }
@@ -1029,7 +1034,17 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   bool toggleTransport = transportKey && !shift;
   if ((transportKey || (edit && onStatus && !onScene && !onTempo)) && shift) restartByHand();
   if (edit && onStatus && shift && onTempo) audioFollowToggle();   // SHIFT+A on the tempo cell: audio follow on / off
-  if (edit && onStatus && shift && onScene) sceneChanged = sceneDuplicate();   // SHIFT+A on the scene cell: a copy of the scene after it, as SHIFT+B twice
+  // SHIFT+A on the scene cell: a copy of the scene after it, as SHIFT+B
+  // twice; A again with SHIFT still held: that copy's tracks all cleared.
+  if (!shift) dupJustMade = false;
+  if (edit && onStatus && shift && onScene) {
+    if (dupJustMade) {
+      sceneChanged = sceneClear();
+      dupJustMade = false;
+    } else {
+      sceneChanged = dupJustMade = sceneDuplicate();
+    }
+  }
   if (edit && onStatus && !shift) {
     if (onScene) nextSceneArmed = true;            // (acts once A is let go, below)
     else if (onClock) {                            // play / stop, as START
