@@ -416,7 +416,9 @@ static bool createPoolFile() {
   if (!number) return false;
   char path[40];
   poolPath(number, path, sizeof path);
-  if (transport.running) Serial.printf("no recording space left: creating %s while playing\n", path);
+  if (transport.running) Serial.printf("no recording space left: creating %s while playing (refill %s, %d to trim)\n", path,
+                                       poolBlocked ? "blocked: no space" : "not blocked", untrimmedCount);
+  else Serial.printf("recording space: making %s (%d of %d ready)\n", path, poolCount + 1, POOL_SIZE);
   debugStage = "SD create (sample file)";
   FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
   if (!f) return false;
