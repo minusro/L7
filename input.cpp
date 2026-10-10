@@ -153,7 +153,7 @@ static bool rotateStopped = false;                 // (at none: the held arrow's
 static uint32_t stepAt = 0;                        // (millis() of the held arrow's next step; 0: none)
 static int32_t quarterFrames(const Track &tr) { return (int32_t)(tr.spbNative / 4); }
 static int32_t tenMsFrames(const Track &tr) {
-  return (int32_t)((uint64_t)tr.spbNative * (uint32_t)(AUDIO_SAMPLE_RATE_EXACT / 100) / max<uint32_t>(1, transport.spb));
+  return (int32_t)((uint64_t)tr.spbNative * (uint32_t)(AUDIO_SAMPLE_RATE_EXACT / 100) / (transport.spb ? transport.spb : 1));
 }
 static void nudgeStep(int dir, bool reset, int32_t frames = 0) {
   if (rotateT < 0) {
