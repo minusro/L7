@@ -170,12 +170,12 @@ static void drawColumn(int i, int bc) {
     }
   }
   // SHIFT held (the frame's arrows above): the sample's label, black on an
-  // accent-coloured box (a block round the text, its top corners cut), its
+  // accent-coloured box (a block over the text, two either side, its top corners cut), its
   // bottom row the bottom border's.
   if (v.label[0] && bc >= v.labelX && bc < v.labelX + v.labelW) {
     const bool side = bc == v.labelX || bc == v.labelX + v.labelW - 1;   // (its top corners cut)
     for (int r = LABEL_TOP + side; r < LABEL_TOP + 7; r++) block(r, ACCENT);
-    int c = bc - v.labelX - 1;                     // (the text's column)
+    int c = bc - v.labelX - 2;                     // (the text's column)
     bool count = false;                            // (past the '/': the count, never flashed)
     for (const char *p = v.label; *p && c >= 0; p++) {
       if (*p == '/') count = true;
@@ -217,7 +217,7 @@ void drawWave(int i, bool recordingHere) {
   if (!labelSame) {
     v.labelFlash = flash;
     strcpy(v.label, label);
-    v.labelW = textWidth(label) / PX + 2;
+    v.labelW = textWidth(label) / PX + 4;          // (two blocks either side of the text)
     v.labelX = (BLOCK_COLS - v.labelW) / 2;
   }
   if (labelSame && v.drawn == uiGeneration && v.version == tr.overviewVersion && v.turn == tr.turn && v.state == (uint8_t)tr.state &&
