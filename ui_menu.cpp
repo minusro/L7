@@ -281,8 +281,8 @@ static void drawItem(int k) {
     uint16_t color = PROJECT_COLORS[k];
     bool filled = projectFilled(k) && !emptyLook, loaded = k == shownLoaded() && !emptyLook,
          playing = k == playingCard() && transport.running && !emptyLook;   // (emptyLook: as an empty slot's, the cut's wipe)
-    // Its letter (the project's name): black on the loaded one, in the slot's colour on a project.
-    uint16_t letter = loaded ? BG : filled || (sel && actionHeld() && !emptyLook && !menuJustCut()) ? color : DIM;   // (an empty slot's: grey, as its outline; its colour while an action button is held)
+    // Its letter (the project's name): black on the loaded one, else in the slot's colour (an empty one's too).
+    uint16_t letter = loaded ? BG : color;
     const bool cutFlash = emptyLook && cutFlashing;   // (the hold through: its outline and letter white, menuCutFlash())
     if (cutFlash) letter = INK;
     if (loaded) {                                 // the loaded one: filled
