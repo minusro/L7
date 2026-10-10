@@ -73,7 +73,7 @@ struct WaveView {
   int labelX = 0, labelW = 0;                      // its box: first block column, width in blocks
 };
 static WaveView views[NUM_TRACKS];
-static constexpr int LABEL_TOP = BAND_ROWS - 1 - 2 - 7;     // the sample label's box: rows 6-12 (two blocks of space over the bottom border)
+static constexpr int LABEL_TOP = BAND_ROWS - 1 - 7;         // the sample label's box: rows 8-14 (on the bottom border)
 // The record head's look (not a colour the playheads use): its column inverted.
 static constexpr uint16_t INVERT_HEAD = 0x0001;
 
@@ -166,18 +166,17 @@ static void drawColumn(int i, int bc) {
       else if (back) block(r, ACCENT);
     }
   }
-  // SHIFT held (the frame's arrows above): the sample's label, in the accent
-  // colour on a black box (a block round the text), two blocks above the
-  // bottom border.
+  // SHIFT held (the frame's arrows above): the sample's label, black on an
+  // accent-coloured box (a block round the text), on the bottom border.
   if (v.label[0] && bc >= v.labelX && bc < v.labelX + v.labelW) {
-    for (int r = LABEL_TOP; r < LABEL_TOP + 7; r++) block(r, BG);
+    for (int r = LABEL_TOP; r < LABEL_TOP + 7; r++) block(r, ACCENT);
     int c = bc - v.labelX - 1;                     // (the text's column)
     for (const char *p = v.label; *p && c >= 0; p++) {
       const Glyph *g = glyphFor(*p);
       int w = g ? glyphWidth(*g) : 2;
       if (c < w) {
         for (int r = 0; g && r < 5 && g->rows[r]; r++)
-          if (g->rows[r][c] == '#') block(LABEL_TOP + 1 + r + g->top, ACCENT);
+          if (g->rows[r][c] == '#') block(LABEL_TOP + 1 + r + g->top, BG);
         break;
       }
       c -= w + 1;
