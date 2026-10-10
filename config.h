@@ -57,9 +57,6 @@ constexpr bool MIDI_IN_ENABLED = true;
 // MIDI clock over USB too, in and out (midi_usb.h; the USB type with MIDI).
 constexpr bool MIDI_USB_ENABLED = true;
 
-// After a recording ends with a clip, select the next free track (the next
-// empty one up, else the next muted one; input.cpp, followRecording()).
-constexpr bool SELECT_NEXT_AFTER_RECORDING = false;
 
 // Delete the recordings no project uses any more (deleteUnusedSamples(),
 // scenes.cpp) whenever the menu opens. Off: they stay on the card (the function

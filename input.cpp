@@ -1226,17 +1226,20 @@ void followRecording() {
     if (sceneFromResample(resampled)) {
       selected = resampled;
       for (int i = 0; i < ROWS; i++) drawTrack(i);
+      selectAfterRecording(resampled);             // (the setting on: on to the next free track there)
     } else {
       endSilencing();                              // (scene list full: it stays where it is)
     }
   }
   // A recording that ended with a clip (not cancelled): select the next track
-  // (if SELECT_NEXT_AFTER_RECORDING).
+  // (the SELECT NEXT FREE TRACK setting; a resampling: above, once in its scene).
   static int recTrack = -1;
+  static bool recResample = false;
   if (recording.mode != Recording::Idle) {
     recTrack = recording.track;
+    recResample = recording.resample;
   } else if (recTrack >= 0) {
-    if (SELECT_NEXT_AFTER_RECORDING && tracks[recTrack].state != TrackState::Empty) selectAfterRecording(recTrack);
+    if (!recResample && tracks[recTrack].state != TrackState::Empty) selectAfterRecording(recTrack);
     recTrack = -1;
   }
 }

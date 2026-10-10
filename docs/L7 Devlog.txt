@@ -194,6 +194,12 @@ TTTTT000000TTTTT
 - think about fx page
 
 
+#10oct26
+
+- when first showing the wave shift outline, don't show the label first but wait .5s and then cycle through all labels every second (name number/count, original bpm, date time recorded) (?)
+
+
+
 # Graveyard
 
 - overdubbing - not for now or ever maybe X
