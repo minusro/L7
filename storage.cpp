@@ -1385,6 +1385,11 @@ int takeEmptySamples(uint32_t *ids, int most) {
   return n;
 }
 
+uint32_t touchedSample[12];
+void noteTouched(uint32_t id) {
+  if (recordLetter >= 'A' && recordLetter < 'A' + 12 && id) touchedSample[recordLetter - 'A'] = id;
+}
+
 FLASHMEM void sampleLabel(int t, char *buf, size_t size) {
   uint32_t id = unitOf(t).sample;
   if (!id) { if (size) buf[0] = 0; return; }
@@ -1399,12 +1404,18 @@ bool stepSample(int t, int dir) {
   u.rotate = 0;                                  // (another recording: not turned)
   // In the order of the names from the track's sample, wrapping around: this
   // track's recordings in this project, then its other tracks', then other
-  // projects'. An empty track starts from the first of its own (going
-  // forward) or the last (going back).
+  // projects'. An empty track: LEFT the project's sample last touched
+  // (stepped to or recorded), RIGHT the one after it; none touched yet, the
+  // first of its own (going forward) or the last (going back).
   int i;
+  const uint32_t touched = recordLetter >= 'A' && recordLetter < 'A' + 12 ? touchedSample[recordLetter - 'A'] : 0;
   if (u.sample) {
     i = sampleIndex(u.sample);                   // (its place, or where it would be)
     i = dir > 0 ? i + (i < sampleTotal && sampleIds[i] == u.sample) : i - 1;
+  } else if (touched) {                          // empty: LEFT the project's sample last touched, RIGHT the one after it
+    i = sampleIndex(touched);
+    bool there = i < sampleTotal && sampleIds[i] == touched;
+    i = dir > 0 ? i + there : there ? i : i - 1;
   } else {
     uint32_t own = idOf(tagOf(recordLetter, screenTrack(t)), 0);
     i = dir > 0 ? sampleIndex(own + 1) : sampleIndex(own + (1u << NUMBER_BITS)) - 1;
@@ -1422,6 +1433,7 @@ bool stepSample(int t, int dir) {
   // Volume, balance, filter and mute stay; the range is the whole loop again
   // (length 0), aligned to the bar counter (its start on 1.1.1).
   u.sample = n;
+  noteTouched(n);
   u.rangeStart = u.rangeLen = u.rangePhase = 0;
   if (!transport.running) return setUnitNow(t, u);
   requestChange(t, u, quarterAfterLead(0), false);
@@ -1473,6 +1485,13 @@ Session loadSession() {
     else if (!strncmp(line, "nextfree=", 9)) s.settings[2] = strtol(line + 9, nullptr, 10) != 0;
     else if (!strncmp(line, "emptyclick=", 11)) s.settings[3] = strtol(line + 11, nullptr, 10) != 0;
     else if (!strncmp(line, "helpseen=", 9)) s.helpSeen = (int)strtol(line + 9, nullptr, 10) & 0xFFFF;
+    else if (!strncmp(line, "touched=", 8)) {   // (twelve numbers, a comma between)
+      char *p = line + 8;
+      for (int k = 0; k < 12 && *p; k++) {
+        s.touched[k] = strtoul(p, &p, 10);
+        if (*p == ',') p++;
+      }
+    }
     else if (!strncmp(line, "helppage=", 9)) s.helpPage = constrain((int)strtol(line + 9, nullptr, 10), 0, 15);
   }
   f.close();
@@ -1492,6 +1511,9 @@ void saveSession(const Session &s) {
            s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro, s.follow ? 1 : 0, s.offsets[0], s.offsets[1], s.offsets[2]);
   f.printf("monitor=%d\nplaynew=%d\nnextfree=%d\nemptyclick=%d\n", s.settings[0], s.settings[1], s.settings[2], s.settings[3]);
   f.printf("helpseen=%d\nhelppage=%d\n", s.helpSeen, s.helpPage);
+  f.printf("touched=");
+  for (int k = 0; k < 12; k++) f.printf(k ? ",%lu" : "%lu", (unsigned long)s.touched[k]);
+  f.printf("\n");
   f.close();
 }
 

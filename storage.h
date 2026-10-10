@@ -137,6 +137,11 @@ bool stepSample(int t, int dir);
 // Track t's sample as SHIFT+LEFT/RIGHT shows it: its name and its place
 // among all of them ("A30012 3/17"; none: "", no label).
 void sampleLabel(int t, char *buf, size_t size);
+// The loaded project's sample last stepped to (SHIFT+LEFT/RIGHT) or recorded,
+// per project (A-L: 0-11; kept in the session): an empty track's SHIFT+LEFT
+// goes to it, SHIFT+RIGHT to the one after it.
+extern uint32_t touchedSample[12];
+void noteTouched(uint32_t id);       // the loaded project's (none loaded: nothing)
 int takeEmptySamples(uint32_t *ids, int most);
 // Samples on the card holding recordings, including ones no track plays now
 // (until deleteUnusedSamples(), scenes.h: no project's), in the order of their
@@ -186,6 +191,7 @@ struct Session {
   int offsets[3] = {0, 0, 0};                      // the external clocks' offsets, ms (midi_in.h syncOffsetMs: serial MIDI, USB MIDI, audio)
   bool settings[4] = {true, true, true, true};     // app.h's settings: monitor, play new, next free, empty project click
   int helpSeen = 0, helpPage = 0;                  // the help pages seen (a bit each) and the one last shown (app.h)
+  uint32_t touched[12] = {};                       // each project's sample last stepped to or recorded (0: none; touchedSample())
 };
 Session loadSession();
 // A new recording plays once it's done (false: it comes in muted; app.h's setting).

@@ -108,6 +108,7 @@ void setSetting(int which, bool on) {
 
 // ---- Session (tempo, master volume, the loaded project, the selection: the
 // app's, not a project's or a scene's)
+static uint32_t savedTouched[12];                // (touchedSample as last saved)
 void beginSession() {
   Session s = loadSession();
   bpm = roundf(s.bpm * 10) / 10;
@@ -130,6 +131,8 @@ void beginSession() {
   applySettings();
   seenPages = savedSeenPages = (uint16_t)s.helpSeen;
   shownPage = savedShownPage = s.helpPage;
+  memcpy(touchedSample, s.touched, sizeof touchedSample);
+  memcpy(savedTouched, s.touched, sizeof savedTouched);
   audioFollowBegin(s.follow);
   savedFollow = s.follow;
   for (int i = 0; i < SYNC_SOURCES; i++) syncOffsetMs[i] = savedOffsets[i] = (int16_t)s.offsets[i];
@@ -145,7 +148,7 @@ static bool sessionDirty() {
   return tempoDirty || masterVolume() != savedMaster || masterBalance() != savedBalance || projectCurrent() != savedProject ||
          menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell ||
          metroMode != savedMetro || audioFollowOn() != savedFollow || memcmp(settings, savedSettings, sizeof settings) || seenPages != savedSeenPages || shownPage != savedShownPage ||
-         memcmp(syncOffsetMs, savedOffsets, sizeof savedOffsets);
+         memcmp(syncOffsetMs, savedOffsets, sizeof savedOffsets) || memcmp(touchedSample, savedTouched, sizeof savedTouched);
 }
 
 static void writeSession() {
@@ -163,6 +166,8 @@ static void writeSession() {
   for (int i = 0; i < SETTING_COUNT; i++) s.settings[i] = savedSettings[i] = settings[i];
   s.helpSeen = savedSeenPages = seenPages;
   s.helpPage = savedShownPage = shownPage;
+  memcpy(s.touched, touchedSample, sizeof s.touched);
+  memcpy(savedTouched, touchedSample, sizeof savedTouched);
   for (int i = 0; i < SYNC_SOURCES; i++) s.offsets[i] = savedOffsets[i] = syncOffsetMs[i];
   saveSession(s);
   savedMetro = s.metro;

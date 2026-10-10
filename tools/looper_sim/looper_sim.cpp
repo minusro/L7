@@ -681,7 +681,14 @@ int main(int argc, char **argv) {
     tr.gain = 1;
     checkSync(6, "track 7 playing its new sample");
     clearTrack(6);
-    check(stepSample(6, -1) && tr.sample == at(last), "SHIFT+LEFT on an empty track: the last of its own, or the name before");
+    check(stepSample(6, -1) && tr.sample == at(first + 1), "SHIFT+LEFT on an empty track: the project's sample last touched");
+    clearTrack(6);
+    check(stepSample(6, 1) && tr.sample == at(first + 2), "SHIFT+RIGHT on an empty track: the one after the last touched");
+    clearTrack(6);
+    uint32_t keep = touchedSample[projectCurrent()];
+    touchedSample[projectCurrent()] = 0;           // (none touched yet: its own)
+    check(stepSample(6, -1) && tr.sample == at(last), "SHIFT+LEFT on an empty track, nothing touched: the last of its own, or the name before");
+    touchedSample[projectCurrent()] = keep;
     clearTrack(6);
     char m[64];
     snprintf(m, sizeof m, "%zu recordings on the card", count);

@@ -1253,6 +1253,7 @@ void followRecording() {
   // selected.
   int resampled = takeResampled();
   if (resampled >= 0) {
+    noteTouched(tracks[resampled].sample);         // (the project's last touched sample: an empty track's SHIFT+LEFT)
     int on = sceneFromResample(resampled);         // (on track 1)
     if (on >= 0) {
       selected = on;
@@ -1270,6 +1271,7 @@ void followRecording() {
     recTrack = recording.track;
     recResample = recording.resample;
   } else if (recTrack >= 0) {
+    if (!recResample && tracks[recTrack].state != TrackState::Empty) noteTouched(tracks[recTrack].sample);
     if (!recResample && !nextChosen && tracks[recTrack].state != TrackState::Empty) selectAfterRecording(recTrack);   // (ended by itself)
     nextChosen = false;
     recTrack = -1;
