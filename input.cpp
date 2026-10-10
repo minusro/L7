@@ -45,7 +45,7 @@ static void resetCell() {
 // bar line: a stopped clock starts there, from 1.1.1 (running, it's left as it
 // is: no snapping to the taps). That 5th tap isn't part of the estimate: a
 // fresh one starts from it.
-static constexpr uint32_t TAP_TIMEOUT_MS = 2100;     // a little over a beat at the slowest tempo (30 BPM)
+static constexpr uint32_t TAP_TIMEOUT_MS = 1100;     // a little over a beat at the slowest tapped tempo (60 BPM)
 
 static int tapCount = 0;                            // taps in this run (0: the next is the first)
 
@@ -82,7 +82,7 @@ static void tapTempo() {
     // sum(i) = n(n-1)/2, n sum(i^2) - sum(i)^2 = n^2(n^2-1)/12.
     double sumI = n * (n - 1) / 2.0;
     double msPerBeat = (n * sumIT - sumI * sumT) / (n * (double)n * ((double)n * n - 1) / 12);
-    if (msPerBeat > 0) setTempo(60000.0f / msPerBeat);
+    if (msPerBeat > 0) setTempo(max(60.0f, (float)(60000.0 / msPerBeat)));   // (tapped: 60 BPM at least)
   }
   // Stopped, the metronome on: each of the first four taps clicks (the
   // first as a bar's first beat); the 5th starts the clock, which clicks itself.
