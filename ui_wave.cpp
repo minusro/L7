@@ -1,6 +1,7 @@
 // ui_wave.cpp — waveforms, loop range markers and playheads (see ui.h)
 #include "ui.h"
 #include "ui_font.h"
+#include "input.h"
 
 // ---- Waveforms
 // Each track's whole loop in WAVE_COLS columns of blocks, inside the cell's
@@ -70,10 +71,12 @@ struct WaveView {
   uint32_t drawn = 0;                              // uiGeneration when last drawn whole
   uint32_t rs = 0, rb = 0;
   char label[24] = "";                             // the sample's label (SHIFT held: its name, X/N; "": none)
+  bool labelFlash = false;                         // (its box white: the sample just stepped)
   int labelX = 0, labelW = 0;                      // its box: first block column, width in blocks
 };
 static WaveView views[NUM_TRACKS];
-static constexpr int LABEL_TOP = BAND_ROWS - 1 - 7;         // the sample label's box: rows 8-14 (on the bottom border)
+static constexpr uint32_t LABEL_FLASH_MS = 100;           // (a sample step: its label's box white this long)
+static constexpr int LABEL_TOP = BAND_ROWS - 7;             // the sample label's box: rows 9-15 (over the bottom border, its own bottom row)
 // The record head's look (not a colour the playheads use): its column inverted.
 static constexpr uint16_t INVERT_HEAD = 0x0001;
 
@@ -167,9 +170,11 @@ static void drawColumn(int i, int bc) {
     }
   }
   // SHIFT held (the frame's arrows above): the sample's label, black on an
-  // accent-coloured box (a block round the text), on the bottom border.
+  // accent-coloured box (a block round the text, its top corners cut), its
+  // bottom row the bottom border's.
   if (v.label[0] && bc >= v.labelX && bc < v.labelX + v.labelW) {
-    for (int r = LABEL_TOP; r < LABEL_TOP + 7; r++) block(r, ACCENT);
+    const bool side = bc == v.labelX || bc == v.labelX + v.labelW - 1;   // (its top corners cut)
+    for (int r = LABEL_TOP + side; r < LABEL_TOP + 7; r++) block(r, v.labelFlash ? INK : ACCENT);
     int c = bc - v.labelX - 1;                     // (the text's column)
     for (const char *p = v.label; *p && c >= 0; p++) {
       const Glyph *g = glyphFor(*p);
@@ -204,8 +209,10 @@ void drawWave(int i, bool recordingHere) {
   uint16_t outInk = onGround(muted ? DARK : DIM, ground);   // outside it: grey (muted: dark grey; black on the selected track's ground)
   char label[24] = "";                             // (SHIFT held on the waveform cell: the sample's label)
   if (i == selected && shiftArrows() && !recordingOn(i) && cellFrame(i, WAVE_CELL) == ACCENT) sampleLabel(i, label, sizeof label);
-  bool labelSame = !strcmp(label, v.label);
+  bool flash = label[0] && sampleSteppedAt && millis() - sampleSteppedAt < LABEL_FLASH_MS;
+  bool labelSame = !strcmp(label, v.label) && flash == v.labelFlash;
   if (!labelSame) {
+    v.labelFlash = flash;
     strcpy(v.label, label);
     v.labelW = textWidth(label) / PX + 2;
     v.labelX = (BLOCK_COLS - v.labelW) / 2;

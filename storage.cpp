@@ -1387,10 +1387,10 @@ int takeEmptySamples(uint32_t *ids, int most) {
 
 FLASHMEM void sampleLabel(int t, char *buf, size_t size) {
   uint32_t id = unitOf(t).sample;
-  if (!id) { snprintf(buf, size, "-/%d", sampleTotal); return; }
+  if (!id) { snprintf(buf, size, "-"); return; }
   char name[16];
   sampleName(id, name, sizeof name);
-  snprintf(buf, size, "%s %d/%d", name, sampleIndex(id) + 1, sampleTotal);
+  snprintf(buf, size, "%s %d", name, sampleIndex(id) + 1);
 }
 
 bool stepSample(int t, int dir) {

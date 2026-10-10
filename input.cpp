@@ -158,6 +158,7 @@ static int heldSteps = 0;                          // (the held arrow's steps so
 // start, and as a tap's quarter beat is taken (let go).
 static constexpr uint32_t ROTATE_FLASH_MS = 100;
 static uint32_t rotateFlashAt = 0;
+uint32_t sampleSteppedAt = 0;                       // (millis() of the last SHIFT+LEFT/RIGHT sample step: its label flashed)
 bool clipRotateFlash() { return rotateFlashAt && millis() - rotateFlashAt < ROTATE_FLASH_MS; }
 static int32_t msFrames(const Track &tr, int ms) {
   return (int32_t)((uint64_t)tr.spbNative * (uint32_t)(AUDIO_SAMPLE_RATE_EXACT * ms / 1000) / (transport.spb ? transport.spb : 1));
@@ -973,8 +974,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     // meanwhile, ui.h frameCell()): its sample, the previous / next on the card.
     if (!onStatus && !recordingOn(selected)) {
       // (another sample: the waveform cell selected, to see it)
-      if ((pressed & m8::BTN_LEFT) && stepSample(selected, -1)) selectedCell = WAVE_CELL;
-      if ((pressed & m8::BTN_RIGHT) && stepSample(selected, 1)) selectedCell = WAVE_CELL;
+      if ((pressed & m8::BTN_LEFT) && stepSample(selected, -1)) selectedCell = WAVE_CELL, sampleSteppedAt = max(1u, millis());
+      if ((pressed & m8::BTN_RIGHT) && stepSample(selected, 1)) selectedCell = WAVE_CELL, sampleSteppedAt = max(1u, millis());
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) deleteEmptySamples();   // (empty ones stepped over: gone if unused, stopped)
     }
   } else {
