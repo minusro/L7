@@ -86,8 +86,39 @@ static void phaseService() {
 }
 uint32_t lastTapMs() { return tapAt; }
 
+// Following audio (its tempo and beat heard, not tapped): taps say where its
+// bar's first beat is instead, the run's first tap "one". From the 2nd tap,
+// once two taps agree the clock's bar is whole beats off, audio follow eases
+// it there (audioFollowShift()); the run starts again.
+static void tapBar() {
+  static uint32_t lastTap = 0;
+  static int taps = 0, lastK = 0;
+  uint32_t now = millis();
+  if (taps > 0 && now - lastTap > TAP_TIMEOUT_MS) taps = 0;
+  lastTap = now;
+  if (!transport.running || audioFollowShifting()) { taps = 0; return; }
+  noInterrupts();
+  double pos = (double)(transport.beat - transportOrigin()) + (double)transport.sampleInBeat / transport.spb;
+  interrupts();
+  double e = fmod(pos - taps, BEATS_PER_BAR);       // (this tap: beat `taps` of the bar; the clock ahead: positive)
+  if (e < 0) e += BEATS_PER_BAR;
+  if (e >= BEATS_PER_BAR / 2.0) e -= BEATS_PER_BAR;
+  int k = (int)lround(e);                           // (whole beats: within a beat, audio follow has it)
+  if (taps >= 1 && k == lastK && k != 0) {
+    audioFollowShift(k);
+    taps = 0;
+    return;
+  }
+  lastK = k;
+  taps++;
+}
+
 static void tapTempo() {
-  if (audioFollowOn()) return;                       // (the tempo heard: not by hand)
+  if (audioFollowOn()) {                            // (the tempo heard: the taps place its bar)
+    tapAt = millis();
+    tapBar();
+    return;
+  }
   tapAt = millis();
   static uint32_t first, last;                      // this run's first and latest taps
   static double sumT, sumIT;                        // over the taps: t (ms after the first), i * t

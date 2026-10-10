@@ -44,6 +44,8 @@ float audioFollowBpm();                  // their tempo as found, halved or doub
 // instead, the estimate leaning towards it (so it finds that octave). False:
 // not on, or out of range.
 bool audioFollowScale(int by);
+void audioFollowShift(double beats);     // tap tempo while following: the clock eased this many beats later (negative: earlier), its bar onto the taps
+bool audioFollowShifting();              // one under way
 void audioFollowOffsetChanged();         // (midi_in.h syncOffsetMs[SYNC_AUDIO] changed: caught up quickly)
 // The external tempo source followed now (midi_in.h SyncSource): a MIDI
 // clock (serial or USB), else audio follow (active), else SYNC_NONE.

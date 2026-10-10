@@ -222,6 +222,15 @@ static uint32_t inBeatNow() {                        // (transportStartAt(): sam
   return (uint32_t)min(ourPhase() * transport.spb, transport.spb - 1.0);
 }
 
+// A bar shift asked for by tap tempo (audioFollowShift()): the clock eased
+// that many beats later (positive: slower) on top of the beat's nudge, at most
+// SHIFT_NUDGE a beat; `shifted` (beats moved so far) keeps the beat's own
+// nudge from pulling it back meanwhile.
+static constexpr double SHIFT_NUDGE = 0.05;
+static double shiftLeft = 0, shifted = 0;
+void audioFollowShift(double beats) { shiftLeft += beats; }
+bool audioFollowShifting() { return shiftLeft != 0; }
+
 // Recording or resampling too: the tempo and beat followed as ever (a
 // recording keeps its tempo changes: its bar lines as they fell).
 static void follow(bool nudged, uint32_t count, uint32_t at) {
@@ -232,12 +241,17 @@ static void follow(bool nudged, uint32_t count, uint32_t at) {
     if (!ourBeatAt(theirBeatNow(count, at, heardBeat), ours)) return;
     // Their beat on one of ours (ours halved: on a half of ours, every other one of theirs on a whole one).
     double g = min(ratio(), 1.0), x = ours / g;
-    float err = (float)((x - floor(x + 0.5)) * g);   // ahead of them: slower
+    double xs = x + shifted / g;                    // (a bar shift under way: measured from where it has got to)
+    float err = (float)((xs - floor(xs + 0.5)) * g);   // ahead of them: slower
     bool catching = catchBeats > 0 || fabsf(err) >= CATCH_BEATS_OFF;
     if (catchBeats > 0) catchBeats--;
     float most = catching ? CATCH_NUDGE : MAX_NUDGE, gain = catching ? CATCH_GAIN : GAIN;
     float nudge = fabsf(err) < DEADBAND_BEATS ? 0 : constrain(err * gain, -most, most);
-    want = theirSpb * (1 + nudge);
+    double step = shiftLeft > 0 ? min(shiftLeft, SHIFT_NUDGE) : max(shiftLeft, -SHIFT_NUDGE);   // (the bar shift: a beat's worth)
+    shiftLeft -= step;
+    if (fabs(shiftLeft) < 1e-6) shiftLeft = 0;
+    shifted = shiftLeft ? shifted + step : 0;       // (done: whole beats moved, the beat's nudge as ever)
+    want = theirSpb * (1 + nudge + step);
   }
   uint32_t now = transport.pendingSpb ? transport.pendingSpb : transport.spb;
   float raw = bpmForSpb((uint32_t)(theirSpb + 0.5)), shown = fabsf(raw - bpm) < 0.08f ? bpm : roundf(raw * 10) / 10;

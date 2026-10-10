@@ -362,7 +362,11 @@ comes first (audio follow listens on, but doesn't touch the clock meanwhile).
 * Recording or resampling: followed as ever, the tempo changed and the clock
   nudged onto their beat (`follow()`; a recording keeps the tempo changes, its
   bar lines where they fell). Like MIDI clock, this lines up beats, not bars:
-  audio has no bar line to follow (tap tempo's first tap does mark beat one).
+  audio has no bar line to follow. Tapping A on the tempo cell meanwhile places
+  it (`tapBar()`): the taps don't change the tempo; the run's first tap is beat
+  one, and once two taps agree the clock's bar is whole beats off, it's eased
+  there on top of the beat's nudge (`audioFollowShift()`, SHIFT_NUDGE: 5% of a
+  beat a beat).
 * The tempo cell's number flashes with the beat (its first half: black until
   their beat is locked, then the accent colour), whenever audio follow is on: the clock's while it runs; stopped,
   theirs as the tracker has it (locked or not yet), or, nothing found yet, at
