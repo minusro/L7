@@ -279,6 +279,8 @@ bool menuLoadPending();                  // a project loaded from the menu hasn'
 // edge (UP: its bottom item; DOWN: its top card row, at its own column;
 // LEFT/RIGHT: its right / left side, in its own row).
 void menuLand(uint8_t key);
+int menuItemAt(int x, int y);            // a pointer (the desktop app): the item there (-1: none)
+void menuPoint(int k);                   // and selecting it
 bool menuLeavesOn(uint8_t key);          // that arrow leaves the menu: RIGHT / LEFT off its sides (a card row's end, a list item), UP off its top (the top card row) or DOWN off its bottom (the list's last item); a project loaded
 void drawMenu();                         // what changed (all of it after uiGeneration moves on)
 bool menuKeys(uint8_t pressed);          // the arrows pressed, its selection on the menu's items (true: it moved)

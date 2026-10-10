@@ -691,6 +691,32 @@ FLASHMEM static void landInMenu(uint8_t key) {
   movedHere = true;
 }
 
+// A pointer (the desktop app's mouse): the menu item at (x, y) on the screen
+// (-1: none; the settings or help open: none either), and selecting one (as
+// the arrows would, off the status row too).
+FLASHMEM int menuItemAt(int x, int y) {
+  if (!shown || setOpen || helpOpen) return -1;
+  for (int k = 0; k < ITEMS; k++) {
+    if (!listInView(k)) continue;
+    Shape s = itemShape(k);
+    if (x >= s.x * PX && x < (s.x + s.w) * PX && y >= s.y * PX && y < (s.y + s.h) * PX) return k;
+  }
+  return -1;
+}
+FLASHMEM void menuPoint(int k) {
+  if (!shown || setOpen || helpOpen || k < 0 || k >= ITEMS || (k == menuSel && !onStatus)) return;
+  if (onStatus) {
+    onStatus = false;
+    statusCell = selectedCellIn(STATUS_ROW);
+    selected = mainRow;
+    selectedCell = mainCell;
+  }
+  menuSel = k;
+  if (k < CARDS) cardCol = k % COLS;
+  movedHere = true;
+  drawMenu();
+}
+
 void menuLand(uint8_t key) {
   if (!shown || !key) return;
   landInMenu(key);

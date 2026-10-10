@@ -14,10 +14,13 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <deque>
+#include <vector>
 #include <sys/stat.h>
 #include "app.h"
 #include "engine.h"
 #include "ui.h"
+#include "input.h"
 
 void setup();
 void loop();
@@ -131,7 +134,95 @@ static uint8_t keyBit(SDL_Keycode k) {
   }
 }
 
+// The app's icon, size x size: the L7 logo in white on black (drawn by the
+// splash's own code, a block a dot, into the screen's buffer and scaled up
+// from there, blocky; the screen cleared after).
+static std::vector<uint16_t> makeIcon(int size) {
+  constexpr int LW = 55, LH = 26;                  // (the logo, in blocks)
+  auto &d = board.tft();
+  d.fillScreen(0);
+  drawLogoScaled(0, 0, 1, 0xFFFF);
+  std::vector<uint16_t> icon(size * size, 0);
+  int k = size * 3 / 4 / LW, x0 = (size - LW * k) / 2, y0 = (size - LH * k) / 2;
+  for (int y = 0; y < LH * k; y++)
+    for (int x = 0; x < LW * k; x++) icon[(y0 + y) * size + x0 + x] = d.px[(y / k) * m8::Display::W + x / k];
+  d.fillScreen(0);
+  return icon;
+}
+
+// ---- The mouse: in the menu, the item under it selected, a click its A
+// press; on a track's cell, a press selects it and a drag adjusts it (B held,
+// an arrow a step each DRAG_STEP px: right / left, up / down). Its keys go in
+// as the keys would, a change a pass of loop() (so each press is seen).
+static constexpr int DRAG_STEP = 6;
+static std::deque<uint8_t> mouseQueue;             // (the mouse's keys, a state a pass)
+static uint8_t mouseKeys = 0, keyboardKeys = 0;
+static bool dragging = false;                      // (on a track's cell, the button down)
+static bool dragB = false;                         // (B down for it)
+static int dragX = 0, dragY = 0;                   // (where the last step was taken from)
+
+static void mouseDown(int x, int y) {
+  if (menuOpen()) {
+    int k = menuItemAt(x, y);
+    if (k < 0) return;
+    menuPoint(k);
+    mouseQueue.push_back(m8::BTN_EDIT);
+    mouseQueue.push_back(0);
+    return;
+  }
+  for (int i = 0; i < NUM_TRACKS; i++) {
+    if (y < rowTop(i) || y >= rowTop(i) + ROW_BAND) continue;
+    for (int c = 0; c < CELLS; c++) {
+      if (x < CELL[c].x || x >= CELL[c].x + CELL[c].w) continue;
+      int was = selected;
+      selected = i;
+      selectedCell = c;
+      if (was != i && was >= 0 && was < ROWS) drawTrack(was);
+      drawTrack(i);
+      dragging = true;
+      dragB = false;
+      dragX = x;
+      dragY = y;
+      return;
+    }
+  }
+}
+static void mouseMove(int x, int y, bool down) {
+  if (!down) {
+    if (menuOpen()) menuPoint(menuItemAt(x, y));
+    return;
+  }
+  if (!dragging) return;
+  auto step = [](uint8_t arrow) {
+    if (!dragB) { mouseQueue.push_back(m8::BTN_OPT); dragB = true; }
+    mouseQueue.push_back(m8::BTN_OPT | arrow);
+    mouseQueue.push_back(m8::BTN_OPT);
+  };
+  while (x - dragX >= DRAG_STEP) { step(m8::BTN_RIGHT); dragX += DRAG_STEP; }
+  while (dragX - x >= DRAG_STEP) { step(m8::BTN_LEFT); dragX -= DRAG_STEP; }
+  while (dragY - y >= DRAG_STEP) { step(m8::BTN_UP); dragY -= DRAG_STEP; }
+  while (y - dragY >= DRAG_STEP) { step(m8::BTN_DOWN); dragY += DRAG_STEP; }
+}
+static void mouseUp() {
+  if (dragging && dragB) mouseQueue.push_back(0);
+  dragging = dragB = false;
+}
+
 int main(int argc, char **argv) {
+  if (argc > 2 && !strcmp(argv[1], "--icon")) {      // (build.sh: the icon as a file, ./L7 --icon <out.ppm> <size>)
+    int size = argc > 3 ? atoi(argv[3]) : 1024;
+    auto icon = makeIcon(size);
+    FILE *f = fopen(argv[2], "wb");
+    if (!f) return 1;
+    fprintf(f, "P6 %d %d 255\n", size, size);
+    for (uint16_t c : icon) {
+      uint8_t rgb[3] = {(uint8_t)((c >> 11) * 255 / 31), (uint8_t)(((c >> 5) & 63) * 255 / 63), (uint8_t)((c & 31) * 255 / 31)};
+      fwrite(rgb, 1, 3, f);
+    }
+    fclose(f);
+    return 0;
+  }
+  if (argc > 1 && !strncmp(argv[1], "-psn", 4)) argc = 1;   // (opened from the Finder: its process number, not a folder)
   std::string root = argc > 1 ? argv[1] : std::string(getenv("HOME") ? getenv("HOME") : ".") + "/Documents/L7 Desktop";
   mkdir(root.c_str(), 0755);
   simRoot = root;
@@ -159,18 +250,10 @@ int main(int argc, char **argv) {
     SDL_RenderPresent(ren);
   };
 
-  // The app's icon: the L7 logo in white on black (drawn by the splash's own
-  // code, 4x, into the screen's buffer, then copied out; the screen cleared).
-  {
-    constexpr int ICON = 256, K = 4, LW = 55 * K, LH = 26 * K;
-    auto &d = board.tft();
-    d.fillScreen(0);
-    drawLogoScaled(0, 0, K, 0xFFFF);
-    static uint16_t icon[ICON * ICON];
-    for (int y = 0; y < LH; y++)
-      for (int x = 0; x < LW; x++) icon[(y + (ICON - LH) / 2) * ICON + x + (ICON - LW) / 2] = d.px[y * m8::Display::W + x];
-    d.fillScreen(0);
-    SDL_Surface *sf = SDL_CreateRGBSurfaceWithFormatFrom(icon, ICON, ICON, 16, ICON * 2, SDL_PIXELFORMAT_RGB565);
+  {                                                // (its icon: the dock's while it runs)
+    constexpr int ICON = 256;
+    static std::vector<uint16_t> icon = makeIcon(ICON);
+    SDL_Surface *sf = SDL_CreateRGBSurfaceWithFormatFrom(icon.data(), ICON, ICON, 16, ICON * 2, SDL_PIXELFORMAT_RGB565);
     SDL_SetWindowIcon(win, sf);
     SDL_FreeSurface(sf);
   }
@@ -203,10 +286,21 @@ int main(int argc, char **argv) {
         if (e.key.keysym.sym == SDLK_ESCAPE) { quit = true; break; }
         if (e.key.repeat) continue;
         uint8_t b = keyBit(e.key.keysym.sym);
-        if (e.type == SDL_KEYDOWN) board.heldKeys |= b;
-        else board.heldKeys &= ~b;
+        if (e.type == SDL_KEYDOWN) keyboardKeys |= b;
+        else keyboardKeys &= ~b;
+      } else if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
+        mouseDown(e.button.x, e.button.y);
+      } else if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_LEFT) {
+        mouseUp();
+      } else if (e.type == SDL_MOUSEMOTION) {
+        mouseMove(e.motion.x, e.motion.y, e.motion.state & SDL_BUTTON_LMASK);
       }
     }
+    if (!mouseQueue.empty()) {
+      mouseKeys = mouseQueue.front();
+      mouseQueue.pop_front();
+    }
+    board.heldKeys = keyboardKeys | mouseKeys;
     loop();
     if (millis() - shownAt >= 16) {
       shownAt = millis();
