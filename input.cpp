@@ -146,14 +146,15 @@ static int32_t signedTurn(int64_t f, int64_t loop) {
 }
 // A nudge step on the track being turned: dir 1 later, -1 earlier, by
 // frames (the clip's own); reset: back to none. Reaching none (or passing it,
-// either way): there, the held arrow's steps stopped. A tap (let go before
-// the arrows' repeats start): a quarter beat; held instead: a repeat 1, 2,
-// 3, 4 ms, then 5 ms each.
+// either way): there, the held arrow's steps stopped. A short tap (let go
+// within ROTATE_TAP_MS): 5 ms; let go later, before ROTATE_REPEAT_MS: a
+// quarter beat; held on: a quarter beat every ROTATE_PERIOD_MS while held.
 static bool rotateStepped = false;                 // (the press's steps begun, or reset: no tap's quarter)
 static bool rotateStopped = false;                 // (at none: the held arrow's steps stopped)
 static uint32_t stepAt = 0;                        // (millis() of the held arrow's next step; 0: none)
 static int32_t quarterFrames(const Track &tr) { return (int32_t)(tr.spbNative / 4); }
-static int heldSteps = 0;                          // (the held arrow's steps so far: 1, 2, 3, 4 ms, then 5 ms each)
+static uint32_t rotatePressAt = 0;                 // (millis() of the arrow's press)
+static constexpr uint32_t ROTATE_TAP_MS = 200, ROTATE_REPEAT_MS = 700, ROTATE_PERIOD_MS = 350;
 static int32_t msFrames(const Track &tr, int ms) {
   return (int32_t)((uint64_t)tr.spbNative * (uint32_t)(AUDIO_SAMPLE_RATE_EXACT * ms / 1000) / (transport.spb ? transport.spb : 1));
 }
@@ -187,11 +188,10 @@ static void nudgeStep(int dir, bool reset, int32_t frames = 0) {
 // meanwhile: again until taken.
 static void serviceRotate() {                      // (every pass: pollKeys())
   if (rotateT < 0) return;
-  if (rotateHeld && !rotateStopped && (int32_t)(millis() - stepAt) >= 0 && (mainKeys() & rotateKey)) {   // held: 1, 2, 3, 4 ms a repeat, then 5 ms
-    stepAt += REPEAT_PERIOD_MS;
+  if (rotateHeld && !rotateStopped && (int32_t)(millis() - stepAt) >= 0 && (mainKeys() & rotateKey)) {   // held long: a quarter beat a (slow) repeat
+    stepAt += ROTATE_PERIOD_MS;
     rotateStepped = true;
-    heldSteps = min(heldSteps + 1, 5);
-    nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false, msFrames(tracks[rotateT], heldSteps));
+    nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false, quarterFrames(tracks[rotateT]));
   }
   int32_t q = quarterNow();
   bool crossing = q != rotateQ;
@@ -457,7 +457,9 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   // The fine rotate's keys: one let go, what was shown is heard.
   if (rotateHeld && (!(keys & m8::BTN_EDIT) || !(keys & m8::BTN_OPT) || !(keys & rotateKey))) {
-    if (!rotateStepped && rotateKey) nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false, quarterFrames(tracks[rotateT]));   // (a tap: a quarter beat)
+    if (!rotateStepped && rotateKey)               // (let go before the repeats: a tap 5 ms, longer a quarter beat)
+      nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false,
+                millis() - rotatePressAt < ROTATE_TAP_MS ? msFrames(tracks[rotateT], 5) : quarterFrames(tracks[rotateT]));
     rotateHeld = false;
     serviceRotate();
   }
@@ -804,8 +806,9 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       }
     } else if (clipRotating() && (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
       // B then A on a clip's waveform: its fine rotate (the clip turned, its
-      // audio as it was): RIGHT/LEFT tapped a quarter beat earlier / later;
-      // held, a repeat 1, 2, 3, 4 ms, then 5 ms each, instead (serviceRotate()); while held only the waveform drawn (and the ms
+      // audio as it was): RIGHT/LEFT earlier / later: a short tap 5 ms, a
+      // longer press a quarter beat on letting go, held on a quarter beat a
+      // slow repeat (serviceRotate()); while held only the waveform drawn (and the ms
       // shown) turn, heard at each quarter beat crossing and once a key of the
       // combo is let go (serviceRotate(), above). Both held: back to none.
       // Reaching none (or passing it): there, the held arrow's steps stopped
@@ -824,8 +827,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         rotateHeld = true;
         rotateKey = pressed & LR;
         rotateStepped = rotateStopped = false;
-        heldSteps = 0;
-        stepAt = millis() + REPEAT_DELAY_MS;       // (a tap's quarter beat on letting go, serviceRotate()'s ms steps once held)
+        rotatePressAt = millis();
+        stepAt = millis() + ROTATE_REPEAT_MS;      // (let go sooner: its step then; held on: serviceRotate()'s quarter beats)
       }
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats: any whole number of beats, up to the whole loop.
