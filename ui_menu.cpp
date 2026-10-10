@@ -192,7 +192,7 @@ static void scrollList(int i, int dir) {
   listTop = constrain(listTop, 0, max(0, LIST - LIST_ROOM));
 }
 
-static bool playPulse();
+static int playPulse();
 
 // The card shown as the loaded project's (filled, its letter black, the play
 // icon): the loaded one's; but from letting go of the A or B that loaded it
@@ -303,9 +303,10 @@ static void drawItem(int k) {
       for (int r = 0; r < 5 && g->rows[r]; r++)
         for (int c = 0; c < w; c++)
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
-      if (playing) {                              // the clock running: a small play icon right of the letter, in the letter's colour, light grey a moment on each beat
+      if (playing) {                              // the clock running: a small play icon right of the letter, in the letter's colour, light grey a moment on each beat, white on a bar's first
         static const char *const PLAY[5] = {"#..", "##.", "###", "##.", "#.."};
-        const uint16_t ink = playPulse() ? LIGHT : letter;
+        const int pulse = playPulse();
+        const uint16_t ink = pulse == 2 ? INK : pulse ? LIGHT : letter;   // (a bar's first beat: white)
         for (int r = 0; r < 5; r++)
           for (int c = 0; c < 3; c++)
             if (PLAY[r][c] == '#') t.fillRect((x0 + w + 1 + c) * PX, (y0 + r) * PX, PX, PX, ink);
@@ -342,11 +343,13 @@ uint16_t menuActionColor() {
   return projectHasClips() && !exportText[0] ? ACCENT : DIM;   // export: grey with nothing to export, or while its label shows
 }
 
-// The playing card's play icon (the clock running): light grey for PLAY_FLASH_MS from each beat.
+// The playing card's play icon (the clock running): for PLAY_FLASH_MS from
+// each beat, 1 (light grey); from a bar's first beat, 2 (white); else 0.
 static constexpr uint32_t PLAY_FLASH_MS = 100;
-static bool playPulse() {
+static int playPulse() {
   noInterrupts();
-  bool on = transport.running && transport.sampleInBeat < (uint32_t)(PLAY_FLASH_MS * AUDIO_SAMPLE_RATE_EXACT / 1000);
+  int on = transport.running && transport.sampleInBeat < (uint32_t)(PLAY_FLASH_MS * AUDIO_SAMPLE_RATE_EXACT / 1000)
+             ? (transport.beat % BEATS_PER_BAR == 0 ? 2 : 1) : 0;
   interrupts();
   return on;
 }
@@ -358,7 +361,7 @@ static uint32_t itemKey(int k) {
   return sel | (k < CARDS && projectFilled(k)) << 1 | (k == loaded) << 2 | (k == CARDS && !projectHasClips()) << 3 |
          (uint32_t)(k >= CARDS && listInView(k) ? k - CARDS - listTop + 1 : 0) << 4 |   // (its place in view)
          (uint32_t)(sel && !setOpen ? frameColor() : 0) << 8 | (uint32_t)(sel && k < CARDS && actionHeld()) << 28 | (uint32_t)(sel && menuJustCut()) << 29 | (uint32_t)(k == CARDS && exportText[0]) << 30 |
-         (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing && playPulse()) << 25 ^
+         (uint32_t)(k == playing && transport.running) << 24 | (uint32_t)(k == playing ? playPulse() : 0) << 25 ^
          (k == CARDS + MENU_EXPORT ? (uint32_t)(projectCurrent() + 2) * 2654435761u : 0);   // (export: the loaded project's colour)
 }
 
