@@ -303,6 +303,11 @@ bool sceneDuplicate() {
   return true;
 }
 
+int sceneUnitState(int t) {
+  if (t < 0 || t >= NUM_TRACKS || recordSlot < 0) return -1;
+  return !record.units[t].sample ? 0 : record.units[t].muted ? 1 : 2;
+}
+
 bool sceneClear() {
   takeHeld();
   commit();

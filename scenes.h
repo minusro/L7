@@ -56,6 +56,7 @@ bool sceneGoEnd();             // to N+1*
 bool sceneCut();               // to the scene clipboard (not a scene with no clips: the clipboard keeps what it had); removed from the list, goes to the one before
 bool scenePaste();             // inserted after the current scene (or over N+1*), and selected
 bool sceneDuplicate();         // a copy inserted after the current scene, and selected
+int sceneUnitState(int t);     // track t in the current scene as last written (its switch maybe still to come): 0 empty, 1 muted, 2 playing; -1 not known
 bool sceneClear();             // the current scene's tracks all cleared (its tempo kept; not while recording)
 bool sceneClipboardFull();
 // A resampling on track t has been saved: a new scene is inserted after the current one, holding just it, on track 1 (the

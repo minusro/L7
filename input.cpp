@@ -1104,12 +1104,16 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
 // After a recording finishes on the selected track, move on: to the next
 // empty track (in their numbering, from the bottom up, wrapping), else the
 // next muted one, else stay.
-static void selectAfterRecording(int t) {
+// fromScene: as the new scene has them (a resampling's: its switch still to
+// come on the next beat), not as the tracks play now.
+static void selectAfterRecording(int t, bool fromScene = false) {
   if (selected != t || !setting(SET_NEXT_FREE)) return;   // the user has moved on already (the setting off: it stays)
   for (TrackState want : {TrackState::Empty, TrackState::Muted}) {
     for (int k = 1; k < NUM_TRACKS; k++) {
       int i = (t - k + NUM_TRACKS) % NUM_TRACKS;   // (the track numbered next: the row above)
-      if (tracks[i].state == want) {
+      int st = fromScene ? sceneUnitState(i) : -1;
+      bool match = st >= 0 ? st == (want == TrackState::Empty ? 0 : 1) : tracks[i].state == want;
+      if (match) {
         selected = i;
         drawTrack(i);
         drawTrack(t);
@@ -1242,7 +1246,7 @@ void followRecording() {
     if (on >= 0) {
       selected = on;
       for (int i = 0; i < ROWS; i++) drawTrack(i);
-      selectAfterRecording(on);             // (the setting on: on to the next free track there)
+      selectAfterRecording(on, true);       // (the setting on: on to the next free track there, as the new scene has them: track 2)
     } else {
       endSilencing();                              // (scene list full: it stays where it is)
     }
