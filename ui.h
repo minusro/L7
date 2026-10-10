@@ -180,6 +180,12 @@ inline bool bArrows() { return arrowModifier() == m8::BTN_OPT; }
 // cell's grey).
 bool optThenEdit();                       // (input.cpp) B then A held on a track
 inline int frameCell(int i) { return selectedCellIn(i); }
+// SHIFT the arrows' modifier on the selected track (not recording): its
+// sample switch shown on its waveform cell, whichever cell is selected (an
+// accent frame, its arrows, the sample's label: ui_wave.cpp).
+inline bool sampleSwitchShown(int i) {
+  return i == selected && i != STATUS_ROW && shiftArrows() && !recordingOn(i) && !menuOpen() && !screenSwitchPending() && !optThenEdit();
+}
 // A frame in black (BG means none): black to the eye.
 constexpr uint16_t FRAME_BLACK = 0x0001;
 inline uint16_t cellFrame(int i, int cell) {

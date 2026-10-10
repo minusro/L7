@@ -974,8 +974,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     // meanwhile, ui.h frameCell()): its sample, the previous / next on the card.
     if (!onStatus && !recordingOn(selected)) {
       // (another sample: the waveform cell selected, to see it)
-      if ((pressed & m8::BTN_LEFT) && stepSample(selected, -1)) selectedCell = WAVE_CELL, sampleSteppedAt = max(1u, millis());
-      if ((pressed & m8::BTN_RIGHT) && stepSample(selected, 1)) selectedCell = WAVE_CELL, sampleSteppedAt = max(1u, millis());
+      if ((pressed & m8::BTN_LEFT) && stepSample(selected, -1)) sampleSteppedAt = max(1u, millis());
+      if ((pressed & m8::BTN_RIGHT) && stepSample(selected, 1)) sampleSteppedAt = max(1u, millis());
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) deleteEmptySamples();   // (empty ones stepped over: gone if unused, stopped)
     }
   } else {
