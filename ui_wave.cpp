@@ -71,7 +71,6 @@ struct WaveView {
   uint32_t drawn = 0;                              // uiGeneration when last drawn whole
   uint32_t rs = 0, rb = 0;
   char label[24] = "";                             // the sample's label (SHIFT held: its name, X/N; "": none)
-  bool ownFrame = false;                           // (the sample switch's accent frame drawn here: another cell selected)
   bool labelFlash = false;                         // (its name and number dark grey: the sample just stepped)
   int labelX = 0, labelW = 0;                      // its box: first block column, width in blocks
 };
@@ -163,10 +162,6 @@ static void drawColumn(int i, int bc) {
   // LEFT/RIGHT step its sample): an arrow out of each side of the frame, at
   // its middle, the frame cleared a block round its tip.
   const bool switching = sampleSwitchShown(i);
-  if (switching && selectedCellIn(i) != WAVE_CELL) {   // (another cell selected: the accent frame drawn here, the selected one's grey)
-    if (bc == 0 || bc == BLOCK_COLS - 1) for (int r = 0; r < BAND_ROWS; r++) block(r, ACCENT);
-    else { block(0, ACCENT); block(BAND_ROWS - 1, ACCENT); }
-  }
   if ((bc <= 1 || bc >= BLOCK_COLS - 2) && switching) {
     const bool edge = bc == 0 || bc == BLOCK_COLS - 1;   // (the frame's column: the tip; the one inside it: the arrow's back)
     for (int r = MID_ROW - 2; r <= MID_ROW + 3; r++) {
@@ -176,12 +171,11 @@ static void drawColumn(int i, int bc) {
     }
   }
   // SHIFT held (the frame's arrows above): the sample's label, black on an
-  // accent-coloured box (a block over the text, two either side, its top corners cut), its
+  // accent-coloured box (a block round the text), its
   // bottom row the bottom border's.
   if (v.label[0] && bc >= v.labelX && bc < v.labelX + v.labelW) {
-    const bool side = bc == v.labelX || bc == v.labelX + v.labelW - 1;   // (its top corners cut)
-    for (int r = LABEL_TOP + side; r < LABEL_TOP + 7; r++) block(r, ACCENT);
-    int c = bc - v.labelX - 2;                     // (the text's column)
+    for (int r = LABEL_TOP; r < LABEL_TOP + 7; r++) block(r, ACCENT);
+    int c = bc - v.labelX - 1;                     // (the text's column)
     bool count = false;                            // (past the '/': the count, never flashed)
     for (const char *p = v.label; *p && c >= 0; p++) {
       if (*p == '/') count = true;
@@ -218,14 +212,12 @@ void drawWave(int i, bool recordingHere) {
   uint16_t outInk = onGround(muted ? DARK : DIM, ground);   // outside it: grey (muted: dark grey; black on the selected track's ground)
   char label[24] = "";                             // (SHIFT held on the waveform cell: the sample's label)
   if (sampleSwitchShown(i)) sampleLabel(i, label, sizeof label);
-  const bool switching = sampleSwitchShown(i) && selectedCellIn(i) != WAVE_CELL;   // (its own frame drawn: redrawn as it comes and goes)
   bool flash = label[0] && sampleSteppedAt && millis() - sampleSteppedAt < LABEL_FLASH_MS;
-  bool labelSame = !strcmp(label, v.label) && flash == v.labelFlash && switching == v.ownFrame;
-  v.ownFrame = switching;
+  bool labelSame = !strcmp(label, v.label) && flash == v.labelFlash;
   if (!labelSame) {
     v.labelFlash = flash;
     strcpy(v.label, label);
-    v.labelW = textWidth(label) / PX + 4;          // (two blocks either side of the text)
+    v.labelW = textWidth(label) / PX + 2;          // (a block either side of the text)
     v.labelX = (BLOCK_COLS - v.labelW) / 2;
   }
   if (labelSame && v.drawn == uiGeneration && v.version == tr.overviewVersion && v.turn == tr.turn && v.state == (uint8_t)tr.state &&

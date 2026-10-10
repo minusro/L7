@@ -24,6 +24,9 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
     return theirs != BG ? theirs : ground;
   }
   if (own != BG && !corner) return own;
+  // The sample switch (SHIFT on the track, ui.h sampleSwitchShown()): its own
+  // frame round the waveform cell, in the accent colour, whichever cell is selected.
+  if (!corner && cell == WAVE_CELL && sampleSwitchShown(i)) return ACCENT;
   if (corner && ((l && cellRect(i, cell).x == 0) ||   // (the selected row's ground: all its corners cut, at the screen's
                  (rt && cellRect(i, cell).x + cellRect(i, cell).w == CELLS_RIGHT))) return BG;   //  edge and its last cell's)
   if (t || b) {
@@ -31,6 +34,11 @@ int borderAt(int i, int cell, int r, int c, int rows, int cols) {
     // runs over this column (not at that cell's own corners: cut there too),
     // by place on the screen (an empty track's one cell spans the row).
     int ni = t ? rowAbove(i) : rowBelow(i);
+    if (ni >= 0 && ni == selected && sampleSwitchShown(ni)) {   // (its sample switch's frame, over its waveform cell)
+      int x = cellRect(i, cell).x / PX + c;
+      const Cell &w = cellRect(ni, WAVE_CELL);
+      if (x > w.x / PX && x < (w.x + w.w) / PX - 1) return ACCENT;
+    }
     if (ni >= 0 && ni == selected) {
       int x = cellRect(i, cell).x / PX + c, nc = frameCell(ni);
       const Cell &n = cellRect(ni, nc);
@@ -61,7 +69,7 @@ uint64_t bordersOf(int i, int cell) {
   if (i != STATUS_ROW) {
     bool near = selected == rowAbove(i) || selected == rowBelow(i);
     k = k * 31 + (near ? (uint64_t)(frameCell(selected) + 1) << 20 | cellFrame(selected, frameCell(selected)) |
-                             (uint64_t)(selected == rowAbove(i)) << 25 : 0);
+                             (uint64_t)(selected == rowAbove(i)) << 25 | (uint64_t)sampleSwitchShown(selected) << 26 : 0);
   }
   return k;
 }
