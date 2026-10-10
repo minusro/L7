@@ -1390,7 +1390,7 @@ FLASHMEM void sampleLabel(int t, char *buf, size_t size) {
   if (!id) { if (size) buf[0] = 0; return; }
   char name[16];
   sampleName(id, name, sizeof name);
-  snprintf(buf, size, "%s %d", name, sampleIndex(id) + 1);
+  snprintf(buf, size, "%s %d/%d", name, sampleIndex(id) + 1, sampleTotal);
 }
 
 bool stepSample(int t, int dir) {

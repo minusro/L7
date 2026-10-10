@@ -71,11 +71,11 @@ struct WaveView {
   uint32_t drawn = 0;                              // uiGeneration when last drawn whole
   uint32_t rs = 0, rb = 0;
   char label[24] = "";                             // the sample's label (SHIFT held: its name, X/N; "": none)
-  bool labelFlash = false;                         // (its box white: the sample just stepped)
+  bool labelFlash = false;                         // (its name and number white: the sample just stepped)
   int labelX = 0, labelW = 0;                      // its box: first block column, width in blocks
 };
 static WaveView views[NUM_TRACKS];
-static constexpr uint32_t LABEL_FLASH_MS = 100;           // (a sample step: its label's box white this long)
+static constexpr uint32_t LABEL_FLASH_MS = 100;           // (a sample step: its label's name and number white this long)
 static constexpr int LABEL_TOP = BAND_ROWS - 7;             // the sample label's box: rows 9-15 (over the bottom border, its own bottom row)
 // The record head's look (not a colour the playheads use): its column inverted.
 static constexpr uint16_t INVERT_HEAD = 0x0001;
@@ -174,14 +174,17 @@ static void drawColumn(int i, int bc) {
   // bottom row the bottom border's.
   if (v.label[0] && bc >= v.labelX && bc < v.labelX + v.labelW) {
     const bool side = bc == v.labelX || bc == v.labelX + v.labelW - 1;   // (its top corners cut)
-    for (int r = LABEL_TOP + side; r < LABEL_TOP + 7; r++) block(r, v.labelFlash ? INK : ACCENT);
+    for (int r = LABEL_TOP + side; r < LABEL_TOP + 7; r++) block(r, ACCENT);
     int c = bc - v.labelX - 1;                     // (the text's column)
+    bool count = false;                            // (past the '/': the count, never flashed)
     for (const char *p = v.label; *p && c >= 0; p++) {
+      if (*p == '/') count = true;
+      const uint16_t ink = v.labelFlash && !count ? INK : BG;   // (a step: the name and number white a moment)
       const Glyph *g = glyphFor(*p);
       int w = g ? glyphWidth(*g) : 2;
       if (c < w) {
         for (int r = 0; g && r < 5 && g->rows[r]; r++)
-          if (g->rows[r][c] == '#') block(LABEL_TOP + 1 + r + g->top, BG);
+          if (g->rows[r][c] == '#') block(LABEL_TOP + 1 + r + g->top, ink);
         break;
       }
       c -= w + 1;

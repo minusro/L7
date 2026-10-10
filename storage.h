@@ -135,7 +135,7 @@ int deleteUnmarkedSamples(const uint32_t *only = nullptr, int onlyCount = 0);   
 // (to be deleted if nothing uses them, scenes.h deleteEmptySamples()).
 bool stepSample(int t, int dir);
 // Track t's sample as SHIFT+LEFT/RIGHT shows it: its name and its place
-// among all of them ("A30012 3"; none: "", no label).
+// among all of them ("A30012 3/17"; none: "", no label).
 void sampleLabel(int t, char *buf, size_t size);
 int takeEmptySamples(uint32_t *ids, int most);
 // Samples on the card holding recordings, including ones no track plays now
