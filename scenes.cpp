@@ -344,7 +344,7 @@ int sceneFromResample(int t) {
       while (next == rec) next--;
       if (next < 0) break;
       to.units[next] = from.units[u];
-      if (next == u) hearAgain(u);                 // (silenced with the others: its clip doesn't change, so it's heard once unmuted)
+      hearAgain(next);                             // (silenced with the others: heard once unmuted)
       next--;
     }
   int pos = list.current == list.count + 1 ? list.count + 1 : list.current + 1;

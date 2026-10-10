@@ -1544,14 +1544,14 @@ int main(int argc, char **argv) {
     waitScene();
     runBeats(2);
     bool othersEmpty = true;
-    for (int t = 0; t < NUM_TRACKS; t++) if (t != 6 && t != 1 && tracks[t].state != TrackState::Empty) othersEmpty = false;
+    for (int t = 0; t < NUM_TRACKS; t++) if (t != 6 && t != 5 && tracks[t].state != TrackState::Empty) othersEmpty = false;
     check(tracks[6].sample == sample && tracks[6].state == TrackState::Playing && tracks[6].live && othersEmpty &&
           silencedTracks == 0, "in it: the resampling, on the same track, and nothing unmuted");
-    check(tracks[1].sample == mutedSample && tracks[1].state == TrackState::Muted, "the muted clip came along, still muted");
-    setTrackMuted(1, false);
+    check(tracks[5].sample == mutedSample && tracks[5].state == TrackState::Muted, "the muted clip came along, still muted, on track 2 (right after the resampling's)");
+    setTrackMuted(5, false);
     runBeats(2);
-    checkSync(1, "the muted clip unmuted: heard (not left silenced)");
-    setTrackMuted(1, true);
+    checkSync(5, "the muted clip unmuted: heard (not left silenced)");
+    setTrackMuted(5, true);
     checkSync(6, "the resampling, playing on");
     check(sceneStep(-1), "back to the scene before");
     waitScene();
