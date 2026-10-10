@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
   };
 
   SDL_AudioSpec want = {}, got;
-  want.freq = 44100;
+  want.freq = (int)(AUDIO_SAMPLE_RATE_EXACT + 0.5f);   // (the M8's rate, 44 118 Hz: the computer's audio resampled to it)
   want.format = AUDIO_S16SYS;
   want.channels = 2;
   want.samples = 256;
