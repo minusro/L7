@@ -13,7 +13,7 @@ namespace looper {
 constexpr const char *APP_NAME = "L7";            // the app's name (exports are named after it)
 constexpr int NUM_TRACKS = 7;
 constexpr int BEATS_PER_BAR = 4;                   // fixed 4/4
-constexpr uint32_t MAX_BARS = 32;                  // longest recording
+constexpr uint32_t MAX_BARS = 32;                  // longest recording (at 60 BPM and over; below, half: storage.cpp maxBarsNow())
 // Stopping a recording up to this many beats past a bar line trims it to end
 // there; stopping later keeps recording to the end of that bar.
 constexpr double SNAP_THRESHOLD_BEATS = 1.0;

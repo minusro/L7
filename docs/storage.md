@@ -88,7 +88,7 @@ ms to seconds and starves the streams. So:
 * Stop: the loop is whole bars. `targetBars()`: if stopped within
   `SNAP_THRESHOLD_BEATS` (1 beat) after a bar line it ends there (trimmed),
   otherwise it carries on to the end of the current bar (`Finishing`).
-  Longest: 32 bars.
+  Longest: 32 bars at 60 BPM and over, 16 bars below (`maxBarsNow()`: 16 bars at 30 BPM still fit a file).
 * Playback of the new loop is gapless: the loop's beginning is copied into the
   track's ring while recording, so it can play the moment the loop wraps
   (`armRecordedLoop`).

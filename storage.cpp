@@ -2038,14 +2038,18 @@ static bool streamsTopped() {
 // bars done, if the stop came at most SNAP_THRESHOLD_BEATS past the last bar
 // line; otherwise one more (the recording then carries on to the end of that
 // bar). Under one bar it carries on to one bar.
+// The longest recording, in bars: MAX_BARS (32) at 60 BPM and over, half
+// that below (16 bars at 30 BPM still fit the file: MAX_REC_FRAMES).
+static uint32_t maxBarsNow() { return transport.spb > spbForBpm(60.0f) ? MAX_BARS / 2 : MAX_BARS; }
 static uint32_t targetBars(double beats) {
-  uint32_t p = min((uint32_t)(beats / BEATS_PER_BAR), MAX_BARS);   // whole bars done
-  if (p >= 1 && (beats <= p * BEATS_PER_BAR + SNAP_THRESHOLD_BEATS || p == MAX_BARS)) return p;
+  const uint32_t most = maxBarsNow();
+  uint32_t p = min((uint32_t)(beats / BEATS_PER_BAR), most);   // whole bars done
+  if (p >= 1 && (beats <= p * BEATS_PER_BAR + SNAP_THRESHOLD_BEATS || p == most)) return p;
   return p + 1;
 }
 
 static uint32_t maxRecordingFrames() {
-  return min(MAX_BARS * BEATS_PER_BAR * transport.spb, MAX_REC_FRAMES);
+  return min(maxBarsNow() * BEATS_PER_BAR * transport.spb, MAX_REC_FRAMES);
 }
 
 // The recording's loop length is known: set its track up to play. If the
