@@ -46,7 +46,7 @@ no snapping to the taps).
 * Twice LEFT/RIGHT: move by the range's own length; a range inside the clip
   stops at the clip edge, one already touching it jumps to the other edge,
   one straddling the edge moves freely (wraps).
-* UP/DOWN: length steps 1/4, 1/2, 3/4, 1, 1 1/2, 2, 3, 4, 5, 6 … bars.
+* UP/DOWN: length steps 1/4, 1/2, 3/4, 1, 2, 3, 4, 5, 6 … bars (no 1 1/2).
 * Twice UP/DOWN: powers of two 1/4 … 32 bars; a length of 3 × 2ⁿ beats
   doubles/halves instead (3/4 bar halves to 1/2).
 * The start stays when the length changes.

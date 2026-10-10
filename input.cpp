@@ -830,15 +830,15 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       //     a bar up to 16 bars, a bar beyond; a range of the whole loop, the
       //     start position's grid (startGrid(): each step moves the start
       //     position). Starts off that grid go to the next grid point that way.
-      //   UP/DOWN: to the next / previous of 1/4, 1/2, 3/4, 1, 1 1/2, 2, 3, 4,
+      //   UP/DOWN: to the next / previous of 1/4, 1/2, 3/4, 1, 2, 3, 4,
       //     5, 6 ... bars (up to the whole loop).
       //   Tapped twice, LEFT/RIGHT: by its own length. A range inside the loop
       //     stops at the loop's edge rather than crossing it; one already at
       //     that edge jumps to the other. A range across the edge moves freely.
       //   Tapped twice, UP/DOWN: to the next / previous power of two: 1/4,
       //     1/2, 1, 2, 4, 8, 16, 32 bars (up to the whole loop). Three times a
-      //     power of two (3/4, 1 1/2, 3, 6 ... bars) doubles / halves instead
-      //     (3/4 bar halves to 1/2: no half beats).
+      //     power of two (3, 6 ... bars) doubles / halves instead (3/4 bar:
+      //     to 1 / 1/2; 3 bars halves to 2: no 1 1/2 bars).
       // The start stays when the length changes. A double tap counts from the
       // range before the first tap (which already moved it a step).
       Track &tr = tracks[selected];
@@ -847,20 +847,18 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       static int tapTrack = -1;
       static uint32_t tapAt[4], tapStart[4], tapLen[4];   // per arrow: the last tap and the range before it
       const uint8_t keys4[4] = {m8::BTN_LEFT, m8::BTN_RIGHT, m8::BTN_UP, m8::BTN_DOWN};
-      // Lengths in beats: the steps (1, 2, 3, 4, 6, 8, then every 4) and the
+      // Lengths in beats: the steps (1, 2, 3, 4, then every 4) and the
       // jumps (powers of two, or doubling / halving three times one). Next
       // above / below l (at least 1 beat).
-      auto stepAbove = [](uint32_t l) { return l < 4 ? l + 1 : l < 8 ? (l / 2 + 1) * 2 : (l / 4 + 1) * 4; };
-      auto stepBelow = [](uint32_t l) {
-        return l <= 1 ? 1 : l <= 4 ? l - 1 : l <= 8 ? (l - 1) / 2 * 2 : (l - 1) / 4 * 4;
-      };
+      auto stepAbove = [](uint32_t l) { return l < 4 ? l + 1 : (l / 4 + 1) * 4; };
+      auto stepBelow = [](uint32_t l) { return l <= 1 ? 1 : l <= 4 ? l - 1 : (l - 1) / 4 * 4; };
       auto threeTimesPow2 = [](uint32_t l) { return l % 3 == 0 && ((l / 3) & (l / 3 - 1)) == 0; };
       auto jumpAbove = [&](uint32_t l) {
-        if (threeTimesPow2(l)) return l * 2;
+        if (threeTimesPow2(l) && l * 2 != 6) return l * 2;   // (no 1 1/2 bars)
         uint32_t j = 1; while (j <= l) j *= 2; return j;
       };
       auto jumpBelow = [&](uint32_t l) {
-        if (threeTimesPow2(l) && l >= 6) return l / 2;
+        if (threeTimesPow2(l) && l >= 6 && l / 2 != 6) return l / 2;
         uint32_t j = 1; while (j * 2 < l) j *= 2; return l <= 1 ? 1 : j;
       };
       uint32_t step = tr.loopBars <= BEAT_STEP_MAX_BARS ? 1 : tr.loopBars <= 16 ? 2 : 4;   // the start's grid
