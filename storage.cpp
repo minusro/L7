@@ -422,11 +422,14 @@ static bool createPoolFile() {
   debugStage = "SD create (sample file)";
   FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
   if (!f) return false;
-  f.preAllocate(SAMPLE_FILE_BYTES);
+  bool pre = f.preAllocate(SAMPLE_FILE_BYTES);
   uint8_t zero = 0;                              // give the file its full size
-  bool ok = f.seekSet(SAMPLE_FILE_BYTES - 1) && f.write(&zero, 1) == 1;
-  ok = writeSampleHeader(f, 0, 0, 0, nullptr) && ok;
+  bool seek = f.seekSet(SAMPLE_FILE_BYTES - 1), wrote = seek && f.write(&zero, 1) == 1;
+  bool head = writeSampleHeader(f, 0, 0, 0, nullptr);
+  bool ok = wrote && head;
   f.close();
+  if (!ok) Serial.printf("%s: preallocate %s, seek %s, last byte %s, header %s (card error 0x%02X)\n", path, pre ? "ok" : "failed",
+                         seek ? "ok" : "failed", wrote ? "ok" : "failed", head ? "ok" : "failed", SD.sdfs.card()->errorCode());
   if (!ok) {                                     // probably no space: don't keep half a file
     SD.sdfs.remove(path);
     poolBlocked = true;
