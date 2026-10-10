@@ -51,6 +51,39 @@ static int tapCount = 0;                            // taps in this run (0: the 
 
 
 static uint32_t tapAt = 0;                          // millis() of the latest tap (taken)
+
+// Tapping while playing also lines the clock up with the taps (the run's
+// first tap its "one", a bar's first beat): each tap from the 3rd on measures
+// how far the clock's bar is from the taps' and eases it there, the tempo
+// PHASE_RATE faster or slower until it has caught up (phaseService()); the
+// tempo set by the taps meanwhile, and again after.
+static constexpr float PHASE_RATE = 0.06f;           // 6% faster / slower while catching up
+static int phaseDir = 0;                            // 1 faster, -1 slower, 0 none
+static uint32_t phaseEnd = 0;                       // millis() it's caught up by
+static void phaseAlign(double msPerBeat, double firstMs) {
+  if (!transport.running || syncSource() != SYNC_NONE) return;
+  noInterrupts();
+  double pos = (double)(transport.beat - transportOrigin()) + (double)transport.sampleInBeat / transport.spb;   // (the clock, in beats)
+  interrupts();
+  double want = (millis() - firstMs) / msPerBeat;   // (the taps', in beats from the run's first: its "one")
+  double e = fmod(pos - want, BEATS_PER_BAR);       // (the clock ahead: positive; within half a bar either way)
+  if (e < 0) e += BEATS_PER_BAR;
+  if (e >= BEATS_PER_BAR / 2.0) e -= BEATS_PER_BAR;
+  if (fabs(e) < 0.01) { phaseDir = 0; return; }
+  phaseDir = e > 0 ? -1 : 1;                        // (ahead: slower)
+  phaseEnd = millis() + (uint32_t)(fabs(e) * msPerBeat / PHASE_RATE);
+}
+static void phaseService() {
+  if (!phaseDir) return;
+  if (!transport.running || tempoNudging() || (int32_t)(millis() - phaseEnd) >= 0) {
+    phaseDir = 0;
+    if (transport.running && !tempoNudging()) transport.pendingSpb = spbForBpm(bpm);   // caught up: the tempo set
+    return;
+  }
+  uint32_t spb = (uint32_t)lroundf(spbForBpm(bpm) / (1 + phaseDir * PHASE_RATE));
+  uint32_t now = transport.pendingSpb ? transport.pendingSpb : transport.spb;
+  if (spb != now) transport.pendingSpb = spb;
+}
 uint32_t lastTapMs() { return tapAt; }
 
 static void tapTempo() {
@@ -83,6 +116,10 @@ static void tapTempo() {
     double sumI = n * (n - 1) / 2.0;
     double msPerBeat = (n * sumIT - sumI * sumT) / (n * (double)n * ((double)n * n - 1) / 12);
     if (msPerBeat > 0) setTempo(max(60.0f, (float)(60000.0 / msPerBeat)));   // (tapped: 60 BPM at least)
+    if (msPerBeat > 0) {                            // playing: the clock eased onto the taps' bar
+      double a = (sumT - msPerBeat * sumI) / n;     // (the fit's first tap, ms after the real first)
+      phaseAlign(msPerBeat, first + a);
+    }
   }
   // Stopped, the metronome on: each of the first four taps clicks (the
   // first as a bar's first beat); the 5th starts the clock, which clicks itself.
@@ -1249,6 +1286,7 @@ void pollKeys() {
   switchHold();
   serviceRotate();
   nudgeService();
+  phaseService();
 }
 
 void followRecording() {
