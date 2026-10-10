@@ -191,7 +191,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   is loading a project (A on the loaded one: just back), or RIGHT off its right edge (on a card of the right column, or on a list item), LEFT off its left edge (on a card of the left column, or on a list item), UP off its top (on the top card row) or DOWN off its bottom (on the list's last item), once let go; with no project loaded those make a new one in the first empty slot (the menu's selection staying where it was) and go back (all slots full: nowhere to go); with the dummy
   project loaded, one has to be loaded or made first. Opening the menu
   with a project that has no clips at all (not recording) deletes it: its
-  slot empties and the dummy project is loaded.
+  slot empties and the dummy project is loaded, that slot selected (however the menu was entered).
   The menu's ground is dark grey (`MENU_BG`), the whole screen's.
   Twelve project cards (three rows of four, 21×15 blocks, 3 apart across and 3 down, centred):
   rectangles with the bottom right corner cut diagonally (3 blocks), lettered
