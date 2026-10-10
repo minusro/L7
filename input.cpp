@@ -197,7 +197,7 @@ static void serviceRotate() {                      // (every pass: pollKeys())
     rotateStepped = true;
     if (++heldSteps == 1) rotateFlashAt = max(1u, millis());
     int ms = heldSteps <= 5 ? 1 : heldSteps <= 10 ? 2 : heldSteps <= 15 ? 4 : 10;
-    nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false, msFrames(tracks[rotateT], ms));
+    nudgeStep(rotateKey & m8::BTN_RIGHT ? 1 : -1, false, msFrames(tracks[rotateT], ms));
   }
   int32_t q = quarterNow();
   bool crossing = q != rotateQ;
@@ -465,7 +465,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // The fine rotate's keys: one let go, what was shown is heard.
   if (rotateHeld && (!(keys & m8::BTN_EDIT) || !(keys & m8::BTN_OPT) || !(keys & rotateKey))) {
     if (!rotateStepped && rotateKey) rotateFlashAt = max(1u, millis());
-    if (!rotateStepped && rotateKey) nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false, quarterFrames(tracks[rotateT]));   // (a tap: a quarter beat)
+    if (!rotateStepped && rotateKey) nudgeStep(rotateKey & m8::BTN_RIGHT ? 1 : -1, false, quarterFrames(tracks[rotateT]));   // (a tap: a quarter beat)
     rotateHeld = false;
     serviceRotate();
   }
@@ -821,7 +821,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       }
     } else if (clipRotating() && (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
       // B then A on a clip's waveform: its fine rotate (the clip turned, its
-      // audio as it was): RIGHT/LEFT tapped a quarter beat earlier / later;
+      // audio as it was): RIGHT/LEFT tapped a quarter beat later / earlier;
       // held, a repeat five of 1 ms, five of 2, five of 4, then 10 ms each, instead (serviceRotate()); while held only the waveform drawn (and the ms
       // shown) turn, heard at each quarter beat crossing and once a key of the
       // combo is let go (serviceRotate(), above). Both held: back to none.
