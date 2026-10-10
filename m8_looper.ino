@@ -300,7 +300,7 @@ void loop() {
   else if (metronomeOn) clickedRecording = true;
   metronomeSteady = metronomeMode() == METRO_ON;
   metronomeOn = (clickedRecording || metronomeWanted()) && !menuOpen();   // (the metronome setting, app.h; not in the dummy project, nor while the clock isn't shown: the menu)
-  clickFromBeat = sceneSwitchBeat();               // a scene or project switch waiting for its bar line: no click until it, whatever the setting
+  clickFromBeat = menuLoadPending() ? sceneSwitchBeat() : INT32_MIN;   // a project switch waiting for its bar line: no click until it (a scene switch: it clicks on)
 
   // Report dropouts with what the storage code was doing (debugging).
   static uint32_t lastDropCheck = 0, lastDrops[NUM_TRACKS] = {};

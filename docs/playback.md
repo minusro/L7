@@ -174,10 +174,12 @@ then the master volume on it as on the mix, at once (all the way down: silent) (
 left out of what a resampling records. Stopped, it clicks on each of tap tempo's first four taps too (the first as a bar's first beat), the 5th starting the clock on its own click (`metronomeClick()`). A recording started with it clicking keeps it
 until it's completely recorded: on auto it stops on the bar line where that
 recording ends and the clip starts playing (it goes on while the recording
-finishes its bar; that bar line itself doesn't click). While a scene or project
-switch waits for its switch point, nothing clicks, whatever the setting: from
-the press until the switch (`clickFromBeat` = `sceneSwitchBeat()`, set by
-`loop()`; the switch's own beat clicks if the new scene should).
+finishes its bar; that bar line itself doesn't click). A scene switch waiting
+for its switch point leaves the click as it is (clicking on until it). While a
+project switch waits, nothing clicks, whatever the setting: from the press
+until the switch (`clickFromBeat` = `sceneSwitchBeat()` while
+`menuLoadPending()`, set by `loop()`; the switch's own beat clicks if the new
+project should).
 
 ## MIDI clock
 
