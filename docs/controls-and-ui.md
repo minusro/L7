@@ -43,7 +43,7 @@ no snapping to the taps).
   The start position (where 1.1.1 plays from) is then the range's first half
   bar or bar line on clips ≤ 8 bars, its first bar line on longer ones
   (playback.md).
-* Twice LEFT/RIGHT: move by the range's own length; a range inside the clip
+* Twice LEFT/RIGHT: move by the range's own length (the whole loop: every tap a single step instead); a range inside the clip
   stops at the clip edge, one already touching it jumps to the other edge,
   one straddling the edge moves freely (wraps).
 * UP/DOWN: length steps 1/4, 1/2, 3/4, 1, 2, 3, 4, 5, 6 … bars (no 1 1/2).

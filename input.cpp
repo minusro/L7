@@ -861,7 +861,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       //     position). Starts off that grid go to the next grid point that way.
       //   UP/DOWN: to the next / previous of 1/4, 1/2, 3/4, 1, 2, 3, 4,
       //     5, 6 ... bars (up to the whole loop).
-      //   Tapped twice, LEFT/RIGHT: by its own length. A range inside the loop
+      //   Tapped twice, LEFT/RIGHT: by its own length (the whole loop: a step each tap). A range inside the loop
       //     stops at the loop's edge rather than crossing it; one already at
       //     that edge jumps to the other. A range across the edge moves freely.
       //   Tapped twice, UP/DOWN: to the next / previous power of two: 1/4,
@@ -897,6 +897,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       for (int k = 0; k < 4; k++) {
         if (!(pressed & keys4[k])) continue;
         bool twice = !repeat && tapTrack == selected && tapAt[k] && millis() - tapAt[k] < DOUBLE_TAP_MS;
+        if (k < 2 && rb >= loopBeats) twice = false;   // (the whole loop: by its own length is nowhere; every tap a step)
         uint32_t s0 = twice ? tapStart[k] : rs, l0 = twice ? tapLen[k] : rb, s = s0, l = l0;
         if (!twice && !repeat) { tapTrack = selected; tapAt[k] = millis(); tapStart[k] = rs; tapLen[k] = rb; }
         if (twice) tapAt[k] = 0;
