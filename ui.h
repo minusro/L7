@@ -174,22 +174,21 @@ uint8_t arrowModifier();
 uint8_t mainKeys();
 inline bool shiftArrows() { return arrowModifier() == m8::BTN_SHIFT; }
 inline bool bArrows() { return arrowModifier() == m8::BTN_OPT; }
-// The cell framed in row i (the selected row): its selected cell; a track's
-// with SHIFT the arrows' modifier, its waveform cell (SHIFT+LEFT/RIGHT step
-// its sample, from any of its cells), in the accent colour, the other hidden.
+// The cell framed in row i (the selected row): its selected cell (a track's
+// with SHIFT the arrows' modifier: SHIFT+LEFT/RIGHT step its sample, from
+// any of its cells: the waveform cell's frame in the accent colour, another
+// cell's grey).
 bool optThenEdit();                       // (input.cpp) B then A held on a track
-inline int frameCell(int i) {
-  return i != STATUS_ROW && ((shiftArrows() && !recordingOn(i)) || optThenEdit()) ? WAVE_CELL : selectedCellIn(i);
-}
+inline int frameCell(int i) { return selectedCellIn(i); }
 // A frame in black (BG means none): black to the eye.
 constexpr uint16_t FRAME_BLACK = 0x0001;
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != frameCell(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
   if (screenSwitchPending()) return BG;            // (an edge line shown: no frame meanwhile)
-  if (i != STATUS_ROW && optThenEdit()) return FRAME_BLACK;   // (B then A on a track: black, on its waveform cell)
+  if (i != STATUS_ROW && optThenEdit()) return BG;   // (B then A on a track, its fine rotate: no frame)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
-  if (i != STATUS_ROW && shiftArrows() && !recordingOn(i)) return ACCENT;   // (SHIFT: its waveform cell)
+  if (i != STATUS_ROW && shiftArrows() && !recordingOn(i)) return cell == WAVE_CELL ? ACCENT : DIM;   // (SHIFT: the waveform cell's accent, another's grey)
   return bArrows() ? DIM : k && !(k & ~arrows) && arrowsMoved() ? INK : LIGHT;
 }
 // B the arrows' modifier (A and START not held; arrows may be down).

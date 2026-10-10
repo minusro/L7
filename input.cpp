@@ -215,11 +215,11 @@ bool optThenEdit() {
   uint8_t k = mainKeys();
   return editAfterOpt && (k & m8::BTN_OPT) && (k & m8::BTN_EDIT) && selected != STATUS_ROW && !menuOpen();
 }
-// B then A held on a clip's waveform cell: its fine rotate (the arrows turn it).
+// B then A held on a track with a clip, any of its cells: its fine rotate (the arrows turn it).
 bool clipRotating() {
   uint8_t k = mainKeys();
   return editAfterOpt && (k & m8::BTN_OPT) && (k & m8::BTN_EDIT) && selected != STATUS_ROW && !menuOpen() &&
-         selectedCellIn(selected) == WAVE_CELL && hasClip(selected);
+         hasClip(selected);                         // (from any of its cells)
 }
 
 // The last arrow press moved the selection (not: already at the edge that way).
@@ -820,7 +820,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         selected = to;
       }
     } else if (clipRotating() && (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
-      // B then A on a clip's waveform: its fine rotate (the clip turned, its
+      // B then A on a clip (any of its cells): its fine rotate (the clip turned, its
       // audio as it was): RIGHT/LEFT tapped a quarter beat later / earlier;
       // held, a repeat five of 1 ms, five of 2, five of 4, then 10 ms each, instead (serviceRotate()); while held only the waveform drawn (and the ms
       // shown) turn, heard at each quarter beat crossing and once a key of the
