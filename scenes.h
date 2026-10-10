@@ -60,7 +60,7 @@ int sceneUnitState(int t);     // track t in the current scene as last written (
 bool sceneClear();             // the current scene's tracks all cleared (its tempo kept; not while recording)
 bool sceneClipboardFull();
 // A resampling on track t has been saved: a new scene is inserted after the current one, holding just it, on track 1 (the
-// bottom row; another recording running there: on t; the muted clips come along, track 1's to t); it
+// bottom row; another recording running there: on t; the muted clips come along, in order, on the tracks after it); it
 // leaves the current scene. The new scene is selected and goes on on the next beat
 // (works while another recording runs: that track is left alone). Returns the
 // track it's on; -1: the list is full.

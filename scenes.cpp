@@ -329,17 +329,23 @@ int sceneFromResample(int t) {
   to.tempo = resampleTempo > 0 ? resampleTempo : getTempo();   // (made by the resampling: its tempo)
   resampleTempo = 0;
   // On track 1 (the bottom row), unless another recording runs there (then
-  // its own); a muted clip on track 1 swaps places with it.
+  // its own); the muted clips come along, still muted (and stay here too),
+  // in their order, on the tracks right after it (2, 3 ...: no gaps; the
+  // track another recording runs on stepped over).
   const int one = NUM_TRACKS - 1;
-  const int d = recording.mode != Recording::Idle && recording.track == one && t != one ? t : one;
+  const int rec = recording.mode != Recording::Idle ? recording.track : -1;
+  const int d = rec == one && t != one ? t : one;
   if (list.count >= MAX_SCENES) return -1;
   to.units[d] = from.units[t];
   from.units[t] = emptyScene().units[t];
-  for (int u = 0; u < NUM_TRACKS; u++)              // the muted clips come along, still muted (and stay here too)
+  int next = d - 1;                                // (the next track up: its number one more)
+  for (int u = NUM_TRACKS - 1; u >= 0; u--)        // (from track 1 up)
     if (u != t && from.units[u].sample && from.units[u].muted) {
-      int at = u == d ? t : u;                     // (track 1's: where the resampling was)
-      to.units[at] = from.units[u];
-      if (at == u) hearAgain(u);                   // (silenced with the others: its clip doesn't change, so it's heard once unmuted)
+      while (next == rec) next--;
+      if (next < 0) break;
+      to.units[next] = from.units[u];
+      if (next == u) hearAgain(u);                 // (silenced with the others: its clip doesn't change, so it's heard once unmuted)
+      next--;
     }
   int pos = list.current == list.count + 1 ? list.count + 1 : list.current + 1;
   if (list.current >= 1 && list.current <= list.count) {   // the current scene, without it
