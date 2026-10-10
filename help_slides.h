@@ -1325,63 +1325,80 @@ PROGMEM static const char HELP_STR_0[] = "HELP";
 PROGMEM static const char HELP_STR_1[] = "A LOOPER FOR THE M8";
 PROGMEM static const char HELP_STR_2[] = "7 STEREO TRACKS, 200 SCENES";
 PROGMEM static const char HELP_STR_3[] = "AND 12 PROJECTS";
-PROGMEM static const char HELP_STR_4[] = "< > TO MOVE   A OR B TO EXIT";
-PROGMEM static const char HELP_STR_5[] = "THE SCREEN";
-PROGMEM static const char HELP_STR_6[] = "A TRACK: SOUND, FILTER, VOLUME";
-PROGMEM static const char HELP_STR_7[] = "BELOW: SCENE, TIME, TEMPO";
-PROGMEM static const char HELP_STR_8[] = "RECORD";
-PROGMEM static const char HELP_STR_9[] = "1";
-PROGMEM static const char HELP_STR_10[] = "EMPTY";
-PROGMEM static const char HELP_STR_11[] = "2";
-PROGMEM static const char HELP_STR_12[] = "3";
-PROGMEM static const char HELP_STR_13[] = "PLAY";
-PROGMEM static const char HELP_STR_14[] = "A: RECORD";
-PROGMEM static const char HELP_STR_15[] = "A AGAIN: STOP. IT PLAYS";
-PROGMEM static const char HELP_STR_16[] = "MUTE";
-PROGMEM static const char HELP_STR_17[] = "A: MUTE OR PLAY";
-PROGMEM static const char HELP_STR_18[] = "HOLD A, PRESS ^v: MORE TRACKS";
-PROGMEM static const char HELP_STR_19[] = "LENGTH";
-PROGMEM static const char HELP_STR_20[] = "LONG";
-PROGMEM static const char HELP_STR_21[] = "SHORT";
-PROGMEM static const char HELP_STR_22[] = "HOLD B, PRESS ^v: LONGER OR SHORTER";
-PROGMEM static const char HELP_STR_23[] = "HOLD B, PRESS < >: MOVE IT";
-PROGMEM static const char HELP_STR_24[] = "FILTER VOLUME";
-PROGMEM static const char HELP_STR_25[] = "FILTER";
-PROGMEM static const char HELP_STR_26[] = "VOLUME";
-PROGMEM static const char HELP_STR_27[] = "HOLD B ON A FILTER OR VOLUME";
-PROGMEM static const char HELP_STR_28[] = "PRESS THE ARROWS TO CHANGE IT";
-PROGMEM static const char HELP_STR_29[] = "CLIPS";
-PROGMEM static const char HELP_STR_30[] = "CUT";
-PROGMEM static const char HELP_STR_31[] = "PASTE";
-PROGMEM static const char HELP_STR_32[] = "CHANGE";
-PROGMEM static const char HELP_STR_33[] = "SHIFT+A: CUT OR PASTE";
-PROGMEM static const char HELP_STR_34[] = "SHIFT+< >: OTHER SOUNDS";
-PROGMEM static const char HELP_STR_35[] = "SCENES";
-PROGMEM static const char HELP_STR_36[] = "SCENE 1";
-PROGMEM static const char HELP_STR_37[] = "SCENE 2";
-PROGMEM static const char HELP_STR_38[] = "A SCENE KEEPS ALL TRACKS";
-PROGMEM static const char HELP_STR_39[] = "SHIFT+^v: NEXT SCENE";
-PROGMEM static const char HELP_STR_40[] = "TEMPO";
-PROGMEM static const char HELP_STR_41[] = "TAP";
-PROGMEM static const char HELP_STR_42[] = "CLICK";
-PROGMEM static const char HELP_STR_43[] = "START: PLAY OR STOP";
-PROGMEM static const char HELP_STR_44[] = "A ON TEMPO: TAP. B+A: CLICK";
-PROGMEM static const char HELP_STR_45[] = "RESAMPLE AND MOVE";
-PROGMEM static const char HELP_STR_46[] = "RESAMPLE";
-PROGMEM static const char HELP_STR_47[] = "MOVE";
-PROGMEM static const char HELP_STR_48[] = "B+A: RECORD WHAT YOU HEAR";
-PROGMEM static const char HELP_STR_49[] = "B+^v: MOVE A TRACK";
-PROGMEM static const char HELP_STR_50[] = "SYNC";
-PROGMEM static const char HELP_STR_51[] = "FOLLOW";
-PROGMEM static const char HELP_STR_52[] = "MIDI";
-PROGMEM static const char HELP_STR_53[] = "USB";
-PROGMEM static const char HELP_STR_54[] = "AUDIO";
-PROGMEM static const char HELP_STR_55[] = "L7 FOLLOWS MIDI AND USB CLOCK";
-PROGMEM static const char HELP_STR_56[] = "SHIFT+A ON TEMPO: FOLLOW AUDIO";
-PROGMEM static const char HELP_STR_57[] = "PROJECTS";
-PROGMEM static const char HELP_STR_58[] = "OPEN";
-PROGMEM static const char HELP_STR_59[] = "ARROW OFF THE EDGE: MENU";
-PROGMEM static const char HELP_STR_60[] = "A: OPEN. SHIFT+A: CUT";
+PROGMEM static const char HELP_STR_4[] = "< >";
+PROGMEM static const char HELP_STR_5[] = " TO MOVE   ";
+PROGMEM static const char HELP_STR_6[] = "A";
+PROGMEM static const char HELP_STR_7[] = " OR ";
+PROGMEM static const char HELP_STR_8[] = "B";
+PROGMEM static const char HELP_STR_9[] = " TO EXIT";
+PROGMEM static const char HELP_STR_10[] = "THE SCREEN";
+PROGMEM static const char HELP_STR_11[] = "A TRACK: SOUND, FILTER, VOLUME";
+PROGMEM static const char HELP_STR_12[] = "BELOW: SCENE, TIME, TEMPO";
+PROGMEM static const char HELP_STR_13[] = "RECORD";
+PROGMEM static const char HELP_STR_14[] = "1";
+PROGMEM static const char HELP_STR_15[] = "EMPTY";
+PROGMEM static const char HELP_STR_16[] = "2";
+PROGMEM static const char HELP_STR_17[] = "3";
+PROGMEM static const char HELP_STR_18[] = "PLAY";
+PROGMEM static const char HELP_STR_19[] = ": RECORD";
+PROGMEM static const char HELP_STR_20[] = " AGAIN: STOP. IT PLAYS";
+PROGMEM static const char HELP_STR_21[] = "MUTE";
+PROGMEM static const char HELP_STR_22[] = ": MUTE OR PLAY";
+PROGMEM static const char HELP_STR_23[] = "HOLD ";
+PROGMEM static const char HELP_STR_24[] = ", PRESS ";
+PROGMEM static const char HELP_STR_25[] = "^v";
+PROGMEM static const char HELP_STR_26[] = ": MORE TRACKS";
+PROGMEM static const char HELP_STR_27[] = "LENGTH";
+PROGMEM static const char HELP_STR_28[] = "LONG";
+PROGMEM static const char HELP_STR_29[] = "SHORT";
+PROGMEM static const char HELP_STR_30[] = ": LONGER OR SHORTER";
+PROGMEM static const char HELP_STR_31[] = ": MOVE IT";
+PROGMEM static const char HELP_STR_32[] = "FILTER VOLUME";
+PROGMEM static const char HELP_STR_33[] = "FILTER";
+PROGMEM static const char HELP_STR_34[] = "VOLUME";
+PROGMEM static const char HELP_STR_35[] = " ON A FILTER OR VOLUME";
+PROGMEM static const char HELP_STR_36[] = "PRESS THE ARROWS TO CHANGE IT";
+PROGMEM static const char HELP_STR_37[] = "CLIPS";
+PROGMEM static const char HELP_STR_38[] = "CUT";
+PROGMEM static const char HELP_STR_39[] = "PASTE";
+PROGMEM static const char HELP_STR_40[] = "CHANGE";
+PROGMEM static const char HELP_STR_41[] = "SHIFT+A";
+PROGMEM static const char HELP_STR_42[] = ": CUT OR PASTE";
+PROGMEM static const char HELP_STR_43[] = "SHIFT+< >";
+PROGMEM static const char HELP_STR_44[] = ": OTHER SOUNDS";
+PROGMEM static const char HELP_STR_45[] = "SCENES";
+PROGMEM static const char HELP_STR_46[] = "SCENE 1";
+PROGMEM static const char HELP_STR_47[] = "SCENE 2";
+PROGMEM static const char HELP_STR_48[] = "A SCENE KEEPS ALL TRACKS";
+PROGMEM static const char HELP_STR_49[] = "SHIFT+^v";
+PROGMEM static const char HELP_STR_50[] = ": NEXT SCENE";
+PROGMEM static const char HELP_STR_51[] = "TEMPO";
+PROGMEM static const char HELP_STR_52[] = "TAP";
+PROGMEM static const char HELP_STR_53[] = "CLICK";
+PROGMEM static const char HELP_STR_54[] = "START";
+PROGMEM static const char HELP_STR_55[] = ": PLAY OR STOP";
+PROGMEM static const char HELP_STR_56[] = " ON TEMPO: TAP. ";
+PROGMEM static const char HELP_STR_57[] = "B+A";
+PROGMEM static const char HELP_STR_58[] = ": CLICK";
+PROGMEM static const char HELP_STR_59[] = "RESAMPLE AND MOVE";
+PROGMEM static const char HELP_STR_60[] = "RESAMPLE";
+PROGMEM static const char HELP_STR_61[] = "MOVE";
+PROGMEM static const char HELP_STR_62[] = ": RECORD WHAT YOU HEAR";
+PROGMEM static const char HELP_STR_63[] = "B+A+^v";
+PROGMEM static const char HELP_STR_64[] = ": MOVE A TRACK";
+PROGMEM static const char HELP_STR_65[] = "SYNC";
+PROGMEM static const char HELP_STR_66[] = "FOLLOW";
+PROGMEM static const char HELP_STR_67[] = "MIDI";
+PROGMEM static const char HELP_STR_68[] = "USB";
+PROGMEM static const char HELP_STR_69[] = "AUDIO";
+PROGMEM static const char HELP_STR_70[] = "L7 FOLLOWS MIDI AND USB CLOCK";
+PROGMEM static const char HELP_STR_71[] = " ON TEMPO: FOLLOW AUDIO";
+PROGMEM static const char HELP_STR_72[] = "PROJECTS";
+PROGMEM static const char HELP_STR_73[] = "OPEN";
+PROGMEM static const char HELP_STR_74[] = "ARROW";
+PROGMEM static const char HELP_STR_75[] = " OFF THE EDGE: MENU";
+PROGMEM static const char HELP_STR_76[] = ": OPEN. ";
+PROGMEM static const char HELP_STR_77[] = ": CUT";
 PROGMEM static const HelpOp HELP_PAGE_1[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_LOGO, 2, 8, 36, 0, 0, 0xB718, nullptr, nullptr},
@@ -1389,228 +1406,264 @@ PROGMEM static const HelpOp HELP_PAGE_1[] = {
   {HELP_TEXT, 2, 8, 140, 0, 0, 0xCE79, HELP_STR_1, nullptr},
   {HELP_TEXT, 2, 8, 154, 0, 0, 0xCE79, HELP_STR_2, nullptr},
   {HELP_TEXT, 2, 8, 168, 0, 0, 0xCE79, HELP_STR_3, nullptr},
-  {HELP_TEXT, 2, 8, 196, 0, 0, 0x738E, HELP_STR_4, nullptr},
+  {HELP_TEXT, 2, 8, 196, 0, 0, 0xFFFF, HELP_STR_4, nullptr},
+  {HELP_TEXT, 2, 34, 196, 0, 0, 0x738E, HELP_STR_5, nullptr},
+  {HELP_TEXT, 2, 116, 196, 0, 0, 0xFFFF, HELP_STR_6, nullptr},
+  {HELP_TEXT, 2, 124, 196, 0, 0, 0x738E, HELP_STR_7, nullptr},
+  {HELP_TEXT, 2, 152, 196, 0, 0, 0xFFFF, HELP_STR_8, nullptr},
+  {HELP_TEXT, 2, 160, 196, 0, 0, 0x738E, HELP_STR_9, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_2[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 8, 0, 0, 0, nullptr, &HELP_IMG_0},
-  {HELP_TEXT, 3, 22, 8, 0, 0, 0xD755, HELP_STR_5, nullptr},
+  {HELP_TEXT, 3, 22, 8, 0, 0, 0xD755, HELP_STR_10, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 0, 30, 0, 0, 0, nullptr, &HELP_IMG_1},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xD755, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_6, nullptr},
-  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_7, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_11, nullptr},
+  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_12, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_3[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 10, 0, 0, 0, nullptr, &HELP_IMG_2},
-  {HELP_TEXT, 3, 24, 8, 0, 0, 0xF774, HELP_STR_8, nullptr},
+  {HELP_TEXT, 3, 24, 8, 0, 0, 0xF774, HELP_STR_13, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 42, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 44, 0, 0, 0, nullptr, &HELP_IMG_3},
   {HELP_IMAGE, 0, 4, 48, 0, 0, 0, nullptr, &HELP_IMG_4},
-  {HELP_TEXT, 2, 12, 54, 0, 0, 0x0000, HELP_STR_9, nullptr},
-  {HELP_TEXT, 2, 250, 54, 0, 0, 0xCE79, HELP_STR_10, nullptr},
+  {HELP_TEXT, 2, 12, 54, 0, 0, 0x0000, HELP_STR_14, nullptr},
+  {HELP_TEXT, 2, 250, 54, 0, 0, 0xCE79, HELP_STR_15, nullptr},
   {HELP_RECT, 0, 30, 90, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 92, 0, 0, 0, nullptr, &HELP_IMG_5},
   {HELP_IMAGE, 0, 4, 96, 0, 0, 0, nullptr, &HELP_IMG_4},
-  {HELP_TEXT, 2, 12, 102, 0, 0, 0x0000, HELP_STR_11, nullptr},
-  {HELP_TEXT, 2, 250, 102, 0, 0, 0xCE79, HELP_STR_8, nullptr},
+  {HELP_TEXT, 2, 12, 102, 0, 0, 0x0000, HELP_STR_16, nullptr},
+  {HELP_TEXT, 2, 250, 102, 0, 0, 0xCE79, HELP_STR_13, nullptr},
   {HELP_RECT, 0, 30, 138, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 140, 0, 0, 0, nullptr, &HELP_IMG_6},
   {HELP_IMAGE, 0, 4, 144, 0, 0, 0, nullptr, &HELP_IMG_4},
-  {HELP_TEXT, 2, 12, 150, 0, 0, 0x0000, HELP_STR_12, nullptr},
-  {HELP_TEXT, 2, 250, 150, 0, 0, 0xCE79, HELP_STR_13, nullptr},
+  {HELP_TEXT, 2, 12, 150, 0, 0, 0x0000, HELP_STR_17, nullptr},
+  {HELP_TEXT, 2, 250, 150, 0, 0, 0xCE79, HELP_STR_18, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xF774, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_14, nullptr},
-  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_15, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xFFFF, HELP_STR_6, nullptr},
+  {HELP_TEXT, 2, 16, 190, 0, 0, 0xCE79, HELP_STR_19, nullptr},
+  {HELP_TEXT, 2, 8, 206, 0, 0, 0xFFFF, HELP_STR_6, nullptr},
+  {HELP_TEXT, 2, 16, 206, 0, 0, 0xCE79, HELP_STR_20, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_4[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 8, 0, 0, 0, nullptr, &HELP_IMG_7},
-  {HELP_TEXT, 3, 30, 8, 0, 0, 0xFED4, HELP_STR_16, nullptr},
+  {HELP_TEXT, 3, 30, 8, 0, 0, 0xFED4, HELP_STR_21, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_8},
   {HELP_IMAGE, 0, 4, 72, 0, 0, 0, nullptr, &HELP_IMG_9},
-  {HELP_TEXT, 2, 12, 78, 0, 0, 0x0000, HELP_STR_9, nullptr},
-  {HELP_TEXT, 2, 250, 78, 0, 0, 0xCE79, HELP_STR_13, nullptr},
+  {HELP_TEXT, 2, 12, 78, 0, 0, 0x0000, HELP_STR_14, nullptr},
+  {HELP_TEXT, 2, 250, 78, 0, 0, 0xCE79, HELP_STR_18, nullptr},
   {HELP_RECT, 0, 30, 114, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 116, 0, 0, 0, nullptr, &HELP_IMG_10},
   {HELP_IMAGE, 0, 4, 120, 0, 0, 0, nullptr, &HELP_IMG_9},
-  {HELP_TEXT, 2, 12, 126, 0, 0, 0x0000, HELP_STR_11, nullptr},
-  {HELP_TEXT, 2, 250, 126, 0, 0, 0xCE79, HELP_STR_16, nullptr},
+  {HELP_TEXT, 2, 12, 126, 0, 0, 0x0000, HELP_STR_16, nullptr},
+  {HELP_TEXT, 2, 250, 126, 0, 0, 0xCE79, HELP_STR_21, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xFED4, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_17, nullptr},
-  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_18, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xFFFF, HELP_STR_6, nullptr},
+  {HELP_TEXT, 2, 16, 190, 0, 0, 0xCE79, HELP_STR_22, nullptr},
+  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_23, nullptr},
+  {HELP_TEXT, 2, 46, 206, 0, 0, 0xFFFF, HELP_STR_6, nullptr},
+  {HELP_TEXT, 2, 54, 206, 0, 0, 0xCE79, HELP_STR_24, nullptr},
+  {HELP_TEXT, 2, 110, 206, 0, 0, 0xFFFF, HELP_STR_25, nullptr},
+  {HELP_TEXT, 2, 134, 206, 0, 0, 0xCE79, HELP_STR_26, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_5[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 10, 0, 0, 0, nullptr, &HELP_IMG_11},
-  {HELP_TEXT, 3, 20, 8, 0, 0, 0xFE55, HELP_STR_19, nullptr},
+  {HELP_TEXT, 3, 20, 8, 0, 0, 0xFE55, HELP_STR_27, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_12},
   {HELP_IMAGE, 0, 4, 72, 0, 0, 0, nullptr, &HELP_IMG_13},
-  {HELP_TEXT, 2, 12, 78, 0, 0, 0x0000, HELP_STR_9, nullptr},
-  {HELP_TEXT, 2, 250, 78, 0, 0, 0xCE79, HELP_STR_20, nullptr},
+  {HELP_TEXT, 2, 12, 78, 0, 0, 0x0000, HELP_STR_14, nullptr},
+  {HELP_TEXT, 2, 250, 78, 0, 0, 0xCE79, HELP_STR_28, nullptr},
   {HELP_RECT, 0, 30, 114, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 116, 0, 0, 0, nullptr, &HELP_IMG_14},
   {HELP_IMAGE, 0, 4, 120, 0, 0, 0, nullptr, &HELP_IMG_13},
-  {HELP_TEXT, 2, 12, 126, 0, 0, 0x0000, HELP_STR_11, nullptr},
-  {HELP_TEXT, 2, 250, 126, 0, 0, 0xCE79, HELP_STR_21, nullptr},
+  {HELP_TEXT, 2, 12, 126, 0, 0, 0x0000, HELP_STR_16, nullptr},
+  {HELP_TEXT, 2, 250, 126, 0, 0, 0xCE79, HELP_STR_29, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xFE55, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_22, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_23, nullptr},
+  {HELP_TEXT, 2, 46, 190, 0, 0, 0xFFFF, HELP_STR_8, nullptr},
+  {HELP_TEXT, 2, 54, 190, 0, 0, 0xCE79, HELP_STR_24, nullptr},
+  {HELP_TEXT, 2, 110, 190, 0, 0, 0xFFFF, HELP_STR_25, nullptr},
+  {HELP_TEXT, 2, 134, 190, 0, 0, 0xCE79, HELP_STR_30, nullptr},
   {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_23, nullptr},
+  {HELP_TEXT, 2, 46, 206, 0, 0, 0xFFFF, HELP_STR_8, nullptr},
+  {HELP_TEXT, 2, 54, 206, 0, 0, 0xCE79, HELP_STR_24, nullptr},
+  {HELP_TEXT, 2, 110, 206, 0, 0, 0xFFFF, HELP_STR_4, nullptr},
+  {HELP_TEXT, 2, 136, 206, 0, 0, 0xCE79, HELP_STR_31, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_6[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 6, 0, 0, 0, nullptr, &HELP_IMG_15},
-  {HELP_TEXT, 3, 32, 8, 0, 0, 0xF5B8, HELP_STR_24, nullptr},
+  {HELP_TEXT, 3, 32, 8, 0, 0, 0xF5B8, HELP_STR_32, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_16},
   {HELP_IMAGE, 0, 4, 72, 0, 0, 0, nullptr, &HELP_IMG_17},
-  {HELP_TEXT, 2, 12, 78, 0, 0, 0x0000, HELP_STR_9, nullptr},
-  {HELP_TEXT, 2, 250, 78, 0, 0, 0xCE79, HELP_STR_25, nullptr},
+  {HELP_TEXT, 2, 12, 78, 0, 0, 0x0000, HELP_STR_14, nullptr},
+  {HELP_TEXT, 2, 250, 78, 0, 0, 0xCE79, HELP_STR_33, nullptr},
   {HELP_RECT, 0, 30, 114, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 116, 0, 0, 0, nullptr, &HELP_IMG_18},
   {HELP_IMAGE, 0, 4, 120, 0, 0, 0, nullptr, &HELP_IMG_17},
-  {HELP_TEXT, 2, 12, 126, 0, 0, 0x0000, HELP_STR_11, nullptr},
-  {HELP_TEXT, 2, 250, 126, 0, 0, 0xCE79, HELP_STR_26, nullptr},
+  {HELP_TEXT, 2, 12, 126, 0, 0, 0x0000, HELP_STR_16, nullptr},
+  {HELP_TEXT, 2, 250, 126, 0, 0, 0xCE79, HELP_STR_34, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xF5B8, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_27, nullptr},
-  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_28, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_23, nullptr},
+  {HELP_TEXT, 2, 46, 190, 0, 0, 0xFFFF, HELP_STR_8, nullptr},
+  {HELP_TEXT, 2, 54, 190, 0, 0, 0xCE79, HELP_STR_35, nullptr},
+  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_36, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_7[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 8, 0, 0, 0, nullptr, &HELP_IMG_19},
-  {HELP_TEXT, 3, 28, 8, 0, 0, 0xF5DB, HELP_STR_29, nullptr},
+  {HELP_TEXT, 3, 28, 8, 0, 0, 0xF5DB, HELP_STR_37, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 42, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 44, 0, 0, 0, nullptr, &HELP_IMG_20},
   {HELP_IMAGE, 0, 4, 48, 0, 0, 0, nullptr, &HELP_IMG_21},
-  {HELP_TEXT, 2, 12, 54, 0, 0, 0x0000, HELP_STR_9, nullptr},
-  {HELP_TEXT, 2, 250, 54, 0, 0, 0xCE79, HELP_STR_30, nullptr},
+  {HELP_TEXT, 2, 12, 54, 0, 0, 0x0000, HELP_STR_14, nullptr},
+  {HELP_TEXT, 2, 250, 54, 0, 0, 0xCE79, HELP_STR_38, nullptr},
   {HELP_RECT, 0, 30, 90, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 92, 0, 0, 0, nullptr, &HELP_IMG_22},
   {HELP_IMAGE, 0, 4, 96, 0, 0, 0, nullptr, &HELP_IMG_21},
-  {HELP_TEXT, 2, 12, 102, 0, 0, 0x0000, HELP_STR_11, nullptr},
-  {HELP_TEXT, 2, 250, 102, 0, 0, 0xCE79, HELP_STR_31, nullptr},
+  {HELP_TEXT, 2, 12, 102, 0, 0, 0x0000, HELP_STR_16, nullptr},
+  {HELP_TEXT, 2, 250, 102, 0, 0, 0xCE79, HELP_STR_39, nullptr},
   {HELP_RECT, 0, 30, 138, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 140, 0, 0, 0, nullptr, &HELP_IMG_23},
   {HELP_IMAGE, 0, 4, 144, 0, 0, 0, nullptr, &HELP_IMG_21},
-  {HELP_TEXT, 2, 12, 150, 0, 0, 0x0000, HELP_STR_12, nullptr},
-  {HELP_TEXT, 2, 250, 150, 0, 0, 0xCE79, HELP_STR_32, nullptr},
+  {HELP_TEXT, 2, 12, 150, 0, 0, 0x0000, HELP_STR_17, nullptr},
+  {HELP_TEXT, 2, 250, 150, 0, 0, 0xCE79, HELP_STR_40, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xF5DB, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_33, nullptr},
-  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_34, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xFFFF, HELP_STR_41, nullptr},
+  {HELP_TEXT, 2, 64, 190, 0, 0, 0xCE79, HELP_STR_42, nullptr},
+  {HELP_TEXT, 2, 8, 206, 0, 0, 0xFFFF, HELP_STR_43, nullptr},
+  {HELP_TEXT, 2, 82, 206, 0, 0, 0xCE79, HELP_STR_44, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_8[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 6, 0, 0, 0, nullptr, &HELP_IMG_24},
-  {HELP_TEXT, 3, 32, 8, 0, 0, 0xE5BC, HELP_STR_35, nullptr},
+  {HELP_TEXT, 3, 32, 8, 0, 0, 0xE5BC, HELP_STR_45, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 32, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_25},
   {HELP_IMAGE, 0, 4, 70, 0, 0, 0, nullptr, &HELP_IMG_26},
-  {HELP_TEXT, 2, 12, 76, 0, 0, 0x0000, HELP_STR_9, nullptr},
-  {HELP_TEXT, 2, 250, 76, 0, 0, 0xCE79, HELP_STR_36, nullptr},
+  {HELP_TEXT, 2, 12, 76, 0, 0, 0x0000, HELP_STR_14, nullptr},
+  {HELP_TEXT, 2, 250, 76, 0, 0, 0xCE79, HELP_STR_46, nullptr},
   {HELP_RECT, 0, 30, 114, 214, 32, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 116, 0, 0, 0, nullptr, &HELP_IMG_27},
   {HELP_IMAGE, 0, 4, 118, 0, 0, 0, nullptr, &HELP_IMG_26},
-  {HELP_TEXT, 2, 12, 124, 0, 0, 0x0000, HELP_STR_11, nullptr},
-  {HELP_TEXT, 2, 250, 124, 0, 0, 0xCE79, HELP_STR_37, nullptr},
+  {HELP_TEXT, 2, 12, 124, 0, 0, 0x0000, HELP_STR_16, nullptr},
+  {HELP_TEXT, 2, 250, 124, 0, 0, 0xCE79, HELP_STR_47, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xE5BC, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_38, nullptr},
-  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_39, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_48, nullptr},
+  {HELP_TEXT, 2, 8, 206, 0, 0, 0xFFFF, HELP_STR_49, nullptr},
+  {HELP_TEXT, 2, 80, 206, 0, 0, 0xCE79, HELP_STR_50, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_9[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 8, 0, 0, 0, nullptr, &HELP_IMG_28},
-  {HELP_TEXT, 3, 26, 8, 0, 0, 0xCDDD, HELP_STR_40, nullptr},
+  {HELP_TEXT, 3, 26, 8, 0, 0, 0xCDDD, HELP_STR_51, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 32, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_29},
   {HELP_IMAGE, 0, 4, 70, 0, 0, 0, nullptr, &HELP_IMG_30},
-  {HELP_TEXT, 2, 12, 76, 0, 0, 0x0000, HELP_STR_9, nullptr},
-  {HELP_TEXT, 2, 250, 76, 0, 0, 0xCE79, HELP_STR_41, nullptr},
+  {HELP_TEXT, 2, 12, 76, 0, 0, 0x0000, HELP_STR_14, nullptr},
+  {HELP_TEXT, 2, 250, 76, 0, 0, 0xCE79, HELP_STR_52, nullptr},
   {HELP_RECT, 0, 30, 114, 214, 32, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 116, 0, 0, 0, nullptr, &HELP_IMG_31},
   {HELP_IMAGE, 0, 4, 118, 0, 0, 0, nullptr, &HELP_IMG_30},
-  {HELP_TEXT, 2, 12, 124, 0, 0, 0x0000, HELP_STR_11, nullptr},
-  {HELP_TEXT, 2, 250, 124, 0, 0, 0xCE79, HELP_STR_42, nullptr},
+  {HELP_TEXT, 2, 12, 124, 0, 0, 0x0000, HELP_STR_16, nullptr},
+  {HELP_TEXT, 2, 250, 124, 0, 0, 0xCE79, HELP_STR_53, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xCDDD, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_43, nullptr},
-  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_44, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xFFFF, HELP_STR_54, nullptr},
+  {HELP_TEXT, 2, 48, 190, 0, 0, 0xCE79, HELP_STR_55, nullptr},
+  {HELP_TEXT, 2, 8, 206, 0, 0, 0xFFFF, HELP_STR_6, nullptr},
+  {HELP_TEXT, 2, 16, 206, 0, 0, 0xCE79, HELP_STR_56, nullptr},
+  {HELP_TEXT, 2, 134, 206, 0, 0, 0xFFFF, HELP_STR_57, nullptr},
+  {HELP_TEXT, 2, 158, 206, 0, 0, 0xCE79, HELP_STR_58, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_10[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 10, 0, 0, 0, nullptr, &HELP_IMG_32},
-  {HELP_TEXT, 3, 32, 8, 0, 0, 0xB63E, HELP_STR_45, nullptr},
+  {HELP_TEXT, 3, 32, 8, 0, 0, 0xB63E, HELP_STR_59, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_33},
   {HELP_IMAGE, 0, 4, 72, 0, 0, 0, nullptr, &HELP_IMG_34},
-  {HELP_TEXT, 2, 12, 78, 0, 0, 0x0000, HELP_STR_9, nullptr},
-  {HELP_TEXT, 2, 250, 78, 0, 0, 0xCE79, HELP_STR_46, nullptr},
+  {HELP_TEXT, 2, 12, 78, 0, 0, 0x0000, HELP_STR_14, nullptr},
+  {HELP_TEXT, 2, 250, 78, 0, 0, 0xCE79, HELP_STR_60, nullptr},
   {HELP_RECT, 0, 30, 114, 214, 34, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 116, 0, 0, 0, nullptr, &HELP_IMG_35},
   {HELP_IMAGE, 0, 4, 120, 0, 0, 0, nullptr, &HELP_IMG_34},
-  {HELP_TEXT, 2, 12, 126, 0, 0, 0x0000, HELP_STR_11, nullptr},
-  {HELP_TEXT, 2, 250, 126, 0, 0, 0xCE79, HELP_STR_47, nullptr},
+  {HELP_TEXT, 2, 12, 126, 0, 0, 0x0000, HELP_STR_16, nullptr},
+  {HELP_TEXT, 2, 250, 126, 0, 0, 0xCE79, HELP_STR_61, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xB63E, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_48, nullptr},
-  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_49, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xFFFF, HELP_STR_57, nullptr},
+  {HELP_TEXT, 2, 32, 190, 0, 0, 0xCE79, HELP_STR_62, nullptr},
+  {HELP_TEXT, 2, 8, 206, 0, 0, 0xFFFF, HELP_STR_63, nullptr},
+  {HELP_TEXT, 2, 64, 206, 0, 0, 0xCE79, HELP_STR_64, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_11[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 6, 0, 0, 0, nullptr, &HELP_IMG_36},
-  {HELP_TEXT, 3, 30, 8, 0, 0, 0xAEBD, HELP_STR_50, nullptr},
+  {HELP_TEXT, 3, 30, 8, 0, 0, 0xAEBD, HELP_STR_65, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 42, 214, 32, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 44, 0, 0, 0, nullptr, &HELP_IMG_37},
   {HELP_IMAGE, 0, 4, 46, 0, 0, 0, nullptr, &HELP_IMG_38},
-  {HELP_TEXT, 2, 12, 52, 0, 0, 0x0000, HELP_STR_9, nullptr},
-  {HELP_TEXT, 2, 250, 52, 0, 0, 0xCE79, HELP_STR_51, nullptr},
-  {HELP_TEXT, 2, 32, 92, 0, 0, 0xCE79, HELP_STR_52, nullptr},
-  {HELP_TEXT, 2, 32, 106, 0, 0, 0xCE79, HELP_STR_53, nullptr},
-  {HELP_TEXT, 2, 32, 120, 0, 0, 0xCE79, HELP_STR_54, nullptr},
+  {HELP_TEXT, 2, 12, 52, 0, 0, 0x0000, HELP_STR_14, nullptr},
+  {HELP_TEXT, 2, 250, 52, 0, 0, 0xCE79, HELP_STR_66, nullptr},
+  {HELP_TEXT, 2, 32, 92, 0, 0, 0xCE79, HELP_STR_67, nullptr},
+  {HELP_TEXT, 2, 32, 106, 0, 0, 0xCE79, HELP_STR_68, nullptr},
+  {HELP_TEXT, 2, 32, 120, 0, 0, 0xCE79, HELP_STR_69, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xAEBD, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_55, nullptr},
-  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_56, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_70, nullptr},
+  {HELP_TEXT, 2, 8, 206, 0, 0, 0xFFFF, HELP_STR_41, nullptr},
+  {HELP_TEXT, 2, 64, 206, 0, 0, 0xCE79, HELP_STR_71, nullptr},
 };
 PROGMEM static const HelpOp HELP_PAGE_12[] = {
   {HELP_RECT, 0, 0, 0, 320, 240, 0x2965, nullptr, nullptr},
   {HELP_IMAGE, 0, 8, 10, 0, 0, 0, nullptr, &HELP_IMG_39},
-  {HELP_TEXT, 3, 24, 8, 0, 0, 0xAF1B, HELP_STR_57, nullptr},
+  {HELP_TEXT, 3, 24, 8, 0, 0, 0xAF1B, HELP_STR_72, nullptr},
   {HELP_RECT, 0, 0, 30, 320, 152, 0x0000, nullptr, nullptr},
   {HELP_RECT, 0, 30, 66, 214, 42, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 68, 0, 0, 0, nullptr, &HELP_IMG_40},
   {HELP_IMAGE, 0, 4, 76, 0, 0, 0, nullptr, &HELP_IMG_41},
-  {HELP_TEXT, 2, 12, 82, 0, 0, 0x0000, HELP_STR_9, nullptr},
-  {HELP_TEXT, 2, 250, 82, 0, 0, 0xCE79, HELP_STR_58, nullptr},
+  {HELP_TEXT, 2, 12, 82, 0, 0, 0x0000, HELP_STR_14, nullptr},
+  {HELP_TEXT, 2, 250, 82, 0, 0, 0xCE79, HELP_STR_73, nullptr},
   {HELP_RECT, 0, 30, 114, 214, 42, 0x0000, nullptr, nullptr},
   {HELP_IMAGE, 0, 32, 116, 0, 0, 0, nullptr, &HELP_IMG_42},
   {HELP_IMAGE, 0, 4, 124, 0, 0, 0, nullptr, &HELP_IMG_41},
-  {HELP_TEXT, 2, 12, 130, 0, 0, 0x0000, HELP_STR_11, nullptr},
-  {HELP_TEXT, 2, 250, 130, 0, 0, 0xCE79, HELP_STR_30, nullptr},
+  {HELP_TEXT, 2, 12, 130, 0, 0, 0x0000, HELP_STR_16, nullptr},
+  {HELP_TEXT, 2, 250, 130, 0, 0, 0xCE79, HELP_STR_38, nullptr},
   {HELP_RECT, 0, 0, 182, 320, 2, 0xAF1B, nullptr, nullptr},
-  {HELP_TEXT, 2, 8, 190, 0, 0, 0xCE79, HELP_STR_59, nullptr},
-  {HELP_TEXT, 2, 8, 206, 0, 0, 0xCE79, HELP_STR_60, nullptr},
+  {HELP_TEXT, 2, 8, 190, 0, 0, 0xFFFF, HELP_STR_74, nullptr},
+  {HELP_TEXT, 2, 52, 190, 0, 0, 0xCE79, HELP_STR_75, nullptr},
+  {HELP_TEXT, 2, 8, 206, 0, 0, 0xFFFF, HELP_STR_6, nullptr},
+  {HELP_TEXT, 2, 16, 206, 0, 0, 0xCE79, HELP_STR_76, nullptr},
+  {HELP_TEXT, 2, 70, 206, 0, 0, 0xFFFF, HELP_STR_41, nullptr},
+  {HELP_TEXT, 2, 126, 206, 0, 0, 0xCE79, HELP_STR_77, nullptr},
 };
 constexpr int HELP_PAGES = 12;
 PROGMEM static const HelpPage HELP[HELP_PAGES] = {
-  {HELP_PAGE_1, 7, 8},
+  {HELP_PAGE_1, 12, 8},
   {HELP_PAGE_2, 8, 8},
-  {HELP_PAGE_3, 22, 8},
-  {HELP_PAGE_4, 17, 8},
-  {HELP_PAGE_5, 17, 8},
-  {HELP_PAGE_6, 17, 8},
-  {HELP_PAGE_7, 22, 8},
-  {HELP_PAGE_8, 17, 8},
-  {HELP_PAGE_9, 17, 8},
-  {HELP_PAGE_10, 17, 8},
-  {HELP_PAGE_11, 15, 8},
-  {HELP_PAGE_12, 17, 8},
+  {HELP_PAGE_3, 24, 8},
+  {HELP_PAGE_4, 22, 8},
+  {HELP_PAGE_5, 25, 8},
+  {HELP_PAGE_6, 19, 8},
+  {HELP_PAGE_7, 24, 8},
+  {HELP_PAGE_8, 18, 8},
+  {HELP_PAGE_9, 21, 8},
+  {HELP_PAGE_10, 19, 8},
+  {HELP_PAGE_11, 16, 8},
+  {HELP_PAGE_12, 21, 8},
 };

@@ -26,29 +26,29 @@ STATUS_LEFT, STATUS_RIGHT = (0, 212, 210, 240), (110, 212, 320, 240)            
 CARDS = (60, 26, 270, 64)                                                         # the menu's top card row
 BOTTOM = (0, 90, 320, 240)                                                        # the screen's lower part (tracks 4-1, the status row)
 PAGES = [
-    dict(title=("L7", "HELP"), steps=[], lines=("A LOOPER FOR THE M8", "7 STEREO TRACKS, 200 SCENES AND 12 PROJECTS", "< > TO MOVE   A OR B TO EXIT")),
+    dict(title=("L7", "HELP"), steps=[], lines=("A LOOPER FOR THE M8", "7 STEREO TRACKS, 200 SCENES AND 12 PROJECTS", "{< >} TO MOVE   {A} OR {B} TO EXIT")),
     dict(title=("THE", "SCREEN"), icon="PLAY", whole=("ui_played", BOTTOM),
          lines=("A TRACK: SOUND, FILTER, VOLUME", "BELOW: SCENE, TIME, TEMPO")),
     dict(title=("RECORD", ""), icon="RECORD", steps=[("ui_empty", TRACK(2), "EMPTY"), ("ui_recording", TRACK(2), "RECORD"), ("ui_played", TRACK(2), "PLAY")],
-         lines=("A: RECORD", "A AGAIN: STOP. IT PLAYS")),
+         lines=("{A}: RECORD", "{A} AGAIN: STOP. IT PLAYS")),
     dict(title=("MUTE", ""), icon="MUTE", steps=[("ui_wave", TRACK(6), "PLAY"), ("ui_muted", TRACK(5), "MUTE")],
-         lines=("A: MUTE OR PLAY", "HOLD A, PRESS ^v: MORE TRACKS")),
+         lines=("{A}: MUTE OR PLAY", "HOLD {A}, PRESS {^v}: MORE TRACKS")),
     dict(title=("LENGTH", ""), icon="MOVE", steps=[("ui_wave", TRACK(6, 0), "LONG"), ("ui_wave_edit", TRACK(6, 0), "SHORT")],
-         lines=("HOLD B, PRESS ^v: LONGER OR SHORTER", "HOLD B, PRESS < >: MOVE IT")),
+         lines=("HOLD {B}, PRESS {^v}: LONGER OR SHORTER", "HOLD {B}, PRESS {< >}: MOVE IT")),
     dict(title=("FILTER", "VOLUME"), icon="ADJUST", steps=[("ui_filter_edit", TRACK(4), "FILTER"), ("ui_mix_edit", TRACK(3), "VOLUME")],
-         lines=("HOLD B ON A FILTER OR VOLUME", "PRESS THE ARROWS TO CHANGE IT")),
+         lines=("HOLD {B} ON A FILTER OR VOLUME", "PRESS THE ARROWS TO CHANGE IT")),
     dict(title=("CLIPS", ""), icon="CUT", steps=[("ui_cut", TRACK(6), "CUT"), ("ui_paste", TRACK(2), "PASTE"), ("ui_shift_track", TRACK(5, 0), "CHANGE")],
-         lines=("SHIFT+A: CUT OR PASTE", "SHIFT+< >: OTHER SOUNDS")),
+         lines=("{SHIFT+A}: CUT OR PASTE", "{SHIFT+< >}: OTHER SOUNDS")),
     dict(title=("SCENES", ""), icon="SCENE_DUP", steps=[("ui_played", STATUS_LEFT, "SCENE 1"), ("ui_status_scene_edit", STATUS_LEFT, "SCENE 2")],
-         lines=("A SCENE KEEPS ALL TRACKS", "SHIFT+^v: NEXT SCENE")),
+         lines=("A SCENE KEEPS ALL TRACKS", "{SHIFT+^v}: NEXT SCENE")),
     dict(title=("TEMPO", ""), icon="RESTART", steps=[("ui_status_tap_held", STATUS_RIGHT, "TAP"), ("ui_status_metro_on", STATUS_RIGHT, "CLICK")],
-         lines=("START: PLAY OR STOP", "A ON TEMPO: TAP. B+A: CLICK")),
+         lines=("{START}: PLAY OR STOP", "{A} ON TEMPO: TAP. {B+A}: CLICK")),
     dict(title=("RESAMPLE", "AND MOVE"), icon="RESAMPLE", steps=[("ui_resampling", TRACK(2), "RESAMPLE"), ("ui_move", TRACK(2), "MOVE")],
-         lines=("B+A: RECORD WHAT YOU HEAR", "B+^v: MOVE A TRACK")),
+         lines=("{B+A}: RECORD WHAT YOU HEAR", "{B+A+^v}: MOVE A TRACK")),
     dict(title=("SYNC", ""), icon="USB", steps=[("ui_status_follow_on", STATUS_RIGHT, "FOLLOW")],
-         lines=("L7 FOLLOWS MIDI AND USB CLOCK", "SHIFT+A ON TEMPO: FOLLOW AUDIO"), notes=["MIDI", "USB", "AUDIO"]),
+         lines=("L7 FOLLOWS MIDI AND USB CLOCK", "{SHIFT+A} ON TEMPO: FOLLOW AUDIO"), notes=["MIDI", "USB", "AUDIO"]),
     dict(title=("PROJECTS", ""), icon="LOAD", steps=[("ui_menu_load", CARDS, "OPEN"), ("ui_menu_cut", CARDS, "CUT")],
-         lines=("ARROW OFF THE EDGE: MENU", "A: OPEN. SHIFT+A: CUT")),
+         lines=("{ARROW} OFF THE EDGE: MENU", "{A}: OPEN. {SHIFT+A}: CUT")),
 ]
 
 # ---- L7's font (its widths: centring, wrapping)
@@ -57,10 +57,17 @@ GLYPHS = {}
 for m in re.finditer(r"\{'(.)',\s*\{((?:\"[.#]*\",?\s*)+)\}", src):
     GLYPHS[m.group(1)] = re.findall(r'"([.#]*)"', m.group(2))
 def g(ch): return GLYPHS.get(ch) or GLYPHS.get(ch.upper()) or GLYPHS[' ']
-def text_w(s, k=1): return max(0, sum((len(g(c)[0]) + 1) * k for c in s) - k)
+def text_w(s, k=1): s = s.replace("{", "").replace("}", ""); return max(0, sum((len(g(c)[0]) + 1) * k for c in s) - k)
+# A line's text steps: its controls ({...}) in white (INK), the rest in ink.
+def say(x, y, k, ink, line):
+    ops = []
+    for i, part in enumerate(re.split(r"[{}]", line)):
+        if part: ops.append(("text", x, y, k, NAMED["INK"] if i % 2 else ink, part))
+        x += text_w(part, k) + k if part else 0
+    return ops
 for line in [l for p in PAGES for l in p["lines"] + tuple(p.get("notes", [])) + p["title"]] + [c for p in PAGES for _, _, c in p.get("steps", [])]:
     for ch in line:
-        if ch not in GLYPHS and ch.upper() not in GLYPHS: sys.exit(f"not in the font: {ch!r} ({line})")
+        if ch not in "{}" and ch not in GLYPHS and ch.upper() not in GLYPHS: sys.exit(f"not in the font: {ch!r} ({line})")
 
 # ---- The action button's icons (ui_buttons.cpp), by name: their art, rows of '#'.
 _ub = open(os.path.join(ROOT, "ui_buttons.cpp")).read()
@@ -152,7 +159,7 @@ def page(n, p):
             else:
                 lines.append((line, ink))
         for j, (line, ink) in enumerate(lines):           # (the last, how to move, a line lower: apart)
-            ops.append(("text", 8, 140 + (j + (j == len(lines) - 1)) * 14, 2, NAMED[ink], line))
+            ops += say(8, 140 + (j + (j == len(lines) - 1)) * 14, 2, NAMED[ink], line)
         return ops, 8
     title = (t1 + " " + t2).strip()                  # (one line, in the page's colour; no page number)
     # Its icon left of it (the action button's, a block a dot: 2 px), in the
@@ -195,10 +202,10 @@ def page(n, p):
         ops.append(("text", 32 + w + 8, ev(y + h // 2 - 5), 2, NAMED["LIGHT"], lab))
         y += PITCH
     for j, line in enumerate(p.get("notes", [])):     # (under the strips)
-        ops.append(("text", 32, y + j * 14, 2, NAMED["LIGHT"], line))
+        ops += say(32, y + j * 14, 2, NAMED["LIGHT"], line)
     ops.append(("rect", 0, 182, 320, 2, acc))
-    ops.append(("text", 8, 190, 2, NAMED["LIGHT"], p["lines"][0]))
-    ops.append(("text", 8, 206, 2, NAMED["LIGHT"], p["lines"][1]))   # (a block more than the first's line pitch)
+    ops += say(8, 190, 2, NAMED["LIGHT"], p["lines"][0])
+    ops += say(8, 206, 2, NAMED["LIGHT"], p["lines"][1])   # (a block more than the first's line pitch)
     return ops, 8
 
 pages = [page(i + 1, p) for i, p in enumerate(PAGES)]
