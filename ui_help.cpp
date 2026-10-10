@@ -69,13 +69,13 @@ FLASHMEM static void helpDots(int x, int shown) {
   auto &t = board.tft();
   constexpr int Y = 226, SIZE = 8, STEP = 16;
   uint16_t seen = helpSeen();
-  t.fillRect(0, Y - 2 * PX, 320, SIZE + 4 * PX, MENU_BG);   // (the row: places shift as the page turns)
+  t.fillRect(0, Y - 2 * PX, 320, 240 - (Y - 2 * PX), MENU_BG);   // (the row: places shift as the page turns)
   for (int i = 0; i < HELP_PAGES; i++) {
     int x0 = x + i * STEP;                         // (the shown page: two blocks more space either side, not past the ends)
     if (shown > 0 && i >= shown) x0 += 2 * PX;
     if (shown < HELP_PAGES - 1 && i > shown) x0 += 2 * PX;
-    if (i == shown) {                              // (the shown page: its square two blocks larger all round)
-      t.fillRect(x0 - 2 * PX, Y - 2 * PX, SIZE + 4 * PX, SIZE + 4 * PX, PROJECT_COLORS[i]);
+    if (i == shown) {                              // (the shown page: two blocks wider each side, down to the bottom)
+      t.fillRect(x0 - 2 * PX, Y, SIZE + 4 * PX, 240 - Y, PROJECT_COLORS[i]);   // (its top level with the others', down to the screen's bottom)
     } else if (seen & (1 << i)) {
       t.fillRect(x0, Y, SIZE, SIZE, PROJECT_COLORS[i]);
     } else {

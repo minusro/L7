@@ -485,8 +485,8 @@ FLASHMEM void menuSettingsAct() {
 }
 
 // ---- The help pages: over the whole screen, from the menu's HELP (once let
-// go), on the page last shown; LEFT/RIGHT the page before / after (wrapping
-// round; held, they repeat half as fast as elsewhere),
+// go), on the page last shown; LEFT/RIGHT the page before / after (not
+// wrapping: LEFT on the first, RIGHT on the last back to the menu; held, they repeat half as fast as elsewhere),
 // A or B back to the menu, UP or DOWN too (once let go, its edge line meanwhile). Each page drawn whole as it's turned to (ui_help.cpp).
 bool menuHelpOpen() { return shown && helpOpen; }
 
@@ -508,8 +508,8 @@ FLASHMEM bool menuHelpKeys(uint8_t pressed, bool repeat) {
   if (repeat && (skip = !skip)) return false;
   if (!repeat) skip = false;
   int to = p;
-  if (pressed & m8::BTN_RIGHT) to = (p + 1) % n;
-  if (pressed & m8::BTN_LEFT) to = (p + n - 1) % n;
+  if (pressed & m8::BTN_RIGHT && p < n - 1) to = p + 1;   // (no wrapping: off the ends, input.cpp leaves for the menu)
+  if (pressed & m8::BTN_LEFT && p > 0) to = p - 1;
   if (to == p) return false;
   setHelpPage(to);
   helpTurned();

@@ -573,6 +573,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     if (menuHelpOpen() && !armed) {                  // the help pages: LEFT / RIGHT turn them, A or B back to the menu; UP or
       if (pressed & act) menuHelp(false);          // DOWN too, once let go (or held SWITCH_HOLD_MS), its edge line meanwhile
       else if ((pressed & (m8::BTN_UP | m8::BTN_DOWN)) && !repeat) helpOnRelease = pressed & m8::BTN_UP ? m8::BTN_UP : m8::BTN_DOWN;
+      else if ((pressed & m8::BTN_LEFT) && helpPage() == 0) { if (!repeat) helpOnRelease = m8::BTN_LEFT; }   // (off the ends: likewise)
+      else if ((pressed & m8::BTN_RIGHT) && helpPage() == helpPages() - 1) { if (!repeat) helpOnRelease = m8::BTN_RIGHT; }
       else if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) moved = menuHelpKeys(pressed, repeat);
       return;
     }
