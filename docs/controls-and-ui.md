@@ -233,7 +233,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   square each, 16 px apart, the pages seen filled in their colour, the others a grey outline, the shown one on
   a solid light grey square two blocks wider all round. LEFT / RIGHT turn the pages,
   wrapping round (held, repeating at half the usual rate); A or B go
-  back to the menu; UP as RIGHT (the next page), DOWN as LEFT; no edge leads out meanwhile. The pages seen and the last one shown are
+  back to the menu; UP or DOWN too, once let go (or held SWITCH_HOLD_MS), the edge line shown meanwhile. The pages seen and the last one shown are
   saved with the session (`helpseen=`, a bit each; `helppage=`).
   Left with A or B on a card (to the looper: the loaded one, a new project, or held after a
   load), the menu comes back on the loaded project's card, whichever edge it's opened from
