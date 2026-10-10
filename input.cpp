@@ -825,7 +825,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         rotateKey = pressed & LR;
         rotateStepped = rotateStopped = false;
         heldSteps = 0;
-        stepAt = millis() + REPEAT_DELAY_MS;       // (a tap's quarter beat on letting go, serviceRotate()'s 10 ms steps once held)
+        stepAt = millis() + REPEAT_DELAY_MS;       // (a tap's quarter beat on letting go, serviceRotate()'s ms steps once held)
       }
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats: any whole number of beats, up to the whole loop.
