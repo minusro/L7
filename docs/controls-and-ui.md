@@ -202,7 +202,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   loaded, the splash's turquoise). The loaded project's card is filled with
   it, its letter (the project's name) black; another
   project's is a thick outline (two blocks) in its colour, the letter in it too.
-  While the clock runs, the playing project's card shows a small play icon right of its letter (both 2 blocks left of centre), in the letter's colour, on the first half of each beat (pulsing): the loaded one's, or while another is on its way in, the one still heard. An empty slot is a grey outline, its letter in the slot's colour. In the bottom
+  While the clock runs, the playing project's card shows a small play icon right of its letter (both 2 blocks left of centre), in the letter's colour, light grey for 100 ms on each beat: the loaded one's, or while another is on its way in, the one still heard. An empty slot is a grey outline, its letter in the slot's colour. In the bottom
   left corner, the logo small (full resolution, 55 × 26 px: the status row's height; a block
   in from the left edge, on the status row's line: `CORNER_LOGO_X/Y`), always
   in the colour the action button had for the item (`actionRestColor()`). In the top right
