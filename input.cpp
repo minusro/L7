@@ -144,14 +144,18 @@ static int32_t signedTurn(int64_t f, int64_t loop) {
   int64_t r = (f % loop + loop) % loop;
   return (int32_t)(r > loop / 2 ? r - loop : r);
 }
-// A nudge step on the track being turned: dir 1 later, -1 earlier, a 16th of
-// a beat << nudgeLevel (up to a beat); reset: back to none. Reaching none (or
-// passing it, either way): there, the held arrow's steps stopped.
-static constexpr uint32_t NUDGE_STEP_MS = 500;
-static constexpr int NUDGE_LEVELS = 4;             // (a 16th, an 8th, a quarter, a half, a beat)
-static int nudgeLevel = 0;
-static uint32_t stepAt = 0;                       // (millis() of the held arrow's next step; 0: none)
-static void nudgeStep(int dir, bool reset) {
+// A nudge step on the track being turned: dir 1 later, -1 earlier, by
+// frames (the clip's own); reset: back to none. Reaching none (or passing it,
+// either way): there, the held arrow's steps stopped. A tap (let go before
+// the arrows' repeats start): a quarter beat; held: 10 ms a repeat instead.
+static bool rotateStepped = false;                 // (the press's steps begun, or reset: no tap's quarter)
+static bool rotateStopped = false;                 // (at none: the held arrow's steps stopped)
+static uint32_t stepAt = 0;                        // (millis() of the held arrow's next step; 0: none)
+static int32_t quarterFrames(const Track &tr) { return (int32_t)(tr.spbNative / 4); }
+static int32_t tenMsFrames(const Track &tr) {
+  return (int32_t)((uint64_t)tr.spbNative * (uint32_t)(AUDIO_SAMPLE_RATE_EXACT / 100) / max<uint32_t>(1, transport.spb));
+}
+static void nudgeStep(int dir, bool reset, int32_t frames = 0) {
   if (rotateT < 0) {
     if (!reset) return;
     rotateT = selected;                            // (both arrows at once: the selected track's)
@@ -162,15 +166,15 @@ static void nudgeStep(int dir, bool reset) {
   const int64_t loop = tr.loopFrames();
   if (loop <= 0) return;
   const int32_t now = signedTurn((int64_t)unitOf(rotateT).rotate + rotateBy, loop);
-  int32_t by = reset ? -now : dir * (int32_t)((uint64_t)tr.spbNative * (1u << nudgeLevel) / 16);
+  int32_t by = reset ? -now : dir * frames;
   if (!reset && now != 0) {
     int32_t next = signedTurn((int64_t)now + by, loop);
     if (next == 0 || ((now < 0) != (next < 0) && llabs((int64_t)next - now) < loop / 2)) {
       by = -now;                                   // (to none: there)
-      stepAt = 0;
+      rotateStopped = true;
     }
   }
-  if (reset) stepAt = 0;
+  if (reset) rotateStepped = true;
   rotateBy += by;
   drawTrack(rotateT);
 }
@@ -181,10 +185,10 @@ static void nudgeStep(int dir, bool reset) {
 // meanwhile: again until taken.
 static void serviceRotate() {                      // (every pass: pollKeys())
   if (rotateT < 0) return;
-  if (rotateHeld && stepAt && (int32_t)(millis() - stepAt) >= 0 && (mainKeys() & rotateKey)) {   // held: the next step, twice the last
-    stepAt += NUDGE_STEP_MS;
-    if (nudgeLevel < NUDGE_LEVELS) nudgeLevel++;
-    nudgeStep(rotateKey & m8::BTN_RIGHT ? 1 : -1, false);
+  if (rotateHeld && !rotateStopped && (int32_t)(millis() - stepAt) >= 0 && (mainKeys() & rotateKey)) {   // held: 10 ms a repeat
+    stepAt += REPEAT_PERIOD_MS;
+    rotateStepped = true;
+    nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false, tenMsFrames(tracks[rotateT]));
   }
   int32_t q = quarterNow();
   bool crossing = q != rotateQ;
@@ -450,6 +454,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   bool shift = keys & m8::BTN_SHIFT, opt = keys & m8::BTN_OPT;
   // The fine rotate's keys: one let go, what was shown is heard.
   if (rotateHeld && (!(keys & m8::BTN_EDIT) || !(keys & m8::BTN_OPT) || !(keys & rotateKey))) {
+    if (!rotateStepped && rotateKey) nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false, quarterFrames(tracks[rotateT]));   // (a tap: a quarter beat)
     rotateHeld = false;
     serviceRotate();
   }
@@ -796,9 +801,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
       }
     } else if (clipRotating() && (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT))) {
       // B then A on a clip's waveform: its fine rotate (the clip turned, its
-      // audio as it was): LEFT/RIGHT a 16th of a beat earlier / later; held,
-      // a step every NUDGE_STEP_MS, each twice the last up to a beat
-      // (serviceRotate()); while held only the waveform drawn (and the ms
+      // audio as it was): RIGHT/LEFT tapped a quarter beat earlier / later;
+      // held, 10 ms a repeat instead (serviceRotate()); while held only the waveform drawn (and the ms
       // shown) turn, heard at each quarter beat crossing and once a key of the
       // combo is let go (serviceRotate(), above). Both held: back to none.
       // Reaching none (or passing it): there, the held arrow's steps stopped
@@ -816,9 +820,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         rotateT = selected;
         rotateHeld = true;
         rotateKey = pressed & LR;
-        nudgeLevel = 0;
-        stepAt = millis() + NUDGE_STEP_MS;
-        nudgeStep(rotateKey & m8::BTN_RIGHT ? 1 : -1, false);
+        rotateStepped = rotateStopped = false;
+        stepAt = millis() + REPEAT_DELAY_MS;       // (a tap's quarter beat on letting go, serviceRotate()'s 10 ms steps once held)
       }
     } else if (selectedCell == WAVE_CELL) {
       // Loop range in beats: any whole number of beats, up to the whole loop.
