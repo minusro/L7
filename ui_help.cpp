@@ -72,7 +72,9 @@ FLASHMEM static void helpDots(int x, int shown) {
   for (int i = 0; i < HELP_PAGES; i++) {
     int x0 = x + i * STEP;
     if (i == shown) t.fillRect(x0 - 2 * PX, Y - 2 * PX, SIZE + 4 * PX, SIZE + 4 * PX, DIM);
-    if (seen & (1 << i)) {
+    if (i == shown) {                              // (the shown page: its square a block larger all round)
+      t.fillRect(x0 - PX, Y - PX, SIZE + 2 * PX, SIZE + 2 * PX, PROJECT_COLORS[i]);
+    } else if (seen & (1 << i)) {
       t.fillRect(x0, Y, SIZE, SIZE, PROJECT_COLORS[i]);
     } else {
       t.fillRect(x0, Y, SIZE, SIZE, DIM);

@@ -81,7 +81,7 @@
 <table>
   <tr><th>Keys</th><th>What they do</th></tr>
   <tr><td>Arrows</td><td>Move the selection: <span class="key">UP</span>/<span class="key">DOWN</span> between rows, <span class="key">LEFT</span>/<span class="key">RIGHT</span> between cells.</td></tr>
-  <tr><td><span class="key">A</span> on a track</td><td>Empty track: record, press again to stop. Track with a clip: mute / unmute. Keep <span class="key">A</span> held and press (or hold) <span class="key">UP</span> / <span class="key">DOWN</span> to <b>swipe</b>: each track you step onto gets the same. After a mute, every track still playing is muted except the last one, where it stops: a quick way to solo a track. After an unmute, every muted track is unmuted, stopping on the track just before the one you started from.</td></tr>
+  <tr><td><span class="key">A</span> on a track</td><td>Empty track: record, press again to stop. Track with a clip: mute / unmute. Keep <span class="key">A</span> held and press (or hold) <span class="key">UP</span> / <span class="key">DOWN</span> to <b>swipe</b>: each track you step onto gets the same, and it stops when it comes back round to where you started. Step the other way to undo, a track at a time.</td></tr>
   <tr><td><span class="key">B</span> held + arrows</td><td>Adjust the selected cell (see below).</td></tr>
   <tr><td><span class="key">B</span> twice</td><td>Reset the cell: whole loop, filter open, volume at unity and balance centred; on the clock cell, master volume back to 100% and balance centred; on the tempo cell, the scene's own tempo (the one it was made at, or its latest recording's).</td></tr>
   <tr><td><span class="key">SHIFT</span> + <span class="key">A</span></td><td>Cut the track's clip to the clipboard, or paste it onto an empty track. On a recording track: cancel the recording.</td></tr>
@@ -110,7 +110,7 @@
   <tr><td>Waveform</td><td>Move the range's start. Tap twice to move it by its own length.</td><td>Make the range longer / shorter (¼ bar up to the whole loop). Tap twice for halves and doubles.</td></tr>
   <tr><td>Filter</td><td>Move the band</td><td>Widen / narrow the band</td></tr>
   <tr><td>Volume</td><td>Balance</td><td>Volume (off, then steps of 3.75 dB, a half line each; each clip starts at its level as recorded, and the top step makes it peak at full scale)</td></tr>
-  <tr><td>Empty track</td><td></td><td>Move the empty track up / down: the track in its way takes its place, without a gap (wraps round from track 1 to 7). A track with a clip moves the same way with <span class="key">B</span> + <span class="key">A</span> held (press <span class="key">A</span> while holding <span class="key">B</span>)</td></tr>
+  <tr><td>Any track</td><td></td><td>With <span class="key">B</span> + <span class="key">A</span> held (press <span class="key">A</span> while holding <span class="key">B</span>): move a track with a clip up / down. The track in its way takes its place (wraps round from track 1 to 7)</td></tr>
   <tr><td>Waveform, <span class="key">B</span> + <span class="key">A</span></td><td>Nudge the loop later / earlier by a 16th of a beat; hold to go on in bigger steps (up to a beat). It stops at 0; both arrows together: back to 0. The waveform and the tempo cell (in ms) show it; you hear it on the next quarter beat</td><td>Move the track (as from any cell)</td></tr>
   <tr><td>Scene cell</td><td></td><td>Next / previous scene</td></tr>
   <tr><td>Clock cell</td><td colspan="2">Master volume (UP/DOWN) and balance (LEFT/RIGHT), shown like a track's volume cell (one for all projects)</td></tr>

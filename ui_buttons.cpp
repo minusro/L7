@@ -129,7 +129,6 @@ static int trackIcon(int i) {
   }
   // B held on the selected empty track (B + UP/DOWN moves it), or B then A on
   // one with a clip (B + A + UP/DOWN do; A first: a swipe): up and down arrows instead of its number.
-  if (shownSelected(i) && bAlone() && unitOf(i).sample == 0) return ICON_MOVE;
   if (movingClip(i)) return ICON_MOVE;
   return ICON_NONE;                                // (the track's number shows its state)
 }

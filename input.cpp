@@ -248,8 +248,9 @@ static void keepColumns(int from, int at) {
 // started from (round again).
 // Empty tracks (and one recording) are stepped over as they are. Stopped,
 // UP / DOWN do nothing more until A is let go.
-static bool swipeOn = false, swipeMute = false, swipeDone = false;
-static int swipeFrom = -1;
+static bool swipeOn = false, swipeMute = false;
+static int swipeFrom = -1, swipeDir = 0, swipePos = 0;   // (the first step's way, in track indices; steps taken that way)
+static bool swipeWas[NUM_TRACKS];                  // each track's mute when A was pressed (undoing goes back to it)
 
 // An arrow held that switches screens when let go: into the menu, or out of
 // it; or between the looper's two (main and notes, ui.h: UP off its top, DOWN
@@ -638,27 +639,36 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     if (onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL && sceneNext())
       for (int i = 0; i < ROWS; i++) drawTrack(i);
   }
-  // Swipe to mute / solo (above): A still held, UP / DOWN step on.
+  // Swipe (A pressed on a track with a clip: it muted / unmuted): A still
+  // held, UP / DOWN step on a track at a time, doing the same to each (with a
+  // clip), wrapping round; back on the track it started on, it stops there
+  // (held: no more repeats). The other way from the first step's: each step
+  // undoes one (that track's mute as it was when A was pressed), and back
+  // past the start, the press's own.
   if (swipeOn && !(keys & m8::BTN_EDIT)) swipeOn = false;
   if (swipeOn && (pressed & (m8::BTN_UP | m8::BTN_DOWN))) {
-    if (!swipeDone && !shift && !opt) {
-      int t = (selected + ((pressed & m8::BTN_UP) ? NUM_TRACKS - 1 : 1)) % NUM_TRACKS;   // (UP: a row up; the top track's index is 0)
-      if (!swipeMute && t == swipeFrom) {
-        swipeDone = true;                            // unmuting, round again: stopped on the track before it
-        t = selected;
-      }
-      selected = t;
-      int heard = 0;
-      for (int k = 0; k < NUM_TRACKS; k++) heard += hasClip(k) && !trackMuted(k);
-      if (swipeMute) {
-        if (hasClip(t) && !trackMuted(t)) {
-          if (heard <= 1) swipeDone = true;          // the last one heard: kept (a solo)
-          else setTrackMuted(t, true);
-        } else if (t == swipeFrom) {
-          swipeDone = true;                          // (round again: none left to mute)
+    if (!shift && !opt) {
+      int dir = (pressed & m8::BTN_UP) ? NUM_TRACKS - 1 : 1;   // (UP: a row up; the top track's index is 0)
+      if (!swipeDir) swipeDir = dir;
+      if (dir == swipeDir) {
+        if (swipePos < NUM_TRACKS - 1) {
+          swipePos++;
+          int t = (swipeFrom + swipePos * swipeDir) % NUM_TRACKS;
+          selected = t;
+          if (hasClip(t)) setTrackMuted(t, swipeMute);
+          if (swipePos == NUM_TRACKS - 1) stopRepeat = true;   // (the next: the start again)
+        } else {
+          selected = swipeFrom;                    // round: stopped on the start
+          stopRepeat = true;
         }
-      } else if (!swipeDone && hasClip(t) && trackMuted(t)) {
-        setTrackMuted(t, false);
+      } else if (swipePos > 0) {                   // back: undone
+        int t = (swipeFrom + swipePos * swipeDir) % NUM_TRACKS;
+        if (hasClip(t)) setTrackMuted(t, swipeWas[t]);
+        swipePos--;
+        selected = (swipeFrom + swipePos * swipeDir) % NUM_TRACKS;
+      } else if (hasClip(swipeFrom) && trackMuted(swipeFrom) != swipeWas[swipeFrom]) {
+        setTrackMuted(swipeFrom, swipeWas[swipeFrom]);   // (past the start: the press's own undone)
+        stopRepeat = true;
       }
     }
     pressed &= ~(m8::BTN_UP | m8::BTN_DOWN);         // (nothing else: not the menu's edges either)
@@ -771,12 +781,10 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         if (pressed & m8::BTN_RIGHT) masterBalance() >= MASTER_BALANCE_MAX ? stepMasterVolume(1) : stepMasterBalance(1);
       }
     } else if ((pressed & (m8::BTN_UP | m8::BTN_DOWN)) && !recordingOn(selected) && recordQueued() != selected &&
-               (unitOf(selected).sample == 0 || ((keys & m8::BTN_EDIT) && editAfterOpt && hasClip(selected)))) {
-      // An empty track (a change on its way counts): B + UP/DOWN moves it up /
-      // down, the track in its way taking its place (wrapping round the 7);
-      // the selection goes with it. A track with a clip: the same with A
-      // pressed while B is held (B + A + UP/DOWN, from any cell; B alone: its
-      // range; A first: a swipe, above, which takes UP/DOWN).
+               (keys & m8::BTN_EDIT) && editAfterOpt && hasClip(selected)) {
+      // A track with a clip, A pressed while B is held (B + A + UP/DOWN, from
+      // any cell): moves it up / down, the track in its way taking its place
+      // (wrapping round the 7); the selection goes with it.
       int to = (pressed & m8::BTN_UP) ? (selected + NUM_TRACKS - 1) % NUM_TRACKS : (selected + 1) % NUM_TRACKS;   // (row 0: track 7, at the top)
       if (swapTracks(selected, to)) {
         drawTrack(selected);
@@ -1013,11 +1021,12 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     } else if (tr.state == TrackState::Empty || recordingOn(selected)) {
       if (recordPress(selected)) selectedCell = WAVE_CELL;   // a recording (or its stop, its cancel, out of the queue): at once, on the press
     } else {
+      for (int k = 0; k < NUM_TRACKS; k++) swipeWas[k] = trackMuted(k);   // (to undo to)
       setTrackMuted(selected, !trackMuted(selected));
       swipeOn = true;                                // (held: UP / DOWN carry it on, above)
       swipeMute = trackMuted(selected);
-      swipeDone = false;
       swipeFrom = selected;
+      swipeDir = swipePos = 0;
     }
   }
   if (toggleTransport) {
