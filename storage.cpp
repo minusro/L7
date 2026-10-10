@@ -52,7 +52,7 @@ static uint8_t headerDirty = 0;                  // bit t: track t's unit file n
 // A write is waiting for the playback buffers to be topped up (see serviceStreams).
 static bool writePending = false;
 static constexpr uint64_t SAMPLE_FILE_BYTES = WAV_DATA_OFFSET + (uint64_t)MAX_REC_FRAMES * 4;
-static constexpr int POOL_SIZE = 8;              // empty sample files kept ready for recordings (~180 MB):
+static constexpr int POOL_SIZE = 24;             // empty sample files kept ready for recordings (~540 MB; fewer if the card is short):
                                                  // making one takes ~0.7 s, so never while playing if it can be helped.
                                                  // Their names are the lowest free numbers (DATA/0001.DAT ...), not ever
                                                  // higher ones: a recording's file is renamed (to SAMPLES) anyway

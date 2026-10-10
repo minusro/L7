@@ -42,9 +42,10 @@ used for this any more.)
 Creating, resizing, deleting or renaming files stalls the card for hundreds of
 ms to seconds and starves the streams. So:
 
-* **Pool**: `POOL_SIZE` = 8 empty sample files (each 22.6 MB = 32 bars at
-  60 BPM, `MAX_REC_FRAMES`, ~180 MB), made ahead of time and refilled while
-  stopped. They are named from the lowest free numbers (`DATA/0001.DAT` …
+* **Pool**: `POOL_SIZE` = 24 empty sample files (each 22.6 MB = 32 bars at
+  60 BPM, `MAX_REC_FRAMES`, ~540 MB; fewer if the card hasn't the space),
+  made ahead of time and refilled while stopped (run out while playing, a
+  recording makes its own, stalling the card ~0.7 s: dropouts). They are named from the lowest free numbers (`DATA/0001.DAT` …
   `0008.DAT`, never ever higher ones: a recording's file is renamed into
   `SAMPLES` anyway, which frees its number). A card with more of them, or
   numbered higher, is brought down to those at boot (the extra ones removed).

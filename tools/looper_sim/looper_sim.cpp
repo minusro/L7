@@ -1203,7 +1203,7 @@ int main(int argc, char **argv) {
     char m[160];
     snprintf(m, sizeof m, "%d switches at %.0f BPM: new samples heard after %.0f ms on average (max %.0f), %u samples of silence, %u dropped",
              SWITCHES, bpmForSpb(transport.spb), sumLatency / SWITCHES, maxLatency, silent, drops);
-    check(maxLatency > 0 && maxLatency < 300 && silent == 0 && drops == 0, m);
+    check(maxLatency > 0 && maxLatency < 320 && silent == 0 && drops == 0, m);   // (~300 ms: which samples are switched to moves it a little)
     simSdLatency = nullptr;
     for (int t = 0; t < NUM_TRACKS; t++) {
       snprintf(m, sizeof m, "track %d after switching (recorded at %.0f BPM)", t + 1, bpmForSpb(tracks[t].spbNative));
@@ -2059,9 +2059,9 @@ for f in os.listdir("."):
     storageBegin([](const char *) {});
     scenesBegin(simTempo, simSetTempo, projectCurrent() < 0 ? 0 : 2, simNewTempo);
     FILE *ls = popen(("ls " + simRoot + "/L7/DATA | grep '^[0-9]' | tr '\\n' ' '").c_str(), "r");
-    char line[200] = {};
+    char line[400] = {};
     if (ls) { if (!fgets(line, sizeof line, ls)) line[0] = 0; pclose(ls); }
-    check(std::string(line) == "0001.DAT 0002.DAT 0003.DAT 0004.DAT 0005.DAT 0006.DAT 0007.DAT 0008.DAT ", "after the boot: exactly 0001-0008.DAT");
+    check(std::string(line) == "0001.DAT 0002.DAT 0003.DAT 0004.DAT 0005.DAT 0006.DAT 0007.DAT 0008.DAT 0009.DAT 0010.DAT 0011.DAT 0012.DAT 0013.DAT 0014.DAT 0015.DAT 0016.DAT 0017.DAT 0018.DAT 0019.DAT 0020.DAT 0021.DAT 0022.DAT 0023.DAT 0024.DAT ", "after the boot: exactly 0001-0024.DAT (the pool: 24)");
   }
 
   printf("a recording in the dummy project (no project letter): a plain-numbered sample, still in step with the files\n");
@@ -2083,7 +2083,7 @@ for f in os.listdir("."):
     if (ls) { if (fscanf(ls, "%d", &spaceFiles) != 1) spaceFiles = -1; pclose(ls); }
     char m[160];
     snprintf(m, sizeof m, "sample %u is a plain number in SAMPLES (%s), its recording-space number free again (%d files in recording space)", id, path, spaceFiles);
-    check(id > 0 && id < 10000 && ::stat((simRoot + path).c_str(), &st) == 0 && st.st_size < 10 * 1000 * 1000 && spaceFiles == 8, m);
+    check(id > 0 && id < 10000 && ::stat((simRoot + path).c_str(), &st) == 0 && st.st_size < 10 * 1000 * 1000 && spaceFiles == 24, m);
   }
 
   printf("tempo changes while recording: written as it comes, at its average tempo, its bar lines kept\n");

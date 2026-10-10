@@ -389,8 +389,7 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
     bool track = i != STATUS_ROW;
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
-    int c0 = (track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB)) +
-             0,
+    int c0 = (track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 + (icon == ICON_RESAMPLE) : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB)),   // (a track's resample: a block right)
       r0 = (rows - ic.h) / 2 - track;   // (a block clear of the backdrop's edge; a track's: a block higher)
     for (int r = 0; r < ic.h; r++)
       for (int c = 0; c < ic.w; c++)
