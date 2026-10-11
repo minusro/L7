@@ -73,7 +73,7 @@ struct WaveView {
   bool rec = false;
   uint32_t drawn = 0;                              // uiGeneration when last drawn whole
   uint32_t rs = 0, rb = 0;
-  char label[24] = "";                             // the sample's label (SHIFT held: its name, X/N; "": none)
+  char label[32] = "";                             // the sample's label (SHIFT held: its name, X/N; "": none)
   bool labelFlash = false;                         // (its name and number dark grey: the sample just stepped)
   int labelX = 0, labelW = 0;                      // its box: first block column, width in blocks
 };
@@ -217,7 +217,7 @@ FLASHMEM void drawWave(int i, bool recordingHere) {   // (flash: RAM1 is full; i
   if (recordingHere) rangeInk = INK;                 // the recording's waveform: white
   uint16_t ground = rowGround(i);
   uint16_t outInk = onGround(muted ? DARK : DIM, ground);   // outside it: grey (muted: dark grey; black on the selected track's ground)
-  char label[24] = "";                             // (SHIFT held on the waveform cell: the sample's label)
+  char label[32] = "";                             // (SHIFT held on the waveform cell: the sample's label)
   if (sampleSwitchShown(i)) sampleLabel(i, label, sizeof label);
   bool flash = label[0] && sampleSteppedAt && millis() - sampleSteppedAt < LABEL_FLASH_MS;
   bool labelSame = !strcmp(label, v.label) && flash == v.labelFlash;
