@@ -2086,6 +2086,35 @@ for f in os.listdir("."):
     check(id > 0 && id < 10000 && ::stat((simRoot + path).c_str(), &st) == 0 && st.st_size < 10 * 1000 * 1000 && spaceFiles == 24, m);
   }
 
+  printf("the metronome while stopped: its level follows the mix and the master volume\n");
+  {
+    if (transport.running) transportStop();
+    for (int i = 0; i < 50; i++) block();
+    const int wasMaster = masterVolume();
+    const bool wasMonitored = inputMonitored, wasRamp = feedRamp;
+    inputMonitored = true;
+    auto clickPeak = [&](int master, bool loud) {
+      setMasterVolume(master);
+      feedRamp = loud;
+      for (int i = 0; i < 400; i++) block();         // (the level's reference settles: up at once, down 6 dB a second)
+      metronomeClick(true);
+      int pk = 0;
+      for (int i = 0; i < 20; i++) {
+        block();
+        for (int k = 0; k < AUDIO_BLOCK_SAMPLES; k++) pk = std::max(pk, abs((int)outL.data[k]));
+      }
+      return pk;
+    };
+    int quiet = clickPeak(MASTER_VOLUME_UNITY, false), down = clickPeak(MASTER_VOLUME_UNITY - 6, false);
+    int loud = clickPeak(MASTER_VOLUME_UNITY, true);
+    char m[160];
+    snprintf(m, sizeof m, "stopped: a click %d, the master down 6 steps %d, over a loud input %d", quiet, down, loud);
+    check(quiet > 0 && down < quiet * 0.7 && loud > quiet, m);
+    setMasterVolume(wasMaster);
+    inputMonitored = wasMonitored;
+    feedRamp = wasRamp;
+  }
+
   printf("tempo changes while recording: written as it comes, at its average tempo, its bar lines kept\n");
   {
     if (!transport.running) transportStart();
