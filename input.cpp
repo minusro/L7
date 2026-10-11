@@ -464,7 +464,7 @@ static void closeToLooper() {
 
 // A or B let go (or held) on the loaded project's card: back to the looper
 // (one on its way: once it has come in); on an empty slot: a new project there,
-// opened. Either way the looper's selection on the clock cell. False: nothing done.
+// opened (on track 1's waveform cell; the loaded one's: the clock cell). False: nothing done.
 static bool openCard(int slot) {
   openOnLetGo = false;
   menuNoteLeave(true);                               // (back in: on the loaded project's card)
@@ -474,7 +474,7 @@ static bool openCard(int slot) {
     return true;
   }
   if (projectFilled(slot) || !loadFromMenu(slot)) return false;
-  setMainSelection(STATUS_ROW, CLOCK_CELL);
+  setMainSelection(NUM_TRACKS - 1, WAVE_CELL);      // (a new, empty project: track 1's waveform cell, to record)
   closeMenu();
   return true;
 }
