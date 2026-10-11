@@ -1455,11 +1455,8 @@ FLASHMEM void sampleLabel(int t, char *buf, size_t size) {
   if (!id) { if (size) buf[0] = 0; return; }
   char name[16];
   sampleName(id, name, sizeof name);
-  char tempo[12];                                // its tempo, to a tenth (whole: no .0)
-  const float b = tracks[t].spbNative ? roundf(bpmForSpb(tracks[t].spbNative) * 10) / 10 : 0;
-  if (b == floorf(b)) snprintf(tempo, sizeof tempo, "%d", (int)b);
-  else snprintf(tempo, sizeof tempo, "%.1f", b);
-  snprintf(buf, size, "%s BPM %s %d/%d", tempo, name, sampleIndex(id) + 1, sampleTotal);
+  const float b = tracks[t].spbNative ? bpmForSpb(tracks[t].spbNative) : 0;   // (its tempo, to a tenth)
+  snprintf(buf, size, "%.1f %s %d/%d", b, name, sampleIndex(id) + 1, sampleTotal);
 }
 
 bool stepSample(int t, int dir) {

@@ -143,7 +143,7 @@ int deleteUnmarkedSamples(const uint32_t *only = nullptr, int onlyCount = 0);   
 // (to be deleted if nothing uses them, scenes.h deleteEmptySamples()).
 bool stepSample(int t, int dir);
 // Track t's sample as SHIFT+LEFT/RIGHT shows it: its name and its place
-// among all of them ("92.6 BPM A013 13/24": its tempo, its name, its place; none: "", no label).
+// among all of them ("92.6 A013 13/24": its tempo, its name, its place; none: "", no label).
 void sampleLabel(int t, char *buf, size_t size);
 // The loaded project's sample last stepped to (SHIFT+LEFT/RIGHT) or recorded,
 // per project (A-L: 0-11; kept in the session): an empty track's SHIFT+LEFT
