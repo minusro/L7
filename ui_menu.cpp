@@ -370,9 +370,13 @@ static uint32_t itemKey(int k) {
 // frame hidden meanwhile). Grey all over, from four blocks under the screen's top, each corner
 // cut (its block and the two next to it); its items' frames as the list's, two
 // blocks of space round them; OFF dark grey.
-static const char *const SET_LABELS[SETTING_COUNT] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
-                                                      "EMPTY PROJECT CLICK"};
-static constexpr int SET_ITEMS = SETTING_COUNT, SET_PITCH = 10;
+// The settings, then a command at the top: REMOVE UNUSED SAMPLES (A or B:
+// the recordings on the card no project, scene, clip or clipboard uses,
+// deleted; the clock stopped first; the number removed shown in its value's place).
+static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
+                                                          "EMPTY PROJECT CLICK", "REMOVE UNUSED SAMPLES"};
+static constexpr int SET_ITEMS = SETTING_COUNT + 1, SET_PITCH = 10, SET_REMOVE = SETTING_COUNT;
+static int removedCount = -1;                    // (the command's result, until the popup closes; -1: not run)
 
 bool menuSettingsOpen() { return shown && setOpen; }
 int menuSettingsItem() { return menuSettingsOpen() ? setSel : -1; }
@@ -434,20 +438,23 @@ FLASHMEM static void drawSettings(bool whole) {
   uint16_t frame = setPressAt && millis() - setPressAt < PRESS_FLASH_MS ? LIGHT : actionHeld() ? DARK : frameColor();
   uint32_t key = setSel | (uint32_t)frame << 8;
   for (int i = 0; i < SETTING_COUNT; i++) key |= (uint32_t)setting(i) << (3 + i);
+  key ^= (uint32_t)(removedCount + 1) * 2654435761u;
   if (key == shownKey) return;
   shownKey = key;
   for (int pass = 0; pass < 2; pass++)             // (the selected one last: its frame on top of the rows it shares)
     for (int i = 0; i < SET_ITEMS; i++) {
       bool sel = i == setSel;
       if (sel != (pass == 1)) continue;
-      bool on = setting(i);
+      bool on = i < SETTING_COUNT && setting(i);
       Shape s = {x, setRow(i, yb), w, FONT_H / PX, 0};   // (its frame round the whole line, 2 blocks out)
       fillRing(s, 3, 2, sel ? frame : DIM, true);
       fillRing(s, 2, 0, DIM);
       t.fillRect(s.x * PX, s.y * PX, s.w * PX, FONT_H, DIM);   // (the line cleared: OFF to ON leaves nothing behind)
       drawText(s.x * PX, s.y * PX, SET_LABELS[i], sel ? INK : LIGHT, DIM);
-      const char *v = on ? "ON" : "OFF";
-      drawText((x + w) * PX - textWidth(v), s.y * PX, v, on ? (sel ? INK : LIGHT) : DARK, DIM);
+      char num[8];
+      if (i == SET_REMOVE) snprintf(num, sizeof num, "%d", max(removedCount, 0));
+      const char *v = i == SET_REMOVE ? (removedCount >= 0 ? num : "") : on ? "ON" : "OFF";
+      drawText((x + w) * PX - textWidth(v), s.y * PX, v, i == SET_REMOVE || on ? (sel ? INK : LIGHT) : DARK, DIM);
     }
 }
 
@@ -455,6 +462,7 @@ FLASHMEM static void drawSettings(bool whole) {
 // under it drawn again (nothing else redrawn: no flicker).
 FLASHMEM void menuSettings(bool open) {
   if (!shown || setOpen == open) return;
+  if (open) removedCount = -1;                  // (the command's last result: not shown again)
   if (!open) {
     int x0, y0, x1, y1;
     setBox(x0, y0, x1, y1);
@@ -482,7 +490,12 @@ FLASHMEM bool menuSettingsKeys(uint8_t pressed) {
 
 FLASHMEM void menuSettingsAct() {
   setPressAt = millis();                           // (its frame light grey a moment: drawSettings())
-  setSetting(setSel, !setting(setSel));
+  if (setSel == SET_REMOVE) {
+    if (transport.running) transportStop();      // (the card to itself)
+    removedCount = deleteUnusedSamples();
+  } else {
+    setSetting(setSel, !setting(setSel));
+  }
   drawSettings(false);
 }
 
