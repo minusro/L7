@@ -53,8 +53,8 @@ clock stopped, the 5th tap starts it from 1.1.1 (that tap not in the estimate: a
 Other cells with B + arrows: filter (LEFT/RIGHT move, UP/DOWN width; width
 scales from the edge at the edge), volume (UP/DOWN: 0–10, each step a half line, on the clip's own scale: the
 top step plays it peaking at 0 dBFS, its unity step — where it starts — plays it as
-recorded, as many 3.75 dB steps below the top as its peak is below 0 dBFS, rounded
-up, the step just below the top taking what's left; 3.75 dB steps below unity; 0
+recorded, as many 1.875 dB steps below the top as its peak is below 0 dBFS, rounded
+up, the step just below the top taking what's left; 1.875 dB steps below unity (20 in all, unity 16; shown two to a half line, an odd step's last half dotted, every other pixel row lit, the meter lighting it the same way: none lit only when off; saved volumes from before, with half as many steps, are not converted); 0
 off; a clip peaking under ~-48 dBFS counts as peaking at 0 dBFS. The track keeps
 its volume as steps from unity, so another clip plays at its own level as
 recorded. Its meter: the top half at 0 dBFS. `volumeStepOf()` in engine.cpp; the

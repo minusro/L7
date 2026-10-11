@@ -105,9 +105,9 @@ constexpr float FILTER_MIN_HZ = 20.0f, FILTER_OCTAVES = 10.0f;
 // BALANCE_MAX, centre 0 (the signal as it is): turning it towards one side
 // moves that share of the other channel over to this one (linearly), so at the
 // end this side carries the mono sum (L + R) and the other is silent.
-constexpr int VOLUME_MAX = 10, VOLUME_UNITY = 8;
+constexpr int VOLUME_MAX = 20, VOLUME_UNITY = 16;    // (doubled: saved volumes from before, half as many steps, not converted)
 constexpr int8_t VOLUME_OFF = -128;                // (a track's stored volume: off)
-constexpr float VOLUME_STEP_DB = 3.75f;
+constexpr float VOLUME_STEP_DB = 1.875f;
 constexpr uint16_t QUIET_PEAK = 130;               // ~-48 dBFS
 // A recording whose samples all lie within EMPTY_SPAN of each other (silence,
 // a constant level, a little noise) is empty: stepping through the samples

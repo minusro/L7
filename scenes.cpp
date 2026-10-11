@@ -339,9 +339,9 @@ int sceneFromResample(int t) {
   if (list.count >= MAX_SCENES) return -1;
   to.units[d] = from.units[t];
   // Its volume: as loud as what it resampled. The mix it recorded already had
-  // the tracks' headroom (masterGain, ~-3.1 dB) in it, and playing it back adds
-  // that again: a step up (+3.75 dB) is the nearest.
-  to.units[d].volume = VOLUME_UNITY + 1;
+  // the tracks' headroom (masterGain, -3.75 dB) in it, and playing it back
+  // adds that again: two steps up (+3.75 dB), exactly.
+  to.units[d].volume = VOLUME_UNITY + 2;
   from.units[t] = emptyScene().units[t];
   int next = d - 1;                                // (the next track up: its number one more)
   for (int u = NUM_TRACKS - 1; u >= 0; u--)        // (from track 1 up)

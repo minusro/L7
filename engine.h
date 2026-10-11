@@ -331,7 +331,8 @@ public:
   // Outputs 0-1: the line out and headphones (after the master volume, the
   // metronome in; to USB: usbAudioWrite).
   LooperEngine() : AudioStream(2, inputQueue_) {}
-  float masterGain = 0.7f;                         // the tracks' mix, before the master volume (headroom)
+  float masterGain = 0.6493816f;                   // the tracks' mix, before the master volume (headroom): -3.75 dB, two volume steps
+                                                   // (a resampling's clip, two steps up, as loud as what it recorded)
   void update() override;
 
 private:

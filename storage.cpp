@@ -474,13 +474,13 @@ FLASHMEM static void trimSample(uint32_t id) {
 
 // ---- Tracks and their unit files
 static constexpr uint32_t UNIT_VERSION = 6;   // 6: volume as steps from unity, off VOLUME_OFF (5: off 0; 4: 20 of 1.875 dB; 3: 5 of 7.5 dB, +-5; 2: 6 a side, 6 dB)
+                                                 // (5 and 6 saved with 10 steps of 3.75 dB, now 20 of 1.875: taken as they are, not converted)
 
 void upgradeUnit(TrackUnit &u) {
   if (u.version >= UNIT_VERSION) return;
-  if (u.version == 4) {                            // (version 4: unity 16 of 20, balance as today: half, rounded up, a quiet one still heard)
-    u.volume = (int8_t)((u.volume + 1) / 2);
-  } else if (u.version == 3) {                     // (version 3: unity 4 of 5, 7.5 dB; balance +-5: exactly 2x both)
-    u.volume = (int8_t)(u.volume * 2);
+  if (u.version == 4) {                            // (version 4: unity 16 of 20, 1.875 dB, balance as today: as it is)
+  } else if (u.version == 3) {                     // (version 3: unity 4 of 5, 7.5 dB; balance +-5: 4x, 2x)
+    u.volume = (int8_t)(u.volume * 4);
     u.balance = (int8_t)(u.balance * 2);
   } else if (u.version < 3) {
     // The old steps: version 1 volume 0-32 (unity 28, 1.5 dB), balance +-16;

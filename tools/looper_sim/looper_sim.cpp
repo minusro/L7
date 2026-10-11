@@ -462,8 +462,8 @@ int main(int argc, char **argv) {
              tr.sample, tr.recordedFrames, tr.loopBars, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted);
     check(tr.sample == 1 && tr.recordedFrames == legacyFrames && tr.loopBars == 1 && tr.rangeBeats == 2 &&
           tr.state == TrackState::Muted && tr.overview[10] == 100, m);
-    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 7 && tr.balance == -3,
-          "its filter kept, volume and balance in today's steps (25 -> 7, -4 -> -3)");
+    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 14 && tr.balance == -3,
+          "its filter kept, volume and balance in today's steps (25 -> 14, -4 -> -3)");
     check(wavLeft(4, 0) == -500 && wavLeft(4, 1234) == 1234 % 1000 - 500 && wavLeft(4, legacyFrames - 1) == (int16_t)((legacyFrames - 1) % 1000 - 500),
           "its audio is intact in SAMPLES/0001.wav");
     struct stat st;
@@ -1431,10 +1431,10 @@ int main(int argc, char **argv) {
       char mp[200];
       snprintf(mp, sizeof mp, "a sine at 8000: its peak kept (%u; in its header: %.2f dB down, here %.2f), unity step %d, the top step's gain x%.3f (0 dBFS: x%.3f)",
                pk, read ? sd.headroomDb : -1.0f, d, unityStepOf(d), volumeGainOf(volumeStoredOf(VOLUME_MAX, d), d), 32768.0f / pk);
-      check(abs((int)pk - 8000) <= 2 && read && fabsf(sd.headroomDb - d) < 0.01f && unityStepOf(d) == 6 &&
-            volumeStepOf(VOLUME_UNITY, d) == 6 && fabsf(volumeGainOf(VOLUME_UNITY, d) - 1) < 1e-4f &&
+      check(abs((int)pk - 8000) <= 2 && read && fabsf(sd.headroomDb - d) < 0.01f && unityStepOf(d) == 13 &&
+            volumeStepOf(VOLUME_UNITY, d) == 13 && fabsf(volumeGainOf(VOLUME_UNITY, d) - 1) < 1e-4f &&
             fabsf(volumeGainOf(volumeStoredOf(VOLUME_MAX, d), d) * pk / 32768.0f - 1) < 1e-3f &&
-            fabsf(volumeGainOf(volumeStoredOf(7, d), d) - powf(10, 3.75f / 20)) < 1e-3f, mp);
+            fabsf(volumeGainOf(volumeStoredOf(15, d), d) - powf(10, 3.75f / 20)) < 1e-3f, mp);
       uint8_t quiet[OVERVIEW_BYTES] = {};
       quiet[OVERVIEW_COLS] = 60;                   // (~-55 dBFS: quiet)
       check(headroomDbOf(quiet) == 0 && unityStepOf(0) == VOLUME_MAX && volumeGainOf(VOLUME_UNITY, 0) == 1 &&
@@ -1559,7 +1559,7 @@ int main(int argc, char **argv) {
     runBeats(2);
     checkSync(5, "the muted clip unmuted: heard (not left silenced)");
     setTrackMuted(5, true);
-    check(tracks[6].volume == VOLUME_UNITY + 1, "the resampled clip a volume step up (as loud as what it resampled: the mix's headroom)");
+    check(tracks[6].volume == VOLUME_UNITY + 2, "the resampled clip two volume steps up (as loud as what it resampled: the mix's headroom, -3.75 dB)");
     setTrackMix(6, VOLUME_UNITY, tracks[6].balance);   // (the sync check compares at unity gain)
     runBeats(1);
     checkSync(6, "the resampling, playing on");
@@ -1892,7 +1892,7 @@ int main(int argc, char **argv) {
                        "c=t.findall('DeviceChain/MainSequencer/ClipSlotList/ClipSlot')[i].find('ClipSlot/Value/AudioClip')\n"
                        "v=[float(e.find('Automation/Events/FloatEvent').get('Value')) for e in c.findall('Envelopes/Envelopes/ClipEnvelope')]\n"
                        "note=lambda hz: 69+12*math.log2(hz/440)\n"
-                       "want=[float(c.find('SampleVolume').get('Value'))-10**((6-vu)*3.75/20), v[0]-4/bm, v[1]-note(hz1), v[2]-note(hz2)]\n"
+                       "want=[float(c.find('SampleVolume').get('Value'))-10**((6-vu)*1.875/20), v[0]-4/bm, v[1]-note(hz1), v[2]-note(hz2)]\n"
                        "print(*['%.4f'%w for w in want]); sys.exit(0 if all(abs(w)<0.01 for w in want) else 1)\" '" + dir + "' " + args;
       FILE *vout = popen(vp.c_str(), "r");
       char res[120] = {};
@@ -2722,7 +2722,7 @@ for f in os.listdir("."):
     stemPeaks(before);
     setTrackMix(1, VOLUME_UNITY, BALANCE_MAX);       // track 2: hard right (its left moved into its right; the test
                                                      // input's right is its left inverted, so they cancel there too)
-    setTrackMix(4, VOLUME_UNITY - 2, 0);             // track 5: 7.5 dB down
+    setTrackMix(4, VOLUME_UNITY - 4, 0);             // track 5: 7.5 dB down
     for (int b = 0; b < 20; b++) block();            // (the levels glide there)
     stemPeaks(after);
     int worst = 0, others = 0;
