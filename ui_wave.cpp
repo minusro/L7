@@ -56,6 +56,7 @@ struct WaveView {
   uint64_t borders = 0;                            // the border's sides (bordersOf())
   int rangeFirstPx = 0, rangePx = 0;               // pixel columns inside the loop range: rangeFirstPx on, wrapping
   int markPx = -1;                                 // the start position's line: its first pixel column; -1: none
+  bool markSolid = false;                         // (the step offset just tapped: the start point solid white)
   int gridPx = 0;                                  // the step offset: the range, start, playhead and bar lines this many pixel columns left
   int playPx = -1;                                 // playhead / record head: its first pixel column; -1: none
   uint16_t headColor = 0;                          // a line this colour; INVERT_HEAD: the column inverted
@@ -77,6 +78,7 @@ struct WaveView {
   int labelX = 0, labelW = 0;                      // its box: first block column, width in blocks
 };
 static WaveView views[NUM_TRACKS];
+static constexpr uint32_t STEP_FLASH_MS = 150;            // (a step offset tap: the start point solid white this long)
 static constexpr uint32_t LABEL_FLASH_MS = 100;           // (a sample step: its label's name and number dark grey this long)
 static constexpr int LABEL_TOP = BAND_ROWS - 7;             // the sample label's box: rows 9-15 (over the bottom border, its own bottom row)
 // The record head's look (not a colour the playheads use): its column inverted.
@@ -151,8 +153,8 @@ static void drawColumn(int i, int bc) {
           break;
         }
       if (!v.live && covers(v.markPx, p))                         // the start position: a checkerboard line, 1-pixel squares,
-        for (int y = START_TOP * PX; y < (START_BOTTOM + 1) * PX; y++)   // the waveform's height, white and black (B held too)
-          px[y * PX + sub] = (p + y) % 2 == 0 ? INK : BG;
+        for (int y = START_TOP * PX; y < (START_BOTTOM + 1) * PX; y++)   // the waveform's height, white and black (B held too; a step tap: solid white a moment)
+          px[y * PX + sub] = v.markSolid || (p + y) % 2 == 0 ? INK : BG;
       if (covers(v.playPx, p)) {                                  // on top: the playhead
         int reach = v.live ? 0 : 1;                               // (a block past the waveform each way; recording: within its backdrop)
         for (int y = (MID_ROW - WAVE_REACH - reach) * PX; y < (MID_ROW + 2 + WAVE_REACH + reach) * PX; y++) {
@@ -228,7 +230,8 @@ FLASHMEM void drawWave(int i, bool recordingHere) {   // (flash: RAM1 is full; i
   // Heights as the track's volume plays it (the overview: as recorded).
   uint16_t scale = tr.state == TrackState::Empty ? 256 : (uint16_t)min(1024.0f, volumeGainOf(tr.volume, headroomDbOf(tr.overview)) * 256 + 0.5f);
   const int gridPx = tr.loopBars ? (int)(((uint32_t)tr.steps * PX_COLS + tr.loopBars * BEATS_PER_BAR * 2) / (tr.loopBars * BEATS_PER_BAR * 4)) % PX_COLS : 0;
-  if (labelSame && scale == v.scale && gridPx == v.gridPx && v.drawn == uiGeneration && v.version == tr.overviewVersion && v.turn == tr.turn && v.state == (uint8_t)tr.state &&
+  const bool markSolid = i == stepFlashTrack && stepFlashAt && millis() - stepFlashAt < STEP_FLASH_MS;
+  if (labelSame && scale == v.scale && gridPx == v.gridPx && markSolid == v.markSolid && v.drawn == uiGeneration && v.version == tr.overviewVersion && v.turn == tr.turn && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.ground == ground && v.borders == borders &&
       v.rangeInk == rangeInk && v.outInk == outInk)
     return;
@@ -237,6 +240,7 @@ FLASHMEM void drawWave(int i, bool recordingHere) {   // (flash: RAM1 is full; i
   v.version = tr.overviewVersion;
   v.turn = tr.turn;
   v.gridPx = gridPx;
+  v.markSolid = markSolid;
   v.state = (uint8_t)tr.state;
   v.rec = recordingHere;
   v.rs = rs;

@@ -28,6 +28,8 @@ bool optBeforeShift() { return true; }             // (input.cpp isn't built her
 bool clipRotating() { return false; }
 bool clipRotateFlash() { return false; }
 uint32_t sampleSteppedAt = 0;
+uint32_t stepFlashAt = 0;
+int stepFlashTrack = -1;
 bool sceneDupMade() { return false; }
 bool optThenEdit() { return false; }
 int32_t clipRotatePending(int) { return 0; }

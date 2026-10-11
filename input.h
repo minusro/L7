@@ -10,7 +10,9 @@ bool optThenEdit();                      // B then A held on a track: its frame 
 bool clipRotating();                     // B then A held on a track with a clip (any cell): its fine rotate (the arrows turn it)
 bool clipRotateFlash();
 bool sceneDupMade();                     // SHIFT+A just duplicated the scene, SHIFT still held (A again: clear it)
-extern uint32_t sampleSteppedAt;         // millis() of the last sample step (SHIFT+LEFT/RIGHT; 0: none)                  // its ms flashed white a moment (the held steps starting, a tap taken)
+extern uint32_t sampleSteppedAt;
+extern uint32_t stepFlashAt;             // the step offset's last tap (millis(); 0: none): the start point solid white a moment
+extern int stepFlashTrack;               // its track         // millis() of the last sample step (SHIFT+LEFT/RIGHT; 0: none)                  // its ms flashed white a moment (the held steps starting, a tap taken)
 int32_t clipRotatePending(int t);        // its turn while held (frames; not heard yet), track t's (0: none)
 int32_t clipRotatePendingSteps(int t);   // of it, whole quarter beats (the step offset; taps)
 bool tempoNudging();                     // SHIFT+LEFT/RIGHT held on the status row, no external clock: the clock nudged faster / slower
