@@ -142,6 +142,8 @@ int deleteUnmarkedSamples(const uint32_t *only = nullptr, int onlyCount = 0);   
 // config.h) are stepped over, and noted: takeEmptySamples() hands them on
 // (to be deleted if nothing uses them, scenes.h deleteEmptySamples()).
 bool stepSample(int t, int dir);
+char sampleLetter(uint32_t id);          // its name's first character (a project's letter; an older one's: a digit)
+bool sampleFirstOfLetter(uint32_t id);   // the first, in L7's order, of the samples whose names start so
 // Track t's sample as SHIFT+LEFT/RIGHT shows it: its name and its place
 // among all of them ("92.6 A013 13/24": its tempo, its name, its place; none: "", no label).
 void sampleLabel(int t, char *buf, size_t size);

@@ -1073,8 +1073,16 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     // meanwhile, ui.h frameCell()): its sample, the previous / next on the card.
     if (!onStatus && !recordingOn(selected)) {
       // (another sample: the waveform cell selected, to see it)
-      if ((pressed & m8::BTN_LEFT) && stepSample(selected, -1)) sampleSteppedAt = max(1u, millis());
-      if ((pressed & m8::BTN_RIGHT) && stepSample(selected, 1)) sampleSteppedAt = max(1u, millis());
+      // Held: the repeats stop on the first sample whose name starts with the
+      // letter of the one the press itself went to (round once to its project's first).
+      static char stepLetter = 0;
+      const int dir = (pressed & m8::BTN_LEFT) ? -1 : (pressed & m8::BTN_RIGHT) ? 1 : 0;
+      if (dir && stepSample(selected, dir)) {
+        sampleSteppedAt = max(1u, millis());
+        uint32_t now = unitOf(selected).sample;
+        if (!repeat) stepLetter = sampleLetter(now);
+        else if (sampleLetter(now) == stepLetter && sampleFirstOfLetter(now)) stopRepeat = true;
+      }
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) deleteEmptySamples();   // (empty ones stepped over: gone if unused, stopped)
     }
   } else {

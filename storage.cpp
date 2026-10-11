@@ -1459,6 +1459,16 @@ FLASHMEM void sampleLabel(int t, char *buf, size_t size) {
   snprintf(buf, size, "%.1f %s %d/%d", b, name, sampleIndex(id) + 1, sampleTotal);
 }
 
+FLASHMEM char sampleLetter(uint32_t id) {
+  char name[16];
+  sampleName(id, name, sizeof name);
+  return name[0];
+}
+FLASHMEM bool sampleFirstOfLetter(uint32_t id) {
+  int i = sampleIndex(id);
+  return i <= 0 || i >= sampleTotal || sampleLetter(sampleIds[i - 1]) != sampleLetter(id);
+}
+
 bool stepSample(int t, int dir) {
   if (sampleTotal < 2 || recordingTrack(t)) return false;
   TrackUnit u = unitOf(t);                       // (a planned change counts)
