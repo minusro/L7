@@ -373,7 +373,7 @@ static uint32_t itemKey(int k) {
 // The settings, then a command at the top: DELETE UNUSED SAMPLES (A or B:
 // the recordings on the card no project, scene, clip or clipboard uses,
 // deleted; the clock stopped first; meanwhile a light grey bar the line's
-// height grows over it, its label inverted; then "DELETED N SAMPLES", dimmed).
+// height grows over it, its label inverted; then, the bar full, "DELETED N SAMPLES" inverted on it).
 static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
                                                           "EMPTY PROJECT CLICK", "DELETE UNUSED SAMPLES"};
 static constexpr int SET_ITEMS = SETTING_COUNT + 1, SET_PITCH = 10, SET_REMOVE = SETTING_COUNT;
@@ -463,10 +463,11 @@ FLASHMEM static void drawSettings(bool whole) {
         t.setClipRect();
         continue;
       }
-      if (i == SET_REMOVE && removedCount >= 0) {  // done: what it did, dimmed, until the popup closes
+      if (i == SET_REMOVE && removedCount >= 0) {  // done: the bar full, what it did inverted on it, until the popup closes
         char done[32];
         snprintf(done, sizeof done, "DELETED %d SAMPLE%s", removedCount, removedCount == 1 ? "" : "S");
-        drawText(s.x * PX, s.y * PX, done, DARK, DIM);
+        t.fillRect((s.x - 1) * PX, (s.y - 1) * PX, (s.w + 2) * PX, FONT_H + 2 * PX, LIGHT);
+        drawText(s.x * PX, s.y * PX, done, DIM, LIGHT);
         continue;
       }
       drawText(s.x * PX, s.y * PX, SET_LABELS[i], sel ? INK : LIGHT, DIM);
