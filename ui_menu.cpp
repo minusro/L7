@@ -305,7 +305,7 @@ static void drawItem(int k) {
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
       if (playing) {                              // the clock running: a small play icon right of the letter, black, grey a moment on each beat
         static const char *const PLAY[5] = {"#..", "##.", "###", "##.", "#.."};
-        const uint16_t ink = loaded ? (playPulse() ? DIM : BG) : (playPulse() ? LIGHT : ACCENT);   // (the loaded card's: black, grey a moment on each beat; another, not filled: the accent colour, light grey on each beat)
+        const uint16_t ink = loaded ? (playPulse() ? DIM : BG) : (playPulse() ? LIGHT : color);   // (the loaded card's: black, grey a moment on each beat; another, not filled: its own project's colour, light grey on each beat)
         for (int r = 0; r < 5; r++)
           for (int c = 0; c < 3; c++)
             if (PLAY[r][c] == '#') t.fillRect((x0 + w + 2 + c) * PX, (y0 + r) * PX, PX, PX, ink);   // (two blocks after the letter)
