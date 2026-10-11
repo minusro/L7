@@ -372,8 +372,8 @@ static uint32_t itemKey(int k) {
 // blocks of space round them; OFF dark grey.
 // The settings, then a command at the top: DELETE UNUSED SAMPLES (A or B:
 // the recordings on the card no project, scene, clip or clipboard uses,
-// deleted; the clock stopped first; meanwhile a bar under it, light grey as
-// far as it's got; then the number deleted, in its value's place).
+// deleted; the clock stopped first; meanwhile a light grey bar the line's
+// height grows over it, its label inverted; then "DELETED N SAMPLES", dimmed).
 static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
                                                           "EMPTY PROJECT CLICK", "DELETE UNUSED SAMPLES"};
 static constexpr int SET_ITEMS = SETTING_COUNT + 1, SET_PITCH = 10, SET_REMOVE = SETTING_COUNT;
@@ -452,12 +452,25 @@ FLASHMEM static void drawSettings(bool whole) {
       fillRing(s, 3, 2, sel ? frame : DIM, true);
       fillRing(s, 2, 0, DIM);
       t.fillRect(s.x * PX, s.y * PX, s.w * PX, FONT_H, DIM);   // (the line cleared: OFF to ON leaves nothing behind)
+      if (i == SET_REMOVE && removingPct >= 0) {   // running: a bar the line's height (a block over and under), its label inverted over it
+        const int bx = (s.x - 1) * PX, by = (s.y - 1) * PX, bw = (s.w + 2) * PX * removingPct / 100, bh = FONT_H + 2 * PX;
+        t.fillRect(bx, by, (s.w + 2) * PX, bh, DIM);
+        t.fillRect(bx, by, bw, bh, LIGHT);
+        t.setClipRect(bx + bw, by, (s.w + 2) * PX - bw, bh);
+        drawText(s.x * PX, s.y * PX, SET_LABELS[i], sel ? INK : LIGHT, DIM);
+        t.setClipRect(bx, by, bw, bh);
+        drawText(s.x * PX, s.y * PX, SET_LABELS[i], DIM, LIGHT);
+        t.setClipRect();
+        continue;
+      }
+      if (i == SET_REMOVE && removedCount >= 0) {  // done: what it did, dimmed, until the popup closes
+        char done[32];
+        snprintf(done, sizeof done, "DELETED %d SAMPLE%s", removedCount, removedCount == 1 ? "" : "S");
+        drawText(s.x * PX, s.y * PX, done, DARK, DIM);
+        continue;
+      }
       drawText(s.x * PX, s.y * PX, SET_LABELS[i], sel ? INK : LIGHT, DIM);
-      char num[8];
-      if (i == SET_REMOVE) snprintf(num, sizeof num, "%d", max(removedCount, 0));
-      const char *v = i == SET_REMOVE ? (removingPct < 0 && removedCount >= 0 ? num : "") : on ? "ON" : "OFF";
-      if (i == SET_REMOVE && removingPct >= 0)     // (running: a bar under it, light grey as far as it's got)
-        t.fillRect(s.x * PX, s.y * PX + FONT_H + PX, s.w * PX * removingPct / 100, PX, LIGHT);
+      const char *v = i == SET_REMOVE ? "" : on ? "ON" : "OFF";
       drawText((x + w) * PX - textWidth(v), s.y * PX, v, i == SET_REMOVE || on ? (sel ? INK : LIGHT) : DARK, DIM);
     }
 }
