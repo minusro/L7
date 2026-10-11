@@ -833,21 +833,25 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
   }
 
-  // SHIFT+UP/DOWN: newer / older scene; tapped twice, the second tap held
-  // (see above): straight to that end (UP: N+1*, DOWN: the empty scene 0*).
+  // SHIFT+UP/DOWN: newer / older scene, a step a tap; tapped three times
+  // quickly (each within DOUBLE_TAP_MS of the last; no hold), the third goes
+  // straight to that end (UP: N+1*, DOWN: the empty scene 0*).
   auto sceneKeys = [&] {
     static uint32_t lastTap[2] = {0, 0};
+    static int taps[2] = {0, 0};
     const uint8_t keys2[2] = {m8::BTN_UP, m8::BTN_DOWN};
     for (int k = 0; k < 2; k++) {
       if (!(pressed & keys2[k] & ~edgeDone)) continue;
-      bool twice = false;                          // (double taps: none on the arrows any more)
-      if (twice) {
-        edgeKey = keys2[k];
-        edgeAt = millis() + EDGE_HOLD_MS;
+      if (repeat) { taps[k] = 0; sceneChanged |= sceneStep(k == 0 ? 1 : -1); continue; }
+      taps[k] = millis() - lastTap[k] < DOUBLE_TAP_MS ? taps[k] + 1 : 1;
+      lastTap[k] = millis();
+      if (taps[k] >= 3) {
+        sceneChanged |= k == 0 ? sceneGoEnd() : sceneGoEmpty();
+        taps[k] = 0;
+        lastTap[k] = 0;
       } else {
         sceneChanged |= sceneStep(k == 0 ? 1 : -1);
       }
-      lastTap[k] = repeat || twice ? 0 : millis();
     }
   };
 
