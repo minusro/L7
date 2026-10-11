@@ -39,6 +39,10 @@ checked, or turn it into a fix.
   converted), so a track that was set off unity now sits half as far from it
   (e.g. old "2 steps down", -7.5 dB, now plays -3.75 dB). Check older
   projects still sound right, or re-set their volumes.
+- [ ] **Balance, ±20 steps**: saved balances not converted, so they now sit
+  half as far off centre. Check older projects.
+- [ ] **Volume cell while B is held**: meter in the accent colour, the level
+  light grey; stopped or muted, the level all accent.
 - [ ] **Volume display**: an odd step's last half-line dotted, the meter
   lighting it dotted too; nothing lit only when the track is off.
 - [ ] **Resampled clip's loudness**: two steps up with the -3.75 dB headroom
