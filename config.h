@@ -113,7 +113,7 @@ constexpr uint16_t QUIET_PEAK = 130;               // ~-48 dBFS
 // a constant level, a little noise) is empty: stepping through the samples
 // (SHIFT+LEFT/RIGHT) skips it, and, stopped, deletes it if nothing uses it.
 constexpr int EMPTY_SPAN = 256;
-constexpr int BALANCE_MAX = 10;
+constexpr int BALANCE_MAX = 20;                    // (doubled: saved balances from before, half as many steps, not converted)
 // Master volume and balance: the final output (tracks and monitored input),
 // the clock cell's control a line per step (ui_status.cpp): volume
 // 0..MASTER_VOLUME_MAX in MASTER_STEP_DB steps, MASTER_VOLUME_UNITY 100% (the

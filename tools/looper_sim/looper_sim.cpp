@@ -462,8 +462,8 @@ int main(int argc, char **argv) {
              tr.sample, tr.recordedFrames, tr.loopBars, tr.rangeStartBeat, tr.rangeBeats, tr.state == TrackState::Muted);
     check(tr.sample == 1 && tr.recordedFrames == legacyFrames && tr.loopBars == 1 && tr.rangeBeats == 2 &&
           tr.state == TrackState::Muted && tr.overview[10] == 100, m);
-    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 14 && tr.balance == -3,
-          "its filter kept, volume and balance in today's steps (25 -> 14, -4 -> -3)");
+    check(tr.filterLo == 3 && tr.filterHi == 20 && tr.volume == 14 && tr.balance == -5,
+          "its filter kept, volume and balance in today's steps (25 -> 14, -4 -> -5)");
     check(wavLeft(4, 0) == -500 && wavLeft(4, 1234) == 1234 % 1000 - 500 && wavLeft(4, legacyFrames - 1) == (int16_t)((legacyFrames - 1) % 1000 - 500),
           "its audio is intact in SAMPLES/0001.wav");
     struct stat st;
@@ -3271,10 +3271,10 @@ for f in os.listdir("."):
     };
     auto v4 = up(4, 16, -6), v4quiet = up(4, 1, 10), v3 = up(3, 4, 2), v3max = up(3, 5, -5);
     char m16[220];
-    snprintf(m16, sizeof m16, "20 steps (unity 16): 16, -6 -> %d, %d; the quietest, 1 -> %d (still heard); 5 steps: 4, 2 -> %d, %d; 5, -5 -> %d, %d",
+    snprintf(m16, sizeof m16, "20 steps (unity 16): 16, -6 -> %d, %d; the quietest, 1 -> %d (still heard); 5 steps: 4, 2 -> %d, %d; 5, -5 -> %d, %d (balance +-20 today)",
              v4.first, v4.second, v4quiet.first, v3.first, v3.second, v3max.first, v3max.second);
-    check(v4 == std::make_pair(VOLUME_UNITY, -6) && v4quiet.first == 1 && v4quiet.second == 10 &&
-          v3 == std::make_pair(VOLUME_UNITY, 4) && v3max == std::make_pair(VOLUME_MAX, -BALANCE_MAX), m16);
+    check(v4 == std::make_pair(VOLUME_UNITY, -12) && v4quiet.first == 1 && v4quiet.second == 20 &&
+          v3 == std::make_pair(VOLUME_UNITY, 8) && v3max == std::make_pair(VOLUME_MAX, -BALANCE_MAX), m16);
   }
 
   printf("fine rotate: the clip turned, its audio as it was, played in step\n");

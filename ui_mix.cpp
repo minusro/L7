@@ -19,7 +19,7 @@ static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = CELL_H / PX;
 // height (rows 2-13).
 static constexpr int MIX_ARCS = (CELL_COLS - 4) / 4;                     // 5
 static constexpr int HALVES = 2 * MIX_ARCS;                              // 10 a channel
-static_assert(2 * HALVES == VOLUME_MAX && BALANCE_MAX == HALVES, "a half per two volume steps, and per balance step");
+static_assert(2 * HALVES == VOLUME_MAX && BALANCE_MAX == 2 * HALVES, "a half per two volume steps, and per two balance steps");
 static constexpr float METER_FALL_DB_PER_S = 24;
 
 static int8_t arcAt[BAND_ROWS][CELL_COLS];          // [row][col]: side * MIX_ARCS + arc, -1: none
@@ -75,19 +75,21 @@ void drawMix(int i) {
 
   uint64_t frame = bordersOf(i, MIX_CELL);
   uint16_t looks[2 * HALVES], dots[2 * HALVES];    // each half's colour: its even pixel rows, its odd (a dotted half: they differ)
-  // Lit, in volume steps (a balance step: a half, two steps): none only when off.
-  int levels[2] = {max(0, tr.volume - 2 * max(0, (int)tr.balance)), max(0, tr.volume - 2 * max(0, -(int)tr.balance))};
+  // Lit, in volume steps (a balance step takes one off the other side): none only when off.
+  int levels[2] = {max(0, tr.volume - max(0, (int)tr.balance)), max(0, tr.volume - max(0, -(int)tr.balance))};
   bool muted = tr.state == TrackState::Muted, here = shownSelected(i);   // (the selected track: all its cells look selected)
   bool editing = editingCell(i, MIX_CELL);         // (B held, with other keys or not: as the filter cell)
   uint16_t ground = rowGround(i);
-  uint16_t levelInk = onGround(editing ? ACCENT : muted ? DARK : here ? LIGHT : DIM, ground);
+  const bool noMeter = muted || !transport.running;   // (stopped or muted: no meter)
+  uint16_t levelInk = onGround(editing ? (noMeter ? ACCENT : LIGHT) : muted ? DARK : here ? LIGHT : DIM, ground);   // (editing: light grey under the accent meter; no meter: all the accent colour)
+  const uint16_t meterInk = editing ? ACCENT : INK;
   uint16_t outerInk = editing ? DIM : muted ? ground : here ? DIM : DARK;   // (muted: none)
   for (int ch = 0; ch < 2; ch++) {
     int level = levels[ch], meter = stepsForDb(meterDb[i][ch]);   // (muted: none)
     for (int h = 0; h < HALVES; h++) {
       const int full = 2 * h + 2, half = 2 * h + 1; // (lit whole from this many steps; dotted at exactly this)
-      looks[ch * HALVES + h] = !shownClip(i) ? ground : meter >= full ? INK : level >= full ? levelInk : outerInk;
-      dots[ch * HALVES + h] = !shownClip(i) ? ground : meter >= half ? INK : level >= half ? levelInk : outerInk;
+      looks[ch * HALVES + h] = !shownClip(i) ? ground : meter >= full ? meterInk : level >= full ? levelInk : outerInk;
+      dots[ch * HALVES + h] = !shownClip(i) ? ground : meter >= half ? meterInk : level >= half ? levelInk : outerInk;
     }
   }
 
