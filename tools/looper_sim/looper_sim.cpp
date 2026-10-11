@@ -1559,6 +1559,9 @@ int main(int argc, char **argv) {
     runBeats(2);
     checkSync(5, "the muted clip unmuted: heard (not left silenced)");
     setTrackMuted(5, true);
+    check(tracks[6].volume == VOLUME_UNITY + 1, "the resampled clip a volume step up (as loud as what it resampled: the mix's headroom)");
+    setTrackMix(6, VOLUME_UNITY, tracks[6].balance);   // (the sync check compares at unity gain)
+    runBeats(1);
     checkSync(6, "the resampling, playing on");
     check(sceneStep(-1), "back to the scene before");
     waitScene();

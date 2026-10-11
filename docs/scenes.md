@@ -113,7 +113,7 @@ version's `/L7/scenes.dat` are moved to these names at boot.
 * No scene changes while recording.
 * **After a resampling** (`sceneFromResample(t)`, from `followRecording()`):
   a new scene is inserted after the current one, holding
-  the resampled clip, on track 1 (the bottom row; another recording running there: on its own track), and the current scene's muted clips,
+  the resampled clip, on track 1 (the bottom row; another recording running there: on its own track; its volume a step over unity: the mix it recorded already had the tracks' headroom, `masterGain` ~-3.1 dB, in it, so it plays as loud as what it resampled), and the current scene's muted clips,
   still muted (copied: they stay in the current scene too), in their order on the tracks right after it (2, 3 ...: no empty tracks between; a track another recording runs on stepped over); the resampled
   clip leaves the current scene. The new scene is selected and goes on on the next beat (the other
   tracks were already silenced where the loop ended), with that track
