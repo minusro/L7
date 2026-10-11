@@ -198,6 +198,7 @@ extern Transport transport;
 extern Recording recording;
 extern volatile bool inputMonitored;      // the input heard in the mix (app.h's setting; recorded either way)
 extern uint32_t inputRing[INPUT_FRAMES];  // stereo input, index = sample % INPUT_FRAMES
+extern uint32_t mixRing[MIX_FRAMES];      // the output as resampling records it (always), index = sample % MIX_FRAMES
 // Tracks (bit per track) silenced from transport sample silenceFrom on: the
 // others while a resampling's loop takes over from them. A track's bit
 // clears when its stream switches clips (see takeSwitch); all clear on stop.

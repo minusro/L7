@@ -1509,7 +1509,7 @@ int main(int argc, char **argv) {
     setTrackMuted(1, true);
     uint32_t mutedSample = tracks[1].sample;
     feedRamp = false;
-    runBeats(4);
+    runBeats(4.5);                                   // (half a beat past the bar line: past the 200 ms grace, so it waits)
     setMasterVolume(MASTER_VOLUME_UNITY - 3);        // (the master volume is not in what's recorded)
     const float masterNow = powf(10.0f, -3 * MASTER_STEP_DB / 20);
     // The output, by transport sample, while it records.

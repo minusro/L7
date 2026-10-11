@@ -30,6 +30,12 @@ checked, or turn it into a fix.
   on 1.1.1's start position, not a bar late.
 - [ ] **Recording stop grace (200 ms)** and the 16-bar limit below 60 BPM.
 
+- [ ] **Resample pressed late** (within 0.2 s after a bar line): starts on
+  that bar line, the mix copied in from the mix history; no click at its start
+  (the 128-frame pre-roll from the mix too). No simulator test yet.
+- [ ] **Recording on a slow card**: the input history is now ~560 ms (was
+  ~740 ms), so a long card stall loses input sooner ("recording fell behind").
+
 ## Open problems
 
 - [ ] **Recording files on a card with scattered free space**: making one
@@ -41,9 +47,6 @@ checked, or turn it into a fix.
   short (`underrunStage`); capture a log while loading projects.
 - [ ] **A dropout while a recording is saved** (seen once: track 6, the loop
   drawing the screen).
-- [ ] **Resampling sometimes starts a bar late**: it can't look back to the
-  bar line just passed (no history of the mix). Decide: keep, show it, or
-  add a mix history (RAM).
 - [ ] **Swipe**: a held arrow stops one track short of the start; undoing after
   a full lap skips a track.
 - [ ] **Simulator: "12 switches at 120 BPM"** fails with dropouts since the

@@ -66,8 +66,10 @@ ms to seconds and starves the streams. So:
 ## Recording
 
 * `recordPress(t)` on an empty track: starts on the bar line just passed if
-  pressed within `PREROLL_FRAMES` (~250 ms) of it (read back from the input
-  history), otherwise waits for the next bar line (`WaitBar`). Stopped: the
+  pressed within `START_GRACE_FRAMES` (~200 ms) of it (read back from the input
+  history, `INPUT_FRAMES` ~560 ms; a resampling: from the mix history,
+  `MIX_FRAMES` ~209 ms, kept always and copied into the input history then),
+  otherwise waits for the next bar line (`WaitBar`). Stopped: the
   transport starts and recording begins on bar 1.
 * Recordings are shifted by `LATENCY_FRAMES` (153, measured round trip).
 * **The tempo may change while recording** (by hand, tap tempo): the

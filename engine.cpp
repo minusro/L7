@@ -6,6 +6,7 @@ namespace looper {
 // 7 x 64 KB, all in RAM2 next to the other DMAMEM buffers.
 DMAMEM static uint32_t rings[NUM_TRACKS][RING_FRAMES];
 uint32_t inputRing[INPUT_FRAMES];
+uint32_t mixRing[MIX_FRAMES];
 
 Track tracks[NUM_TRACKS];
 Transport transport;
@@ -925,10 +926,12 @@ void LooperEngine::update() {
     }
     transport.now = transport.now + 1;
 
-    if (captureOutput) {                             // (without the metronome) the tracks and the input as they are:
+    {                                                // (without the metronome) the tracks and the input as they are:
       int16_t cl = (int16_t)constrain(mixL + monL, -32767.0f, 32767.0f);   // the master volume is not in it
       int16_t cr = (int16_t)constrain(mixR + monR, -32767.0f, 32767.0f);
-      inputRing[at % INPUT_FRAMES] = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
+      const uint32_t m = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
+      mixRing[at % MIX_FRAMES] = m;                  // (always: a resample pressed late takes it from here)
+      if (captureOutput) inputRing[at % INPUT_FRAMES] = m;
     }
     float click = clickSample() * outGain;           // (its level from the mix before the master volume: the master volume on it now)
     {                                                // the master volume and balance

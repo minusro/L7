@@ -32,9 +32,16 @@ constexpr uint32_t STRETCH_HISTORY = 1024;            // (a grain reads at most 
 constexpr uint32_t STREAM_FRAMES = RING_FRAMES - STRETCH_HISTORY;
 constexpr bool STRETCH_DEFAULT = true;             // new tracks stretch (keep their pitch) rather than resample
 constexpr bool LOG_ENGINE_LOAD = true;             // the audio interrupt's CPU use on the serial log every 5 s
-// Input history: pre-roll for late record presses + slack for SD write stalls.
-constexpr uint32_t INPUT_FRAMES = 32768;           // 128 KB, ~740 ms
-constexpr uint32_t PREROLL_FRAMES = 11025;         // ~250 ms
+// Input history: the late press's grace (and the 128-frame pre-roll before
+// it) + slack for SD write stalls (what's recorded waits in it for the card).
+constexpr uint32_t INPUT_FRAMES = 24576;           // 96 KB, ~560 ms
+// A record or resample press up to this long after a bar line starts there
+// (from the history); stopping up to as long after one ends there (config
+// SNAP_THRESHOLD_MS).
+constexpr uint32_t START_GRACE_FRAMES = 8824;      // ~200 ms
+// Mix history (resampling's late press): the output as resampling records it,
+// the grace and the pre-roll's worth (copied into the input history then).
+constexpr uint32_t MIX_FRAMES = 9216;              // 36 KB, ~209 ms
 
 // Measured round trip output -> input (audio_test): recordings are shifted
 // earlier by this much so they line up with what was playing.

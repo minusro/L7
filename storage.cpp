@@ -2370,6 +2370,8 @@ static void startRecording(int t, uint32_t from, int32_t beat, int32_t maxBehind
   noInterrupts();
   recording.markCount = 0;                       // (the tempo marks begin on its first bar line)
   if (maxBehind >= 0 && (int32_t)(transport.now - from) <= maxBehind) {
+    if (resample)                                // (late: the mix since the bar line and its pre-roll, into the input history)
+      for (uint32_t s = from - XFADE_FRAMES; s != transport.now; s++) inputRing[s % INPUT_FRAMES] = mixRing[s % MIX_FRAMES];
     recording.startSample = from;
     recording.startBeat = beat;
     beginTempoMarks(from - recordingLatency(), beat);
@@ -2420,20 +2422,21 @@ bool recordPress(int t, bool resample, uint32_t heldFor) {
         transportStart();
         return true;
       }
-      if (resample) {                            // the next bar line (the history holds the input)
-        startRecording(t, 0, 0, -1, true);
-        return true;
-      }
-      // Pressed shortly after a bar line: start at that bar line (from the
-      // input history). Otherwise wait for the next one.
+      // Pressed shortly after a bar line (START_GRACE_FRAMES): start at that
+      // bar line (from the input history; resampling: the mix history's,
+      // startRecording()). Otherwise wait for the next one.
       noInterrupts();
       uint32_t lastBar = transport.lastBarSample;
       int32_t lastBeat = transport.lastBarBeat;
       interrupts();
+      if (resample) {                            // (no latency: the output as it was made)
+        startRecording(t, lastBar, lastBeat, min<int64_t>(START_GRACE_FRAMES, MIX_FRAMES - XFADE_FRAMES - AUDIO_BLOCK_SAMPLES), true);
+        return true;
+      }
       // (Held a while before it was let go: the window from the press, as
       // long as the history still has the bar line and its pre-roll.)
-      int32_t maxBehind = min((int64_t)PREROLL_FRAMES + recording.latency + heldFor,
-                              (int64_t)INPUT_FRAMES - PREROLL_FRAMES - 4096);
+      int32_t maxBehind = min((int64_t)START_GRACE_FRAMES + recording.latency + heldFor,
+                              (int64_t)INPUT_FRAMES - XFADE_FRAMES - 4096);
       startRecording(t, lastBar + recording.latency, lastBeat, maxBehind);
       return true;
     }
