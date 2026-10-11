@@ -8,7 +8,7 @@
 
 static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;   // held arrows
 static constexpr uint32_t DOUBLE_TAP_MS = 200;      // two taps of a key this close: a double tap
-static constexpr uint32_t TRIPLE_TAP_MS = 300;      // SHIFT+UP/DOWN's three quick taps: each this close to the last
+static constexpr uint32_t TRIPLE_TAP_MS = 200;      // SHIFT+UP/DOWN's three quick taps: each this close to the last
 static constexpr uint32_t EDGE_HOLD_MS = 350;       // SHIFT+UP/DOWN's second tap held this long: to the list's end
 
 // The selected track's current cell back to its defaults: the whole loop as
@@ -115,8 +115,9 @@ static void tapBar() {
 }
 
 static void tapTempo() {
-  if (audioFollowOn()) {                            // (the tempo heard: the taps place its bar)
+  if (audioFollowOn()) {                            // (the tempo heard: the taps place its bar, and help find their beat)
     tapAt = millis();
+    audioFollowTapHint();
     tapBar();
     return;
   }
@@ -185,7 +186,7 @@ static void exportToAbleton() {
   char b[24];
   if (n) {
     int head = snprintf(b, sizeof b, "SAVED AS ");
-    snprintf(b + head, sizeof b - head, "%s %c%03d", APP_NAME, 'A' + p, n);
+    snprintf(b + head, sizeof b - head, "%s %c%02d", APP_NAME, 'A' + p, n);
     menuExportStatus(b, head);                       // (the name in the project's colour)
   } else {
     snprintf(b, sizeof b, "EXPORT FAILED");

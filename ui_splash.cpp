@@ -33,9 +33,9 @@ static bool l7Row(int p, float s, int &l0, int &l1, int &s0, int &s1) {
   return true;
 }
 // The logo over what's there (the menu's corner).
-static void drawL7(int x, int y, float s, uint16_t color) {
+static void drawL7(int x, int y, float s, uint16_t color, int fromRow = 0) {
   auto &t = board.tft();
-  for (int p = 0, h = l7Px(L7_H, s); p < h; p++) {
+  for (int p = fromRow, h = l7Px(L7_H, s); p < h; p++) {
     int l0, l1, s0, s1;
     if (!l7Row(p, s, l0, l1, s0, s1)) continue;
     t.fillRect(x + l0, y + p, l1 - l0, 1, color);
@@ -161,6 +161,11 @@ static_assert(LOGO_W == (int)(55 * LOGO_SCALE + 0.5f) && LOGO_H == (int)(26 * LO
 
 // The logo small, for the menu's corner: 55 x 26 px (the status row's height).
 void drawSmallLogo(int x, int y, uint16_t color) { drawL7(x, y, 1, color); }
+// Its two bottom stripes only (under the cuts), the rest cleared to `ground`.
+void drawSmallLogoStripes(int x, int y, uint16_t color, uint16_t ground) {
+  board.tft().fillRect(x, y, L7_W, L7_H, ground);
+  drawL7(x, y, 1, color, 20);
+}
 // The logo `scale` times that (whole: its shape drawn at that size, not stretched).
 void drawLogoScaled(int x, int y, int scale, uint16_t color) { drawL7(x, y, scale, color); }
 

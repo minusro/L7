@@ -50,8 +50,9 @@
   holds no audio, only references to the sample files its scenes use.
 * The loaded project is autosaved.
 * Loading, cut and paste all work while playing (copies in the background).
-* The tempo is the project's (agreed 2026-10-04): changing it in a scene
-  changes it in all of them. New projects start with the tempo last set by
+* The tempo is each scene's again (2026-10-11; from 2026-10-04 it was the
+  project's): switching scenes brings in that scene's tempo, and setting it
+  by hand changes the current scene's. New projects start with the tempo last set by
   hand (before any: 120 BPM). The master volume is the app's, one for all
   projects (changed 2026-10-06; before: the project's), saved in the session.
 

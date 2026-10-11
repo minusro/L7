@@ -44,6 +44,7 @@ float audioFollowBpm();                  // their tempo as found, halved or doub
 // instead, the estimate leaning towards it (so it finds that octave). False:
 // not on, or out of range.
 bool audioFollowScale(int by);
+void audioFollowTapHint();               // a tap on the tempo cell: one of their beats, heard now (helps the tracker)
 void audioFollowShift(double beats);     // tap tempo while following: the clock eased this many beats later (negative: earlier), its bar onto the taps
 bool audioFollowShifting();              // one under way
 void audioFollowOffsetChanged();         // (midi_in.h syncOffsetMs[SYNC_AUDIO] changed: caught up quickly)

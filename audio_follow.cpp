@@ -260,6 +260,11 @@ static void follow(bool nudged, uint32_t count, uint32_t at) {
 }
 
 // Their next beat looked for (its window all heard): the tracker moved, the clock with it.
+// A tap on the tempo cell while following (input.cpp): taken as one of their
+// beats heard, where it fell (in onset frames), helping the tracker along.
+static int64_t tapFrame = -1;
+void audioFollowTapHint() { tapFrame = onsetCount; }
+
 static void trackBeat(uint32_t count, uint32_t at) {
   const double p = period;
   int lo = (int)ceil(nextBeat - WINDOW * p), hi = (int)floor(nextBeat + WINDOW * p);
@@ -277,10 +282,18 @@ static void trackBeat(uint32_t count, uint32_t at) {
   avg /= span;
   bool hit = peak > HIT_MIN && peak > HIT_RATIO * avg;
   bool finding = beatsTracked < FIND_BEATS || !locked;
-  if (hit) {
-    float a = osf((uint32_t)bestN - 1), c = osf((uint32_t)bestN + 1);   // (its peak between frames)
-    float den = a - 2 * peak + c;
-    double at2 = bestN + (den < 0 ? constrain(0.5f * (a - c) / den, -0.5f, 0.5f) : 0);
+  const int64_t tf = tapFrame;
+  const bool tapped = tf >= lo && tf <= hi;          // (a tap in this beat's window: a beat heard there too)
+  if (tf >= 0 && tf <= hi) tapFrame = -1;          // (taken, or too late for any)
+  if (hit || tapped) {
+    double at2 = (double)tf;
+    if (hit) {
+      float a = osf((uint32_t)bestN - 1), c = osf((uint32_t)bestN + 1);   // (its peak between frames)
+      float den = a - 2 * peak + c;
+      double heard = bestN + (den < 0 ? constrain(0.5f * (a - c) / den, -0.5f, 0.5f) : 0);
+      at2 = tapped ? (heard + at2) / 2 : heard;    // (both: between them)
+    }
+    hit = true;
     double miss = at2 - nextBeat;
     bool fast = finding || fabs(miss) >= FAST_MISS;
     nextBeat += (fast ? ALPHA_FIND : ALPHA) * miss;

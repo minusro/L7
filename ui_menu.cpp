@@ -305,7 +305,7 @@ static void drawItem(int k) {
           if (g->rows[r][c] == '#') t.fillRect((x0 + c) * PX, (y0 + r) * PX, PX, PX, letter);
       if (playing) {                              // the clock running: a small play icon right of the letter, black, grey a moment on each beat
         static const char *const PLAY[5] = {"#..", "##.", "###", "##.", "#.."};
-        const uint16_t ink = playPulse() ? DIM : BG;   // (grey a moment on each beat, black otherwise)
+        const uint16_t ink = loaded ? (playPulse() ? DIM : BG) : (playPulse() ? LIGHT : ACCENT);   // (the loaded card's: black, grey a moment on each beat; another, not filled: the accent colour, light grey on each beat)
         for (int r = 0; r < 5; r++)
           for (int c = 0; c < 3; c++)
             if (PLAY[r][c] == '#') t.fillRect((x0 + w + 2 + c) * PX, (y0 + r) * PX, PX, PX, ink);   // (two blocks after the letter)
@@ -531,6 +531,8 @@ FLASHMEM void menuSettingsAct() {
       removingPct = pct;
       drawSettings(false);
     };
+    clearClipClipboard();                        // (the clipboards emptied first: what they held counts as unused)
+    clearClipboards();
     removedCount = deleteUnusedSamples();
     removedAt = millis();
     deleteProgress = nullptr;
@@ -642,9 +644,13 @@ FLASHMEM void drawMenu() {
   // (Anything redrawn: the selected one again after it, its frame on top.)
   drawBattery(all);
   static uint16_t logo;                          // the corner logo's colour shown
-  if (all || logo != actionRestColor()) {        // the logo, bottom left: the action button's colour (not its pressed look)
+  static bool logoStripes = false;               // (an empty card selected: its two bottom stripes only)
+  const bool stripes = !onStatus && menuSel < CARDS && !projectFilled(menuSel);
+  if (all || logo != actionRestColor() || stripes != logoStripes) {   // the logo, bottom left: the action button's colour (not its pressed look)
     logo = actionRestColor();
-    drawSmallLogo(LOGO_X, LOGO_Y, logo);
+    logoStripes = stripes;
+    if (stripes) drawSmallLogoStripes(LOGO_X, LOGO_Y, logo, MENU_BG);
+    else drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
   bool redrawn = false;
   int cutSlot;

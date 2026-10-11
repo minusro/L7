@@ -168,14 +168,14 @@
 <ul>
   <li><b>Monitor audio in</b>: you hear the input through L7. Off, you don't, but it still records.</li>
   <li><b>Play newly recorded</b>: a new loop plays when you finish it. Off, it comes in muted.</li>
-  <li><b>Delete unused samples</b>: press <span class="key">A</span> to delete from the card every recording that no project, scene, clip or clipboard uses (the clock stops first). A bar fills the line as it goes, then it says how many samples were deleted.</li>
+  <li><b>Delete unused samples</b>: press <span class="key">A</span> to empty the clipboards, then delete from the card every recording that no project, scene or track uses (the clock stops first). A bar fills the line as it goes, then it says how many samples were deleted.</li>
   <li><b>Select next free track</b>: when you stop a recording (or after a resampling), the next empty track is selected (none empty: the next muted one). Off, you stay on the track you recorded.</li>
   <li><b>Empty project click</b>: a project with no loops yet clicks with the clock, even with the metronome off.</li>
 </ul>
 <p>When you leave the menu by pressing <span class="key">A</span> on a card, coming back puts you on the loaded project's card.</p>
 
 <h2>Exporting to Ableton Live</h2>
-<p>Load the project, open the menu and choose <b>EXPORT ABLETON SET</b>. The clock stops and L7 writes a Live 11 project to the card, in <code>/L7/EXPORTS/L7 A001 Project/</code> (the project's letter, then the next free number). The label then reads <b>SAVED AS L7 A001</b>, and the button stays off until you close the menu.</p>
+<p>Load the project, open the menu and choose <b>EXPORT ABLETON SET</b>. The clock stops and L7 writes a Live 11 project to the card, in <code>/L7/EXPORTS/L7 A01 Project/</code> (the project's letter, then the next free number, 01–99). The label then reads <b>SAVED AS L7 A001</b>, and the button stays off until you close the menu.</p>
 <ul>
   <li>7 audio tracks, coloured like the project, each with a highpass and a lowpass Auto Filter and a Utility.</li>
   <li>One scene per L7 scene that has clips, plus an empty one at the end. The current scene's clips are armed to play when the set opens.</li>

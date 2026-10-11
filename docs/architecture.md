@@ -9,7 +9,7 @@
 | `engine.*` | Audio interrupt (`LooperEngine::update()`): master clock, varispeed playback from the track rings, filters, volume/balance, master volume and output meter, input capture and monitoring, MIDI clock scheduling |
 | `storage.*` | Everything on the SD card, all from `loop()`: streaming tracks into their rings, recording, sample files and the pool, track units, the clipboard, transport start/stop, clip changes while playing |
 | `scenes.*` | Projects (12 slots, `/L7/PROJECTS/`: load, cut/paste) and their scene lists: stepping, cut/paste/duplicate, the SHIFT hold |
-| `ableton.*` | The loaded project exported as an Ableton Live Set (`/L7/EXPORTS/L7 A005 Project/`): its samples copied, the set streamed as gzip from `ableton_template.h` (made by `tools/ableton/make_template.py` from a set Live saved) |
+| `ableton.*` | The loaded project exported as an Ableton Live Set (`/L7/EXPORTS/L7 A05 Project/`): its samples copied, the set streamed as gzip from `ableton_template.h` (made by `tools/ableton/make_template.py` from a set Live saved) |
 | `midi_in.*` | Following an external MIDI clock (serial MIDI in or USB): its start/stop, tempo and beat (playback.md) |
 | `midi_usb.*` | MIDI clock over USB, in and out (the patched USB type's MIDI interface) |
 | `app.*` | Shared state: `board`, `bpm`, the selection (`selected` row, `selectedCell`), `setTempo()` |

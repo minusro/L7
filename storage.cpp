@@ -1356,6 +1356,7 @@ FLASHMEM int deleteUnmarkedSamples(const uint32_t *only, int onlyCount) {
 }
 
 bool clipboardFull() { return clipboard.sample != 0; }
+void clearClipClipboard() { clipboard = TrackUnit{}; }
 
 bool cutTrack(int t) {
   if (tracks[t].state == TrackState::Empty || recordingTrack(t)) return false;

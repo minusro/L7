@@ -117,6 +117,7 @@ bool projectDelete(int p);
 // Stopped only. Not called automatically while DELETE_UNUSED_SAMPLES (config.h)
 // is off. Returns how many.
 int deleteUnusedSamples();
+void clearClipboards();        // the scene and project clipboards emptied (the clip clipboard: storage.h clearClipClipboard())
 // Of the recordings stepSample() stepped over as empty (storage.h), deletes
 // those nothing uses (as above). Stopped only (else left for next time).
 int deleteEmptySamples();

@@ -48,12 +48,12 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   kept in the session (`SESSION.DAT`). (`SceneInfo.row`/`cell` and
   `SceneList.row`/`cell`, where scenes and projects kept one before, are
   unused.)
-* Each scene keeps a tempo of its own, its saved tempo (`SceneInfo.tempo`;
-  the project's tempo is one for all its scenes): the tempo it was made at (0*
+* Each scene keeps a tempo of its own, its saved tempo (`SceneInfo.tempo`),
+  played from its switch on (`apply()`; 0* and N+1* keep the tempo as it is): the tempo it was made at (0*
   or N+1* made a scene by a change there: the tempo then, or a recording's
   own; a duplicate: the tempo then; a resampling's scene: the resampling's; a
   pasted scene keeps its own), then its latest recording's (`sceneRecorded()`,
-  as a recording is saved; the tempo set by hand doesn't change it). B twice on
+  as a recording is saved; the tempo set by hand changes it too, `projectTempoChanged()`). B twice on
   the tempo cell goes back to the current scene's (`sceneSavedTempo()`; N+1*:
   N's; 0*: none). Before, a scene's record held the tempo when it was last
   saved, and the list block (`recTempo10`, now unused) the project's last

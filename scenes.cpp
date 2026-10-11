@@ -217,7 +217,7 @@ static bool go(int pos, bool quick = false) {
   listDirty = true;
   SceneInfo s = sceneAt(min(pos, (int)list.count));   // N+1*: a copy of N
   sceneTempo = pos >= 1 && pos <= list.count ? s.tempo : 0;   // (0* and N+1*: none until made a scene)
-  apply(s, quick);
+  apply(s, quick, false, sceneTempo);              // (each scene its own tempo, on the switch: 0*, N+1*: as it is)
   return true;
 }
 
@@ -284,7 +284,7 @@ bool scenePaste() {
   recordSlot = slot;
   list.current = pos;
   sceneTempo = clip.tempo;                         // (the scene moved: its own)
-  apply(clip, true);
+  apply(clip, true, false, sceneTempo);
   return true;
 }
 
@@ -365,7 +365,7 @@ FLASHMEM int sceneFromResample(int t) {
   recordSlot = slot;
   list.current = pos;
   sceneTempo = to.tempo;
-  apply(to, true);                                 // on the next beat
+  apply(to, true, false, sceneTempo);              // on the next beat (its tempo)
   return d;
 }
 
@@ -544,6 +544,16 @@ void flushScenes() { flushProject(); }
 int projectCurrent() { return project == DUMMY ? -1 : project; }
 bool projectFilled(int p) { return p >= 0 && p < PROJECTS && filled[p]; }
 bool projectClipboardFull() { return projectClip; }
+
+void clearClipboards() {                           // the scene and project clipboards emptied (scenes.h)
+  clipFull = false;
+  if (projectClip && !job.on) {
+    FsFile f = openProject(CLIP);
+    SceneList l = newList();
+    if (f) writeBlockTo(f, 0, &l, sizeof l);
+    projectClip = false;
+  }
+}
 bool projectHasClips() {
   if (project == DUMMY) return false;
   for (int t = 0; t < NUM_TRACKS; t++)
@@ -588,7 +598,7 @@ FLASHMEM static bool openAs(int p, bool apply_) {
   SceneInfo s = sceneAt(min((int)list.current, (int)list.count));   // N+1*: a copy of N
   sceneTempo = list.current >= 1 && list.current <= list.count ? s.tempo : 0;
   resampleTempo = 0;
-  float tempo = list.tempo10 ? list.tempo10 / 10.0f : s.tempo > 0 ? s.tempo : getTempo();
+  float tempo = sceneTempo > 0 ? sceneTempo : list.tempo10 ? list.tempo10 / 10.0f : s.tempo > 0 ? s.tempo : getTempo();   // (its scene's)
   if (!list.tempo10) {
     list.tempo10 = tenths(tempo);
     listDirty = true;
@@ -644,7 +654,12 @@ float sceneSavedTempo() {
 }
 
 void projectTempoChanged() {
-  if (loading || tenths(getTempo()) == list.tempo10) return;
+  if (loading) return;
+  if (list.current >= 1 && list.current <= list.count && sceneTempo != getTempo()) {   // (set by hand: the scene's tempo)
+    sceneTempo = getTempo();
+    changed = true;
+  }
+  if (tenths(getTempo()) == list.tempo10) return;
   list.tempo10 = tenths(getTempo());
   listDirty = true;
   edits++;

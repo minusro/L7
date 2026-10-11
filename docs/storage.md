@@ -6,7 +6,7 @@ older card's `/looper` is renamed to it at boot), in four folders:
 * `SAMPLES`: all the samples the tracks use; recordings end up here.
 * `PROJECTS`: the 12 project files, `A.L7P` … `L.L7P` (an empty slot has none).
 * `EXPORTS`: Ableton Live Sets (see ableton.h):
-  `EXPORTS/L7 A005 Project/L7 A005.als` and its samples in `Samples/Imported/`.
+  `EXPORTS/L7 A05 Project/L7 A05.als` and its samples in `Samples/Imported/`.
 * `DATA`: everything else the app needs, including the temporary audio files
   (recording space, and a recording's file until it's named and moved into
   `SAMPLES`).

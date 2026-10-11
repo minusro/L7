@@ -1255,8 +1255,7 @@ int main(int argc, char **argv) {
     uint32_t spbB = transport.spb;
     check(b2.sample != a[2].sample && trackMuted(4) && tracks[5].state == TrackState::Empty && spbB != spbA,
           "scene B set up");
-    check(sceneSavedTempo() > 0 && fabsf(sceneSavedTempo() - 125) > 0.05f,
-          "scene B keeps the tempo it was made at (not one set by hand later)");
+    check(fabsf(sceneSavedTempo() - 125) < 0.05f, "scene B's tempo: the one set by hand in it (tempo per scene)");
     runBeats(1.3);
     while (transport.beat % BEATS_PER_BAR != 1) block();   // early in a bar: the streams don't take A's clips yet
     // To A, and when each part of the change is heard.
@@ -1280,7 +1279,7 @@ int main(int argc, char **argv) {
              sw.beat, sw.sib, unmute.beat, unmute.sib, start.beat, start.sib);
     check(onBar(sw, AUDIO_BLOCK_SAMPLES) && onBar(unmute, 4 * AUDIO_BLOCK_SAMPLES) &&
           onBar(start, AUDIO_BLOCK_SAMPLES) && sw.beat == unmute.beat && sw.beat == start.beat, m);
-    check(tempo.beat < 0 && transport.spb == spbB, "the tempo stays: the project's (changed in B, A has it too)");
+    check(transport.spb == spbA, "back to A: A's own tempo (tempo per scene)");
     bool same = true;
     for (int t = 0; t < NUM_TRACKS; t++) if (unitOf(t).sample != a[t].sample) same = false;
     check(same && !sceneChangeWaiting(), "scene A's tracks, label bright again");
@@ -1582,7 +1581,7 @@ int main(int argc, char **argv) {
     if (!transport.running) transportStart();
     for (int k = 0; k < 2; k++) {
       clearTrack(tracksTo[k]);
-      recordTrack(tracksTo[k], 4.08, 1, k ? "  (track 3 recorded)" : "  (track 4 recorded)");
+      recordTrack(tracksTo[k], 3.5, 1, k ? "  (track 3 recorded)" : "  (track 4 recorded)");
       before[k] = hostFile(tracks[tracksTo[k]].sample);
       before[k] = before[k].substr(before[k].rfind('/') + 1);
     }
@@ -1749,8 +1748,9 @@ int main(int argc, char **argv) {
     volumeByHand(U - 2);
     for (int i = 0; i < 5; i++) block();
     int pos = sceneCurrent();
-    check((sceneStep(-1) || sceneStep(1)) && sceneCurrent() != pos && at(133, U - 2), "another scene: the same tempo and master volume");
-    check(sceneGoEmpty() && at(133, U - 2), "the empty scene too");
+    check((sceneStep(-1) || sceneStep(1)) && sceneCurrent() != pos && masterVolume() == U - 2, "another scene: the same master volume (its own tempo)");
+    check(sceneGoEmpty() && masterVolume() == U - 2, "the empty scene too");
+    tempoByHand(133);
     check(projectLoad(3) && sceneCount() == 0 && at(133, U - 2), "a new project (slot 4): the tempo last set by hand, the volume unchanged");
     tempoByHand(97);
     volumeByHand(U + 2);
@@ -1791,9 +1791,9 @@ int main(int argc, char **argv) {
     char colorHex[8];
     snprintf(colorHex, sizeof colorHex, "%02X%02X%02X", (PROJECT_COLORS[2] >> 11) * 255 / 31, ((PROJECT_COLORS[2] >> 5) & 63) * 255 / 63, (PROJECT_COLORS[2] & 31) * 255 / 31);
     int first = exportProject(2), second = exportProject(2);
-    std::string dir = simRoot + "/L7/EXPORTS/L7 C00" + std::to_string(first) + " Project";
+    std::string dir = simRoot + "/L7/EXPORTS/L7 C0" + std::to_string(first) + " Project";
     char m[200];
-    snprintf(m, sizeof m, "exported as L7 C%03d, then L7 C%03d (the next number for its letter)", first, second);
+    snprintf(m, sizeof m, "exported as L7 C%02d, then L7 C%02d (the next number for its letter)", first, second);
     check(first >= 1 && second == first + 1, m);
     // The set: valid gzip and XML, 7 tracks with two Auto Filters each, a clip
     // slot per scene on each, the scenes; every clip's sample copied.
@@ -1908,7 +1908,7 @@ int main(int argc, char **argv) {
     // The folder's icon for a Mac: Icon<CR>, its AppleDouble file (Finder info + the icon's fork), and the folder's own.
     auto sizeOf = [](const std::string &path) { FILE *f = fopen(path.c_str(), "rb"); long n = -1; if (f) { fseek(f, 0, SEEK_END); n = ftell(f); fclose(f); } return n; };
     long iconSize = sizeOf(dir + "/Icon\r"), forkSize = sizeOf(dir + "/._Icon\r"), folderSize;
-    folderSize = sizeOf(simRoot + "/L7/EXPORTS/._L7 C00" + std::to_string(first) + " Project");
+    folderSize = sizeOf(simRoot + "/L7/EXPORTS/._L7 C0" + std::to_string(first) + " Project");
     snprintf(m, sizeof m, "the folder's Mac icon: Icon<CR> empty (%ld), ._Icon<CR> %ld bytes, the folder's ._ file %ld bytes", iconSize, forkSize, folderSize);
     check(iconSize == 0 && forkSize == 0xEE2 + 62577 && folderSize == 0xEE2, m);
   }
@@ -3252,8 +3252,8 @@ for f in os.listdir("."):
     check(made == sceneCount() && near(sceneSavedTempo(), 120), m14);
     tempoByHand(110);
     runBeats(1);
-    snprintf(m14, sizeof m14, "the tempo set to 110 by hand: the scene's kept (%.1f)", sceneSavedTempo());
-    check(near(sceneSavedTempo(), 120), m14);
+    snprintf(m14, sizeof m14, "the tempo set to 110 by hand: the scene's now (%.1f)", sceneSavedTempo());
+    check(near(sceneSavedTempo(), 110), m14);
     check(sceneDuplicate() && near(sceneSavedTempo(), 110), "a duplicate: made at the tempo now (110)");
     tempoByHand(100);
     runBeats(1);
@@ -3264,8 +3264,8 @@ for f in os.listdir("."):
     check(near(sceneSavedTempo(), 100), m14);
     sceneStep(-1);
     runBeats(BEATS_PER_BAR * 2);
-    snprintf(m14, sizeof m14, "back to the scene before: its own tempo (%.1f, made at 120)", sceneSavedTempo());
-    check(near(sceneSavedTempo(), 120), m14);
+    snprintf(m14, sizeof m14, "back to the scene before: its own tempo (%.1f, set to 110 there)", sceneSavedTempo());
+    check(near(sceneSavedTempo(), 110), m14);
     sceneGoEnd();
     runBeats(BEATS_PER_BAR * 2);
     snprintf(m14, sizeof m14, "the copy after the last: the last's (%.1f)", sceneSavedTempo());

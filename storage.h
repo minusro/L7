@@ -112,6 +112,7 @@ void clearTrack(int t);               // its sample stays on the card
 bool cutTrack(int t);
 bool pasteTrack(int t);
 bool clipboardFull();
+void clearClipClipboard();          // emptied
 // Tracks a and b swap their units (a clip, its range, mute, filter, volume,
 // balance): at once while stopped, else both on the next quarter beat after
 // the lead, each clip in step with the clock as it was (no gap); the scene

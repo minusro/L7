@@ -321,12 +321,12 @@ static int nextNumber(char letter) {
     f.getName(name, sizeof name);
     bool is = f.isDir();
     f.close();
-    if (!is || strlen(name) != pl + 3 + strlen(FOLDER_SUFFIX) || strncmp(name, prefix, pl) || strcmp(name + pl + 3, FOLDER_SUFFIX)) continue;
+    if (!is || strlen(name) != pl + 2 + strlen(FOLDER_SUFFIX) || strncmp(name, prefix, pl) || strcmp(name + pl + 2, FOLDER_SUFFIX)) continue;
     int n = 0;
-    for (int i = 0; i < 3; i++) n = name[pl + i] >= '0' && name[pl + i] <= '9' && n >= 0 ? n * 10 + name[pl + i] - '0' : -1;
+    for (int i = 0; i < 2; i++) n = name[pl + i] >= '0' && name[pl + i] <= '9' && n >= 0 ? n * 10 + name[pl + i] - '0' : -1;
     if (n > highest) highest = n;
   }
-  return highest < 999 ? highest + 1 : 0;
+  return highest < 99 ? highest + 1 : 0;           // (two digits: "L7 B02 Project")
 }
 
 // ---- The folder's icon, as a Mac shows it (Live's own, as in any Live project).
@@ -391,7 +391,7 @@ FLASHMEM int exportProject(int p, void (*progress)(int done, int total)) {
   SD.sdfs.mkdir("/L7/EXPORTS");
   x.number = nextNumber(letter);
   if (!x.number) return 0;
-  snprintf(x.name, sizeof x.name, "%s %c%03d", APP_NAME, letter, x.number);
+  snprintf(x.name, sizeof x.name, "%s %c%02d", APP_NAME, letter, x.number);
   snprintf(x.dir, sizeof x.dir, "/L7/EXPORTS/%s%s", x.name, FOLDER_SUFFIX);
   char path[96];
   SD.sdfs.mkdir(x.dir);

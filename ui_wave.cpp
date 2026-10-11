@@ -78,7 +78,7 @@ struct WaveView {
   int labelX = 0, labelW = 0;                      // its box: first block column, width in blocks
 };
 static WaveView views[NUM_TRACKS];
-static constexpr uint32_t STEP_FLASH_MS = 150;            // (a step offset tap: the start point solid white this long)
+static constexpr uint32_t STEP_FLASH_MS = 75;             // (a step offset tap: the start point solid white this long)
 static constexpr uint32_t LABEL_FLASH_MS = 100;           // (a sample step: its label's name and number dark grey this long)
 static constexpr int LABEL_TOP = BAND_ROWS - 7;             // the sample label's box: rows 9-15 (over the bottom border, its own bottom row)
 // The record head's look (not a colour the playheads use): its column inverted.
