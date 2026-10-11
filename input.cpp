@@ -685,7 +685,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
     if (menuSettingsOpen() && !armed) {              // the settings popup: A or B turns its item on / off (on the
       if (pressed & act) menuSettingsAct();          // press); the arrows go through it (DOWN off its bottom, LEFT / RIGHT: closed)
-      else if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) moved = menuSettingsKeys(pressed);
+      else if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN)) { moved = menuSettingsKeys(pressed, repeat); if (!menuSettingsOpen()) stopRepeat = true; }   // (closed: the held arrow's repeats not on into the menu)
       return;
     }
     if ((pressed & act) && !armed) {

@@ -496,9 +496,17 @@ FLASHMEM void menuSettings(bool open) {
   drawMenu();
 }
 
-FLASHMEM bool menuSettingsKeys(uint8_t pressed) {
-  if ((pressed & m8::BTN_LEFT) || (pressed & m8::BTN_RIGHT) || ((pressed & m8::BTN_DOWN) && setSel == 0) ||
-      ((pressed & m8::BTN_UP) && setSel == SET_ITEMS - 1)) {   // (off its bottom or top, or sideways: closed)
+FLASHMEM bool menuSettingsKeys(uint8_t pressed, bool repeat) {
+  if ((pressed & m8::BTN_UP) && setSel == SET_ITEMS - 1) {   // off its top (a fresh press, not a held one's repeats):
+    if (repeat) return false;
+    menuSettings(false);                         // closed, the list's item above SETTINGS selected
+    menuSel = CARDS + MENU_SETTINGS - 1;
+    scrollList(menuSel - CARDS, -1);
+    movedHere = true;
+    drawMenu();
+    return true;
+  }
+  if ((pressed & m8::BTN_LEFT) || (pressed & m8::BTN_RIGHT) || ((pressed & m8::BTN_DOWN) && setSel == 0)) {   // (off its bottom, or sideways: closed)
     menuSettings(false);
     return true;
   }

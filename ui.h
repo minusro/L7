@@ -267,7 +267,7 @@ bool menuJustCut();                      // (input.cpp) a project just cut by ho
 bool menuSettingsOpen();
 int menuSettingsItem();
 void menuSettings(bool open);
-bool menuSettingsKeys(uint8_t pressed);
+bool menuSettingsKeys(uint8_t pressed, bool repeat = false);
 void menuSettingsAct();
 void menuNoteLeave(bool byAction);
 // The help pages (the menu's HELP): open (over the whole screen) or closed;
