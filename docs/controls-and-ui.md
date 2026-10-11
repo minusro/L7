@@ -23,7 +23,6 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | SHIFT + LEFT/RIGHT (status row) | Playing: nudged while held, as Live's nudge buttons — RIGHT faster, LEFT slower, by 1% at first and 3% more a second, at most 8% (in 0.25% steps). Our own clock: its tempo, set again once let go (the shift in phase stays), the tempo cell showing the nudged tempo in the accent colour meanwhile. Following an external clock: its offset moved as far as the nudge would have moved the clock (RIGHT earlier), the follower taking ours there; it stays once let go; the offset shown meanwhile, and for 1 s after (`nudgeService()` in input.cpp) |
 | B + LEFT/RIGHT, B + UP/DOWN (tempo cell, following an external clock) | LEFT/RIGHT: our clock's offset from it, 10 ms a press or repeat, RIGHT later (L7's material plays later), LEFT earlier, within ±250 ms; each source its own, 0 by default, saved in the session (`offmidi=`, `offusb=`, `offaudio=`); both together: back to 0; while held, and for 1 s after it last changed, the tempo cell shows it (e.g. +20, the tag MS) in the accent colour (`syncOffsetMs`, `syncOffsetChangedMs` in midi_in.h). UP/DOWN: the tempo doubled / halved (fresh presses; within 30–240 BPM): audio follow's (playback.md), or a MIDI clock's taken times that (ours restarting on their next beat that fits; `midiScale()`) |
 | SHIFT + UP/DOWN | Newer / older scene (see scenes.md); B + UP/DOWN does the same on the status row's scene cell (double taps and holding B included) |
-| SHIFT + UP/DOWN twice, second held | To N+1\* / 0\* |
 | B, SHIFT, A / SHIFT, B, A | Paste scene (B first) / cut scene (SHIFT first; a scene with no clips on its tracks is removed but doesn't replace the clipboard, and cutting 0* does nothing) |
 | PLAY | Start from 1.1.1 / stop |
 | SHIFT + PLAY (or SHIFT + A on status) | Restart from 1.1.1 |
@@ -42,12 +41,8 @@ clock stopped, the 5th tap starts it from 1.1.1 (that tap not in the estimate: a
   The start position (where 1.1.1 plays from) is then the range's first half
   bar or bar line on clips ≤ 8 bars, its first bar line on longer ones
   (playback.md).
-* Twice LEFT/RIGHT: move by the range's own length (the whole loop: every tap a single step instead); a range inside the clip
-  stops at the clip edge, one already touching it jumps to the other edge,
-  one straddling the edge moves freely (wraps).
+* Held, LEFT/RIGHT step on (a step a repeat), on past the clip's edges (the range then straddles the loop's end; no stopping, no jumping). No double taps on the arrows.
 * UP/DOWN: length steps 1/4, 1/2, 3/4, 1, 2, 3, 4, 5, 6 … bars (no 1 1/2).
-* Twice UP/DOWN: powers of two 1/4 … 32 bars; a length of 3 × 2ⁿ beats
-  doubles/halves instead (3/4 bar halves to 1/2).
 * The start stays when the length changes.
 
 Other cells with B + arrows: filter (LEFT/RIGHT move, UP/DOWN width; width

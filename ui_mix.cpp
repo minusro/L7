@@ -81,7 +81,7 @@ void drawMix(int i) {
   bool editing = editingCell(i, MIX_CELL);         // (B held, with other keys or not: as the filter cell)
   uint16_t ground = rowGround(i);
   const bool noMeter = muted || !transport.running;   // (stopped or muted: no meter)
-  uint16_t levelInk = onGround(editing ? (noMeter ? ACCENT : LIGHT) : muted ? DARK : here ? LIGHT : DIM, ground);   // (editing: light grey under the accent meter; no meter: all the accent colour)
+  uint16_t levelInk = onGround(editing ? (noMeter ? ACCENT : ACCENT_DARK) : muted ? DARK : here ? LIGHT : DIM, ground);   // (editing: the dark accent under the accent meter, as the filter's fill; no meter: all the accent colour)
   const uint16_t meterInk = editing ? ACCENT : INK;
   uint16_t outerInk = editing ? DIM : muted ? ground : here ? DIM : DARK;   // (muted: none)
   for (int ch = 0; ch < 2; ch++) {
