@@ -563,7 +563,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // The fine rotate's keys: one let go, what was shown is heard.
   if (rotateHeld && (!(keys & m8::BTN_EDIT) || !(keys & m8::BTN_OPT) || !(keys & rotateKey))) {
     if (!rotateStepped && rotateKey) rotateFlashAt = max(1u, millis());
-    if (!rotateStepped && rotateKey) nudgeStep(rotateKey & m8::BTN_RIGHT ? 1 : -1, false, 0, 1);   // (a tap: a quarter beat, the step offset)
+    if (!rotateStepped && rotateKey) nudgeStep(rotateKey & m8::BTN_RIGHT ? -1 : 1, false, 0, 1);   // (a tap: a quarter beat, the step offset; RIGHT earlier: the grid moves right)
     rotateHeld = false;
     serviceRotate();
   }
