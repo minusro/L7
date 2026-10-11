@@ -2089,6 +2089,36 @@ for f in os.listdir("."):
     check(id > 0 && id < 10000 && ::stat((simRoot + path).c_str(), &st) == 0 && st.st_size < 10 * 1000 * 1000 && spaceFiles == 24, m);
   }
 
+  printf("a card stall while playing: the tracks run short, then back in step with the clock\n");
+  {
+    if (!transport.running) transportStart();
+    if (tracks[0].state == TrackState::Empty) recordTrack(0, 7.5, 2, "  (track 1 recorded)");
+    runBeats(4);
+    for (auto &tr : tracks) tr.underruns = 0;
+    static int stalls;
+    stalls = 1;
+    simSdLatency = [](size_t, bool write) {          // one read: 1.5 s (far past what the buffers hold)
+      if (write || !stalls) return;
+      stalls--;
+      pendingUs += 1500000;
+      const double blockUs = AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT;
+      while (pendingUs >= blockUs) { pendingUs -= blockUs; audioBlock(); }
+    };
+    runBeats(4);
+    simSdLatency = nullptr;
+    uint32_t short_ = 0;
+    for (auto &tr : tracks) short_ += tr.underruns;
+    check(short_ > 0, "(the stall ran the tracks short)");
+    runBeats(4);
+    for (auto &tr : tracks) tr.underruns = 0;
+    for (int t = 0; t < NUM_TRACKS; t++)
+      if (tracks[t].live) {
+        char m[96];
+        snprintf(m, sizeof m, "track %d after the stall", t + 1);
+        checkSync(t, m);
+      }
+  }
+
   printf("the metronome while stopped: its level follows the mix and the master volume\n");
   {
     if (transport.running) transportStop();

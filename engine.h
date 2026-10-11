@@ -90,6 +90,11 @@ struct Track {
   float curMix[4] = {};
   volatile bool stopping = false;
   volatile uint32_t underruns = 0;
+  // Ran short and fell behind the clock (a snag): where the stream should be
+  // at that beat (onBeat()); loop()'s produce() jumps there (the next beat's
+  // snap then lines it up exactly).
+  volatile bool resyncOn = false;
+  volatile uint32_t resyncTo = 0;
   // Sample switch (loop() -> interrupt): from stream frame switchAt on, the
   // stream holds another recording (or range); the start handshake's mapping
   // then becomes nextS0 / nextStartBeat / nextSpb. The old one plays up to it.

@@ -679,6 +679,10 @@ void LooperEngine::onBeat(uint32_t blockMicros, int sampleIndex) {
     // varispeed playback locked to the clock (no drift, tempo changes included).
     uint32_t expected = tr.s0 + (uint32_t)(beat - tr.startBeat) * tr.playSpb;
     int32_t ahead = (int32_t)(tr.head - expected);
+    if (tr.live && ahead < 2 && !tr.sampleSwitch) {   // behind (a snag left it there): the stream to jump (loop(), produce())
+      tr.resyncTo = expected;
+      tr.resyncOn = true;
+    }
     if (ahead >= 2 && ahead <= (int32_t)RING_FRAMES) {
       tr.tail = expected;
       tr.frac = 0;

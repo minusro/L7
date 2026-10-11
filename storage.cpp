@@ -1924,6 +1924,20 @@ static uint32_t streamRoom(const Track &tr) {
 
 // One SD read (or one block of padding silence) into the track's ring.
 static void produce(Track &tr) {
+  // Behind the clock after a snag (onBeat()): the stream and the play
+  // position jump to where it should be (none on its way to a switch); the
+  // next beat's snap lines it up exactly.
+  if (tr.resyncOn) {
+    tr.resyncOn = false;
+    if (!tr.rangePending && !plans[&tr - tracks].on && !tr.sampleSwitch && (int32_t)(tr.resyncTo - tr.head) > 0) {
+      noInterrupts();
+      tr.head = tr.tail = tr.resyncTo;
+      tr.frac = 0;
+      interrupts();
+      tr.fileFrame = tr.rangeFrame(tr.resyncTo);
+      resetTransients(tr, tr.resyncTo);
+    }
+  }
   if (tr.rangePending && tr.head == tr.switchS) applyQueuedRange(tr);
   Plan &plan = plans[&tr - tracks];
   if (plan.on && tr.head == plan.switchS) applyPlan(&tr - tracks);
