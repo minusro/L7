@@ -1082,8 +1082,10 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         sampleSteppedAt = max(1u, millis());
         uint32_t now = unitOf(selected).sample;
         if (!repeat) stepLetter = sampleLetter(now);
-        else if (sampleLetter(now) != stepLetter) stopRepeat = true;   // (right: on the next letter's first)
-        if (dir < 0 && sampleLetter(now) == stepLetter && sampleFirstOfLetter(now)) stopRepeat = true;   // (left: on its own letter's first, before leaving it)
+        else if (sampleLetter(now) != stepLetter) {      // another letter: right, stopped on its first; left, past the
+          if (dir < 0) stepSample(selected, 1);           // press's letter's first (an empty one stepped over): back on it
+          stopRepeat = true;
+        } else if (dir < 0 && sampleFirstOfLetter(now)) stopRepeat = true;   // (left: on its own letter's first)
       }
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) deleteEmptySamples();   // (empty ones stepped over: gone if unused, stopped)
     }
