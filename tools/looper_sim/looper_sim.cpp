@@ -1818,6 +1818,29 @@ int main(int argc, char **argv) {
     snprintf(m, sizeof m, "the set opens as gzip and XML: 7 tracks, two Auto Filters each, %d scene(s) (%d of the project's have clips, and an empty last one), %d clip(s), "
              "their samples copied, a Live project (Ableton Project Info)", s, scenes, clips);
     check(rc == 0 && s == scenes + 1 && clips > 0, m);
+    {                                              // each scene's tempo: L7's scene's (the empty last one: none)
+      std::string want;
+      for (int pos = 1; pos <= sceneCount(); pos++) {
+        TrackUnit us[NUM_TRACKS];
+        bool c = false;
+        if (projectScene(2, pos, us)) for (const auto &u : us) c |= u.sample != 0;
+        if (!c) continue;
+        char b[24];
+        float t = projectSceneTempo(2, pos);
+        snprintf(b, sizeof b, "%s%g", want.empty() ? "" : ",", t > 0 ? roundf(t * 10) / 10 : -1.0f);
+        want += b;
+      }
+      std::string tp = "python3 -c \"import gzip,sys,os,xml.etree.ElementTree as E; d=sys.argv[1]; r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read()); "
+                       "sc=r.find('LiveSet/Scenes'); print(','.join(('%g'%float(x.find('Tempo').get('Value'))) if x.find('IsTempoEnabled').get('Value')=='true' else '-1' for x in sc))\" '" + dir + "'";
+      FILE *to = popen(tp.c_str(), "r");
+      char got[400] = {};
+      if (to) { if (!fgets(got, sizeof got, to)) got[0] = 0; pclose(to); }
+      std::string g = got;
+      while (!g.empty() && (g.back() == '\n' || g.back() == '\r')) g.pop_back();
+      char mt[600];
+      snprintf(mt, sizeof mt, "each scene's tempo L7's scene's, the last one's off: %s (want %s,-1)", g.c_str(), want.c_str());
+      check(g == want + ",-1", mt);
+    }
     snprintf(m, sizeof m, "scene 2's clips (set scene %d) saved as playing: %d track(s) (%d have a clip there), %d other", index + 1, saved,
              playing, other);
     check(saved == playing && other == 0 && playing > 0, m);

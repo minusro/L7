@@ -265,6 +265,12 @@ FLASHMEM static void field(char code) {
     case 'F': clipSlots(true); break;
     // a slot, a clip, a scene
     case 'k': putNumber(x.slot); break;
+    case 'w': {                                  // a scene's tempo: L7's scene's (the empty last one, or none kept: the set's)
+      float b = x.slot < x.scenes ? projectSceneTempo(x.p, x.pos[x.slot]) : 0;
+      putNumber(b > 0 ? roundf(b * 10) / 10 : x.tempo);
+      break;
+    }
+    case 'W': gz.puts(x.slot < x.scenes && projectSceneTempo(x.p, x.pos[x.slot]) > 0 ? "true" : "false"); break;
     case 'm':
       if (x.place < NUM_TRACKS) gz.puts(x.sample.name);   // a clip: its sample's
       /* a scene: no name */

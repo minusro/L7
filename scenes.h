@@ -82,6 +82,7 @@ int sceneCount();
 // Reading project p (the Live Set export): its scene count and tempo (false:
 // an empty slot), and scene pos's (1..count) units, track by track.
 bool projectInfo(int p, int &scenes, float &tempo, int &current);   // current: its scene (0: the empty one)
+float projectSceneTempo(int p, int pos);   // scene pos's saved tempo (0: none kept)
 bool projectScene(int p, int pos, TrackUnit *units);
 int projectCurrent();          // the loaded one (-1: the dummy project, after the loaded one was cut)
 bool projectFilled(int p);     // the slot holds a project (the loaded one always does)

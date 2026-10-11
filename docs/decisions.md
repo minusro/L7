@@ -117,7 +117,7 @@ loaded or pasted to (a short stall if playing), so saving never allocates.
 * The folder is a Live project: it has an (empty) `Ableton Project Info`
   folder, so the clips' sample paths, relative to it, resolve (without it
   Live showed every sample offline).
-* The set (Live 11): the project's tempo; 7 audio tracks, each
+* The set (Live 11): the project's tempo; each scene its L7 scene's own tempo (Tempo, IsTempoEnabled; the empty last one: off); 7 audio tracks, each
   with two Auto Filters, highpass then lowpass, fully open, and a Utility (as with no clip
   playing); a scene per project scene with clips (empty ones, like 0*, left
   out); each track's clip there: Re-Pitch warp

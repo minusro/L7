@@ -168,6 +168,8 @@ def main(src, dst):
     scene = scenes[a:b]
     scene = field(scene, r'<Scene Id="(\d+)"', 'k')
     scene = field(scene, r'<Name Value="([^"]*)"', 'm')
+    scene = field(scene, r'<Tempo Value="([^"]*)"', 'w')              # (each scene's own tempo: L7's scene's)
+    scene = field(scene, r'<IsTempoEnabled Value="([^"]*)"', 'W')     # (on, but for the empty last one)
 
     # ---- The set
     s = xml[:xml.index('<Tracks>') + len('<Tracks>')] + '\n' + MARK + 'R' + xml[tracks_end:]

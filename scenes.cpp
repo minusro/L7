@@ -623,6 +623,15 @@ bool projectInfo(int p, int &scenes, float &tempo, int &current) {
   return true;
 }
 
+float projectSceneTempo(int p, int pos) {
+  FsFile f = openProject(p);
+  SceneList l;
+  if (!readList(f, l) || pos < 1 || pos > l.count) return 0;
+  SceneInfo s;
+  if (!f.seekSet((uint64_t)(1 + l.slot[pos - 1]) * BLOCK) || f.read(&s, sizeof s) != (int)sizeof s || memcmp(s.magic, "M8SC", 4)) return 0;
+  return s.tempo >= MIN_BPM && s.tempo <= MAX_BPM ? s.tempo : 0;
+}
+
 bool projectScene(int p, int pos, TrackUnit *units) {
   FsFile f = openProject(p);
   SceneList l;
