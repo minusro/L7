@@ -1,6 +1,6 @@
 // OctogonTest — a sketch of its own (in the L7 project's folder), for trying
-// out an idea on the M8: a light grey regular octagon inside a grey one twice
-// its size, both centred, on a light grey ground.
+// out an idea on the M8: a grey regular octagon with one a third its size
+// cut out of its middle, centred, on white.
 //
 // Uses the L7 project's board code: M8Board.* here are links to the ones one folder up.
 #include "M8Board.h"
@@ -13,6 +13,7 @@ static constexpr uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
 }
 static constexpr uint16_t LIGHT = rgb565(208, 208, 208);   // light grey (L7's GREY_81)
 static constexpr uint16_t GREY = rgb565(112, 112, 112);    // grey (L7's GREY_44)
+static constexpr uint16_t WHITE = rgb565(255, 255, 255);
 
 // A regular octagon centred on (cx, cy), `a` px from its centre to each side
 // (its apothem), turned `turn` degrees (0: flat sides at the top, bottom, left
@@ -47,11 +48,11 @@ static constexpr float TURN = 22.5f;               // (degrees: a corner at the 
 void setup() {
   board.begin();
   auto &t = board.tft();
-  t.fillScreen(LIGHT);
+  t.fillScreen(WHITE);
   const int cx = 160, cy = 120;
   const float outer = 110 * cosf(M_PI / 8);        // (turned: its corners, top and bottom, 110 px from the centre)
   fillOctagon(cx, cy, outer, TURN, GREY);
-  fillOctagon(cx, cy, outer / 2, TURN, LIGHT);     // (half its size, inside it)
+  fillOctagon(cx, cy, outer / 3, TURN, WHITE);     // (a third its size, cut out of it: the ground shows through)
 }
 
 void loop() {}
