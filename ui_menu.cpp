@@ -378,6 +378,7 @@ static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "P
                                                           "EMPTY PROJECT CLICK", "DELETE UNUSED SAMPLES"};
 static constexpr int SET_ITEMS = SETTING_COUNT + 1, SET_PITCH = 10, SET_REMOVE = SETTING_COUNT;
 static int removedCount = -1;                    // (the command's result, until the popup closes; -1: not run)
+static uint32_t removedAt = 0;                   // (millis() it finished: its result shown 2 s, or until another item is selected)
 static int removingPct = -1;                     // (while it runs: how far, 0-99; -1: not running)
 
 bool menuSettingsOpen() { return shown && setOpen; }
@@ -421,6 +422,7 @@ FLASHMEM static void drawSettings(bool whole) {
   setLayout(x, yb, w);
   setBox(x0, y0, x1, y1);
   static uint32_t shownKey = 0;
+  if (removedCount >= 0 && millis() - removedAt >= 2000) removedCount = -1;   // (its result: 2 s)
   if (whole) {
     t.fillRect(x0 * PX, y0 * PX, (x1 - x0 + 1) * PX, (y1 - y0 + 1) * PX, DIM);   // (grey; each corner cut: its block and the two next to it)
     for (int c : {x0, x1})
@@ -503,6 +505,7 @@ FLASHMEM bool menuSettingsKeys(uint8_t pressed) {
   if ((pressed & m8::BTN_UP) && setSel < SET_ITEMS - 1) setSel++;
   if ((pressed & m8::BTN_DOWN) && setSel > 0) setSel--;
   movedHere = setSel != was;
+  if (movedHere) removedCount = -1;                // (another item: the command's result gone)
   drawSettings(false);
   return movedHere;
 }
@@ -520,6 +523,7 @@ FLASHMEM void menuSettingsAct() {
       drawSettings(false);
     };
     removedCount = deleteUnusedSamples();
+    removedAt = millis();
     deleteProgress = nullptr;
     removingPct = -1;
   } else {
