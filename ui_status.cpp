@@ -151,7 +151,9 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   const bool rotateShown = clipRotating();
   if (rotateShown) {
     int32_t loop = tracks[selected].loopFrames();
-    int32_t f = ((int32_t)((unitOf(selected).rotate + (int64_t)clipRotatePending(selected)) % loop) + loop) % loop;   // (held, not heard yet: counted)
+    const TrackUnit su = unitOf(selected);         // (the ms offset: the turn less its whole quarters, the step offset)
+    const int64_t stepFrames = (int64_t)(su.steps + clipRotatePendingSteps(selected)) * (tracks[selected].spbNative / 4);
+    int32_t f = (int32_t)((((int64_t)su.rotate + clipRotatePending(selected) - stepFrames) % loop + loop) % loop);   // (held, not heard yet: counted)
     if (f > loop / 2) f -= loop;
     int ms = (int)lroundf(f * 1000.0f / AUDIO_SAMPLE_RATE_EXACT);
     if (abs(ms) < 10000) snprintf(text, sizeof text, ms ? "%+d" : "%d", ms);   // (the number's room: "+8888" at most; none: 0, no sign)

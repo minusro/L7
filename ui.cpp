@@ -98,7 +98,11 @@ static void takeLooks(int t, ShownTrack &s) {
   // counting): the waveform turned as far right.
   uint32_t loop = tr.loopFrames();
   TrackUnit u = unitOf(t);
-  int64_t turn = (u.sample == tr.sample ? u.rotate : tr.rotate) + (int64_t)clipRotatePending(t);
+  // (The step offset, whole quarter beats, not: shown as the grid moved instead.)
+  const int32_t quarters = tr.loopBars * BEATS_PER_BAR * 4, qf = (int32_t)(tr.spbNative / 4);
+  const int32_t steps = quarters ? (int32_t)((((int64_t)(u.sample == tr.sample ? u.steps : tr.steps) + clipRotatePendingSteps(t)) % quarters + quarters) % quarters) : 0;
+  s.steps = (uint16_t)steps;
+  int64_t turn = (u.sample == tr.sample ? u.rotate : tr.rotate) + (int64_t)clipRotatePending(t) - (int64_t)steps * qf;
   int shift = loop ? (int)(((turn % loop + loop) % loop) * OVERVIEW_COLS / loop) : 0;
   s.turn = shift;
   for (int c = 0; c < OVERVIEW_COLS; c++) s.overview[(c + shift) % OVERVIEW_COLS] = (uint8_t)min(255.0f, tr.overview[c] * norm + 0.5f);

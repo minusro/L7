@@ -543,13 +543,14 @@ static bool applyingUnit = false;                // setTrackUnit() at work: not 
 TrackUnit unitOf(int t) {
   const Track &tr = tracks[t];
   if (changes[t].on) return changes[t].u;        // a change on its way counts
-  TrackUnit u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, 0, 0, 0, 0, 0, 0, tr.filterLo, tr.filterHi, tr.volume, tr.balance};
+  TrackUnit u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, 0, 0, 0, 0, 0, 0, 0, tr.filterLo, tr.filterHi, tr.volume, tr.balance};   // (version, steps, sample, range x3, muted, rotate)
   if (tr.state == TrackState::Empty) return u;
   u.sample = tr.sample;
   trackRange(t, u.rangeStart, u.rangeLen);       // a queued range counts
   u.rangePhase = (uint32_t)posMod(-tr.rangeAnchorQ, 4 * u.rangeLen);
   u.muted = tr.state == TrackState::Muted;
   u.rotate = tr.rangePending ? tr.pendingRotate : tr.rotate;   // (a queued one counts)
+  u.steps = tr.steps;
   return u;
 }
 
@@ -666,6 +667,8 @@ static void applyRange(int t, const TrackUnit &u) {
   tr.rangeBeats = len;
   tr.rangeAnchorQ = -(int32_t)(u.rangePhase % (4 * len));
   uint32_t loop = tr.loopFrames(), rotate = loop ? u.rotate % loop : 0;
+  const uint32_t quarters = tr.loopBars * BEATS_PER_BAR * 4;
+  tr.steps = quarters ? u.steps % quarters : 0;
   if (rotate != tr.rotate) {
     tr.rotate = rotate;
     tr.overviewVersion++;                          // (the waveform drawn turned too)
@@ -1284,7 +1287,7 @@ static void migrateLegacy(int t, void (*progress)(const char *)) {
     }
     buildOverview(tr, recPeaks, info.recordedFrames);
   }
-  TrackUnit u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, nextSample, info.rangeStart, info.rangeLen, info.rangePhase,
+  TrackUnit u = {{'M', '8', 'T', 'U'}, UNIT_VERSION, 0, nextSample, info.rangeStart, info.rangeLen, info.rangePhase,
                 info.muted, 0, 0, FILTER_MAX, VOLUME_UNITY, 0};
   const uint32_t FILTER_AT = INFO_OFFSET + sizeof(LegacyInfo) + OVERVIEW_COLS, MIX_AT = FILTER_AT + 2;
   if (info.version >= 8) { u.filterLo = (int8_t)h[FILTER_AT]; u.filterHi = (int8_t)h[FILTER_AT + 1]; }
@@ -1320,10 +1323,13 @@ bool sampleMarked(int i) { return i >= 0 && i < sampleTotal && (sampleMarks[i / 
 // Deletes the recordings not marked, keeping what the tracks, the clipboard
 // and a recording use; empty recording space (the pool) isn't touched. Only
 // stopped and idle (it changes the file system). The marks are cleared.
+void (*deleteProgress)(int done, int total) = nullptr;
 FLASHMEM int deleteUnmarkedSamples(const uint32_t *only, int onlyCount) {
   if (transport.running || recording.mode != Recording::Idle) return 0;
   int deleted = 0, kept = 0;
-  for (int i = 0; i < sampleTotal; i++) {
+  const int total = sampleTotal;
+  for (int i = 0; i < total; i++) {
+    if (deleteProgress && (i & 7) == 0) deleteProgress(i, total);   // (every 8 files: the settings' command shows it)
     uint32_t id = sampleIds[i];
     bool listed = !only;
     for (int k = 0; k < onlyCount && !listed; k++) listed = only[k] == id;
@@ -1370,7 +1376,7 @@ bool pasteTrack(int t) {
 }
 
 static void queueRange(int t, uint32_t startBeat, uint32_t beats, uint32_t rotate);
-bool rotateTrack(int t, int32_t by) {
+bool rotateTrack(int t, int32_t by, int32_t bySteps) {
   Track &tr = tracks[t];
   if (tr.state == TrackState::Empty || recordingTrack(t)) return false;
   if (changes[t].on || plans[t].on || tr.sampleSwitch) return false;   // a change on its way (a moment)
@@ -1379,6 +1385,11 @@ bool rotateTrack(int t, int32_t by) {
   uint32_t now = tr.rangePending ? tr.pendingRotate : tr.rotate;
   int64_t r = ((int64_t)now + by) % loop;
   uint32_t to = (uint32_t)(r < 0 ? r + loop : r);
+  if (bySteps) {                                 // (its whole quarters: the steps)
+    const int32_t quarters = tr.loopBars * BEATS_PER_BAR * 4;
+    tr.steps = (uint16_t)((((int32_t)tr.steps + bySteps) % quarters + quarters) % quarters);
+    trackChanged(t);
+  }
   if (to == now) return true;
   uint32_t rs, rb;
   trackRange(t, rs, rb);
@@ -1450,6 +1461,7 @@ bool stepSample(int t, int dir) {
   if (sampleTotal < 2 || recordingTrack(t)) return false;
   TrackUnit u = unitOf(t);                       // (a planned change counts)
   u.rotate = 0;                                  // (another recording: not turned)
+  u.steps = 0;
   // In the order of the names from the track's sample, wrapping around: the
   // project's recordings, then other projects'. An empty track: LEFT the project's sample last touched
   // (stepped to or recorded), RIGHT the one after it; none touched yet, the
@@ -2134,6 +2146,7 @@ static void armRecordedLoop(bool endAhead) {
   tr.rangePending = false;
   tr.rangeAnchorQ = 4 * recording.startBeat;
   tr.rotate = 0;                                 // (a new recording: not turned)
+  tr.steps = 0;
   tr.state = newClipsPlay ? TrackState::Playing : TrackState::Muted;   // (off: it comes in muted)
   if (!transport.running) return;
   if (!endAhead) {
@@ -2199,6 +2212,7 @@ static void finishRecording() {
   tr.rangeBeats = tr.loopBars * BEATS_PER_BAR;
   tr.rangeAnchorQ = 4 * recording.startBeat;
   tr.rotate = 0;                                 // (a new recording: not turned)
+  tr.steps = 0;
   tr.state = newClipsPlay ? TrackState::Playing : TrackState::Muted;   // (off: it comes in muted)
   if (recording.written > tr.recordedFrames && tr.recordedFrames % PEAK_BIN_FRAMES) {
     // Trimmed: the last bin also saw audio past the new end. Re-measure it.

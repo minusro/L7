@@ -52,6 +52,12 @@ checked, or turn it into a fix.
   both halves; plays as on the M8. No simulator test yet.
 - [ ] **Sample names `A001.wav`** (per project): new recordings named so;
   older `A30012.wav` ones still play; SHIFT+LEFT/RIGHT order.
+- [ ] **Step and ms offsets apart**: taps move the range, start point,
+  playhead and bar lines left over the waveform (not the waveform); holds turn
+  the waveform; the status shows the ms part only. Export: steps move the
+  clip's start and loop start back (wrapping; a range then across the end:
+  doubled), the ms part as before. Older saved offsets load as ms.
+- [ ] **Delete unused samples**: the progress bar under it, then the count.
 
 ## Open problems
 

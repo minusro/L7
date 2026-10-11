@@ -11,7 +11,12 @@ namespace looper {
 // filter, volume and balance. Saved in its unit file; scenes hold one per track.
 struct TrackUnit {
   char magic[4];                                 // "M8TU"
-  uint32_t version, sample;                      // sample 0: empty track
+  // The version in the low 16 bits; in the high 16 the clip's step offset
+  // (quarter beats, the part of `rotate` taken in whole quarters: shown as the
+  // range, start, playhead and bar lines moved, exported as the loop's start
+  // moved). Units saved before it: 0 there (a small version number).
+  uint32_t version : 16, steps : 16;
+  uint32_t sample;                               // sample 0: empty track
   uint32_t rangeStart, rangeLen, rangePhase;     // beats; position in the range at transport beat 0, in quarters
   // Muted (0/1), and the clip's fine rotate: turned this many frames later
   // (its audio as it was; < its loop's frames). The rotate in the bits a
@@ -19,6 +24,7 @@ struct TrackUnit {
   uint32_t muted : 8, rotate : 24;
   int8_t filterLo, filterHi, volume, balance;
 };
+static_assert(sizeof(TrackUnit) == 32, "a unit's size as saved (scenes, headers): unchanged");
 TrackUnit unitOf(int t);
 // Units before version 2 kept volume 0-32 (unity 28, 1.5 dB steps) and
 // balance -16..16: brought to today's steps (config.h).
@@ -115,10 +121,11 @@ bool swapTracks(int a, int b);
 // (its audio as it was: TrackUnit's rotate): at once while stopped, else on
 // the next quarter beat after the lead (no gap); the scene follows. false:
 // no clip (or another on its way).
-bool rotateTrack(int t, int32_t by);
+bool rotateTrack(int t, int32_t by, int32_t bySteps = 0);   // by: frames in all; bySteps: of them, whole quarter beats (the step offset)
 // Samples are known by an id: the name's tag (project letter, track) and
 // number ("A30012.wav"; older ones: the number alone, "0012.wav").
 // Marks on the samples in use (clearSampleMarks(), markSample() each), then
+extern void (*deleteProgress)(int done, int total);   // called as deleteUnmarkedSamples() goes through the files (nullptr: none)
 // deleteUnmarkedSamples() deletes the recordings not marked and not on a
 // track, the clipboard or recording; stopped only (file-system changes);
 // returns how many (the marks cleared).

@@ -31,6 +31,7 @@ uint32_t sampleSteppedAt = 0;
 bool sceneDupMade() { return false; }
 bool optThenEdit() { return false; }
 int32_t clipRotatePending(int) { return 0; }
+int32_t clipRotatePendingSteps(int) { return 0; }
 bool arrowsMoved() { return true; }
 static uint8_t simSwitchKey = 0;                   // (an arrow held that switches screens: the peeps)
 bool screenSwitchPending() { return simSwitchKey != 0; }

@@ -28,7 +28,7 @@ static void resetCell() {
   const Track &tr = tracks[selected];
   if (selectedCell == WAVE_CELL) {
     setRange(selected, 0, tr.loopBars * BEATS_PER_BAR);
-    rotateTrack(selected, -(int32_t)unitOf(selected).rotate);   // (and its fine rotate: none)
+    rotateTrack(selected, -(int32_t)unitOf(selected).rotate, -(int32_t)unitOf(selected).steps);   // (and its offsets: none)
   } else if (selectedCell == FILTER_CELL) {
     setTrackFilter(selected, 0, FILTER_MAX);
     trackChanged(selected);
@@ -205,11 +205,13 @@ static bool editAfterOpt = false;
 // While held and playing, what's turned so far is heard at each quarter beat
 // crossing (serviceRotate()).
 static int32_t rotateBy = 0;
+static int32_t rotateStepsBy = 0;                  // (of it, whole quarter beats: the step offset; taps)
 static int rotateT = -1;
 static uint8_t rotateKey = 0;
 static bool rotateHeld = false;                    // (its keys still held)
 static int32_t rotateQ = 0;                        // (the quarter beat last seen: a crossing, what's turned heard)
 int32_t clipRotatePending(int t) { return t == rotateT ? rotateBy : 0; }
+int32_t clipRotatePendingSteps(int t) { return t == rotateT ? rotateStepsBy : 0; }
 static int32_t quarterNow() {
   noInterrupts();
   int32_t q = transport.beat * 4 + (int32_t)((uint64_t)transport.sampleInBeat * 4 / transport.spb);
@@ -229,7 +231,6 @@ static int32_t signedTurn(int64_t f, int64_t loop) {
 static bool rotateStepped = false;                 // (the press's steps begun, or reset: no tap's quarter)
 static bool rotateStopped = false;                 // (at none: the held arrow's steps stopped)
 static uint32_t stepAt = 0;                        // (millis() of the held arrow's next step; 0: none)
-static int32_t quarterFrames(const Track &tr) { return (int32_t)(tr.spbNative / 4); }
 static int heldSteps = 0;                          // (the held arrow's steps so far: five of 1 ms, five of 2, five of 4, then 10 ms each)
 // The tempo cell's ms flashed white a moment: as the held arrow's ms steps
 // start, and as a tap's quarter beat is taken (let go).
@@ -240,7 +241,9 @@ bool clipRotateFlash() { return rotateFlashAt && millis() - rotateFlashAt < ROTA
 static int32_t msFrames(const Track &tr, int ms) {
   return (int32_t)((uint64_t)tr.spbNative * (uint32_t)(AUDIO_SAMPLE_RATE_EXACT * ms / 1000) / (transport.spb ? transport.spb : 1));
 }
-static void nudgeStep(int dir, bool reset, int32_t frames = 0) {
+// steps: whole quarter beats (a tap: the step offset, wrapping round the
+// loop); frames: the ms offset (held), stopping at none; reset: both to none.
+static void nudgeStep(int dir, bool reset, int32_t frames = 0, int32_t steps = 0) {
   if (rotateT < 0) {
     if (!reset) return;
     rotateT = selected;                            // (both arrows at once: the selected track's)
@@ -250,17 +253,27 @@ static void nudgeStep(int dir, bool reset, int32_t frames = 0) {
   const Track &tr = tracks[rotateT];
   const int64_t loop = tr.loopFrames();
   if (loop <= 0) return;
-  const int32_t now = signedTurn((int64_t)unitOf(rotateT).rotate + rotateBy, loop);
-  int32_t by = reset ? -now : dir * frames;
-  if (!reset && now != 0) {
-    int32_t next = signedTurn((int64_t)now + by, loop);
-    if (next == 0 || ((now < 0) != (next < 0) && llabs((int64_t)next - now) < loop / 2)) {
-      by = -now;                                   // (to none: there)
-      rotateStopped = true;
+  const TrackUnit u = unitOf(rotateT);
+  const int32_t qf = (int32_t)(tr.spbNative / 4), stepsNow = u.steps + rotateStepsBy;
+  if (reset) {
+    rotateBy -= signedTurn((int64_t)u.rotate + rotateBy, loop);
+    rotateStepsBy -= stepsNow;
+    rotateStepped = true;
+  } else if (steps) {                              // (a tap: a quarter beat, the step offset)
+    rotateStepsBy += dir * steps;
+    rotateBy += dir * steps * qf;
+  } else {                                         // (held: the ms offset, stopping at none)
+    const int32_t now = signedTurn((int64_t)u.rotate + rotateBy - (int64_t)stepsNow * qf, loop);
+    int32_t by = dir * frames;
+    if (now != 0) {
+      int32_t next = signedTurn((int64_t)now + by, loop);
+      if (next == 0 || ((now < 0) != (next < 0) && llabs((int64_t)next - now) < loop / 2)) {
+        by = -now;                                 // (to none: there)
+        rotateStopped = true;
+      }
     }
+    rotateBy += by;
   }
-  if (reset) rotateStepped = true;
-  rotateBy += by;
   drawTrack(rotateT);
 }
 
@@ -280,8 +293,8 @@ static void serviceRotate() {                      // (every pass: pollKeys())
   int32_t q = quarterNow();
   bool crossing = q != rotateQ;
   rotateQ = q;
-  if (rotateBy && (!rotateHeld || (crossing && transport.running)) && rotateTrack(rotateT, rotateBy)) rotateBy = 0;
-  if (!rotateHeld && !rotateBy) {
+  if ((rotateBy || rotateStepsBy) && (!rotateHeld || (crossing && transport.running)) && rotateTrack(rotateT, rotateBy, rotateStepsBy)) rotateBy = rotateStepsBy = 0;
+  if (!rotateHeld && !rotateBy && !rotateStepsBy) {
     drawTrack(rotateT);
     rotateT = -1;
     rotateKey = 0;
@@ -550,7 +563,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // The fine rotate's keys: one let go, what was shown is heard.
   if (rotateHeld && (!(keys & m8::BTN_EDIT) || !(keys & m8::BTN_OPT) || !(keys & rotateKey))) {
     if (!rotateStepped && rotateKey) rotateFlashAt = max(1u, millis());
-    if (!rotateStepped && rotateKey) nudgeStep(rotateKey & m8::BTN_RIGHT ? 1 : -1, false, quarterFrames(tracks[rotateT]));   // (a tap: a quarter beat)
+    if (!rotateStepped && rotateKey) nudgeStep(rotateKey & m8::BTN_RIGHT ? 1 : -1, false, 0, 1);   // (a tap: a quarter beat, the step offset)
     rotateHeld = false;
     serviceRotate();
   }
@@ -917,7 +930,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
         if (rotateT != selected) {
           rotateHeld = false;                      // (another track's, let go of: to it now)
           serviceRotate();
-          rotateBy = 0;
+          rotateBy = rotateStepsBy = 0;
           rotateQ = quarterNow();                  // (heard from the next crossing on)
         }
         rotateT = selected;

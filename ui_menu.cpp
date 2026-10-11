@@ -370,13 +370,15 @@ static uint32_t itemKey(int k) {
 // frame hidden meanwhile). Grey all over, from four blocks under the screen's top, each corner
 // cut (its block and the two next to it); its items' frames as the list's, two
 // blocks of space round them; OFF dark grey.
-// The settings, then a command at the top: REMOVE UNUSED SAMPLES (A or B:
+// The settings, then a command at the top: DELETE UNUSED SAMPLES (A or B:
 // the recordings on the card no project, scene, clip or clipboard uses,
-// deleted; the clock stopped first; the number removed shown in its value's place).
+// deleted; the clock stopped first; meanwhile a bar under it, light grey as
+// far as it's got; then the number deleted, in its value's place).
 static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
-                                                          "EMPTY PROJECT CLICK", "REMOVE UNUSED SAMPLES"};
+                                                          "EMPTY PROJECT CLICK", "DELETE UNUSED SAMPLES"};
 static constexpr int SET_ITEMS = SETTING_COUNT + 1, SET_PITCH = 10, SET_REMOVE = SETTING_COUNT;
 static int removedCount = -1;                    // (the command's result, until the popup closes; -1: not run)
+static int removingPct = -1;                     // (while it runs: how far, 0-99; -1: not running)
 
 bool menuSettingsOpen() { return shown && setOpen; }
 int menuSettingsItem() { return menuSettingsOpen() ? setSel : -1; }
@@ -438,7 +440,7 @@ FLASHMEM static void drawSettings(bool whole) {
   uint16_t frame = setPressAt && millis() - setPressAt < PRESS_FLASH_MS ? LIGHT : actionHeld() ? DARK : frameColor();
   uint32_t key = setSel | (uint32_t)frame << 8;
   for (int i = 0; i < SETTING_COUNT; i++) key |= (uint32_t)setting(i) << (3 + i);
-  key ^= (uint32_t)(removedCount + 1) * 2654435761u;
+  key ^= (uint32_t)(removedCount + 1) * 2654435761u ^ (uint32_t)(removingPct + 2) * 40503u;
   if (key == shownKey) return;
   shownKey = key;
   for (int pass = 0; pass < 2; pass++)             // (the selected one last: its frame on top of the rows it shares)
@@ -453,7 +455,9 @@ FLASHMEM static void drawSettings(bool whole) {
       drawText(s.x * PX, s.y * PX, SET_LABELS[i], sel ? INK : LIGHT, DIM);
       char num[8];
       if (i == SET_REMOVE) snprintf(num, sizeof num, "%d", max(removedCount, 0));
-      const char *v = i == SET_REMOVE ? (removedCount >= 0 ? num : "") : on ? "ON" : "OFF";
+      const char *v = i == SET_REMOVE ? (removingPct < 0 && removedCount >= 0 ? num : "") : on ? "ON" : "OFF";
+      if (i == SET_REMOVE && removingPct >= 0)     // (running: a bar under it, light grey as far as it's got)
+        t.fillRect(s.x * PX, s.y * PX + FONT_H + PX, s.w * PX * removingPct / 100, PX, LIGHT);
       drawText((x + w) * PX - textWidth(v), s.y * PX, v, i == SET_REMOVE || on ? (sel ? INK : LIGHT) : DARK, DIM);
     }
 }
@@ -492,7 +496,17 @@ FLASHMEM void menuSettingsAct() {
   setPressAt = millis();                           // (its frame light grey a moment: drawSettings())
   if (setSel == SET_REMOVE) {
     if (transport.running) transportStop();      // (the card to itself)
+    removingPct = 0;                             // (how far: shown as it goes)
+    drawSettings(false);
+    deleteProgress = [](int done, int total) {
+      int pct = total ? min(99, done * 100 / total) : 0;
+      if (pct == removingPct) return;
+      removingPct = pct;
+      drawSettings(false);
+    };
     removedCount = deleteUnusedSamples();
+    deleteProgress = nullptr;
+    removingPct = -1;
   } else {
     setSetting(setSel, !setting(setSel));
   }

@@ -59,6 +59,10 @@ struct Track {
   // The fine rotate (TrackUnit): the clip turned this many frames later, its
   // audio as it was: every place played is that much earlier in the file.
   uint32_t rotate = 0;
+  // The part of it in whole quarter beats (TrackUnit's steps): its audio
+  // plays by rotate as a whole; shown, the waveform turns by the rest (the
+  // ms offset), the range, start, playhead and bar lines move by these.
+  uint16_t steps = 0;
   uint32_t rangeStartFrame() const {
     uint32_t loop = loopFrames(), f = rangeStartBeat * spbNative;
     return loop ? (f + loop - rotate % loop) % loop : f;

@@ -3317,7 +3317,7 @@ for f in os.listdir("."):
     if (t >= 0) {
       Track &tr = tracks[t];
       const uint32_t loop = tr.loopFrames(), quarter = tr.spbNative / 4, start = tr.rangeStartBeat * tr.spbNative;
-      check(rotateTrack(t, (int32_t)quarter), "turned a quarter beat later");
+      check(rotateTrack(t, (int32_t)quarter, 1), "turned a quarter beat later (a step: the step offset)");
       check(tr.rangePending && (int32_t)(tr.switchS - tr.head) >= 0 && tr.switchQ % 1 == 0,
             "queued: switched to where the stream hadn't buffered yet (the old place played up to it, nothing dropped)");
       runBeats(3);
@@ -3325,11 +3325,13 @@ for f in os.listdir("."):
       snprintf(msg, sizeof msg, "its unit and track: %u frames (a quarter beat: %u); the range starts that much earlier in the file",
                (unsigned)unitOf(t).rotate, (unsigned)quarter);
       check(unitOf(t).rotate == quarter && tr.rotate == quarter && tr.rangeStartFrame() == (start + loop - quarter) % loop, msg);
+      check(unitOf(t).steps == 1 && tr.steps == 1, "the step offset kept apart: 1 quarter (its unit, its track)");
       checkSync(t, "a quarter beat later");
       rotateTrack(t, 44);                          // (a millisecond more)
       runBeats(3);
       checkSync(t, "a millisecond more");
-      rotateTrack(t, -(int32_t)quarter - 44);       // back
+      rotateTrack(t, -(int32_t)quarter - 44, -1);   // back
+      check(unitOf(t).steps == 0, "back: no step offset");
       runBeats(3);
       check(tr.rotate == 0 && unitOf(t).rotate == 0 && tr.rangeStartFrame() == start, "turned back: none");
       checkSync(t, "back as it was");

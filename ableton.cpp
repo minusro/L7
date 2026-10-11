@@ -118,7 +118,7 @@ static struct {
   int slot;                                      // the clip slot or scene being written (0..)
   TrackUnit unit;                                // the clip's
   SampleDetails sample;
-  uint32_t loopStart, loopEnd;                   // beats
+  double loopStart, loopEnd;                     // beats (the step offset: quarters too)
   double start;                                  // beats (the fine rotate: a fraction too)
   double shiftSec;                               // the warp markers' audio moved this much (the fine rotate, a range inside the loop)
   bool doubled;                                  // the clip's range crosses its loop's end: the doubled file ("A077x2.wav"), the loop twice over
@@ -149,41 +149,50 @@ static void clipSlots(bool freeze) {
       continue;
     }
     x.unit = units[trackAt(x.place)];
-    // The loop: the track's range (whole loop: length 0), or for one across
-    // the loop's end (a Live loop can't wrap) the whole loop; the start: the
-    // range's start position.
-    uint32_t loopBeats = x.sample.loopBars * BEATS_PER_BAR;
-    uint32_t len = x.unit.rangeLen ? x.unit.rangeLen : loopBeats;
-    uint32_t sp = startPosition(loopBeats, x.unit.rangeStart, len);
-    // A range across the loop's end (a Live loop can't wrap): the doubled
-    // file, the loop twice over, the range inside it as it is.
-    x.doubled = x.unit.rangeStart + len > loopBeats && len < loopBeats;
+    // The loop: the track's range (whole loop: length 0); the start: the
+    // range's start position. The step offset (whole quarter beats of the
+    // clip's turn) moves both back, wrapping round the loop; a range then
+    // across the loop's end (a Live loop can't wrap): the doubled file, the
+    // loop twice over, the range inside it as it is.
+    const uint32_t loopBeats = x.sample.loopBars * BEATS_PER_BAR, loopQ = loopBeats * 4;
+    const uint32_t len = x.unit.rangeLen ? x.unit.rangeLen : loopBeats;
+    const uint32_t sp = startPosition(loopBeats, x.unit.rangeStart, len);
+    const uint32_t steps = loopQ ? x.unit.steps % loopQ : 0;
+    const double rs = (double)((x.unit.rangeStart * 4 + loopQ - steps) % loopQ) / 4;   // (moved back by the steps)
+    const double spm = (double)((sp * 4 + loopQ - steps) % loopQ) / 4;
+    x.doubled = len < loopBeats && rs + len > loopBeats;
     x.loopFrames = x.sample.frames;
-    x.loopStart = x.unit.rangeStart;
-    x.loopEnd = x.unit.rangeStart + len;
     if (x.doubled) {
       strncat(x.sample.name, "x2", sizeof x.sample.name - strlen(x.sample.name) - 1);
       x.sample.frames *= 2;
       x.sample.bytes = 44 + (uint64_t)x.sample.frames * 4;
-      x.start = (sp < x.loopStart ? sp + loopBeats : sp) - x.loopStart;   // (its start position, in the range)
+      x.loopStart = rs;
+      x.loopEnd = rs + len;
+      x.start = (spm < rs ? spm + loopBeats : spm) - rs;   // (its start position, in the range)
+    } else if (len >= loopBeats) {                 // (the whole loop)
+      x.loopStart = 0;
+      x.loopEnd = loopBeats;
+      x.start = spm;
     } else {
-      if (x.loopEnd > loopBeats) { x.loopStart = 0; x.loopEnd = loopBeats; }   // (the whole loop)
-      x.start = (sp + loopBeats - x.loopStart) % loopBeats;
+      x.loopStart = rs;
+      x.loopEnd = rs + len;
+      x.start = fmod(spm - rs + loopBeats, (double)loopBeats);
     }
     if (x.start >= x.loopEnd - x.loopStart) x.start = 0;
-    // The fine rotate (the clip's audio later by `rotate` frames, wrapping
-    // round its loop): a Live loop can't wrap its audio, so for the whole
-    // loop the start marker moves back by it instead (Live's looping wraps
-    // the audio as the app does); for a range inside the loop, every warp
-    // marker's audio moves (the range plays what the app plays there).
+    // The ms offset (the turn less its whole quarters: the clip's audio later
+    // by that many frames, wrapping round its loop): a Live loop can't wrap
+    // its audio, so for the whole loop the start marker moves back by it
+    // instead (Live's looping wraps the audio as the app does); for a range
+    // inside the loop, every warp marker's audio moves (the range plays what
+    // the app plays there).
     x.shiftSec = 0;
     const int64_t loopFrames = (int64_t)loopBeats * x.sample.spb;
-    int64_t r = loopFrames ? (int64_t)x.unit.rotate % loopFrames : 0;
+    int64_t r = loopFrames ? (((int64_t)x.unit.rotate - (int64_t)steps * (x.sample.spb / 4)) % loopFrames + loopFrames) % loopFrames : 0;
     if (r > loopFrames / 2) r -= loopFrames;       // (past half the loop: as earlier)
     if (r) {
       if (x.loopEnd - x.loopStart >= loopBeats) {
-        double s = fmod(x.start - (double)r / x.sample.spb, (double)loopBeats);
-        x.start = s < 0 ? s + loopBeats : s;
+        double s2 = fmod(x.start - (double)r / x.sample.spb, (double)loopBeats);
+        x.start = s2 < 0 ? s2 + loopBeats : s2;
       } else {
         x.shiftSec = r / 44100.0;
       }
@@ -404,8 +413,8 @@ FLASHMEM int exportProject(int p, void (*progress)(int done, int total)) {
       for (const auto &u : units) {
         markSample(u.sample);
         SampleDetails d;                           // (a range across its loop's end: the doubled file too)
-        if (u.sample && u.rangeLen && sampleDetails(u.sample, d) && u.rangeStart + u.rangeLen > d.loopBars * BEATS_PER_BAR &&
-            u.rangeLen < d.loopBars * BEATS_PER_BAR) {
+        const uint32_t lq = sampleDetails(u.sample, d) ? d.loopBars * BEATS_PER_BAR * 4 : 0;   // (in quarters: the step offset moves its start back)
+        if (u.sample && u.rangeLen && lq && (u.rangeStart * 4 + lq - u.steps % lq) % lq + u.rangeLen * 4 > lq && u.rangeLen * 4 < lq) {
           bool known = false;
           for (int j = 0; j < doubledCount; j++) known |= doubled[j] == u.sample;
           if (!known && doubledCount < (int)(sizeof doubled / sizeof doubled[0])) doubled[doubledCount++] = u.sample;

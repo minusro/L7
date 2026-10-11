@@ -56,6 +56,7 @@ struct WaveView {
   uint64_t borders = 0;                            // the border's sides (bordersOf())
   int rangeFirstPx = 0, rangePx = 0;               // pixel columns inside the loop range: rangeFirstPx on, wrapping
   int markPx = -1;                                 // the start position's line: its first pixel column; -1: none
+  int gridPx = 0;                                  // the step offset: the range, start, playhead and bar lines this many pixel columns left
   int playPx = -1;                                 // playhead / record head: its first pixel column; -1: none
   uint16_t headColor = 0;                          // a line this colour; INVERT_HEAD: the column inverted
   uint16_t rangeInk = INK;                         // the waveform inside the loop range
@@ -145,7 +146,7 @@ static void drawColumn(int i, int bc) {
     for (int sub = 0; sub < PX; sub++) {
       const int p = c * PX + sub;                                 // (this pixel column)
       for (int b = 1; b < bars; b++)                              // bars 2 on: a black line a pixel wide just before each start
-        if ((edgePx(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) - 1 + PX_COLS) % PX_COLS == p) {
+        if ((edgePx(b * BEATS_PER_BAR, bars * BEATS_PER_BAR) - 1 - (v.live ? 0 : v.gridPx) + 2 * PX_COLS) % PX_COLS == p) {
           for (int y = (MID_ROW - WAVE_REACH) * PX; y < (MID_ROW + 2 + WAVE_REACH) * PX; y++) px[y * PX + sub] = v.live ? ACCENT_DARK : v.bg;   // (recording: the dark accent)
           break;
         }
@@ -226,7 +227,8 @@ FLASHMEM void drawWave(int i, bool recordingHere) {   // (flash: RAM1 is full; i
   }
   // Heights as the track's volume plays it (the overview: as recorded).
   uint16_t scale = tr.state == TrackState::Empty ? 256 : (uint16_t)min(1024.0f, volumeGainOf(tr.volume, headroomDbOf(tr.overview)) * 256 + 0.5f);
-  if (labelSame && scale == v.scale && v.drawn == uiGeneration && v.version == tr.overviewVersion && v.turn == tr.turn && v.state == (uint8_t)tr.state &&
+  const int gridPx = tr.loopBars ? (int)(((uint32_t)tr.steps * PX_COLS + tr.loopBars * BEATS_PER_BAR * 2) / (tr.loopBars * BEATS_PER_BAR * 4)) % PX_COLS : 0;
+  if (labelSame && scale == v.scale && gridPx == v.gridPx && v.drawn == uiGeneration && v.version == tr.overviewVersion && v.turn == tr.turn && v.state == (uint8_t)tr.state &&
       v.rec == recordingHere && v.rs == rs && v.rb == rb && v.bg == bg && v.ground == ground && v.borders == borders &&
       v.rangeInk == rangeInk && v.outInk == outInk)
     return;
@@ -234,6 +236,7 @@ FLASHMEM void drawWave(int i, bool recordingHere) {   // (flash: RAM1 is full; i
   v.scale = scale;
   v.version = tr.overviewVersion;
   v.turn = tr.turn;
+  v.gridPx = gridPx;
   v.state = (uint8_t)tr.state;
   v.rec = recordingHere;
   v.rs = rs;
@@ -255,10 +258,11 @@ FLASHMEM void drawWave(int i, bool recordingHere) {   // (flash: RAM1 is full; i
     // (Range edges, bar starts and the start position all on the same column
     // edges: the range's colour stops exactly at the bar lines.)
     int first = edgePx(rs, loopBeats), end = edgePx(rs + rb, loopBeats);   // (end unwrapped)
-    v.rangeFirstPx = first % PX_COLS;
+    v.rangeFirstPx = (first - gridPx + PX_COLS) % PX_COLS;   // (the step offset: left)
     v.rangePx = constrain(end - first, 1, PX_COLS);
     int mark = edgePx(startPosition(loopBeats, rs, rb), loopBeats) % PX_COLS;
     v.markPx = mark == 0 ? 0 : mark - LINE_W;      // (the pixels before its edge, as a bar line's: on the bar line at a bar start)
+    v.markPx = (v.markPx - gridPx + PX_COLS) % PX_COLS;
   }
   for (int bc = 0; bc < BLOCK_COLS; bc++) drawColumn(i, bc);
 }
@@ -349,7 +353,7 @@ void updatePlayheads() {
       uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
       int first = edgePx(tr.rangeStartBeat, loopBeats);
       int pxs = max(LINE_W, edgePx(tr.rangeStartBeat + tr.rangeBeats, loopBeats) - first);
-      at = (first + min(pxs - LINE_W, (int)(inRange * pxs / tr.rangeBeats))) % PX_COLS;
+      at = (first + min(pxs - LINE_W, (int)(inRange * pxs / tr.rangeBeats)) - views[i].gridPx + PX_COLS) % PX_COLS;   // (the step offset: left)
     }
     movePlayhead(i, at, muted ? MUTED_HEAD : v.rangeInk == ACCENT ? INK : ACCENT);
   }
