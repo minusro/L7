@@ -118,7 +118,9 @@ static struct {
   int slot;                                      // the clip slot or scene being written (0..)
   TrackUnit unit;                                // the clip's
   SampleDetails sample;
-  uint32_t loopStart, loopEnd, start;            // beats
+  uint32_t loopStart, loopEnd;                   // beats
+  double start;                                  // beats (the fine rotate: a fraction too)
+  double shiftSec;                               // the warp markers' audio moved this much (the fine rotate, a range inside the loop)
   int event;                                     // the next envelope event's id
   int masterIds;                                 // the master Limiter's fresh ids so far
 } x;
@@ -160,6 +162,23 @@ static void clipSlots(bool freeze) {
     }
     x.start = (sp + loopBeats - x.loopStart) % loopBeats;
     if (x.start >= x.loopEnd - x.loopStart) x.start = 0;
+    // The fine rotate (the clip's audio later by `rotate` frames, wrapping
+    // round its loop): a Live loop can't wrap its audio, so for the whole
+    // loop the start marker moves back by it instead (Live's looping wraps
+    // the audio as the app does); for a range inside the loop, every warp
+    // marker's audio moves (the range plays what the app plays there).
+    x.shiftSec = 0;
+    const int64_t loopFrames = (int64_t)loopBeats * x.sample.spb;
+    int64_t r = loopFrames ? (int64_t)x.unit.rotate % loopFrames : 0;
+    if (r > loopFrames / 2) r -= loopFrames;       // (past half the loop: as earlier)
+    if (r) {
+      if (x.loopEnd - x.loopStart >= loopBeats) {
+        double s = fmod(x.start - (double)r / x.sample.spb, (double)loopBeats);
+        x.start = s < 0 ? s + loopBeats : s;
+      } else {
+        x.shiftSec = r / 44100.0;
+      }
+    }
     emit(ALS_CLIP_SLOT);
   }
 }
@@ -248,7 +267,7 @@ FLASHMEM static void field(char code) {
         gz.puts("<WarpMarker Id=\"");
         putNumber(b);
         gz.puts("\" SecTime=\"");
-        putNumber(b ? x.sample.bars[b - 1] / 44100.0 : 0.0);
+        putNumber((b ? x.sample.bars[b - 1] / 44100.0 : 0.0) - x.shiftSec);   // (the fine rotate: the audio moved)
         gz.puts("\" BeatTime=\"");
         putNumber(b * BEATS_PER_BAR);
         gz.puts("\" />\n");
