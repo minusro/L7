@@ -312,6 +312,7 @@ static int32_t pmod(int32_t a, int32_t m) { int32_t r = a % m; return r < 0 ? r 
 static uint32_t quarterFrames(uint32_t q, uint32_t spb) { return (q / 4) * spb + (q % 4) * spb / 4; }
 
 // Checks the output at the next few beats against the track's recording.
+static uint32_t silentId = 0;                    // (the silent recording: DELETE UNUSED SAMPLES at the end)
 static void checkSync(int t, const char *label) {
   feedRamp = false;
   inputMonitored = false;
@@ -698,7 +699,7 @@ int main(int argc, char **argv) {
     inputMonitored = true;
   }
 
-  printf("empty recordings: stepped over by SHIFT+LEFT/RIGHT, deleted when stopped if unused\n");
+  printf("silent recordings: stepped onto by SHIFT+LEFT/RIGHT, deleted (and taken off the tracks) by DELETE UNUSED SAMPLES\n");
   {
     if (!transport.running) transportStart();
     feedRamp = false; feedSineHz = 0;
@@ -712,16 +713,18 @@ int main(int argc, char **argv) {
     check(empty && tracks[4].state != TrackState::Empty, "a bar of silence recorded");
     clearTrack(4);
     bool landed = false;
-    for (int i = 0; i < (int)sampleCount() + 2; i++) { stepSample(4, 1); landed |= tracks[4].sample == empty; }
-    check(!landed && sampleExists(empty), "playing: stepped over, still on the card");
-    check(deleteEmptySamples() == 0 && sampleExists(empty), "playing: not deleted (the card left alone)");
-    clearTrack(4);
+    for (int i = 0; i < (int)sampleCount() + 2 && !landed; i++) { stepSample(4, 1); runBeats(0.5); landed |= unitOf(4).sample == empty; }
+    check(landed && sampleExists(empty), "playing: stepped onto (silent ones not skipped)");
     int changes = simFsChanges;
     transportStop();
     for (int i = 0; i < 20; i++) serviceStorage();
-    stepSample(4, 1);
-    stepSample(4, -1);
-    check(deleteEmptySamples() == 1 && !sampleExists(empty), "stopped: stepped over again, deleted (nothing uses it)");
+    uint32_t ids[16];
+    int ns = silentSamples(ids, 16);
+    bool found = false;
+    for (int i = 0; i < ns; i++) found |= ids[i] == empty;
+    check(found, "found silent");
+    silentId = empty;                              // (deleted at the end: DELETE UNUSED SAMPLES would empty other tests' scenes)
+    clearTrack(4);
     clearTrack(4);
     for (int i = 0; i < 20; i++) serviceStorage();
     fsChangesAtStart += simFsChanges - changes;    // (stopped: the file system may change)
@@ -1724,12 +1727,12 @@ int main(int argc, char **argv) {
           "after a power cycle: the slots as they were");
     {
       uint32_t before = sampleCount(), playing = tracks[0].sample;
-      int deleted = deleteUnusedSamples();
+      int deleted = deleteUnusedSamples(false);   // (not the silent: the later tests' recordings of silence kept)
       bool kept = sampleExists(playing) && tracks[0].state != TrackState::Empty;
       char m[120];
       snprintf(m, sizeof m, "unused recordings deleted (%d of %u), the ones in use kept", deleted, before);
       check(deleted > 0 && sampleCount() == before - deleted && kept, m);
-      check(deleteUnusedSamples() == 0, "a second time: nothing more");
+      check(deleteUnusedSamples(false) == 0, "a second time: nothing more");
       transportStart();
       runBeats(4);
       checkSync(0, "playing on after the clean-up");
@@ -1772,15 +1775,20 @@ int main(int argc, char **argv) {
   {
     lastAction = "export";
     check(projectLoad(2), "project 3");
-    for (int i = 0; i < 10 && sceneCurrent() != 2; i++) sceneStep(sceneCurrent() < 2 ? 1 : -1);   // (stopped: at once)
-    check(sceneCurrent() == 2, "on its scene 2");
+    int want = 2;                                  // (a scene with a clip on track 1: silent ones were deleted from scenes before)
+    for (int pos = 1; pos <= sceneCount(); pos++) { TrackUnit us[NUM_TRACKS]; if (projectScene(2, pos, us) && us[NUM_TRACKS - 1].sample) { want = pos; break; } }
+    const float keepTempo = simTempo();             // (tempo per scene: the tests after run at the tempo they did)
+    for (int i = 0; i < 20 && sceneCurrent() != want; i++) sceneStep(sceneCurrent() < want ? 1 : -1);   // (stopped: at once)
+    simSetTempo(keepTempo);
+    for (int i = 0; i < 3; i++) block();
+    check(sceneCurrent() == want, "on a scene with a clip on track 1");
     // Its scenes with clips (empty ones left out), and scene 2's place among them.
     int scenes = 0, index = -1;
     for (int pos = 1; pos <= sceneCount(); pos++) {
       TrackUnit units[NUM_TRACKS];
       bool clips = false;
       if (projectScene(2, pos, units)) for (const auto &u : units) clips |= u.sample != 0;
-      if (clips && pos == 2) index = scenes;
+      if (clips && pos == want) index = scenes;
       if (clips) scenes++;
     }
     int playing = 0;                               // its tracks with a clip there: saved as playing
@@ -3358,6 +3366,28 @@ for f in os.listdir("."):
       newClipsPlay = true;
       feedRamp = false;
     }
+  }
+
+  printf("DELETE UNUSED SAMPLES: silent recordings taken off the tracks and deleted\n");
+  {
+    if (!transport.running) transportStart();
+    clearTrack(4);
+    feedRamp = false; feedSineHz = 0;
+    runBeats(1.5);
+    recordPress(4);
+    for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
+    runBeats(3.6);
+    recordPress(4);
+    runUntilIdle();
+    silentId = tracks[4].sample;
+    transportStop();
+    runUntilIdle();
+    check(silentId && tracks[4].state != TrackState::Empty, "(a bar of silence on track 5, in the scene)");
+    flushScenes();
+    int deleted = deleteUnusedSamples();
+    char m[120];
+    snprintf(m, sizeof m, "the silent one deleted, its track emptied (%d deleted in all)", deleted);
+    check(deleted >= 1 && !sampleExists(silentId) && tracks[4].state == TrackState::Empty, m);
   }
 
   printf("random sessions\n");

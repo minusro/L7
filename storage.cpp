@@ -1324,18 +1324,29 @@ bool sampleMarked(int i) { return i >= 0 && i < sampleTotal && (sampleMarks[i / 
 // and a recording use; empty recording space (the pool) isn't touched. Only
 // stopped and idle (it changes the file system). The marks are cleared.
 void (*deleteProgress)(int done, int total) = nullptr;
+static bool deleteSecondHalf = false;            // (after the silent ones' scan: the bar's second half)
+static bool sampleEmpty(uint32_t n);
+FLASHMEM int silentSamples(uint32_t *ids, int most) {
+  int n = 0;
+  for (int i = 0; i < sampleTotal && n < most; i++) {
+    if (deleteProgress && (i & 3) == 0) deleteProgress(i, 2 * sampleTotal);   // (the bar's first half)
+    if (sampleEmpty(sampleIds[i])) ids[n++] = sampleIds[i];
+  }
+  deleteSecondHalf = deleteProgress != nullptr;
+  return n;
+}
 FLASHMEM int deleteUnmarkedSamples(const uint32_t *only, int onlyCount) {
   if (transport.running || recording.mode != Recording::Idle) return 0;
   int deleted = 0, kept = 0;
   const int total = sampleTotal;
   for (int i = 0; i < total; i++) {
-    if (deleteProgress && (i & 7) == 0) deleteProgress(i, total);   // (every 8 files: the settings' command shows it)
+    if (deleteProgress && (i & 7) == 0) deleteProgress(deleteSecondHalf ? total + i : i, deleteSecondHalf ? 2 * total : total);   // (every 8 files: the settings' command shows it)
     uint32_t id = sampleIds[i];
     bool listed = !only;
     for (int k = 0; k < onlyCount && !listed; k++) listed = only[k] == id;
     bool keep = !listed || sampleMarked(i) || id == clipboard.sample;
     for (int t = 0; t < NUM_TRACKS && !keep; t++)
-      if (tracks[t].sample == id || changes[t].u.sample == id || (plans[t].on && plans[t].u.sample == id)) keep = true;
+      if (tracks[t].sample == id || (changes[t].on && changes[t].u.sample == id) || (plans[t].on && plans[t].u.sample == id)) keep = true;   // (a change on its way: only one still on)
     char path[40];
     samplePath(id, path, sizeof path);
     debugStage = "SD remove (unused sample)";
@@ -1351,6 +1362,7 @@ FLASHMEM int deleteUnmarkedSamples(const uint32_t *only, int onlyCount) {
   }
   sampleTotal = kept;
   clearSampleMarks();
+  deleteSecondHalf = false;
   if (deleted) Serial.printf("deleted %d unused recording(s)\n", deleted);
   return deleted;
 }
@@ -1464,6 +1476,12 @@ FLASHMEM char sampleLetter(uint32_t id) {
   sampleName(id, name, sizeof name);
   return name[0];
 }
+FLASHMEM bool sampleLetterEndsAt(uint32_t id, int dir) {
+  int i = sampleIndex(id);
+  if (i < 0 || i >= sampleTotal || sampleIds[i] != id) return true;
+  int j = ((i + dir) % sampleTotal + sampleTotal) % sampleTotal;
+  return sampleLetter(sampleIds[j]) != sampleLetter(id);
+}
 FLASHMEM bool sampleFirstOfLetter(uint32_t id) {
   int i = sampleIndex(id);
   return i <= 0 || i >= sampleTotal || sampleLetter(sampleIds[i - 1]) != sampleLetter(id);
@@ -1491,15 +1509,7 @@ bool stepSample(int t, int dir) {
     uint32_t own = idOf(tagOf(recordLetter, 0), 0);   // (the project's own: today's names)
     i = dir > 0 ? sampleIndex(own + 1) : sampleIndex(own + (1u << NUMBER_BITS)) - 1;
   }
-  uint32_t n = 0;
-  for (int k = 0; k < sampleTotal; k++, i += dir > 0 ? 1 : -1) {   // (empty ones stepped over, noted)
-    n = sampleIds[(i % sampleTotal + sampleTotal) % sampleTotal];
-    if (n == u.sample || !sampleEmpty(n)) break;
-    bool noted = false;
-    for (int e = 0; e < emptyNotedCount; e++) noted |= emptyNoted[e] == n;
-    if (!noted && emptyNotedCount < EMPTY_NOTED) emptyNoted[emptyNotedCount++] = n;
-    n = 0;
-  }
+  const uint32_t n = sampleIds[(i % sampleTotal + sampleTotal) % sampleTotal];   // (silent ones too: DELETE UNUSED SAMPLES removes them)
   if (!n || n == u.sample) return false;
   // Volume, balance, filter and mute stay; the range is the whole loop again
   // (length 0), aligned to the bar counter (its start on 1.1.1).

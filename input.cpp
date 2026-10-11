@@ -1073,21 +1073,14 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     // meanwhile, ui.h frameCell()): its sample, the previous / next on the card.
     if (!onStatus && !recordingOn(selected)) {
       // (another sample: the waveform cell selected, to see it)
-      // Held: the repeats stop on the first sample whose name starts with
-      // another letter than the one the press itself went to (A006 on: B001);
-      // going left, on the first of the press's own letter instead (A001), not past it.
-      static char stepLetter = 0;
+      // Held: the repeats stop before the letter changes (that way, the next
+      // sample's name starts with another letter: right, A009 before B001;
+      // left, A001 before the letter before).
       const int dir = (pressed & m8::BTN_LEFT) ? -1 : (pressed & m8::BTN_RIGHT) ? 1 : 0;
       if (dir && stepSample(selected, dir)) {
         sampleSteppedAt = max(1u, millis());
-        uint32_t now = unitOf(selected).sample;
-        if (!repeat) stepLetter = sampleLetter(now);
-        else if (sampleLetter(now) != stepLetter) {      // another letter: right, stopped on its first; left, past the
-          if (dir < 0) stepSample(selected, 1);           // press's letter's first (an empty one stepped over): back on it
-          stopRepeat = true;
-        } else if (dir < 0 && sampleFirstOfLetter(now)) stopRepeat = true;   // (left: on its own letter's first)
+        if (sampleLetterEndsAt(unitOf(selected).sample, dir)) stopRepeat = true;   // (a press landing there: no repeats past it either; another press crosses)
       }
-      if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) deleteEmptySamples();   // (empty ones stepped over: gone if unused, stopped)
     }
   } else {
     int row = selected, at = selectedCellIn(selected);

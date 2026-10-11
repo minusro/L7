@@ -770,8 +770,31 @@ FLASHMEM int deleteEmptySamples() {
   return deleted;
 }
 
-int deleteUnusedSamples() {
+int deleteUnusedSamples(bool silentToo) {
   if (transport.running || busy() || job.on) return 0;
+  // The silent recordings first: off every scene of every project (their
+  // tracks emptied there) and off the tracks now, so they go with the unused.
+  flushProject();
+  static uint32_t silent[256];
+  const int ns = silentToo ? silentSamples(silent, 256) : 0;
+  auto isSilent = [&](uint32_t id) { for (int i = 0; i < ns; i++) if (id && silent[i] == id) return true; return false; };
+  if (ns) {
+    for (int t = 0; t < NUM_TRACKS; t++) if (isSilent(tracks[t].sample)) clearTrack(t);
+    flushProject();                                // (the current scene: written with them gone)
+    for (int p = 0; p <= DUMMY; p++) {
+      FsFile f = openProject(p);
+      if (!f) continue;
+      for (uint32_t b = 1; b <= LIST_SLOTS; b++) {
+        SceneInfo s;
+        if (!f.seekSet((uint64_t)b * BLOCK) || f.read(&s, sizeof s) != (int)sizeof s || memcmp(s.magic, "M8SC", 4)) continue;
+        bool hit = false;
+        for (int t = 0; t < NUM_TRACKS; t++)
+          if (isSilent(s.units[t].sample)) { s.units[t] = emptyScene().units[t]; hit = true; }
+        if (hit) { f.seekSet((uint64_t)b * BLOCK); f.write(&s, sizeof s); }
+      }
+      f.close();
+    }
+  }
   markUsedSamples();
   return deleteUnmarkedSamples();
 }
