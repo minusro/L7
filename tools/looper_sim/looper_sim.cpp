@@ -25,6 +25,7 @@ void (*simDelayHook)(uint32_t us) = nullptr;
 std::string simRoot;
 SDClass SD;
 SerialStub Serial;
+bool simNoRun = false;
 int simFailIo = 0, simReinits = 0, simFsChanges = 0, simFileCreates = 0, simSampleTruncates = 0;
 void (*simSdLatency)(size_t, bool) = nullptr;
 void (*IntervalTimer::fn)() = nullptr;
@@ -3411,6 +3412,28 @@ for f in os.listdir("."):
     char m[120];
     snprintf(m, sizeof m, "the silent one deleted, its track emptied (%d deleted in all)", deleted);
     check(deleted >= 1 && !sampleExists(silentId) && tracks[4].state == TrackState::Empty, m);
+  }
+
+  printf("a card whose free space is in pieces: recording space grown a chunk at a time while stopped\n");
+  {
+    if (transport.running) transportStop();
+    runUntilIdle();
+    std::system(("rm -f " + simRoot + "/L7/DATA/0024.DAT " + simRoot + "/L7/DATA/0023.DAT").c_str());
+    simNoRun = true;
+    storageForget();
+    scenesForget();
+    storageBegin([](const char *) {});
+    scenesBegin(simTempo, simSetTempo, projectCurrent() < 0 ? 0 : projectCurrent(), simNewTempo);
+    for (int i = 0; i < 40000; i++) serviceStorage();   // (a chunk a pass: ~1350 a file)
+    simNoRun = false;
+    FILE *ls = popen(("ls " + simRoot + "/L7/DATA | grep -c '^[0-9]'").c_str(), "r");
+    int files = -1;
+    if (ls) { if (fscanf(ls, "%d", &files) != 1) files = -1; pclose(ls); }
+    struct stat st;
+    bool full = ::stat((simRoot + "/L7/DATA/0024.DAT").c_str(), &st) == 0 && (uint64_t)st.st_size >= 128ull * 44118 * 4;
+    char m[160];
+    snprintf(m, sizeof m, "no run of 21 MB free: grown in pieces, the 24 there again (%d files, 0024.DAT full size %d)", files, (int)full);
+    check(files == 24 && full, m);
   }
 
   printf("random sessions\n");

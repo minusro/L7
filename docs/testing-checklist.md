@@ -58,14 +58,12 @@ checked, or turn it into a fix.
   clip's start and loop start back (wrapping; a range then across the end:
   doubled), the ms part as before. Older saved offsets load as ms.
 - [ ] **Delete unused samples**: the progress bar under it, then the count.
+- [ ] **Recording space on a card with scattered free space**: grown a
+  chunk at a time while stopped (log: "grown in pieces"); the 24 come back;
+  no freezes while it runs.
 
 ## Open problems
 
-- [ ] **Recording files on a card with scattered free space**: making one
-  needs a 21 MB unbroken block; without it L7 thinks the card is full, stops
-  refilling the 24, and later recordings make their own while playing
-  (snags). Workaround: copy off, format, copy back. Fix to do: fall back to
-  growing the file in small steps while stopped.
 - [ ] **Snags on project load**: the dropout log now names the step that ran
   short (`underrunStage`); capture a log while loading projects.
 - [ ] **A dropout while a recording is saved** (seen once: track 6, the loop

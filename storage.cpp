@@ -451,8 +451,41 @@ static uint32_t freePoolNumber() {
   return 0;
 }
 
+// A card whose free space is in pieces (no 21 MB in one run): a file of
+// recording space grown a chunk at a time instead (growPoolFile(), while
+// stopped), not taken for a full card.
+static FsFile growing;                           // (the one being grown; closed: none)
+static uint32_t growingNumber = 0;
+static uint64_t grownBytes = 0;
+static void addToPool(uint32_t number) {
+  int i = poolCount++;                           // (kept sorted)
+  while (i > 0 && pool[i - 1] > number) { pool[i] = pool[i - 1]; i--; }
+  pool[i] = (uint16_t)number;
+}
+FLASHMEM static void growPoolFile() {
+  debugStage = "SD write (growing recording space)";
+  const uint64_t left = SAMPLE_FILE_BYTES - grownBytes;
+  const size_t n = left < sizeof chunk ? (size_t)left : sizeof chunk;
+  memset(chunk, 0, n);
+  if (growing.write(chunk, n) != n) {            // (a write that fails: the card really is full)
+    char path[40];
+    poolPath(growingNumber, path, sizeof path);
+    growing.close();
+    SD.sdfs.remove(path);
+    poolBlocked = true;
+    Serial.printf("no space for more recording files (%d ready)\n", poolCount);
+    return;
+  }
+  grownBytes += n;
+  if (grownBytes < SAMPLE_FILE_BYTES) return;
+  bool ok = writeSampleHeader(growing, 0, 0, 0, nullptr);
+  growing.close();
+  if (ok) addToPool(growingNumber);
+  Serial.printf("recording space: %04u.DAT grown in pieces (%d of %d ready)\n", (unsigned)growingNumber, poolCount, POOL_SIZE);
+}
+
 FLASHMEM static bool createPoolFile() {
-  if (poolCount >= POOL_SIZE) return false;
+  if (poolCount >= POOL_SIZE || growing) return false;
   uint32_t number = freePoolNumber();
   if (!number) return false;
   char path[40];
@@ -464,6 +497,13 @@ FLASHMEM static bool createPoolFile() {
   FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
   if (!f) return false;
   bool pre = f.preAllocate(SAMPLE_FILE_BYTES);
+  if (!pre && !transport.running) {              // no run of free space that long: grown a piece at a time instead (stopped)
+    growing = std::move(f);
+    growingNumber = number;
+    grownBytes = 0;
+    Serial.printf("%s: no 21 MB in one run; growing it while stopped\n", path);
+    return false;
+  }
   uint8_t zero = 0;                              // give the file its full size
   bool seek = f.seekSet(SAMPLE_FILE_BYTES - 1), wrote = seek && f.write(&zero, 1) == 1;
   bool head = writeSampleHeader(f, 0, 0, 0, nullptr);
@@ -479,9 +519,7 @@ FLASHMEM static bool createPoolFile() {
                   (unsigned long)(SAMPLE_FILE_BYTES >> 20));
     return false;
   }
-  int i = poolCount++;                           // (kept sorted)
-  while (i > 0 && pool[i - 1] > number) { pool[i] = pool[i - 1]; i--; }
-  pool[i] = (uint16_t)number;
+  addToPool(number);
   return true;
 }
 
@@ -1670,6 +1708,10 @@ FLASHMEM static void scanFolder(const char *folder, bool data) {
       } else if (surplusCount < MAX_MOVES) {     // (numbered past the pool's, or too many: renamed low or removed)
         surplus[surplusCount++] = (uint16_t)n;
       }
+    } else if (data && !ok && size < SAMPLE_FILE_BYTES) {   // recording space grown part way (stopped short: power off): gone
+      char path[48];
+      snprintf(path, sizeof path, "/L7/DATA/%s", name);
+      SD.sdfs.remove(path);
     }
   }
 }
@@ -2760,7 +2802,8 @@ void flushHeaders() {
 // top the pool of recording space up. One file per call.
 static void serviceFiles() {
   if (transport.running || recording.mode != Recording::Idle || sdFailed) return;
-  if (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);
+  if (growing) growPoolFile();                   // (a chunk a pass)
+  else if (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);
   else if (poolCount < POOL_SIZE && !poolBlocked) createPoolFile();
   else openPoolNext();
 }
@@ -2784,6 +2827,12 @@ void serviceStorage() {
 // lists of samples and recording space forgotten. Stopped and not recording
 // only. storageBegin() then reads it all again, as at a start.
 void storageForget() {
+  if (growing) {                                 // (recording space grown part way: dropped)
+    char path[40];
+    poolPath(growingNumber, path, sizeof path);
+    growing.close();
+    SD.sdfs.remove(path);
+  }
   noInterrupts();
   for (auto &tr : tracks) {
     tr.live = false;

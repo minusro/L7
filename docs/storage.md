@@ -45,7 +45,10 @@ ms to seconds and starves the streams. So:
 * **Pool**: `POOL_SIZE` = 24 empty sample files (each 22.6 MB = 32 bars at
   60 BPM, `MAX_REC_FRAMES`, ~540 MB; fewer if the card hasn't the space),
   made ahead of time and refilled while stopped (run out while playing, a
-  recording makes its own, stalling the card ~0.7 s: dropouts). They are named from the lowest free numbers (`DATA/0001.DAT` …
+  recording makes its own, stalling the card ~0.7 s: dropouts). A card whose free
+  space is in pieces (no 21 MB in one run: preallocating fails) grows one a chunk
+  at a time instead, while stopped (`growPoolFile()`); only a write failing means
+  the card is full. One grown part way (power off) is removed at the next boot. They are named from the lowest free numbers (`DATA/0001.DAT` …
   `0008.DAT`, never ever higher ones: a recording's file is renamed into
   `SAMPLES` anyway, which frees its number). A card with more of them, or
   numbered higher, is brought down to those at boot (the extra ones removed).
