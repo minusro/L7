@@ -64,8 +64,9 @@ checked, or turn it into a fix.
 
 ## Open problems
 
-- [ ] **Snags on project load**: the dropout log now names the step that ran
-  short (`underrunStage`); capture a log while loading projects.
+- [ ] **Snags on project load**: a capture of several loads (2026-10-12) heard
+  nothing; the log had one tiny dropout on track 7 (112 + 256 samples, ~8 ms)
+  during a scene write, then a stream read. Watch for it again.
 - [ ] **A dropout while a recording is saved** (seen once: track 6, the loop
   drawing the screen).
 - [ ] **Swipe**: a held arrow stops one track short of the start; undoing after
