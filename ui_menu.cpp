@@ -366,7 +366,7 @@ static uint32_t itemKey(int k) {
 // arrow down to it), its items from the bottom up, each a label and, right of
 // it, ON or OFF. A or B on SETTINGS opens it (once let
 // go); UP/DOWN go through it, A or B turns the item on or off (on the press),
-// DOWN off its bottom one or LEFT/RIGHT close it (the menu's own selection
+// DOWN off its bottom one, UP off its top one or LEFT/RIGHT close it (the menu's own selection
 // frame hidden meanwhile). Grey all over, from four blocks under the screen's top, each corner
 // cut (its block and the two next to it); its items' frames as the list's, two
 // blocks of space round them; OFF dark grey.
@@ -497,7 +497,8 @@ FLASHMEM void menuSettings(bool open) {
 }
 
 FLASHMEM bool menuSettingsKeys(uint8_t pressed) {
-  if ((pressed & m8::BTN_LEFT) || (pressed & m8::BTN_RIGHT) || ((pressed & m8::BTN_DOWN) && setSel == 0)) {
+  if ((pressed & m8::BTN_LEFT) || (pressed & m8::BTN_RIGHT) || ((pressed & m8::BTN_DOWN) && setSel == 0) ||
+      ((pressed & m8::BTN_UP) && setSel == SET_ITEMS - 1)) {   // (off its bottom or top, or sideways: closed)
     menuSettings(false);
     return true;
   }
