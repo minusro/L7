@@ -475,6 +475,7 @@ static bool openCard(int slot) {
   }
   if (projectFilled(slot) || !loadFromMenu(slot)) return false;
   setMainSelection(NUM_TRACKS - 1, WAVE_CELL);      // (a new, empty project: track 1's waveform cell, to record)
+  statusColumn = CLOCK_CELL;                       // (and the status row's the clock cell: DOWN from track 1 lands on it)
   closeMenu();
   return true;
 }
