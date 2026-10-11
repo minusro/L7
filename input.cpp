@@ -1074,14 +1074,16 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     if (!onStatus && !recordingOn(selected)) {
       // (another sample: the waveform cell selected, to see it)
       // Held: the repeats stop on the first sample whose name starts with
-      // another letter than the one the press itself went to (A006 on: B001).
+      // another letter than the one the press itself went to (A006 on: B001);
+      // going left, on the first of the press's own letter instead (A001), not past it.
       static char stepLetter = 0;
       const int dir = (pressed & m8::BTN_LEFT) ? -1 : (pressed & m8::BTN_RIGHT) ? 1 : 0;
       if (dir && stepSample(selected, dir)) {
         sampleSteppedAt = max(1u, millis());
         uint32_t now = unitOf(selected).sample;
         if (!repeat) stepLetter = sampleLetter(now);
-        else if (sampleLetter(now) != stepLetter) stopRepeat = true;
+        else if (sampleLetter(now) != stepLetter) stopRepeat = true;   // (right: on the next letter's first)
+        if (dir < 0 && sampleLetter(now) == stepLetter && sampleFirstOfLetter(now)) stopRepeat = true;   // (left: on its own letter's first, before leaving it)
       }
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) deleteEmptySamples();   // (empty ones stepped over: gone if unused, stopped)
     }
