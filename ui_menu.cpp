@@ -465,7 +465,8 @@ FLASHMEM static void drawSettings(bool whole) {
       }
       if (i == SET_REMOVE && removedCount >= 0) {  // done: the bar full, what it did inverted on it, until the popup closes
         char done[32];
-        snprintf(done, sizeof done, "DELETED %d SAMPLE%s", removedCount, removedCount == 1 ? "" : "S");
+        if (removedCount) snprintf(done, sizeof done, "DELETED %d SAMPLE%s", removedCount, removedCount == 1 ? "" : "S");
+        else snprintf(done, sizeof done, "NO UNUSED SAMPLES");
         t.fillRect((s.x - 1) * PX, (s.y - 1) * PX, (s.w + 2) * PX, FONT_H + 2 * PX, LIGHT);
         drawText(s.x * PX, s.y * PX, done, DIM, LIGHT);
         continue;
