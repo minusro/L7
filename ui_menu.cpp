@@ -644,13 +644,9 @@ FLASHMEM void drawMenu() {
   // (Anything redrawn: the selected one again after it, its frame on top.)
   drawBattery(all);
   static uint16_t logo;                          // the corner logo's colour shown
-  static bool logoStripes = false;               // (an empty card selected: its two bottom stripes only)
-  const bool stripes = !onStatus && menuSel < CARDS && !projectFilled(menuSel);
-  if (all || logo != actionRestColor() || stripes != logoStripes) {   // the logo, bottom left: the action button's colour (not its pressed look)
+  if (all || logo != actionRestColor()) {        // the logo, bottom left: the action button's colour (not its pressed look)
     logo = actionRestColor();
-    logoStripes = stripes;
-    if (stripes) drawSmallLogoStripes(LOGO_X, LOGO_Y, logo, MENU_BG);
-    else drawSmallLogo(LOGO_X, LOGO_Y, logo);
+    drawSmallLogo(LOGO_X, LOGO_Y, logo);
   }
   bool redrawn = false;
   int cutSlot;
