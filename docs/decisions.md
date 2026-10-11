@@ -63,9 +63,9 @@
 * A scene holds 7 track units. No conversion of 8-track projects (none
   exist).
 * The app's folder is `/L7` (an older `/looper` is renamed at boot); the
-  files' tags (`M8SC`, `M8TU`, ...) stay. Recordings are named `XYZZZZ.wav`
-  (project letter, track number, number: counting per project and track, so
-  `A13333`, `A23333` and `B43333` can all exist), and SHIFT + LEFT/RIGHT steps
+  files' tags (`M8SC`, `M8TU`, ...) stay. Recordings are named `XNNN.wav`
+  (project letter and a number, 001-999, counting per project; before:
+  `XYZZZZ.wav`, the track's number too, kept as they are), and SHIFT + LEFT/RIGHT steps
   through them in name order.
 
 ## Storage mode, over USB (2026-10-05)

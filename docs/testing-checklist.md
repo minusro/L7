@@ -47,6 +47,11 @@ checked, or turn it into a fix.
   lighting it dotted too; nothing lit only when the track is off.
 - [ ] **Resampled clip's loudness**: two steps up with the -3.75 dB headroom
   should match what was resampled exactly; compare by ear.
+- [ ] **Ableton export, a range across the loop's end**: the doubled file
+  (`A001x2.wav`), the clip's loop on the range inside it, warp markers through
+  both halves; plays as on the M8. No simulator test yet.
+- [ ] **Sample names `A001.wav`** (per project): new recordings named so;
+  older `A30012.wav` ones still play; SHIFT+LEFT/RIGHT order.
 
 ## Open problems
 

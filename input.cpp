@@ -8,6 +8,7 @@
 
 static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;   // held arrows
 static constexpr uint32_t DOUBLE_TAP_MS = 200;      // two taps of a key this close: a double tap
+static constexpr uint32_t TRIPLE_TAP_MS = 300;      // SHIFT+UP/DOWN's three quick taps: each this close to the last
 static constexpr uint32_t EDGE_HOLD_MS = 350;       // SHIFT+UP/DOWN's second tap held this long: to the list's end
 
 // The selected track's current cell back to its defaults: the whole loop as
@@ -834,7 +835,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   }
 
   // SHIFT+UP/DOWN: newer / older scene, a step a tap; tapped three times
-  // quickly (each within DOUBLE_TAP_MS of the last; no hold), the third goes
+  // quickly (each within TRIPLE_TAP_MS of the last; no hold), the third goes
   // straight to that end (UP: N+1*, DOWN: the empty scene 0*).
   auto sceneKeys = [&] {
     static uint32_t lastTap[2] = {0, 0};
@@ -843,7 +844,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     for (int k = 0; k < 2; k++) {
       if (!(pressed & keys2[k] & ~edgeDone)) continue;
       if (repeat) { taps[k] = 0; sceneChanged |= sceneStep(k == 0 ? 1 : -1); continue; }
-      taps[k] = millis() - lastTap[k] < DOUBLE_TAP_MS ? taps[k] + 1 : 1;
+      taps[k] = millis() - lastTap[k] < TRIPLE_TAP_MS ? taps[k] + 1 : 1;
       lastTap[k] = millis();
       if (taps[k] >= 3) {
         sceneChanged |= k == 0 ? sceneGoEnd() : sceneGoEmpty();

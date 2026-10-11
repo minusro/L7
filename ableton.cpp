@@ -121,6 +121,8 @@ static struct {
   uint32_t loopStart, loopEnd;                   // beats
   double start;                                  // beats (the fine rotate: a fraction too)
   double shiftSec;                               // the warp markers' audio moved this much (the fine rotate, a range inside the loop)
+  bool doubled;                                  // the clip's range crosses its loop's end: the doubled file ("A077x2.wav"), the loop twice over
+  uint32_t loopFrames;                           // (the sample's own, once)
   int event;                                     // the next envelope event's id
   int masterIds;                                 // the master Limiter's fresh ids so far
 } x;
@@ -153,14 +155,21 @@ static void clipSlots(bool freeze) {
     uint32_t loopBeats = x.sample.loopBars * BEATS_PER_BAR;
     uint32_t len = x.unit.rangeLen ? x.unit.rangeLen : loopBeats;
     uint32_t sp = startPosition(loopBeats, x.unit.rangeStart, len);
-    if (x.unit.rangeStart + len > loopBeats) {
-      x.loopStart = 0;
-      x.loopEnd = loopBeats;
+    // A range across the loop's end (a Live loop can't wrap): the doubled
+    // file, the loop twice over, the range inside it as it is.
+    x.doubled = x.unit.rangeStart + len > loopBeats && len < loopBeats;
+    x.loopFrames = x.sample.frames;
+    x.loopStart = x.unit.rangeStart;
+    x.loopEnd = x.unit.rangeStart + len;
+    if (x.doubled) {
+      strncat(x.sample.name, "x2", sizeof x.sample.name - strlen(x.sample.name) - 1);
+      x.sample.frames *= 2;
+      x.sample.bytes = 44 + (uint64_t)x.sample.frames * 4;
+      x.start = (sp < x.loopStart ? sp + loopBeats : sp) - x.loopStart;   // (its start position, in the range)
     } else {
-      x.loopStart = x.unit.rangeStart;
-      x.loopEnd = x.unit.rangeStart + len;
+      if (x.loopEnd > loopBeats) { x.loopStart = 0; x.loopEnd = loopBeats; }   // (the whole loop)
+      x.start = (sp + loopBeats - x.loopStart) % loopBeats;
     }
-    x.start = (sp + loopBeats - x.loopStart) % loopBeats;
     if (x.start >= x.loopEnd - x.loopStart) x.start = 0;
     // The fine rotate (the clip's audio later by `rotate` frames, wrapping
     // round its loop): a Live loop can't wrap its audio, so for the whole
@@ -263,11 +272,13 @@ FLASHMEM static void field(char code) {
     // (evenly at its tempo, or as kept when the tempo changed while it
     // recorded), so each bar plays as a bar (the file says 44100 Hz).
     case 'K':
-      for (uint32_t b = 0; b <= x.sample.loopBars && b <= MAX_BARS; b++) {
+      for (uint32_t b = 0; b <= (x.doubled ? 2 : 1) * x.sample.loopBars && b <= 2 * MAX_BARS; b++) {   // (doubled: the second time round too)
+        uint32_t L = x.sample.loopBars, bb = b > L ? b - L : b;
+        double sec = (bb ? x.sample.bars[bb - 1] / 44100.0 : 0.0) + (b > L ? x.loopFrames / 44100.0 : 0.0);
         gz.puts("<WarpMarker Id=\"");
         putNumber(b);
         gz.puts("\" SecTime=\"");
-        putNumber((b ? x.sample.bars[b - 1] / 44100.0 : 0.0) - x.shiftSec);   // (the fine rotate: the audio moved)
+        putNumber(sec - x.shiftSec);                 // (the fine rotate: the audio moved)
         gz.puts("\" BeatTime=\"");
         putNumber(b * BEATS_PER_BAR);
         gz.puts("\" />\n");
@@ -382,12 +393,24 @@ FLASHMEM int exportProject(int p, void (*progress)(int done, int total)) {
   snprintf(path, sizeof path, "%s/Samples/Imported", x.dir);
   SD.sdfs.mkdir(path);
 
-  // The samples its scenes play, copied.
+  // The samples its scenes play, copied (a range across a loop's end: the
+  // doubled file too, "A077x2.wav").
+  static uint32_t doubled[64];
+  int doubledCount = 0;
   clearSampleMarks();
   for (int k = 0; k < x.scenes; k++) {
     TrackUnit units[NUM_TRACKS];
     if (projectScene(p, x.pos[k], units))
-      for (const auto &u : units) markSample(u.sample);
+      for (const auto &u : units) {
+        markSample(u.sample);
+        SampleDetails d;                           // (a range across its loop's end: the doubled file too)
+        if (u.sample && u.rangeLen && sampleDetails(u.sample, d) && u.rangeStart + u.rangeLen > d.loopBars * BEATS_PER_BAR &&
+            u.rangeLen < d.loopBars * BEATS_PER_BAR) {
+          bool known = false;
+          for (int j = 0; j < doubledCount; j++) known |= doubled[j] == u.sample;
+          if (!known && doubledCount < (int)(sizeof doubled / sizeof doubled[0])) doubled[doubledCount++] = u.sample;
+        }
+      }
   }
   int total = 0, done = 0;
   for (int i = 0; i < (int)sampleCount(); i++) total += sampleMarked(i);
@@ -400,6 +423,12 @@ FLASHMEM int exportProject(int p, void (*progress)(int done, int total)) {
       copySample(sampleAt(i), path);
     }
     if (progress) progress(++done, total + 1);
+  }
+  for (int j = 0; j < doubledCount; j++) {
+    SampleDetails d;
+    if (!sampleDetails(doubled[j], d)) continue;
+    snprintf(path, sizeof path, "%s/Samples/Imported/%sx2.wav", x.dir, d.name);
+    copySampleDoubled(doubled[j], d.frames, path);
   }
   clearSampleMarks();
 

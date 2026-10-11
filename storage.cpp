@@ -58,21 +58,24 @@ static constexpr int POOL_SIZE = 24;             // empty sample files kept read
                                                  // higher ones: a recording's file is renamed (to SAMPLES) anyway
 static constexpr uint32_t MAX_NUMBER = 9999;     // sample numbers: 0001-9999
 static constexpr int MAX_SAMPLES = 5000;          // recordings kept track of (sampleIds: 20 KB of RAM1)
-// A sample's id: its name tag (the project's letter and the track's number:
-// (letter - 'A' + 1) << 3 | track) and its number, tag << 14 | number:
-// "A30012.wav". Numbers count per tag (A13333, A23333 and B43333 can all be
-// there). Without a tag, just the number: recordings from before ("0012.wav")
+// A sample's id: its name tag (the project's letter and, before, the track's
+// number: (letter - 'A' + 1) << 3 | track; today's track 0) and its number,
+// tag << 14 | number: "A001.wav" today (a project's recordings numbered
+// together, 001-999), "A30012.wav" before (numbers counted per project and
+// track). Both kept and played. Without a tag, just the number: recordings from before ("0012.wav")
 // and recording space. Ids sort as the names do.
 static constexpr int NUMBER_BITS = 14;
 static uint32_t umax(uint32_t a, uint32_t b) { return a > b ? a : b; }
-static uint8_t tagOf(char letter, int track) { return letter >= 'A' && letter <= 'O' && track >= 1 && track <= 7 ? (uint8_t)((letter - 'A' + 1) << 3 | track) : 0; }
+// Track 0: the project's own numbering ("A001.wav": a project's recordings
+// counted together, PROJECT_NUMBER_MAX of them; recordings now are named so).
+static constexpr uint32_t PROJECT_NUMBER_MAX = 999;
+static uint8_t tagOf(char letter, int track) { return letter >= 'A' && letter <= 'O' && track >= 0 && track <= 7 ? (uint8_t)((letter - 'A' + 1) << 3 | track) : 0; }
 static char tagLetter(uint8_t tag) { return tag ? (char)('A' + (tag >> 3) - 1) : 0; }
 static int tagTrack(uint8_t tag) { return tag & 7; }
 static uint32_t idOf(uint8_t tag, uint32_t number) { return (uint32_t)tag << NUMBER_BITS | number; }
 static uint8_t idTag(uint32_t id) { return (uint8_t)(id >> NUMBER_BITS); }
 static uint32_t idNumber(uint32_t id) { return id & ((1u << NUMBER_BITS) - 1); }
 static uint16_t nextNumber[128];                 // each tag's next number (0: 1)
-static int screenTrack(int t) { return NUM_TRACKS - t; }   // a track's number on the screen (1: the bottom one)
 static char recordLetter = 0;                    // the loaded project's: recordings made now get it
 void setRecordingLetter(char letter) { recordLetter = letter; }
 
@@ -101,7 +104,8 @@ static void sampleName(uint32_t id, char *buf, size_t size) {
   uint8_t tag = idTag(id);
   uint32_t n = idNumber(id);
   if (!tag) tag = olderTag(n);
-  if (tag) snprintf(buf, size, "%c%d%04u", tagLetter(tag), tagTrack(tag), (unsigned)n);
+  if (tag && !tagTrack(tag)) snprintf(buf, size, "%c%03u", tagLetter(tag), (unsigned)n);   // (today's: the project's numbering)
+  else if (tag) snprintf(buf, size, "%c%d%04u", tagLetter(tag), tagTrack(tag), (unsigned)n);
   else snprintf(buf, size, "%04u", (unsigned)n);
 }
 // Its file: where it is now (named: as it ends up).
@@ -314,6 +318,43 @@ FLASHMEM bool copySample(uint32_t n, const char *to, void (*progress)()) {
   if (!ok) SD.sdfs.remove(to);
   return ok;
 }
+// A plain WAV (44.1 kHz stereo, 16-bit) holding sample n's loop (frames
+// frames) twice over: the export's for a range across the loop's end.
+FLASHMEM bool copySampleDoubled(uint32_t n, uint32_t frames, const char *to, void (*progress)()) {
+  if (transport.running) return false;
+  char path[40];
+  samplePath(n, path, sizeof path);
+  FsFile from = SD.sdfs.open(path, O_RDONLY);
+  FsFile dst = SD.sdfs.open(to, O_RDWR | O_CREAT | O_TRUNC);
+  if (!from || !dst) return false;
+  const uint32_t data = frames * 8;
+  uint8_t h[44] = {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ', 16, 0, 0, 0, 1, 0, 2, 0};
+  auto put32 = [](uint8_t *p, uint32_t v) { p[0] = v; p[1] = v >> 8; p[2] = v >> 16; p[3] = v >> 24; };
+  put32(h + 4, 36 + data);
+  put32(h + 24, 44100);
+  put32(h + 28, 44100 * 4);
+  h[32] = 4; h[34] = 16;
+  memcpy(h + 36, "data", 4);
+  put32(h + 40, data);
+  dst.preAllocate(44 + (uint64_t)data);
+  debugStage = "SD copy (export)";
+  bool ok = dst.write(h, sizeof h) == sizeof h;
+  for (int pass = 0; pass < 2 && ok; pass++) {
+    uint64_t left = (uint64_t)frames * 4;
+    ok = from.seekSet(WAV_DATA_OFFSET);
+    while (ok && left) {
+      size_t n4 = left < sizeof chunk ? (size_t)left : sizeof chunk;
+      ok = from.read(chunk, n4) == (int)n4 && dst.write(chunk, n4) == n4;
+      left -= n4;
+      if (progress) progress();
+    }
+  }
+  ok = dst.sync() && ok;
+  dst.close();
+  if (!ok) SD.sdfs.remove(to);
+  return ok;
+}
+
 bool sampleExists(uint32_t id) {
   int i = sampleIndex(id);
   return id && i < sampleTotal && sampleIds[i] == id;
@@ -1409,9 +1450,8 @@ bool stepSample(int t, int dir) {
   if (sampleTotal < 2 || recordingTrack(t)) return false;
   TrackUnit u = unitOf(t);                       // (a planned change counts)
   u.rotate = 0;                                  // (another recording: not turned)
-  // In the order of the names from the track's sample, wrapping around: this
-  // track's recordings in this project, then its other tracks', then other
-  // projects'. An empty track: LEFT the project's sample last touched
+  // In the order of the names from the track's sample, wrapping around: the
+  // project's recordings, then other projects'. An empty track: LEFT the project's sample last touched
   // (stepped to or recorded), RIGHT the one after it; none touched yet, the
   // first of its own (going forward) or the last (going back).
   int i;
@@ -1424,7 +1464,7 @@ bool stepSample(int t, int dir) {
     bool there = i < sampleTotal && sampleIds[i] == touched;
     i = dir > 0 ? i + there : there ? i : i - 1;
   } else {
-    uint32_t own = idOf(tagOf(recordLetter, screenTrack(t)), 0);
+    uint32_t own = idOf(tagOf(recordLetter, 0), 0);   // (the project's own: today's names)
     i = dir > 0 ? sampleIndex(own + 1) : sampleIndex(own + (1u << NUMBER_BITS)) - 1;
   }
   uint32_t n = 0;
@@ -1540,13 +1580,15 @@ FLASHMEM static void scanFolder(const char *folder, bool data) {
   char name[32];
   while (dir && f.openNext(&dir, O_RDONLY)) {
     f.getName(name, sizeof name);
-    unsigned n = 0;                              // "NNNN.wav" (in DATA: .DAT), or "XYNNNN.wav" (project letter, track)
+    unsigned n = 0;                              // "NNNN.wav" (in DATA: .DAT), "XNNN.wav" (project letter: today's), or "XYNNNN.wav" (and track: before)
     size_t len = strlen(name);
-    uint8_t tag = len == 10 ? tagOf(name[0], name[1] - '0') : 0;
+    const bool project = len == 8 && name[0] >= 'A' && name[0] <= 'O';
+    uint8_t tag = project ? tagOf(name[0], 0) : len == 10 && name[1] >= '1' && name[1] <= '7' ? tagOf(name[0], name[1] - '0') : 0;
     if (data && tag) { f.close(); continue; }    // (DATA holds untagged names only)
-    const char *num = name + (tag ? 2 : 0);
-    bool digits = (len == 8 || tag) && !strcasecmp(num + 4, data ? ".DAT" : ".wav");
-    for (int i = 0; digits && i < 4; i++) {
+    const char *num = name + (project ? 1 : tag ? 2 : 0);
+    const int nd = project ? 3 : 4;              // (its digits)
+    bool digits = (len == 8 || tag) && !strcasecmp(num + nd, data ? ".DAT" : ".wav");
+    for (int i = 0; digits && i < nd; i++) {
       if (num[i] < '0' || num[i] > '9') digits = false;
       n = n * 10 + (num[i] - '0');
     }
@@ -2328,10 +2370,10 @@ static bool takeRecordingSample(int t) {
   // letter, the track's number, the next number for those; in its recording
   // space's file until it's named, once stopped.
   uint32_t file = pool[0];
-  uint8_t tag = tagOf(recordLetter, screenTrack(t));
+  uint8_t tag = tagOf(recordLetter, 0);          // (the project's numbering: "A001.wav")
   tr.sample = file;
   if (unnamedCount < (int)(sizeof unnamed / sizeof unnamed[0])) {
-    if (tag && nextNumber[tag] <= MAX_NUMBER) {
+    if (tag && nextNumber[tag] <= PROJECT_NUMBER_MAX) {
       tr.sample = idOf(tag, umax(nextNumber[tag], 1));
       nextNumber[tag] = idNumber(tr.sample) + 1;
       unnamed[unnamedCount++] = {tr.sample, (uint16_t)file};

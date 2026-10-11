@@ -179,7 +179,7 @@
   <li>7 audio tracks, coloured like the project, each with a highpass and a lowpass Auto Filter and a Utility.</li>
   <li>One scene per L7 scene that has clips, plus an empty one at the end. The current scene's clips are armed to play when the set opens.</li>
   <li>Each clip keeps its loop range, start, mute, volume (as clip gain), balance and filter settings (as clip envelopes).</li>
-  <li>The samples are copied into the project, so you can move it anywhere.</li>
+  <li>The samples are copied into the project, so you can move it anywhere. A clip whose range runs across the end of its loop gets a second copy of its sample with the loop written twice (<code>A001x2.wav</code>), so Live can play the range without wrapping.</li>
 </ul>
 
 <h2>Storage mode: the card on your computer</h2>
@@ -190,7 +190,7 @@
 <h2>What's on the card</h2>
 <table>
   <tr><th>Folder</th><th>Contents</th></tr>
-  <tr><td><code>/L7/SAMPLES</code></td><td>Every recording, as a WAV file named <code>A30012.wav</code>: the project letter, the track number (1–7) and a number.</td></tr>
+  <tr><td><code>/L7/SAMPLES</code></td><td>Every recording, as a WAV file named <code>A001.wav</code>: the project letter and a number counting up within the project (001–999). Older recordings named like <code>A30012.wav</code> (with the track number) keep their names.</td></tr>
   <tr><td><code>/L7/PROJECTS</code></td><td>The projects, <code>A.L7P</code> to <code>L.L7P</code>. An empty slot has no file.</td></tr>
   <tr><td><code>/L7/EXPORTS</code></td><td>The Ableton projects you exported.</td></tr>
   <tr><td><code>/L7/DATA</code></td><td>Everything else L7 needs, including about 180 MB of space kept ready for new recordings.</td></tr>
