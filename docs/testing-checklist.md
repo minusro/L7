@@ -35,6 +35,14 @@ checked, or turn it into a fix.
   (the 128-frame pre-roll from the mix too). No simulator test yet.
 - [ ] **Recording on a slow card**: the input history is now ~560 ms (was
   ~740 ms), so a long card stall loses input sooner ("recording fell behind").
+- [ ] **Volume, 20 steps**: saved projects keep their old step numbers (not
+  converted), so a track that was set off unity now sits half as far from it
+  (e.g. old "2 steps down", -7.5 dB, now plays -3.75 dB). Check older
+  projects still sound right, or re-set their volumes.
+- [ ] **Volume display**: an odd step's last half-line dotted, the meter
+  lighting it dotted too; nothing lit only when the track is off.
+- [ ] **Resampled clip's loudness**: two steps up with the -3.75 dB headroom
+  should match what was resampled exactly; compare by ear.
 
 ## Open problems
 
