@@ -1073,15 +1073,15 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     // meanwhile, ui.h frameCell()): its sample, the previous / next on the card.
     if (!onStatus && !recordingOn(selected)) {
       // (another sample: the waveform cell selected, to see it)
-      // Held: the repeats stop on the first sample whose name starts with the
-      // letter of the one the press itself went to (round once to its project's first).
+      // Held: the repeats stop on the first sample whose name starts with
+      // another letter than the one the press itself went to (A006 on: B001).
       static char stepLetter = 0;
       const int dir = (pressed & m8::BTN_LEFT) ? -1 : (pressed & m8::BTN_RIGHT) ? 1 : 0;
       if (dir && stepSample(selected, dir)) {
         sampleSteppedAt = max(1u, millis());
         uint32_t now = unitOf(selected).sample;
         if (!repeat) stepLetter = sampleLetter(now);
-        else if (sampleLetter(now) == stepLetter && sampleFirstOfLetter(now)) stopRepeat = true;
+        else if (sampleLetter(now) != stepLetter) stopRepeat = true;
       }
       if (pressed & (m8::BTN_LEFT | m8::BTN_RIGHT)) deleteEmptySamples();   // (empty ones stepped over: gone if unused, stopped)
     }
@@ -1327,6 +1327,7 @@ void pollKeys() {
     debugStage = "key repeat";
     repeatAt = millis() + REPEAT_PERIOD_MS;          // after a slow pass: no burst of catch-up repeats
     onKeys(prev, repeatKey, true);
+    if (stopRepeat) { repeatKey = 0; stopRepeat = false; }   // (a repeat asked to stop: none more)
   }
   // An arrow held off an edge (a switch waiting): SWITCH_HOLD_MS on, the switch
   // now; it doesn't repeat on the other screen (until pressed again).
