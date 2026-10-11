@@ -16,7 +16,7 @@ constexpr int BEATS_PER_BAR = 4;                   // fixed 4/4
 constexpr uint32_t MAX_BARS = 32;                  // longest recording (at 60 BPM and over; below, half: storage.cpp maxBarsNow())
 // Stopping a recording up to this many ms past a bar line trims it to end
 // there; stopping later keeps recording to the end of that bar.
-constexpr double SNAP_THRESHOLD_MS = 200.0;
+constexpr double SNAP_THRESHOLD_MS = 100.0;
 // Every track file is created once at this size: 32 bars at 60 BPM (~22.6 MB).
 // Below 60 BPM a recording stops at this length instead of 32 bars.
 constexpr uint32_t MAX_REC_FRAMES = 128u * 44118u;
@@ -38,10 +38,10 @@ constexpr uint32_t INPUT_FRAMES = 24576;           // 96 KB, ~560 ms
 // A record or resample press up to this long after a bar line starts there
 // (from the history); stopping up to as long after one ends there (config
 // SNAP_THRESHOLD_MS).
-constexpr uint32_t START_GRACE_FRAMES = 8824;      // ~200 ms
+constexpr uint32_t START_GRACE_FRAMES = 4412;      // ~100 ms
 // Mix history (resampling's late press): the output as resampling records it,
 // the grace and the pre-roll's worth (copied into the input history then).
-constexpr uint32_t MIX_FRAMES = 9216;              // 36 KB, ~209 ms
+constexpr uint32_t MIX_FRAMES = 4864;              // 19 KB, ~110 ms
 
 // Measured round trip output -> input (audio_test): recordings are shifted
 // earlier by this much so they line up with what was playing.

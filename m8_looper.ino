@@ -160,7 +160,7 @@ static void reloadFromCard() {
   if (DELETE_UNUSED_SAMPLES) deleteUnusedSamples();
 }
 
-void setup() {
+FLASHMEM void setup() {
   Serial.begin(115200);
   if (CrashReport) Serial.print(CrashReport);
   AudioMemory(12);

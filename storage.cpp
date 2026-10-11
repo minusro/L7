@@ -292,7 +292,7 @@ bool sampleDetails(uint32_t n, SampleDetails &d) {
   return true;
 }
 
-bool copySample(uint32_t n, const char *to, void (*progress)()) {
+FLASHMEM bool copySample(uint32_t n, const char *to, void (*progress)()) {
   if (transport.running) return false;
   char path[40];
   samplePath(n, path, sizeof path);
@@ -410,7 +410,7 @@ static uint32_t freePoolNumber() {
   return 0;
 }
 
-static bool createPoolFile() {
+FLASHMEM static bool createPoolFile() {
   if (poolCount >= POOL_SIZE) return false;
   uint32_t number = freePoolNumber();
   if (!number) return false;
@@ -1279,7 +1279,7 @@ bool sampleMarked(int i) { return i >= 0 && i < sampleTotal && (sampleMarks[i / 
 // Deletes the recordings not marked, keeping what the tracks, the clipboard
 // and a recording use; empty recording space (the pool) isn't touched. Only
 // stopped and idle (it changes the file system). The marks are cleared.
-int deleteUnmarkedSamples(const uint32_t *only, int onlyCount) {
+FLASHMEM int deleteUnmarkedSamples(const uint32_t *only, int onlyCount) {
   if (transport.running || recording.mode != Recording::Idle) return 0;
   int deleted = 0, kept = 0;
   for (int i = 0; i < sampleTotal; i++) {
@@ -1450,7 +1450,7 @@ bool stepSample(int t, int dir) {
 
 bool newClipsPlay = true;
 
-Session loadSession() {
+FLASHMEM Session loadSession() {
   Session s;
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_RDONLY);
   char line[32];
@@ -1511,7 +1511,7 @@ Session loadSession() {
   return s;
 }
 
-void saveSession(const Session &s) {
+FLASHMEM void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
   f.printf("bpm=%.2f\nnewbpm=%.2f\nout=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\noffmidi=%d\noffusb=%d\noffaudio=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
@@ -1680,7 +1680,7 @@ bool moveFile(const char *from, const char *to) {
 
 // A folder of the app's, made if missing, with its name's letter case as given
 // (a FAT card keeps the case a folder was made with; the older ones were lower case).
-static void ensureFolder(const char *path) {
+FLASHMEM static void ensureFolder(const char *path) {
   FsFile d = SD.sdfs.open(path, O_RDONLY);
   if (!d) {
     SD.sdfs.mkdir(path);

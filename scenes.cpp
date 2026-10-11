@@ -323,7 +323,7 @@ bool sceneClear() {
   return true;
 }
 
-int sceneFromResample(int t) {
+FLASHMEM int sceneFromResample(int t) {
   takeHeld();
   commit();                                        // (the current scene, the resampling on it)
   SceneInfo from = snapshot(), to = emptyScene();
@@ -407,7 +407,7 @@ static FsFile openProject(int p) {
 
 // A new project file at full size, empty (a slot's file is made when it's first
 // used, and removed when it's emptied).
-static FsFile createProject(int p) {
+FLASHMEM static FsFile createProject(int p) {
   char path[40];
   projectPath(path, sizeof path, p);
   FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
@@ -513,7 +513,7 @@ static void stepCopy() {
   endCopy(ok);
 }
 
-static bool startCopy(int from, int to, bool clearFrom) {
+FLASHMEM static bool startCopy(int from, int to, bool clearFrom) {
   if (job.on) return false;
   if (from == project) flushProject();
   job.src = openProject(from);
@@ -566,7 +566,7 @@ bool projectsMayCopy() { return !busy() && !job.on; }
 // set by hand), and so does DUMMY every time. Its tempo goes on the looper
 // (one saved before projects kept a tempo: its current scene's, kept now);
 // apply: its current scene too.
-static bool openAs(int p, bool apply_) {
+FLASHMEM static bool openAs(int p, bool apply_) {
   clipsKnown = -1;
   FsFile f = openProject(p);
   if (!f && p < PROJECTS) f = createProject(p);   // an empty slot: its file made now
@@ -671,7 +671,7 @@ bool projectHasClipsIn(int p) {
   return fileHasClips(f);
 }
 
-bool projectCut(int p) {
+FLASHMEM bool projectCut(int p) {
   if (!projectsMayCopy() || !projectFilled(p)) return false;
   bool clips = p == project;
   if (clips) clips = projectHasClips();
@@ -765,7 +765,7 @@ int deleteUnusedSamples() {
 // 12.dat of /L7/projects become A.L7P ... L.L7P; the first version's
 // /L7/scenes.dat project A), the clipboard's and the dummy project's made at
 // full size if missing, and a slot's file with no project in it removed.
-static void makeProjectFiles() {
+FLASHMEM static void makeProjectFiles() {
   char from[40], to[40];
   projectPath(to, sizeof to, 0);
   moveFile("/L7/scenes.dat", to);

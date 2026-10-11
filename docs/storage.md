@@ -66,9 +66,9 @@ ms to seconds and starves the streams. So:
 ## Recording
 
 * `recordPress(t)` on an empty track: starts on the bar line just passed if
-  pressed within `START_GRACE_FRAMES` (~200 ms) of it (read back from the input
+  pressed within `START_GRACE_FRAMES` (~100 ms) of it (read back from the input
   history, `INPUT_FRAMES` ~560 ms; a resampling: from the mix history,
-  `MIX_FRAMES` ~209 ms, kept always and copied into the input history then),
+  `MIX_FRAMES` ~110 ms, kept always and copied into the input history then),
   otherwise waits for the next bar line (`WaitBar`). Stopped: the
   transport starts and recording begins on bar 1.
 * Recordings are shifted by `LATENCY_FRAMES` (153, measured round trip).
@@ -89,7 +89,7 @@ ms to seconds and starves the streams. So:
   changes to 100 and 140 BPM). With no change, nothing differs from before
   and no bar lines are stored.
 * Stop: the loop is whole bars. `targetBars()`: if stopped within
-  `SNAP_THRESHOLD_MS` (200 ms) after a bar line it ends there (trimmed),
+  `SNAP_THRESHOLD_MS` (100 ms) after a bar line it ends there (trimmed),
   otherwise it carries on to the end of the current bar (`Finishing`).
   Longest: 32 bars at 60 BPM and over, 16 bars below (`maxBarsNow()`: 16 bars at 30 BPM still fit a file).
 * Playback of the new loop is gapless: the loop's beginning is copied into the

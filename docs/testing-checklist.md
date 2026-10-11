@@ -28,9 +28,9 @@ checked, or turn it into a fix.
 - [ ] **Waveform heights** follow the track's volume (turn a track up and down).
 - [ ] **Clock start with the range start a beat before the clip's end**: starts
   on 1.1.1's start position, not a bar late.
-- [ ] **Recording stop grace (200 ms)** and the 16-bar limit below 60 BPM.
+- [ ] **Recording start and stop grace (100 ms)** and the 16-bar limit below 60 BPM.
 
-- [ ] **Resample pressed late** (within 0.2 s after a bar line): starts on
+- [ ] **Resample pressed late** (within 0.1 s after a bar line): starts on
   that bar line, the mix copied in from the mix history; no click at its start
   (the 128-frame pre-roll from the mix too). No simulator test yet.
 - [ ] **Recording on a slow card**: the input history is now ~560 ms (was
@@ -63,5 +63,3 @@ checked, or turn it into a fix.
   a full lap skips a track.
 - [ ] **Simulator: "12 switches at 120 BPM"** fails with dropouts since the
   200 ms grace change (state from earlier tests); look into or loosen.
-- [ ] **RAM1 headroom** is ~1.2 KB: move cold code to flash before the next
-  bigger feature.

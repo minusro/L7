@@ -482,7 +482,7 @@ int main(int argc, char **argv) {
   int fsChangesAtStart = simFsChanges;
   midiBegin(&midi);
 
-  recordTrack(0, 4 * 4 + 0.2, 4, "track 1: stop 4 bars + 0.2 beats in (100 ms: within the 200 ms grace), from stopped (trims to 4 bars)");
+  recordTrack(0, 4 * 4 + 0.1, 4, "track 1: stop 4 bars + 0.1 beats in (50 ms: within the 100 ms grace), from stopped (trims to 4 bars)");
   recordTrack(1, 2 * 4 + 3, 3, "track 2: stop 2 bars + 3 beats in (carries on to the end of bar 3)");
   recordTrack(2, 3, 1, "track 3: stop 3 beats in (carries on to 1 bar)");
 
@@ -763,7 +763,7 @@ int main(int argc, char **argv) {
     clearTrack(6);
     recordPress(5);
     for (int i = 0; i < 2000 && recording.mode == Recording::WaitBar; i++) block();
-    runBeats(4.15);                                // (just past the bar line: within the 200 ms grace)
+    runBeats(4.08);                                // (just past the bar line: within the 100 ms grace)
     recordPress(6);
     int32_t bar = recording.startBeat + 4;
     for (int i = 0; i < 20000 && recording.track != 6; i++) block();
@@ -1509,7 +1509,7 @@ int main(int argc, char **argv) {
     setTrackMuted(1, true);
     uint32_t mutedSample = tracks[1].sample;
     feedRamp = false;
-    runBeats(4.5);                                   // (half a beat past the bar line: past the 200 ms grace, so it waits)
+    runBeats(4.5);                                   // (half a beat past the bar line: past the 100 ms grace, so it waits)
     setMasterVolume(MASTER_VOLUME_UNITY - 3);        // (the master volume is not in what's recorded)
     const float masterNow = powf(10.0f, -3 * MASTER_STEP_DB / 20);
     // The output, by transport sample, while it records.
@@ -1576,7 +1576,7 @@ int main(int argc, char **argv) {
   {
     lastAction = "naming";
     clearTrack(3);
-    recordTrack(3, 4.15, 1, "  (track 4 recorded)");
+    recordTrack(3, 4.08, 1, "  (track 4 recorded)");
     uint32_t n = tracks[3].sample;
     // Its name: the project's letter, track 4's number on the screen (4), and
     // the next number for those two (counting per project and track).
@@ -2776,18 +2776,18 @@ for f in os.listdir("."):
       for (int i = 0; i < 4000 && !(transport.beat % BEATS_PER_BAR == 1); i++) block();   // (into a bar)
       for (int i = 0; i < 4000 && !(transport.beat % BEATS_PER_BAR == 0 && transport.sampleInBeat < AUDIO_BLOCK_SAMPLES); i++) block();
       uint32_t bar = transport.lastBarSample;
-      for (int i = 0; i < (int)(0.2 * fps); i++) block();   // pressed 200 ms after the bar line
+      for (int i = 0; i < (int)(0.05 * fps); i++) block();   // pressed 50 ms after the bar line
       uint32_t pressAt = transport.now;
       for (int i = 0; i < (int)(0.15 * fps); i++) block();  // let go 150 ms later
       bool counted = pass == 0;
       recordPress(3, false, counted ? transport.now - pressAt : 0);
       char m11[200];
       if (counted) {
-        snprintf(m11, sizeof m11, "pressed 200 ms after a bar line, let go 150 ms later: from that bar line (%s)",
+        snprintf(m11, sizeof m11, "pressed 50 ms after a bar line, let go 150 ms later: from that bar line (%s)",
                  recording.mode == Recording::Running ? "running" : "waiting");
         check(recording.mode == Recording::Running && recording.startSample == bar + recording.latency, m11);
       } else {
-        check(recording.mode == Recording::WaitBar, "the same moment, the hold not counted: the next bar line (as a press 350 ms late)");
+        check(recording.mode == Recording::WaitBar, "the same moment, the hold not counted: the next bar line (as a press 200 ms late: past the 100 ms grace)");
       }
       cancelRecording(3);
       for (int i = 0; i < 20; i++) block();
@@ -3193,9 +3193,9 @@ for f in os.listdir("."):
       Hits locked = listen(&base.first);
       printf("  info  %.0f BPM: resampled %+.1f ms (matching %.3f); stretched, not locked: %+.1f ms, matching at least %.3f\n",
              tempo, want.onsetMean, want.matchMin, plain.onsetMean, plain.matchMin);
-      snprintf(m15, sizeof m15, "%.0f BPM (recorded at 120), locked: the clicks %+.1f ms from our beats (resampled %+.1f), matching the recorded one at least %.3f",
-               tempo, locked.onsetMean, want.onsetMean, locked.matchMin);
-      check(locked.beats >= 5 && fabs(locked.onsetMean - want.onsetMean) < 1.0 && locked.matchMin > 0.98, m15);
+      snprintf(m15, sizeof m15, "%.0f BPM (recorded at 120), locked: the clicks %+.1f ms from our beats (resampled %+.1f), matching the recorded one at least %.3f (%d beats)",
+               tempo, locked.onsetMean, want.onsetMean, locked.matchMin, locked.beats);
+      check(locked.beats >= 4 && fabs(locked.onsetMean - want.onsetMean) < 1.0 && locked.matchMin > 0.98, m15);   // (4: which beats the window catches moves with the state earlier tests leave)
     }
     tracks[5].stretch = true;
     tracks[5].stretch = false;

@@ -109,7 +109,7 @@ void setSetting(int which, bool on) {
 // ---- Session (tempo, master volume, the loaded project, the selection: the
 // app's, not a project's or a scene's)
 static uint32_t savedTouched[12];                // (touchedSample as last saved)
-void beginSession() {
+FLASHMEM void beginSession() {
   Session s = loadSession();
   bpm = roundf(s.bpm * 10) / 10;
   newBpm = roundf(s.newBpm * 10) / 10;
@@ -151,7 +151,7 @@ static bool sessionDirty() {
          memcmp(syncOffsetMs, savedOffsets, sizeof savedOffsets) || memcmp(touchedSample, savedTouched, sizeof savedTouched);
 }
 
-static void writeSession() {
+FLASHMEM static void writeSession() {
   Session s;
   s.bpm = bpm;
   s.newBpm = newBpm;
