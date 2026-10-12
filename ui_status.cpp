@@ -9,7 +9,7 @@
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
 //   first cell: the scene, an inverted "SCN" tag and its position "3/7" (the
-//     empty scene "0/7", its 0 dark grey, and the copy after the last "*/7", its * light grey, white selected). Both in the
+//     empty scene "0/7" grey, and the copy after the last "*/7" light grey, white selected). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
 //     UP/DOWN step through the scenes. The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
@@ -285,15 +285,8 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   if (sceneFlash) ink = INK;
   int x = box.x + INSET + tagW + PX;
   t.fillRect(x - PX, tagY, PX, TAG_H, G);          // (the block between the tag and the position: the position, moved, left nothing there)
-  if (temporary) {                                 // 0* and N+1*: their "0" dark grey, their "*" light grey (white
-    const char first[2] = {text[0], 0};            // selected), whatever else is on; the "/N" as any position
-    const uint16_t firstInk = scene == 0 ? DARK : cell == SCENE_CELL ? INK : LIGHT;
-    const int w1 = textWidth(first) + PX;
-    drawText(x, textY, first, firstInk, G, w1);
-    drawText(x + w1, textY, text + 1, ink, G, box.x + box.w - INSET - x - w1);
-  } else {
-    drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
-  }
+  if (temporary) ink = scene == 0 ? DIM : cell == SCENE_CELL ? INK : LIGHT;   // (0* grey, N+1* light grey, white selected: whatever else is on)
+  drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
   // Stepping (the accent colour on): the wider tag, its up and down arrows
   // stacked, in black (both, whether that way goes on or not).
   if (sceneAccent) {

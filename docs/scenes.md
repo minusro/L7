@@ -77,8 +77,8 @@ version's `/L7/scenes.dat` are moved to these names at boot.
 * On a stored scene every change updates it (`sceneStateChanged()` → `commit()`;
   written one block at a time when the buffers allow).
 * The label shows `SCN n/N`; the empty scene shows as `0/N` and the copy after
-  the last as `*/N`: the `0` dark grey, the `*` light grey (white with the cell
-  selected), whatever else is on (stepping, adjusting); the `/N` as any position.
+  the last as `*/N`: the first grey, the second light grey (white with the cell
+  selected), whatever else is on (stepping, adjusting).
 
 ## Switching while playing
 
