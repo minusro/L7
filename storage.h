@@ -146,6 +146,11 @@ int deleteUnmarkedSamples(const uint32_t *only = nullptr, int onlyCount = 0);   
 // config.h) are stepped over, and noted: takeEmptySamples() hands them on
 // (to be deleted if nothing uses them, scenes.h deleteEmptySamples()).
 bool stepSample(int t, int dir);
+// Each recording in SAMPLES not in one piece on the card, copied into a run
+// of free space reserved whole and put in its place (stopped only; the
+// handles on it reopened; deleteProgress meanwhile, in KB): how many;
+// noRoom: those left as they were, no free run long enough.
+int defragSamples(int &noRoom);
 int silentSamples(uint32_t *ids, int most);   // the silent recordings on the card (each one read: slow; deleteProgress meanwhile)
 char sampleLetter(uint32_t id);          // its name's first character (a project's letter; an older one's: a digit)
 bool sampleFirstOfLetter(uint32_t id);   // the first, in L7's order, of the samples whose names start so

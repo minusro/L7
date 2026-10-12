@@ -365,10 +365,24 @@ static uint32_t itemKey(int k) {
 // the recordings on the card no project, scene, clip or clipboard uses,
 // deleted; the clock stopped first; meanwhile a light grey bar the line's
 // height grows over it, its label inverted; then, the bar full, "DELETED N SAMPLES" inverted on it).
+// Its result gone (2 s, or another item selected), the item is DEFRAG SAMPLES
+// (storage.h defragSamples(), shown alike: the bar, then "DEFRAGGED N
+// SAMPLES"), and after that's gone, DELETE UNUSED SAMPLES again; opening the
+// popup: DELETE first.
 static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
                                                           "EMPTY PROJECT CLICK", "DELETE UNUSED SAMPLES"};
 static constexpr int SET_ITEMS = SETTING_COUNT + 1, SET_PITCH = 10, SET_REMOVE = SETTING_COUNT;
 static int removedCount = -1;                    // (the command's result, until the popup closes; -1: not run)
+static bool defragItem = false;                  // (the command: DEFRAG SAMPLES, after a clean-up)
+static bool resultDefrag = false;                // (the result shown: a defrag's)
+static int defragNoRoom = 0;                     // (a defrag's: left as they were, no room)
+// The result gone: the next command (after a clean-up, defrag; after it, the clean-up again).
+static void clearResult() {
+  if (removedCount < 0) return;
+  removedCount = -1;
+  defragItem = !resultDefrag;
+}
+static const char *commandLabel() { return defragItem ? "DEFRAG SAMPLES" : "DELETE UNUSED SAMPLES"; }
 static uint32_t removedAt = 0;                   // (millis() it finished: its result shown 2 s, or until another item is selected)
 static int removingPct = -1;                     // (while it runs: how far, 0-99; -1: not running)
 
@@ -413,7 +427,7 @@ FLASHMEM static void drawSettings(bool whole) {
   setLayout(x, yb, w);
   setBox(x0, y0, x1, y1);
   static uint32_t shownKey = 0;
-  if (removedCount >= 0 && millis() - removedAt >= 2000) removedCount = -1;   // (its result: 2 s)
+  if (removedCount >= 0 && millis() - removedAt >= 2000) clearResult();   // (its result: 2 s)
   if (whole) {
     t.fillRect(x0 * PX, y0 * PX, (x1 - x0 + 1) * PX, (y1 - y0 + 1) * PX, DIM);   // (grey; each corner cut: its block and the two next to it)
     for (int c : {x0, x1})
@@ -433,7 +447,7 @@ FLASHMEM static void drawSettings(bool whole) {
   uint16_t frame = setPressAt && millis() - setPressAt < PRESS_FLASH_MS ? LIGHT : actionHeld() ? DARK : frameColor();
   uint32_t key = setSel | (uint32_t)frame << 8;
   for (int i = 0; i < SETTING_COUNT; i++) key |= (uint32_t)setting(i) << (3 + i);
-  key ^= (uint32_t)(removedCount + 1) * 2654435761u ^ (uint32_t)(removingPct + 2) * 40503u;
+  key ^= (uint32_t)(removedCount + 1) * 2654435761u ^ (uint32_t)(removingPct + 2) * 40503u ^ (uint32_t)defragItem << 31;
   if (key == shownKey) return;
   shownKey = key;
   for (int pass = 0; pass < 2; pass++)             // (the selected one last: its frame on top of the rows it shares)
@@ -450,21 +464,23 @@ FLASHMEM static void drawSettings(bool whole) {
         t.fillRect(bx, by, (s.w + 2) * PX, bh, DIM);
         t.fillRect(bx, by, bw, bh, LIGHT);
         t.setClipRect(bx + bw, by, (s.w + 2) * PX - bw, bh);
-        drawText(s.x * PX, s.y * PX, SET_LABELS[i], sel ? INK : LIGHT, DIM);
+        drawText(s.x * PX, s.y * PX, commandLabel(), sel ? INK : LIGHT, DIM);
         t.setClipRect(bx, by, bw, bh);
-        drawText(s.x * PX, s.y * PX, SET_LABELS[i], DIM, LIGHT);
+        drawText(s.x * PX, s.y * PX, commandLabel(), DIM, LIGHT);
         t.setClipRect();
         continue;
       }
       if (i == SET_REMOVE && removedCount >= 0) {  // done: the bar full, what it did inverted on it, until the popup closes
         char done[32];
-        if (removedCount) snprintf(done, sizeof done, "DELETED %d SAMPLE%s", removedCount, removedCount == 1 ? "" : "S");
-        else snprintf(done, sizeof done, "DELETED NO SAMPLES");
+        const char *verb = resultDefrag ? "DEFRAGGED" : "DELETED";
+        if (resultDefrag && defragNoRoom) snprintf(done, sizeof done, "DEFRAGGED %d, %d NO ROOM", removedCount, defragNoRoom);
+        else if (removedCount) snprintf(done, sizeof done, "%s %d SAMPLE%s", verb, removedCount, removedCount == 1 ? "" : "S");
+        else snprintf(done, sizeof done, "%s NO SAMPLES", verb);
         t.fillRect((s.x - 1) * PX, (s.y - 1) * PX, (s.w + 2) * PX, FONT_H + 2 * PX, LIGHT);
         drawText(s.x * PX, s.y * PX, done, DIM, LIGHT);
         continue;
       }
-      drawText(s.x * PX, s.y * PX, SET_LABELS[i], sel ? INK : LIGHT, DIM);
+      drawText(s.x * PX, s.y * PX, i == SET_REMOVE ? commandLabel() : SET_LABELS[i], sel ? INK : LIGHT, DIM);
       const char *v = i == SET_REMOVE ? "" : on ? "ON" : "OFF";
       drawText((x + w) * PX - textWidth(v), s.y * PX, v, i == SET_REMOVE || on ? (sel ? INK : LIGHT) : DARK, DIM);
     }
@@ -474,7 +490,10 @@ FLASHMEM static void drawSettings(bool whole) {
 // under it drawn again (nothing else redrawn: no flicker).
 FLASHMEM void menuSettings(bool open) {
   if (!shown || setOpen == open) return;
-  if (open) removedCount = -1;                  // (the command's last result: not shown again)
+  if (open) {                                     // (the command's last result: not shown again; DELETE first)
+    removedCount = -1;
+    defragItem = false;
+  }
   if (!open) {
     int x0, y0, x1, y1;
     setBox(x0, y0, x1, y1);
@@ -505,7 +524,7 @@ FLASHMEM bool menuSettingsKeys(uint8_t pressed, bool repeat) {
   if ((pressed & m8::BTN_UP) && setSel < SET_ITEMS - 1) setSel++;
   if ((pressed & m8::BTN_DOWN) && setSel > 0) setSel--;
   movedHere = setSel != was;
-  if (movedHere) removedCount = -1;                // (another item: the command's result gone)
+  if (movedHere) clearResult();                    // (another item: the command's result gone)
   drawSettings(false);
   return movedHere;
 }
@@ -522,9 +541,15 @@ FLASHMEM void menuSettingsAct() {
       removingPct = pct;
       drawSettings(false);
     };
-    clearClipClipboard();                        // (the clipboards emptied first: what they held counts as unused)
-    clearClipboards();
-    removedCount = deleteUnusedSamples();
+    if (defragItem) {
+      removedCount = defragSamples(defragNoRoom);
+      resultDefrag = true;
+    } else {
+      clearClipClipboard();                      // (the clipboards emptied first: what they held counts as unused)
+      clearClipboards();
+      removedCount = deleteUnusedSamples();
+      resultDefrag = false;
+    }
     removedAt = millis();
     deleteProgress = nullptr;
     removingPct = -1;

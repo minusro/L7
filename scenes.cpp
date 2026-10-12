@@ -37,8 +37,9 @@ struct SceneList {
   uint16_t master;
   uint16_t tempo10;                              // the project's tempo, tenths of a BPM (0: not kept yet, older files)
 };
-static constexpr uint16_t MASTER_KEPT = 0xE000;   // (no tempo's tenths reach it)
-static constexpr uint16_t MASTER_KEPT_OLD = 0xF000;   // (kept on the scale before: 1.875 dB steps, 17 100 %)
+static constexpr uint16_t MASTER_KEPT = 0xD000;   // (no tempo's tenths reach it)
+static constexpr uint16_t MASTER_KEPT_11 = 0xE000;   // (kept on a scale before: 1.875 dB steps to 11, 100 %, then ~1.1 dB)
+static constexpr uint16_t MASTER_KEPT_OLD = 0xF000;   // (and before that: 1.875 dB steps, 17 100 %)
 static uint16_t masterOf(int volume, int balance) { return MASTER_KEPT | volume << 6 | (balance + 32); }
 static_assert(MASTER_VOLUME_MAX < 32 && MASTER_BALANCE_MAX < 32, "the master volume and balance fit their bits");
 static constexpr uint32_t BLOCK = 512;
@@ -649,9 +650,11 @@ FLASHMEM static bool openAs(int p, bool apply_) {
   }
   // Its master volume and balance (one saved before projects kept them: the
   // one playing, the app's as it was, kept now).
-  if ((list.master & 0xF000) == MASTER_KEPT_OLD) {   // (the scale before: converted by level)
+  const uint16_t kept = list.master & 0xF000;
+  if (kept == MASTER_KEPT_OLD || kept == MASTER_KEPT_11) {   // (a scale before: converted by level)
     const int v = list.master >> 6 & 31;
-    list.master = masterOf(v ? masterStepForDb((v - 17) * 1.875f) : 0, (list.master & 63) - 32);
+    const float db = kept == MASTER_KEPT_OLD ? (v - 17) * 1.875f : (v - 11) * (v > 11 ? 12.0412f / 11 : 1.875f);
+    list.master = masterOf(v ? masterStepForDb(db) : 0, (list.master & 63) - 32);
     listDirty = true;
   } else if ((list.master & 0xF000) != MASTER_KEPT) {
     list.master = masterOf(masterVolume(), masterBalance());

@@ -26,6 +26,7 @@ std::string simRoot;
 SDClass SD;
 SerialStub Serial;
 bool simNoRun = false;
+bool (*simFragmented)(unsigned long long) = nullptr;
 int simFailIo = 0, simReinits = 0, simFsChanges = 0, simFileCreates = 0, simSampleTruncates = 0;
 void (*simSdLatency)(size_t, bool) = nullptr;
 void (*IntervalTimer::fn)() = nullptr;
@@ -1863,6 +1864,65 @@ int main(int argc, char **argv) {
       transportStart();
       runBeats(4);
       checkSync(0, "playing on after the clean-up");
+      transportStop();
+      runUntilIdle();
+    }
+  }
+
+  printf("defragmenting: recordings in pieces copied whole into their place, the handles on them reopened\n");
+  {
+    lastAction = "defrag";
+    if (transport.running) transportStop();
+    runUntilIdle();
+    for (int i = 0; i < 40; i++) serviceStorage();   // (the recordings named)
+    auto read = [](const std::string &f) { std::string d; FILE *h = fopen(f.c_str(), "rb"); if (h) { char b[65536]; size_t n; while ((n = fread(b, 1, sizeof b, h)) > 0) d.append(b, n); fclose(h); } return d; };
+    auto inode = [](const std::string &f) { struct stat st; return ::stat(f.c_str(), &st) == 0 ? (unsigned long long)st.st_ino : 0ull; };
+    static std::vector<unsigned long long> pieces;
+    pieces.clear();
+    simFragmented = [](unsigned long long ino) { return std::find(pieces.begin(), pieces.end(), ino) != pieces.end(); };
+    int t = -1;
+    for (int k = 0; k < NUM_TRACKS && t < 0; k++) if (tracks[k].state != TrackState::Empty) t = k;
+    uint32_t a = t >= 0 ? tracks[t].sample : sampleAt(0), b = sampleAt(0) == a ? sampleAt(1) : sampleAt(0);
+    std::string fa = hostFile(a), fb = hostFile(b), da = read(fa), db = read(fb);
+    pieces = {inode(fa), inode(fb)};
+    int noRoom = -1;
+    int moved = defragSamples(noRoom);
+    bool left = false;
+    for (int i = 0; i < (int)sampleCount(); i++) {
+      std::string f = hostFile(sampleAt(i)), stem = f.substr(0, f.size() - 4);
+      struct stat st;
+      if (::stat((stem + ".NEW").c_str(), &st) == 0 || ::stat((stem + ".OLD").c_str(), &st) == 0) left = true;
+    }
+    char m[160];
+    snprintf(m, sizeof m, "two in pieces: %d copied (%d no room), the same audio, in new places, nothing left over", moved, noRoom);
+    check(moved == 2 && noRoom == 0 && read(fa) == da && read(fb) == db && inode(fa) != pieces[0] && inode(fb) != pieces[1] && !left, m);
+    uint8_t h[4] = {};
+    check(t < 0 || (tracks[t].file.seekSet(0) && tracks[t].file.read(h, 4) == 4 && !memcmp(h, "RIFF", 4)), "the track playing one reads its new place");
+    check(defragSamples(noRoom) == 0 && noRoom == 0, "a second time: nothing in pieces");
+    pieces = {inode(fb)};
+    simNoRun = true;
+    moved = defragSamples(noRoom);
+    simNoRun = false;
+    check(moved == 0 && noRoom == 1 && read(fb) == db && inode(fb) == pieces[0], "no free run long enough: left as it was");
+    simFragmented = nullptr;
+    {                                              // cut short by power loss: between the renames (X.OLD, X.NEW, no X.wav): undone at the next start
+      std::string stem = fb.substr(0, fb.size() - 4);
+      ::rename(fb.c_str(), (stem + ".OLD").c_str());
+      FILE *j = fopen((stem + ".NEW").c_str(), "wb");
+      if (j) { fputs("half a copy", j); fclose(j); }
+      const int p = projectCurrent();
+      storageForget();
+      storageBegin([](const char *) {});
+      scenesBegin(simTempo, simSetTempo, p, simNewTempo);
+      for (int i = 0; i < 5; i++) block();
+      struct stat st;
+      check(read(fb) == db && ::stat((stem + ".NEW").c_str(), &st) != 0 && ::stat((stem + ".OLD").c_str(), &st) != 0,
+            "a defrag cut short by power loss: the recording back in its place at the next start, nothing left over");
+    }
+    if (t >= 0) {
+      transportStart();
+      runBeats(4);
+      checkSync(t, "playing on after the defrag");
       transportStop();
       runUntilIdle();
     }

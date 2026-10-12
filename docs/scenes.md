@@ -13,7 +13,7 @@ now, `MAX_SCENES`; 0 in a project saved before, which
 then keeps its current scene's tempo; `volume1` next to it is no longer used).
 Changing the tempo, in any scene, changes the project's. The master volume and
 balance are the project's too (block 0's `master`, in the 2 bytes that held
-`recTempo10`: `MASTER_KEPT` (0xE000) | step << 6 | balance + 32; 0xF000: on the scale before, 100 % at 17, converted by level; without either, a
+`recTempo10`: `MASTER_KEPT` (0xD000) | step << 6 | balance + 32; 0xE000 and 0xF000: on scales before (100 % at 11, at 17), converted by level; without either, a
 file from before: it takes the one playing), set as it loads and kept as
 they're changed (`projectMasterChanged()`); a new project's: 100 %, centred.
 The session's `out=`/`pan=` still keep the one playing (the value an older

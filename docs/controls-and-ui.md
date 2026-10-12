@@ -167,10 +167,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   apart: while the clock runs the top one white for 100 ms from each bar's first beat (X.1.1), the
   bottom one light grey from the other beats'. While B alone is held on the clock
   cell it shows the master volume and balance instead: 22 vertical lines across the
-  cell (one per step 1–22, 1.875 dB apart up to 11, 100 % — the default, half of them lit —, then ~1.1 dB apart to 22, 400 %, +12.04 dB; 0 off; saved volumes on the scale before converted by level;
+  cell (one per step 1–22, evenly ~2.0 dB apart, as the meter's: 16 100 % — the default, about three quarters of them lit —, 22 400 %, +12.04 dB; 0 off; saved volumes on the scales before converted by level;
   balance ±20), their upper halves the left channel's, the lower halves the right's:
   in the accent colour, as many as that channel's level (the volume less the balance away
-  from it; none at 0), black after it; each half meters its channel (white, line 11
+  from it; none at 0), black after it; each half meters its channel (white, line 16
   0 dBFS — the master limiter holding it just under —, falling back from peaks), the
   output as it would be without the master limiter (one, on the summed mix) metered under it in grey (its
   peaks, the pre-volume mix through the master volume, `takeOutputPeaks()`'s raw
@@ -222,7 +222,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   the bottom up: MONITOR AUDIO IN (the input heard in the mix: the line out and USB 1-2;
   recorded either way), PLAY NEWLY RECORDED (off: a new clip comes in muted), SELECT NEXT FREE
   TRACK (on: as a recording's stop is pressed, or after a resampling once in its scene, the next empty track up is selected, none empty: the next muted one, `selectAfterRecording()`; off: the selection stays on the track just recorded), EMPTY PROJECT CLICK (the
-  metronome, off, still clicks in a project with no clips), each ON or OFF right of its label; at the top a command, DELETE UNUSED SAMPLES: A or B empties the clip, scene and project clipboards, takes every silent recording off every scene of every project and off the tracks (their tracks emptied there), then deletes from the card those and every recording no project's scenes, the tracks now, the clip clipboard, the scene clipboard or the project clipboard use (the clock stopped first; `deleteUnusedSamples()`), a light grey bar the line's height growing over it as it goes, its label inverted, then the bar full with "DELETED N SAMPLES" (none: "DELETED NO SAMPLES") inverted on it, in its place for 2 s (or until another item is selected or the popup closes)
+  metronome, off, still clicks in a project with no clips), each ON or OFF right of its label; at the top a command, DELETE UNUSED SAMPLES: A or B empties the clip, scene and project clipboards, takes every silent recording off every scene of every project and off the tracks (their tracks emptied there), then deletes from the card those and every recording no project's scenes, the tracks now, the clip clipboard, the scene clipboard or the project clipboard use (the clock stopped first; `deleteUnusedSamples()`), a light grey bar the line's height growing over it as it goes, its label inverted, then the bar full with "DELETED N SAMPLES" (none: "DELETED NO SAMPLES") inverted on it, in its place for 2 s (or until another item is selected or the popup closes); then the item is DEFRAG SAMPLES (A or B: each recording in SAMPLES not in one piece on the card copied into a run of free space reserved whole and put in its place, `defragSamples()`, storage.md; the same bar, by bytes, then "DEFRAGGED N SAMPLES", "DEFRAGGED NO SAMPLES", or "DEFRAGGED N, M NO ROOM" when no free run was long enough for some, for 2 s likewise), and after that DELETE UNUSED SAMPLES again; the popup opens on DELETE
   (on at first; ON light grey, OFF dark grey). Its items' frames as the
   list's, two blocks of space round them (white selected; while A or B is held, dark grey, light grey for the press's first 100 ms). UP/DOWN go through it; A or B turns
   the item on / off at once, on the press (the action button: a tick); DOWN off its bottom item, UP off its top one (a fresh press, not a held one's repeats; the list's item above SETTINGS selected then),

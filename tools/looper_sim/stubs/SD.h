@@ -19,6 +19,7 @@
 
 extern std::string simRoot;
 extern bool simNoRun;   // preAllocate fails: no free run long enough
+extern bool (*simFragmented)(unsigned long long inode);   // a file in pieces on the card (nullptr: none)
 extern int simFailIo;      // > 0: that many reads/writes fail (card stopped responding)
 extern int simReinits;
 extern int simFsChanges;   // file creations/truncations/deletions/renames (counted by the test)
@@ -91,6 +92,10 @@ public:
   uint64_t curPosition() { return f_ ? (uint64_t)ftell(f_) : 0; }
   uint64_t fileSize() { long c = ftell(f_); fseek(f_, 0, SEEK_END); long s = ftell(f_); fseek(f_, c, SEEK_SET); return s; }
   bool preAllocate(uint64_t) { return !simNoRun; }   // (simNoRun: the card's free space in pieces)
+  bool contiguousRange(uint32_t *, uint32_t *) {    // (in one piece unless the test says this file isn't)
+    struct stat st;
+    return f_ && !(simFragmented && fstat(fileno(f_), &st) == 0 && simFragmented((unsigned long long)st.st_ino));
+  }
   bool truncate(uint64_t len) { simFsChanges++; if (path_.find("/SAMPLES/") != std::string::npos) simSampleTruncates++; fflush(f_); return ftruncate(fileno(f_), len) == 0; }
   int available() { long c = ftell(f_); return (int)(fileSize() - c); }
   int fgets(char *buf, int n) { return ::fgets(buf, n, f_) ? (int)strlen(buf) : 0; }

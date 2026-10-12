@@ -1410,6 +1410,97 @@ FLASHMEM int silentSamples(uint32_t *ids, int most) {
   deleteSecondHalf = deleteProgress != nullptr;
   return n;
 }
+// ---- Defragmenting (storage.h): each recording in SAMPLES not in one piece
+// on the card copied into a run of free space reserved whole (preAllocate),
+// then put in its place: X.wav renamed X.OLD, the copy (X.NEW) renamed X.wav,
+// the handles on it reopened there, X.OLD deleted (power lost part way:
+// recoverDefrag() at the next start finishes or undoes it).
+static void defragNames(uint32_t id, char *path, char *fresh, char *old, size_t size) {
+  samplePath(id, path, size);
+  snprintf(fresh, size, "%.*s.NEW", (int)strlen(path) - 4, path);
+  snprintf(old, size, "%.*s.OLD", (int)strlen(path) - 4, path);
+}
+// In pieces (a recording in SAMPLES; one still in its recording space: not).
+static bool fragmented(uint32_t id, uint64_t &bytes) {
+  if (unnamedIndex(id) >= 0) return false;
+  char path[40];
+  samplePath(id, path, sizeof path);
+  FsFile f = SD.sdfs.open(path, O_RDONLY);
+  if (!f || f.contiguousRange(nullptr, nullptr)) return false;
+  bytes = f.fileSize();
+  return true;
+}
+FLASHMEM int defragSamples(int &noRoom) {
+  noRoom = 0;
+  if (transport.running || recording.mode != Recording::Idle) return 0;
+  while (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);   // (cut down to size first)
+  uint64_t total = 0, done = 0, bytes;
+  for (int i = 0; i < sampleTotal; i++)
+    if (fragmented(sampleIds[i], bytes)) total += bytes;
+  const int kb = (int)(total >> 10);
+  int moved = 0;
+  for (int i = 0; i < sampleTotal; i++) {
+    const uint32_t id = sampleIds[i];
+    if (!fragmented(id, bytes)) continue;
+    char path[40], fresh[40], old[40];
+    defragNames(id, path, fresh, old, sizeof path);
+    debugStage = "SD defrag (a recording copied)";
+    FsFile src = SD.sdfs.open(path, O_RDONLY);
+    SD.sdfs.remove(fresh);
+    FsFile dst = SD.sdfs.open(fresh, O_RDWR | O_CREAT | O_TRUNC);
+    bool ok = src && dst && dst.preAllocate(bytes);
+    if (!ok) noRoom++;                             // (no run of free space that long)
+    for (uint64_t at = 0; ok && at < bytes;) {
+      const uint32_t n = (uint32_t)min<uint64_t>(sizeof chunk, bytes - at);
+      ok = src.read(chunk, n) == (int)n && dst.write(chunk, n) == (int)n;
+      at += n;
+      if (deleteProgress) deleteProgress((int)((done + at) >> 10), kb);
+    }
+    done += bytes;
+    ok = ok && dst.sync();
+    dst.close();
+    src.close();
+    if (!ok || !SD.sdfs.rename(path, old)) {
+      SD.sdfs.remove(fresh);
+      continue;
+    }
+    if (!SD.sdfs.rename(fresh, path)) {          // (put back)
+      SD.sdfs.rename(old, path);
+      SD.sdfs.remove(fresh);
+      continue;
+    }
+    if (scan.id == id) stopProfileScan();
+    reopenSample(id);                              // (the handles on it: the copy now)
+    SD.sdfs.remove(old);
+    moved++;
+  }
+  return moved;
+}
+
+// A defrag cut short (power lost): each X.NEW deleted; each X.OLD back as
+// X.wav if that's gone, else deleted.
+FLASHMEM static void recoverDefrag() {
+  FsFile dir = SD.sdfs.open("/L7/SAMPLES", O_RDONLY), f;
+  char names[8][16];
+  int n = 0;
+  while (dir && n < 8 && f.openNext(&dir, O_RDONLY)) {
+    char name[32];
+    f.getName(name, sizeof name);
+    f.close();
+    size_t len = strlen(name);
+    if (len > 4 && len < 16 && (!strcasecmp(name + len - 4, ".NEW") || !strcasecmp(name + len - 4, ".OLD"))) strcpy(names[n++], name);
+  }
+  dir.close();
+  for (int i = 0; i < n; i++) {
+    char path[48], wav[48];
+    size_t len = strlen(names[i]);
+    snprintf(path, sizeof path, "/L7/SAMPLES/%s", names[i]);
+    snprintf(wav, sizeof wav, "/L7/SAMPLES/%.*s.wav", (int)len - 4, names[i]);
+    if (!strcasecmp(names[i] + len - 4, ".OLD") && !SD.sdfs.exists(wav)) SD.sdfs.rename(path, wav);
+    else SD.sdfs.remove(path);
+  }
+}
+
 FLASHMEM int deleteUnmarkedSamples(const uint32_t *only, int onlyCount) {
   if (transport.running || recording.mode != Recording::Idle) return 0;
   int deleted = 0, kept = 0;
@@ -1610,12 +1701,17 @@ FLASHMEM Session loadSession() {
     else if (!strncmp(line, "newbpm=", 7)) s.newBpm = strtof(line + 7, nullptr);   // (new projects' tempo)
     else if (!strncmp(line, "row=", 4)) s.row = (int)strtol(line + 4, nullptr, 10);
     else if (!strncmp(line, "cell=", 5)) s.cell = (int)strtol(line + 5, nullptr, 10);
-    // ("vol=" / "pan=": the master volume and balance on today's scale; older,
-    // converted by level: "out=" (1.875 dB steps, 17: 100%), "gain=" (1.875 dB
+    // ("mvol=" / "pan=": the master volume and balance on today's scale; older,
+    // converted by level: "vol=" (1.875 dB steps to 11, 100%, then ~1.1 dB to
+    // 22), "out=" (1.875 dB steps, 17: 100%), "gain=" (1.875 dB
     // steps, 16: 100%), "level=" (10 steps of 3.75 dB, 8: 100%) and
     // "balance=" (+-10), "volume=" (21 steps of 1.5 dB, 17: 100%); "master="
     // left: 100% again)
-    else if (!strncmp(line, "vol=", 4)) s.master = (int)strtol(line + 4, nullptr, 10);
+    else if (!strncmp(line, "mvol=", 5)) s.master = (int)strtol(line + 5, nullptr, 10);
+    else if (!strncmp(line, "vol=", 4)) {
+      int v = (int)strtol(line + 4, nullptr, 10);
+      s.master = v <= 0 ? 0 : masterStepForDb((v - 11) * (v > 11 ? 12.0412f / 11 : 1.875f));
+    }
     else if (!strncmp(line, "out=", 4)) {
       int v = (int)strtol(line + 4, nullptr, 10);
       s.master = v <= 0 ? 0 : masterStepForDb((v - 17) * 1.875f);
@@ -1676,7 +1772,7 @@ FLASHMEM Session loadSession() {
 FLASHMEM void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nnewbpm=%.2f\nvol=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\noffmidi=%d\noffusb=%d\noffaudio=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
+  f.printf("bpm=%.2f\nnewbpm=%.2f\nmvol=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\noffmidi=%d\noffusb=%d\noffaudio=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
            s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro, s.follow ? 1 : 0, s.offsets[0], s.offsets[1], s.offsets[2]);
   f.printf("monitor=%d\nplaynew=%d\nnextfree=%d\nemptyclick=%d\n", s.settings[0], s.settings[1], s.settings[2], s.settings[3]);
   f.printf("helpseen=%d\nhelppage=%d\n", s.helpSeen, s.helpPage);
@@ -1806,6 +1902,7 @@ static void scanSamples() {
   olderCount = 0;
   moveCount = 0;
   memset(nextNumber, 0, sizeof nextNumber);
+  recoverDefrag();
   scanFolder("/L7/SAMPLES", false);
   for (int i = 0; i < moveCount; i++) {          // recording space from an older card, into DATA
     char from[40], to[40];
