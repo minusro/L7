@@ -1517,11 +1517,17 @@ int main(int argc, char **argv) {
           if (abs((int)outL.data[k]) >= 32767) clipped++;
         }
       };
+      takeLimiterReduction();
       runBeats(2);
       afterAudio = nullptr;
-      snprintf(mp, sizeof mp, "the master limiter: a track 24 dB over, its peak at the output %d (ceiling %.0f), %d samples clipped", top, LIMIT_CEILING, clipped);
-      check(top <= (int)LIMIT_CEILING + 1 && top >= (int)(LIMIT_CEILING * 0.95f) && clipped == 0, mp);
+      const float cut = takeLimiterReduction();
+      snprintf(mp, sizeof mp, "the master limiter: a track 24 dB over, its peak at the output %d (ceiling %.0f), %d samples clipped, %.1f dB taken off (metered)", top, LIMIT_CEILING, clipped, cut);
+      check(top <= (int)LIMIT_CEILING + 1 && top >= (int)(LIMIT_CEILING * 0.95f) && clipped == 0 && cut > 3, mp);
       for (int t = 0; t < NUM_TRACKS; t++) tracks[t].gain = gains[t];
+      for (int i = 0; i < 2000 && !limiterResting(); i++) block();
+      takeLimiterReduction();
+      block();
+      check(takeLimiterReduction() == 0, "back to normal: nothing taken off");
       setTrackFilter(6, 0, FILTER_MAX);
       runBeats(1);
     }

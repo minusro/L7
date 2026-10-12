@@ -276,7 +276,8 @@ struct SpectrumProfiler {
   void finish(uint8_t *profile) const;             // (PROFILE_BYTES)
 };
 void setTrackMix(int t, int volume, int balance);
-bool limiterResting();                             // the master limiter not turning anything down (tests)   // volume: steps from unity (config.h), balance: steps, clamped
+bool limiterResting();                             // the master limiter not turning anything down (tests)
+float takeLimiterReduction();                      // its most since the last call, dB (0: none)   // volume: steps from unity (config.h), balance: steps, clamped
 // A clip's scale (config.h): from its overview (and peak, OVERVIEW_BYTES) the
 // dB its peak is below 0 dBFS (0: quiet or empty, QUIET_PEAK), its peak
 // (max |sample|), and the normalising factor for its overview's columns

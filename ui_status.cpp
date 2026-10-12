@@ -45,7 +45,9 @@ static const Cell &statusCell(int cell) {
 // volume less the balance away from that side; none at 0), black after them.
 // Each half meters its channel's output over them: white up to its level, on
 // the same scale (MASTER_VOLUME_UNITY lines: 0 dBFS), falling at
-// MV_FALL_DB_PER_S. Shown again, it starts from silence.
+// MV_FALL_DB_PER_S. The master limiter's reduction, in the same steps, as
+// grey lines in place of the meter's rightmost ones (falling likewise).
+// Shown again, it starts from silence.
 static constexpr int MV_COLS = CLOCK_BOX.w / PX, MV_ROWS = STATUS_H / PX;   // 47 x 13, the border's included
 static constexpr int MV_LINES = MASTER_VOLUME_MAX;                          // (a line per step above 0)
 static constexpr int MV_LEFT = (MV_COLS - (2 * MV_LINES - 1)) / 2;          // the first line's column (centred: 2 ... 44)
@@ -55,7 +57,7 @@ static constexpr float MV_FALL_DB_PER_S = 24;
 
 FLASHMEM static void drawMasterVolume(bool full) {   // (flash: RAM1 is full)
   static uint16_t shown[MV_LINES][2];
-  static float meterDb[2] = {-200, -200};
+  static float meterDb[2] = {-200, -200}, cutDb = 0;
   static uint32_t lastMs = 0;
   auto &t = board.tft();
   const int top = rowTop(STATUS_ROW);
@@ -65,10 +67,14 @@ FLASHMEM static void drawMasterVolume(bool full) {   // (flash: RAM1 is full)
   uint32_t now = millis();
   float fall = (now - lastMs) * (MV_FALL_DB_PER_S / 1000);
   lastMs = now;
+  float cut = takeLimiterReduction();
   if (full) {
     t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, rowGround(STATUS_ROW));   // (inside the border)
     meterDb[0] = meterDb[1] = -200;
+    cut = cutDb = 0;
   }
+  cutDb = max(cut, cutDb - fall);
+  const int cutLines = (int)floorf(cutDb / MASTER_STEP_DB + 0.5f);
   const int vol = masterVolume(), bal = masterBalance();
   const int levels[2] = {vol - max(0, bal), vol - max(0, -bal)};
   for (int ch = 0; ch < 2; ch++) {
@@ -78,7 +84,7 @@ FLASHMEM static void drawMasterVolume(bool full) {   // (flash: RAM1 is full)
     int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f), 0, MV_LINES);
     for (int j = 0; j < MV_LINES; j++) {
       bool inLevel = j < levels[ch];                 // (0: none)
-      uint16_t color = j < lit && inLevel ? INK : inLevel ? ACCENT : BG;
+      uint16_t color = j < lit && inLevel ? (j >= lit - cutLines ? DIM : INK) : inLevel ? ACCENT : BG;   // (the limiter's: grey)
       if (!full && color == shown[j][ch]) continue;
       shown[j][ch] = color;
       t.fillRect(CLOCK_BOX.x + (MV_LEFT + 2 * j) * PX, top + (2 + ch * (MV_HALF + 1)) * PX, PX, MV_HALF * PX, color);

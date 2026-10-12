@@ -694,10 +694,13 @@ static const float LIMIT_RELEASE = 1.0f - expf(-1000.0f / (LIMIT_RELEASE_MS * AU
 // The master limiter (config.h): a stage's gain, down at once to keep a peak
 // at the ceiling, back up over the release.
 struct Limiter {
-  float gain = 1.0f;
+  float gain = 1.0f, low = 1.0f;                   // (low: its least this block, metered)
   void run(float &l, float &r) {
     float a = max(fabsf(l), fabsf(r));
-    if (a * gain > LIMIT_CEILING) gain = LIMIT_CEILING / a;
+    if (a * gain > LIMIT_CEILING) {
+      gain = LIMIT_CEILING / a;
+      if (gain < low) low = gain;
+    }
     if (gain == 1.0f) return;
     l *= gain;
     r *= gain;
@@ -707,6 +710,14 @@ struct Limiter {
 };
 static Limiter mixLimiter, outLimiter;            // before the master volume (what's resampled too), and after it
 bool limiterResting() { return mixLimiter.gain == 1.0f && outLimiter.gain == 1.0f; }
+static volatile float limitLow = 1.0f;            // the most it turned down since last taken (a gain: 1 none)
+float takeLimiterReduction() {
+  noInterrupts();
+  float g = limitLow;
+  limitLow = 1.0f;
+  interrupts();
+  return g < 1.0f ? -20 * log10f(g) : 0.0f;
+}
 static const float FADE = 1.0f - expf(-1000.0f / (FILTER_FADE_MS * AUDIO_SAMPLE_RATE_EXACT));
 static const float CUTOFF_GLIDE = 1.0f - expf(-1000.0f * AUDIO_BLOCK_SAMPLES / (FILTER_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));   // (a block's)
 
@@ -1079,6 +1090,12 @@ void LooperEngine::update() {
     if (peakR[t] > tr.peakR * 32768) tr.peakR = peakR[t] / 32768;
   }
 
+  {                                                // the master limiter's most this block (both stages)
+    float g = mixLimiter.low * outLimiter.low;
+    if (g < limitLow) limitLow = g;
+    mixLimiter.low = mixLimiter.gain;
+    outLimiter.low = outLimiter.gain;
+  }
   if (outPeak[0] > outPeakL * 32768) outPeakL = outPeak[0] / 32768;
   if (outPeak[1] > outPeakR * 32768) outPeakR = outPeak[1] / 32768;
 

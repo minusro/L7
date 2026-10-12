@@ -171,8 +171,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   balance ±20), their upper halves the left channel's, the lower halves the right's:
   in the accent colour, as many as that channel's level (the volume less the balance away
   from it; none at 0), black after it; each half meters its channel (white, line 17
-  0 dBFS — the ones above it clipping —, falling back from peaks), from silence each
-  time it shows (`drawMasterVolume()` in ui_status.cpp).
+  0 dBFS — the master limiter holding it just under —, falling back from peaks), the
+  limiter's reduction as grey lines in place of the meter's rightmost white ones (a
+  line per 1.875 dB taken off, both stages', `takeLimiterReduction()`, falling likewise),
+  from silence each time it shows (`drawMasterVolume()` in ui_status.cpp).
 * Track buttons: the track's number (tracks count from the bottom: 1 is
   the row just above the status row, 7 the first) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined
   square on a muted one (number grey); in a square filled with the accent
