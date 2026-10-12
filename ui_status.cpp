@@ -9,7 +9,7 @@
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
 // light grey on the selected cell.
 //   first cell: the scene, an inverted "SCN" tag and its position "3/7" (the
-//     empty scene "0/7" and the copy after the last "*/7" in grey). Both in the
+//     empty scene "0/7", its 0 dark grey, and the copy after the last "*/7", its * light grey, white selected). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
 //     UP/DOWN step through the scenes. The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
@@ -275,7 +275,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
   else snprintf(text, sizeof text, "%d/%d", scene, count);       // (0: the empty scene)
-  uint16_t ink = sceneAccent ? ACCENT : temporary ? DIM : labelInk(SCENE_CELL);
+  uint16_t ink = sceneAccent ? ACCENT : labelInk(SCENE_CELL);
   if (sceneHeld() || sceneChangeWaiting()) {
     noInterrupts();
     bool firstHalf = transport.sampleInBeat < transport.spb / 2;
@@ -285,7 +285,15 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   if (sceneFlash) ink = INK;
   int x = box.x + INSET + tagW + PX;
   t.fillRect(x - PX, tagY, PX, TAG_H, G);          // (the block between the tag and the position: the position, moved, left nothing there)
-  drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
+  if (temporary) {                                 // 0* and N+1*: their "0" dark grey, their "*" light grey (white
+    const char first[2] = {text[0], 0};            // selected), whatever else is on; the "/N" as any position
+    const uint16_t firstInk = scene == 0 ? DARK : cell == SCENE_CELL ? INK : LIGHT;
+    const int w1 = textWidth(first) + PX;
+    drawText(x, textY, first, firstInk, G, w1);
+    drawText(x + w1, textY, text + 1, ink, G, box.x + box.w - INSET - x - w1);
+  } else {
+    drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
+  }
   // Stepping (the accent colour on): the wider tag, its up and down arrows
   // stacked, in black (both, whether that way goes on or not).
   if (sceneAccent) {
