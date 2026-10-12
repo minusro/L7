@@ -9,7 +9,7 @@
 // The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are light grey,
 // white on the selected cell (the clock's: grey, light grey selected).
 //   first cell: the scene, an inverted "SCN" tag and its position "3/7" (the
-//     empty scene "0/7" grey, and the copy after the last "*/7" light grey, white selected). Both in the
+//     empty scene "0/7" grey, light grey held; the copy after the last "*/7" its * accent, held white, its /7 then accent). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
 //     UP/DOWN step through the scenes. The position flashes with the beat (the accent colour, then grey) while
 //     another scene is selected but not there yet: SHIFT (or B) still held on
@@ -288,8 +288,17 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   if (sceneFlash) ink = INK;
   int x = box.x + INSET + tagW + PX;
   t.fillRect(x - PX, tagY, PX, TAG_H, G);          // (the block between the tag and the position: the position, moved, left nothing there)
-  if (temporary) ink = scene == 0 ? DIM : cell == SCENE_CELL ? INK : LIGHT;   // (0* grey, N+1* light grey, white selected: whatever else is on)
-  drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
+  // 0*: grey; held (stepping), light grey. N+1*: its "*" in the accent colour,
+  // its "/N" as any position's; held, the "*" white, the "/N" in the accent colour.
+  if (scene == 0) {
+    drawText(x, textY, text, sceneAccent ? LIGHT : DIM, G, box.x + box.w - INSET - x);
+  } else if (scene > count) {
+    const int w1 = textWidth("*") + PX;
+    drawText(x, textY, "*", sceneAccent ? INK : ACCENT, G, w1);
+    drawText(x + w1, textY, text + 1, sceneAccent ? ACCENT : ink, G, box.x + box.w - INSET - x - w1);
+  } else {
+    drawText(x, textY, text, ink, G, box.x + box.w - INSET - x);
+  }
   // Stepping (the accent colour on): the wider tag, its up and down arrows
   // stacked, in black (both, whether that way goes on or not).
   if (sceneAccent) {
