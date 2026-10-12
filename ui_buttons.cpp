@@ -73,7 +73,7 @@ static int actionIcon() {
   if (selected == STATUS_ROW) {                    // restart / duplicate / play-stop / tap tempo
     int cell = selectedCellIn(STATUS_ROW);
     if (shift) return cell == SCENE_CELL ? (sceneDupMade() ? ICON_SCENE_CLEAR : ICON_SCENE_DUP) : cell == TEMPO_CELL ? ICON_EAR : ICON_RESTART;   // (SHIFT: the scene cell duplicates it; the tempo cell: audio follow)
-    return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : transport.running ? ICON_NEXT : ICON_PLAY;   // the scene cell: the next scene (stopped: play)
+    return cell == TEMPO_CELL ? ICON_TAP : cell == CLOCK_CELL ? (transport.running ? ICON_STOP : ICON_PLAY) : ICON_NEXT;   // the scene cell: the next scene (stopped: the clock started)
   }
   const Track &tr = tracks[selected];
   if (shift) return hasClip(selected) ? ICON_CUT : recordingOn(selected) || recordQueued() == selected ? ICON_DELETE : ICON_PASTE;
@@ -219,7 +219,8 @@ static bool unavailable(int i, int icon) {
       return (recording.mode != Recording::Idle && menuSlot() != projectCurrent()) || projectCopying(menuSlot());
     return false;
   }
-  return (icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull());
+  return (icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()) ||
+         (icon == ICON_NEXT && sceneCount() < 2);   // (the next scene: none with fewer than two)
 }
 
 // The action button (the status row's): the accent colour with black icons; dark grey

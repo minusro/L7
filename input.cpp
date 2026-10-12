@@ -763,7 +763,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   if (nextSceneArmed && (pressed & ~m8::BTN_EDIT)) nextSceneArmed = false;   // (another key: not that)
   if (nextSceneArmed && !(keys & m8::BTN_EDIT)) {
     nextSceneArmed = false;
-    if (onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL) {
+    if (onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL && sceneCount() >= 2) {   // (fewer than two scenes: nothing, the button grey)
       if (!transport.running) startByHand();     // (stopped: the clock started, the scene as it is)
       else if (sceneNext())
         for (int i = 0; i < ROWS; i++) drawTrack(i);
