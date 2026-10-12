@@ -6,8 +6,8 @@
 
 // Status row, in the pixel font, each cell framed like the tracks' when the
 // row is selected:
-// The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are grey,
-// light grey on the selected cell.
+// The labels (the "SCN" and "BPM" tags, the scene's position, the tempo) are light grey,
+// white on the selected cell (the clock's: grey, light grey selected).
 //   first cell: the scene, an inverted "SCN" tag and its position "3/7" (the
 //     empty scene "0/7" grey, and the copy after the last "*/7" light grey, white selected). Both in the
 //     accent colour while SHIFT is held, or B alone on the cell: SHIFT or B +
@@ -161,7 +161,10 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   }
   const bool inSeconds = rotateShown && strchr(text, '.');
   int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) && !screenSwitchPending() ? selectedCellIn(STATUS_ROW) : -1;   // (an arrow held off an edge: no selection shown)
-  auto labelInk = [&](int c) -> uint16_t { return cell == c ? LIGHT : DIM; };   // (only the selected cell: not the whole row, as on a track)
+  auto labelInk = [&](int c) -> uint16_t {        // (only the selected cell: not the whole row, as on a track)
+    if (c == SCENE_CELL || c == TEMPO_CELL) return cell == c ? INK : LIGHT;   // (the scene and the tempo: light grey, white selected)
+    return cell == c ? LIGHT : DIM;
+  };
   int tagY = top + (STATUS_H - TAG_H) / 2 / PX * PX, textY = top + (STATUS_H - FONT_H) / 2 / PX * PX;   // (on the block grid)
   {
     // The tempo, then an inverted "BPM" tag at the cell's right edge (like the
@@ -275,7 +278,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
   else snprintf(text, sizeof text, "%d/%d", scene, count);       // (0: the empty scene)
-  uint16_t ink = sceneAccent ? ACCENT : transport.running ? LIGHT : labelInk(SCENE_CELL);   // (1-N: light grey while the clock runs)
+  uint16_t ink = sceneAccent ? ACCENT : labelInk(SCENE_CELL);
   if (sceneHeld() || sceneChangeWaiting()) {
     noInterrupts();
     bool firstHalf = transport.sampleInBeat < transport.spb / 2;
