@@ -113,10 +113,12 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   another scene, or a change waiting for its switch point.
 * Stopped: scene changes apply at once.
 * No scene changes while recording.
-* **Switching scenes** (`go()`): at the switch, a track whose range is as long
-  as the one it had plays as far from its start position as that one was from
-  its own (`keepLen`); any other from its start position (`beginSceneChange(...,
-  restart, clockToo = false)`: as a project switch, but the clock runs on).
+* **Switching scenes** (`go()`): at the switch, a track that was playing a
+  clip plays as far from its start position as that one was from its own,
+  wrapped to its range's length (`keepLen`; a 4-bar range 9 beats past its
+  start, into a 2-bar one: 1 beat past); one that had none from its start
+  position (`beginSceneChange(..., restart, clockToo = false)`: as a project
+  switch, but the clock runs on).
   Between N and N+1* (its copy) nothing starts over.
 * **After a resampling** (`sceneFromResample(t)`, from `followRecording()`):
   a new scene is inserted after the current one, holding

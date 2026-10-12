@@ -1311,8 +1311,8 @@ int main(int argc, char **argv) {
     snprintf(m, sizeof m, "track 6 stops on the bar line (beat %d +%u), then empty", stop.beat, stop.sib);
     check(onBar(stop, AUDIO_BLOCK_SAMPLES) && tracks[5].state == TrackState::Empty, m);
     check(tracks[0].volume == 6, "the volume set while waiting stayed");
-    // At the switch (the bar line): a range as long as before as far from its
-    // start position as the one before was from its own; another, from its start position.
+    // At the switch (the bar line): a range after one playing as far from its
+    // start position as that one was from its own, wrapped to its length; another, from its start position.
     int sameLen = 0, fromStart = 0, wrong = 0;
     for (int t = 0; t < NUM_TRACKS; t++) {
       const Track &tr = tracks[t];
@@ -1321,14 +1321,15 @@ int main(int argc, char **argv) {
       const int32_t q = 4 * stop.beat, len = 4 * tr.rangeBeats;
       const int32_t sNew = 4 * (int32_t)pmod((int32_t)startPosition(loopBeats, tr.rangeStartBeat, tr.rangeBeats) - (int32_t)tr.rangeStartBeat, loopBeats);
       const int32_t at = pmod(q - tr.rangeAnchorQ, len);   // (quarters into its range at the switch)
-      if (tr.rangeBeats == beatsBefore[t] && anchorBefore[t] != INT32_MIN) {
-        const int32_t d = pmod(pmod(q - anchorBefore[t], len) - startBefore[t], len);
+      if (beatsBefore[t] && anchorBefore[t] != INT32_MIN) {   // (any length: the distance wrapped to its own)
+        const int32_t lenOut = 4 * (int32_t)beatsBefore[t];
+        const int32_t d = pmod(pmod(q - anchorBefore[t], lenOut) - startBefore[t], lenOut);
         if (at == pmod(sNew + d, len)) sameLen++; else wrong++;
       } else {
         if (at == sNew) fromStart++; else wrong++;
       }
     }
-    snprintf(m, sizeof m, "the switch: as long ranges as far from their start positions (%d), others from them (%d), %d wrong", sameLen, fromStart, wrong);
+    snprintf(m, sizeof m, "the switch: playing ranges as far from their start positions, wrapped (%d), others from them (%d), %d wrong", sameLen, fromStart, wrong);
     check(sameLen + fromStart > 0 && wrong == 0, m);
     checkSync(2, "track 3 on B's sample");
     setTrackMix(0, VOLUME_UNITY, 0);

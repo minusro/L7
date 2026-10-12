@@ -936,13 +936,12 @@ static void applyPlan(int t) {
     tr.overviewVersion++;
   }
   applyRange(t, p.u);
-  // A range as long as the one playing carries on from the same spot in it
-  // (a project switch: from its 1.1.1 position instead).
-  if (p.restart && p.keepLen && tr.rangeBeats == p.outBeats && p.outBeats) {
-    // A scene switch, a range as long as the one playing: as far from its
-    // start position as that one was from its own.
-    const int32_t len = 4 * (int32_t)tr.rangeBeats, lb = tr.loopBars * BEATS_PER_BAR;
-    const int32_t d = posMod(posMod(p.q - p.outAnchorQ, len) - p.outStartQ, len);
+  // A scene switch: the range carries on as far from its start position as
+  // the one playing was from its own, wrapped to its length (a project
+  // switch: from its 1.1.1 position instead).
+  if (p.restart && p.keepLen && p.outBeats && tr.rangeBeats) {
+    const int32_t len = 4 * (int32_t)tr.rangeBeats, lenOut = 4 * (int32_t)p.outBeats, lb = tr.loopBars * BEATS_PER_BAR;
+    const int32_t d = posMod(posMod(p.q - p.outAnchorQ, lenOut) - p.outStartQ, lenOut);
     const int32_t sNew = 4 * posMod((int32_t)startPosition(lb, tr.rangeStartBeat, tr.rangeBeats) - (int32_t)tr.rangeStartBeat, lb);
     tr.rangeAnchorQ = p.q - posMod(sNew + d, len);
   } else if (p.restart) anchorAsStart(t, p.q);

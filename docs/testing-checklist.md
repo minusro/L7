@@ -75,3 +75,4 @@ checked, or turn it into a fix.
   200 ms grace change (state from earlier tests); look into or loosen.
 - External tempo vs scene tempo: follow a MIDI clock (and audio follow) at a tempo other than the scene's; switch scenes and record while following, then stop the clock / turn audio follow off: the scene's own tempo comes back, and its saved tempo is unchanged. B+UP on the tempo cell while following, power cycle: still doubled; unplug the clock for 10 s (audio follow: turn it off): back to x1.
 - On N+1* (and 0* holding clips), change the tempo by hand: it becomes scene N+1 (1) with that tempo.
+- Scene switch between clips of different range lengths (e.g. 4 bars into 2, 1 into 4): the new clip plays as far past its start point as the old one was, wrapped to its length; same-length ranges unchanged; an empty track into a clip: from its start point.
