@@ -92,13 +92,13 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   change at once if it's prepared, otherwise as soon as it is; the label
   flashes until the change happens. A prepared change needs only ~60 ms of
   lead before its switch point instead of 150 ms.
-* A normal change then takes effect on the **first bar line at least 150 ms
-  ahead** (`beginSceneChange()`), all of it together: samples (gapless, see
+* A normal change then takes effect on the **first beat line at least 150 ms
+  ahead** (`beginSceneChange()`; a project's: the first bar line), all of it together: samples (gapless, see
   playback.md), mutes, filters, volumes, tracks starting or stopping; a
   project loading, its tempo too (engine applies `pendingSpb` exactly at
   `spbAtBeat`; the tempo label shows the playing tempo until then). Scenes
   keep the tempo.
-* Stepping on before the bar reuses the same bar line (unless < 50 ms away;
+* Stepping on before the switch reuses the same beat line (unless < 50 ms away;
   then the next one, with no gap).
 * **Quick operations** — switch on the **next beat** (≥ 150 ms ahead), ignore
   the SHIFT hold (except the steps and jumps to 0\* and N+1\*, which wait for
@@ -147,4 +147,5 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   queued behind the resampling carries on and is left out of the switch.
 
 A half-bar grid for normal changes was tried and reverted (commits 506c0d7 /
-786f884): normal changes stay on bar lines.
+786f884); scene changes have since moved to beat lines (projects' stay on
+bar lines).

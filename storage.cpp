@@ -1123,7 +1123,7 @@ int32_t beginSceneChange(bool quick, bool prepared, bool restart, bool clockToo)
   sceneKeepLen = sceneRestart && !clockToo;      // (a scene's: as long ranges keep their distance from the start position)
   if (!transport.running) return -1;
   int64_t spb, now = nowSamples(spb);
-  int32_t grid = quick ? 1 : BEATS_PER_BAR;
+  int32_t grid = quick || !clockToo ? 1 : BEATS_PER_BAR;   // (a scene's: the next beat line; a project's: the next bar line)
   int32_t q = quarterAfterLead(grid, prepared ? PREPARED_LEAD_MS : SWITCH_LEAD_MS);
   // Stepping on before the last one happened: the same point, if there's time
   // (and it isn't later than this one's would be).

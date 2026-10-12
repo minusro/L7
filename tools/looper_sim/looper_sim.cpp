@@ -1294,9 +1294,9 @@ int main(int argc, char **argv) {
     waitScene();
     for (int i = 0; i < 20; i++) block();
     afterAudio = nullptr;
-    auto onBar = [](const At &x, uint32_t within) { return x.beat >= 0 && x.beat % 4 == 0 && x.sib <= within; };
+    auto onBar = [](const At &x, uint32_t within) { return x.beat >= 0 && x.sib <= within; };   // (a scene's switch: on a beat line)
     char m[160];
-    snprintf(m, sizeof m, "on a bar line together: sample (beat %d +%u), unmute (%d +%u), empty track starts (%d +%u)",
+    snprintf(m, sizeof m, "on a beat line together: sample (beat %d +%u), unmute (%d +%u), empty track starts (%d +%u)",
              sw.beat, sw.sib, unmute.beat, unmute.sib, start.beat, start.sib);
     check(onBar(sw, AUDIO_BLOCK_SAMPLES) && onBar(unmute, 4 * AUDIO_BLOCK_SAMPLES) &&
           onBar(start, AUDIO_BLOCK_SAMPLES) && sw.beat == unmute.beat && sw.beat == start.beat, m);
@@ -1325,7 +1325,7 @@ int main(int argc, char **argv) {
     waitScene();
     for (int i = 0; i < 20; i++) block();
     afterAudio = nullptr;
-    snprintf(m, sizeof m, "track 6 stops on the bar line (beat %d +%u), then empty", stop.beat, stop.sib);
+    snprintf(m, sizeof m, "track 6 stops on the beat line (beat %d +%u), then empty", stop.beat, stop.sib);
     check(onBar(stop, AUDIO_BLOCK_SAMPLES) && tracks[5].state == TrackState::Empty, m);
     check(tracks[0].volume == 6, "the volume set while waiting stayed");
     // At the switch (the bar line): a range after one playing as far from its
@@ -1377,14 +1377,14 @@ int main(int argc, char **argv) {
     runBeats(9);
     check(tracks[2].sample == sample && !sceneChangeWaiting(), "two bars later: still scene A playing");
     int32_t released = transport.beat;
-    check(sceneHold(false) && sceneChangeWaiting() && !sceneHeld(), "let go: the change waits for its bar line");
+    check(sceneHold(false) && sceneChangeWaiting() && !sceneHeld(), "let go: the change waits for its beat line");
     int32_t at = -1;
     afterAudio = [&] { if (at < 0 && tracks[2].sample != sample && !tracks[2].sampleSwitch) at = transport.beat; };
     waitScene();
     afterAudio = nullptr;
     char m[96];
-    snprintf(m, sizeof m, "switched on the first bar line after letting go (beat %d, let go in %d)", at, released);
-    check(at % 4 == 0 && at > released && at <= released + 4 && sceneCurrent() == from + 1, m);
+    snprintf(m, sizeof m, "switched on a beat line just after letting go (beat %d, let go in %d)", at, released);
+    check(at > released && at <= released + 2 && sceneCurrent() == from + 1, m);
   }
 
   printf("a scene selected with SHIFT held is prepared; let go early, it launches once ready\n");
