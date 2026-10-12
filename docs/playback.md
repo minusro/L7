@@ -183,6 +183,9 @@ project should).
 
 ## MIDI clock
 
+While an external MIDI or USB clock is followed, the tempo cell's label is grey
+(light grey selected) instead of the usual light grey (white selected).
+
 **Out** (`engine.cpp`, `MIDI_OUT_ENABLED`): 24 ticks a beat from the audio
 interrupt (each queued with the time it's due and sent by a 200 µs timer:
 <0.2 ms of jitter), Stop on `transportStop()`, and a Song Position wherever
