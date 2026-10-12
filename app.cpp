@@ -109,6 +109,7 @@ void setSetting(int which, bool on) {
 // ---- Session (tempo, master volume, the loaded project, the selection: the
 // app's, not a project's or a scene's)
 static uint32_t savedTouched[12];                // (touchedSample as last saved)
+static int savedOctaves[3];                      // (the external clocks' multipliers as last saved)
 FLASHMEM void beginSession() {
   Session s = loadSession();
   bpm = roundf(s.bpm * 10) / 10;
@@ -132,6 +133,10 @@ FLASHMEM void beginSession() {
   seenPages = savedSeenPages = (uint16_t)s.helpSeen;
   shownPage = savedShownPage = s.helpPage;
   memcpy(touchedSample, s.touched, sizeof touchedSample);
+  midiSetOctave(0, s.octaves[0]);
+  midiSetOctave(1, s.octaves[1]);
+  audioFollowSetOctave(s.octaves[2]);
+  savedOctaves[0] = s.octaves[0]; savedOctaves[1] = s.octaves[1]; savedOctaves[2] = s.octaves[2];
   memcpy(savedTouched, s.touched, sizeof savedTouched);
   audioFollowBegin(s.follow);
   savedFollow = s.follow;
@@ -148,7 +153,8 @@ static bool sessionDirty() {
   return tempoDirty || masterVolume() != savedMaster || masterBalance() != savedBalance || projectCurrent() != savedProject ||
          menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell ||
          metroMode != savedMetro || audioFollowOn() != savedFollow || memcmp(settings, savedSettings, sizeof settings) || seenPages != savedSeenPages || shownPage != savedShownPage ||
-         memcmp(syncOffsetMs, savedOffsets, sizeof savedOffsets) || memcmp(touchedSample, savedTouched, sizeof savedTouched);
+         memcmp(syncOffsetMs, savedOffsets, sizeof savedOffsets) || memcmp(touchedSample, savedTouched, sizeof savedTouched) ||
+         midiOctave(0) != savedOctaves[0] || midiOctave(1) != savedOctaves[1] || audioFollowOctave() != savedOctaves[2];
 }
 
 FLASHMEM static void writeSession() {
@@ -167,6 +173,9 @@ FLASHMEM static void writeSession() {
   s.helpSeen = savedSeenPages = seenPages;
   s.helpPage = savedShownPage = shownPage;
   memcpy(s.touched, touchedSample, sizeof s.touched);
+  s.octaves[0] = savedOctaves[0] = midiOctave(0);
+  s.octaves[1] = savedOctaves[1] = midiOctave(1);
+  s.octaves[2] = savedOctaves[2] = audioFollowOctave();
   memcpy(savedTouched, touchedSample, sizeof savedTouched);
   for (int i = 0; i < SYNC_SOURCES; i++) s.offsets[i] = savedOffsets[i] = syncOffsetMs[i];
   saveSession(s);

@@ -73,3 +73,5 @@ checked, or turn it into a fix.
   a full lap skips a track.
 - [ ] **Simulator: "12 switches at 120 BPM"** fails with dropouts since the
   200 ms grace change (state from earlier tests); look into or loosen.
+- External tempo vs scene tempo: follow a MIDI clock (and audio follow) at a tempo other than the scene's; switch scenes and record while following, then stop the clock / turn audio follow off: the scene's own tempo comes back, and its saved tempo is unchanged. B+UP on the tempo cell while following, power cycle: still doubled; unplug the clock for 10 s (audio follow: turn it off): back to x1.
+- On N+1* (and 0* holding clips), change the tempo by hand: it becomes scene N+1 (1) with that tempo.

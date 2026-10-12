@@ -48,6 +48,8 @@ extern uint32_t syncOffsetChangedMs;      // millis() of the latest change (0: n
 // (by > 0) or halved, again and again (within the clock's range); ours starts
 // again from their next beat that fits. False: not following, or out of range.
 bool midiScale(int by);
+int midiOctave(int s);                  // a source's tempo multiplier, as a power of two (the session keeps it)
+void midiSetOctave(int s, int o);
 uint32_t midiTheirSpb();                  // their tempo as measured (samples a beat; 0: none yet)
 
 // From the app (app.cpp): the tempo shown, and an external clock's tempo

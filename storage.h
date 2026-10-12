@@ -201,6 +201,7 @@ struct Session {
   bool playing = false;
   int metro = 1;                                   // the metronome: 0 off, 1 auto, 2 on (app.h)
   bool follow = false;                             // audio follow (audio_follow.h)
+  int octaves[3] = {0, 0, 0};                      // the external clocks' tempo multipliers (powers of two): serial MIDI, USB MIDI, audio
   int offsets[3] = {0, 0, 0};                      // the external clocks' offsets, ms (midi_in.h syncOffsetMs: serial MIDI, USB MIDI, audio)
   bool settings[4] = {true, true, true, true};     // app.h's settings: monitor, play new, next free, empty project click
   int helpSeen = 0, helpPage = 0;                  // the help pages seen (a bit each) and the one last shown (app.h)

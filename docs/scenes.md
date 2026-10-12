@@ -53,7 +53,7 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   or N+1* made a scene by a change there: the tempo then, or a recording's
   own; a duplicate: the tempo then; a resampling's scene: the resampling's; a
   pasted scene keeps its own), then its latest recording's (`sceneRecorded()`,
-  as a recording is saved; the tempo set by hand changes it too, `projectTempoChanged()`). B twice on
+  as a recording is saved; the tempo set by hand changes it too, `projectTempoChanged()`; on 0* or N+1* a tempo set by hand is a change: it's made a scene with that tempo; an external tempo followed changes none of it). B twice on
   the tempo cell goes back to the current scene's (`sceneSavedTempo()`; N+1*:
   N's; 0*: none). Before, a scene's record held the tempo when it was last
   saved, and the list block (`recTempo10`, now unused) the project's last

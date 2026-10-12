@@ -9,6 +9,8 @@
 // removing a scene only rewrites the list block. All of them are made once at
 // full size (a project's when its slot gets one).
 #include "scenes.h"
+#include "audio_follow.h"
+#include "midi_in.h"
 #include "storage.h"
 #include <utility>
 
@@ -182,7 +184,7 @@ static void apply(const SceneInfo &s, bool quick, bool restart = false, float te
   int32_t at = beginSceneChange(quick, unitsPrepared(), restart, clockToo);
   for (int t = 0; t < NUM_TRACKS; t++) setTrackUnit(t, s.units[t]);   // (they take the prepared files)
   prepareUnits(nullptr);
-  if (tempo > 0) {
+  if (tempo > 0 && syncSource() == SYNC_NONE) {   // (following an external tempo: theirs, the scene's kept for later)
     setTempo(tempo);
     // A tempo change on its way (this one, or one still waiting) goes with it.
     transport.spbAtBeat = transport.pendingSpb ? at : -1;
@@ -653,6 +655,7 @@ bool projectScene(int p, int pos, TrackUnit *units) {
 }
 
 void sceneRecorded(float bpm, bool resample) {
+  if (syncSource() != SYNC_NONE) return;           // (an external tempo: the scene's own kept)
   if (resample) {                                  // (it moves to a scene of its own: that one's)
     resampleTempo = bpm;
     return;
@@ -668,10 +671,14 @@ float sceneSavedTempo() {
 }
 
 void projectTempoChanged() {
-  if (loading) return;
+  if (loading || syncSource() != SYNC_NONE) return;   // (an external tempo: not the scene's)
   if (list.current >= 1 && list.current <= list.count && sceneTempo != getTempo()) {   // (set by hand: the scene's tempo)
     sceneTempo = getTempo();
     changed = true;
+  } else if ((list.current == 0 || list.current == list.count + 1) && !liveEmpty()) {   // (0*, N+1*: a change to it, made a scene with this tempo)
+    sceneTempo = getTempo();
+    changed = true;
+    edits++;
   }
   if (tenths(getTempo()) == list.tempo10) return;
   list.tempo10 = tenths(getTempo());

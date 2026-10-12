@@ -252,7 +252,23 @@ static void startWith(uint32_t tick, uint16_t pos16) {
   if (theirSpb) followTempo(oursOf(theirSpb), shownOf(theirSpb));
 }
 
+int midiOctave(int s) { return octaveOf[s & 1]; }
+void midiSetOctave(int s, int o) { octaveOf[s & 1] = constrain(o, -3, 3); }
+
 void midiInService() {
+  // A source gone quiet (no clock for UNPLUGGED_MS: unplugged): its tempo
+  // multiplier back to 1 (kept in the session otherwise).
+  static constexpr uint32_t UNPLUGGED_MS = 10000;
+  static uint32_t quietSince = 0;
+  static bool wasAlive = false;
+  const bool a = alive();
+  if (a) quietSince = 0;
+  else if (wasAlive) quietSince = max(1u, millis());
+  wasAlive = a;
+  if (quietSince && millis() - quietSince >= UNPLUGGED_MS) {
+    quietSince = 0;
+    if (octaveOf[source & 1]) { octaveOf[source & 1] = 0; Serial.printf("MIDI in: quiet, x1 again\n"); }
+  }
   noInterrupts();
   BlockStamp s;
   s.us = blockStamp.us;

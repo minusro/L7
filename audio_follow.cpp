@@ -338,6 +338,7 @@ FLASHMEM void audioFollowToggle() {
     onsetListen = true;
   } else {
     onsetListen = false;
+    octave = 0;                                    // (turned off: its multiplier back to 1)
     if (locked && period > 0 && !midiClockFollowing()) {   // (the tempo theirs, without the nudge)
       uint32_t count, at;
       snapshot(count, at);
@@ -348,7 +349,6 @@ FLASHMEM void audioFollowToggle() {
   lastBeat = -1;
   locked = false;
   startPending = false;
-  octave = 0;
   estimateAt = millis();
   loudAt = millis();
   silent = false;
@@ -360,6 +360,9 @@ void audioFollowOffsetChanged() { catchBeats = CATCH_BEATS; }
 int syncSource() { return midiClockFollowing() ? midiFollowSource() : audioFollowActive() ? SYNC_AUDIO : SYNC_NONE; }
 bool audioFollowLocked() { return audioFollowActive() && locked && !silent; }
 float audioFollowBpm() { return period > 0 ? bpmOfFrames(period) * (float)ratio() : 0; }
+
+int audioFollowOctave() { return octave; }
+void audioFollowSetOctave(int o) { octave = constrain(o, -3, 3); }
 
 FLASHMEM bool audioFollowScale(int by) {
   if (!on || !by) return false;

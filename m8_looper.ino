@@ -242,6 +242,15 @@ void loop() {
   debugStage = "MIDI in";
   midiInService();                                 // an external clock: its start, stop, tempo and beat
   audioFollowService();                            // the tempo and beat heard in the input
+  // Back on the internal clock (an external one no longer followed): the
+  // scene's own tempo again (the external one never changed it).
+  static int lastSource = SYNC_NONE;
+  const int source = syncSource();
+  if (lastSource != SYNC_NONE && source == SYNC_NONE) {
+    float b = sceneSavedTempo();
+    if (b > 0) loadTempo(b);
+  }
+  lastSource = source;
   serviceUsbLatency();                             // USB audio's latency measured (its beats' sharp sounds)
   // While USB audio comes in: the line input's levels on the serial log every
   // 5 s (its gate's level is set from the quietest, nothing plugged in).

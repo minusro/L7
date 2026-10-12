@@ -1621,6 +1621,13 @@ FLASHMEM Session loadSession() {
     else if (!strncmp(line, "nextfree=", 9)) s.settings[2] = strtol(line + 9, nullptr, 10) != 0;
     else if (!strncmp(line, "emptyclick=", 11)) s.settings[3] = strtol(line + 11, nullptr, 10) != 0;
     else if (!strncmp(line, "helpseen=", 9)) s.helpSeen = (int)strtol(line + 9, nullptr, 10) & 0xFFFF;
+    else if (!strncmp(line, "octaves=", 8)) {   // (three numbers, a comma between)
+      char *p = line + 8;
+      for (int k = 0; k < 3 && *p; k++) {
+        s.octaves[k] = (int)strtol(p, &p, 10);
+        if (*p == ',') p++;
+      }
+    }
     else if (!strncmp(line, "touched=", 8)) {   // (twelve numbers, a comma between)
       char *p = line + 8;
       for (int k = 0; k < 12 && *p; k++) {
@@ -1647,6 +1654,7 @@ FLASHMEM void saveSession(const Session &s) {
            s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro, s.follow ? 1 : 0, s.offsets[0], s.offsets[1], s.offsets[2]);
   f.printf("monitor=%d\nplaynew=%d\nnextfree=%d\nemptyclick=%d\n", s.settings[0], s.settings[1], s.settings[2], s.settings[3]);
   f.printf("helpseen=%d\nhelppage=%d\n", s.helpSeen, s.helpPage);
+  f.printf("octaves=%d,%d,%d\n", s.octaves[0], s.octaves[1], s.octaves[2]);
   f.printf("touched=");
   for (int k = 0; k < 12; k++) f.printf(k ? ",%lu" : "%lu", (unsigned long)s.touched[k]);
   f.printf("\n");

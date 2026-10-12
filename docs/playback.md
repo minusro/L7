@@ -310,11 +310,16 @@ out while it's on. On, the tempo can't be changed by hand or by a project
 (`changeTempo()`, tap tempo: nothing); B+UP/DOWN on the tempo cell only halve
 (DOWN) or double (UP) it (B+LEFT/RIGHT: the offset from the external clock), fresh presses only, again and again
 within the clock's range (`audioFollowScale()`: the clock at their tempo times
-2^n, back to 1 when turned on; halved, their beat lands on every other half of
+2^n, kept in the session (`octaves=`, with the MIDI clocks'), back to 1 when turned off; halved, their beat lands on every other half of
 ours and every other one on ours; the estimate leans towards the tempo shown
 divided back). Nothing found yet: the tempo shown is halved or doubled
 instead (the clock too), and the estimate, leaning towards it, finds that
-octave. An external MIDI clock being followed
+octave. Following any external tempo (a MIDI clock, serial or USB, or audio follow) the
+scene's saved tempo isn't touched (`projectTempoChanged()`, `sceneRecorded()`: nothing; a scene
+switch doesn't set its tempo); back on the internal clock (the clock stopped, audio follow off),
+the current scene's saved tempo comes back (`loop()`, `sceneSavedTempo()`). A MIDI clock's
+multiplier (B+UP/DOWN) is kept in the session too, back to 1 after 10 s without its clock (unplugged).
+An external MIDI clock being followed
 comes first (audio follow listens on, but doesn't touch the clock meanwhile).
 * What's listened to: the input as recorded (monitored or not) (the line input and
   USB audio mixed, before resampling's swap). The interrupt (only while on),
