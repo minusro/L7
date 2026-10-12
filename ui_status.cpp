@@ -275,7 +275,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
   else snprintf(text, sizeof text, "%d/%d", scene, count);       // (0: the empty scene)
-  uint16_t ink = sceneAccent ? ACCENT : labelInk(SCENE_CELL);
+  uint16_t ink = sceneAccent ? ACCENT : transport.running ? LIGHT : labelInk(SCENE_CELL);   // (1-N: light grey while the clock runs)
   if (sceneHeld() || sceneChangeWaiting()) {
     noInterrupts();
     bool firstHalf = transport.sampleInBeat < transport.spb / 2;
