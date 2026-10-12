@@ -350,7 +350,7 @@ void updatePlayheads() {
     // The accent colour (white on a range in the accent colour); muted: black.
     bool muted = tr.state == TrackState::Muted;
     int at = -1;
-    if (v.visible && running && tracks[i].live) {
+    if (v.visible && running && tracks[i].live && !scenePreviewing()) {   // (a scene shown before it plays: none)
       double inRange = fmod(pos - tr.rangeAnchorQ / 4.0, (double)tr.rangeBeats);
       if (inRange < 0) inRange += tr.rangeBeats;
       // Spread over the range's pixels (as the range is drawn): never past its edges.

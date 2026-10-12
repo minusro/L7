@@ -477,6 +477,13 @@ int main(int argc, char **argv) {
     FILE *space = fopen((simRoot + "/L7/DATA/0001.DAT").c_str(), "rb");
     check(space != nullptr, "track 4's empty file is recording space, named from the pool's numbers (DATA/0001.DAT)");
     if (space) fclose(space);
+    {                                              // converted (no spectrum profile yet): measured while stopped, into its header and the track
+      const bool before = profileOf(tr.overview)[0] == 'S';
+      for (int i = 0; i < 200 && profileOf(tr.overview)[0] != 'S'; i++) serviceStorage();
+      SampleDetails sd;
+      check(!before && profileOf(tr.overview)[0] == 'S' && sampleDetails(tr.sample, sd) && !memcmp(sd.profile, profileOf(tr.overview), PROFILE_BYTES),
+            "the converted recording's spectrum profile: measured while stopped, written into its header, the track's too");
+    }
     clearTrack(4);
     flushHeaders();
   }
@@ -883,8 +890,11 @@ int main(int argc, char **argv) {
     check(sceneCut() && waitScene() && sceneCount() == 3 && sceneCurrent() == 0 && sceneClipboardFull(), "cutting a scene with no clips: it's gone, the clipboard still full");
     check(scenePaste() && waitScene() && sceneCount() == 4 && sceneCurrent() == 1 && tracks[0].sample == s1 && tracks[1].state == TrackState::Muted,
           "the clipboard still holds the scene cut before it");
-    check(sceneGoEmpty() && waitScene() && sceneCurrent() == 0 && sceneCut() && sceneCurrent() == 0 && sceneCount() == 4,
-          "cutting 0*: nothing happens (the clipboard too)");
+    check(sceneGoEmpty() && waitScene() && sceneCurrent() == 0 && sceneCut() && sceneCurrent() == 0 && sceneCount() == 4 && !sceneClipboardFull(),
+          "cutting 0*: it stays, the clipboard emptied");
+    check(scenePaste() && waitScene() && sceneCurrent() == 1 && sceneCount() == 5 && empty(),
+          "pasting with the clipboard empty: an empty scene after it (scene 1)");
+    check(sceneCut() && waitScene() && sceneCount() == 4 && sceneCurrent() == 0, "(that empty scene cut again)");
     check(sceneStep(1) && waitScene() && sceneCurrent() == 1, "(on to scene 1 again)");
     check(sceneCut() && waitScene() && sceneCount() == 3, "(the pasted scene cut again, to put the old state back)");
     check(sceneStep(1) && waitScene() && sceneCurrent() == 1, "(scene 1: the old one)");
@@ -1469,6 +1479,28 @@ int main(int argc, char **argv) {
       check(headroomDbOf(quiet) == 0 && unityStepOf(0) == VOLUME_MAX && volumeGainOf(VOLUME_UNITY, 0) == 1 &&
             volumeStepOf(VOLUME_OFF, 0) == 0 && volumeGainOf(VOLUME_OFF, 0) == 0, "a quiet clip: taken as peaking at 0 dBFS, its unity the top step; off is off");
     }
+    {                                              // its spectrum profile (config.h), and the filters' compensation from it
+      Track &tr = tracks[6];
+      const uint8_t *pr = profileOf(tr.overview);
+      auto level = [&](const uint8_t *q, int k) { return q[1 + k / 2] >> (k & 1 ? 4 : 0) & 15; };
+      SampleDetails sd;
+      bool read = sampleDetails(tr.sample, sd);
+      char mp[240];
+      snprintf(mp, sizeof mp, "a 101 Hz sine: profiled as it recorded, its band (80-160 Hz) the loudest, the top ones far down (%d %d %d ... %d), in its header too",
+               level(pr, 1), level(pr, 2), level(pr, 3), level(pr, 9));
+      check(pr[0] == 'S' && level(pr, 2) == 0 && level(pr, 9) >= 10 && read && !memcmp(sd.profile, pr, PROFILE_BYTES), mp);
+      const float open = filterCompOf(0, FILTER_MAX, pr), lp = filterCompOf(0, 16, pr), hp = filterCompOf(20, FILTER_MAX, pr);
+      uint8_t none[PROFILE_BYTES] = {};
+      snprintf(mp, sizeof mp, "compensation: filters open x%.3f, a lowpass at 640 Hz (the sine through) x%.3f, a highpass at 1.6 kHz (gone) x%.3f, not measured x%.3f",
+               open, lp, hp, filterCompOf(0, 16, none));
+      check(open == 1 && lp < 1.1f && hp == FILTER_COMP_MAX && filterCompOf(0, 16, none) == 1, mp);
+      const float before = tr.levelL;
+      setTrackFilter(6, 20, FILTER_MAX);
+      const float after = tr.levelL;
+      setTrackFilter(6, 0, FILTER_MAX);
+      snprintf(mp, sizeof mp, "the track's gain follows its filters (x%.3f), and back (x%.3f)", after / before, tr.levelL / before);
+      check(fabsf(after / before - hp) < 1e-4f && fabsf(tr.levelL / before - 1) < 1e-4f, mp);
+    }
     recordSine(5, 331, 3.6);
     inputMonitored = false;
     for (auto &x : tracks) x.gain = 0;
@@ -1639,13 +1671,22 @@ int main(int argc, char **argv) {
   printf("projects: a new one, back, cut and paste\n");
   {
     lastAction = "projects";
-    if (transport.running) transportStop();
+    if (!transport.running) transportStart();
+    runBeats(9.5);
+    const int32_t at = transport.beat - transportOrigin();
+    transportStop();
+    runUntilIdle();
+    check(at > 0 && transportResumeBeat() == at, "stopped: its beat kept for SHIFT+START");
+    transportStartAt(transportResumeBeat());
+    check(transport.beat - transportOrigin() == at, "resumed from it");
+    transportStop();
     runUntilIdle();
     int scenes = sceneCount(), pos = sceneCurrent();
     uint32_t sample0 = tracks[0].sample;
     check(projectCurrent() == 0 && projectFilled(0) && !projectFilled(1), "project 1 loaded (the first version's scenes), slot 2 empty");
     check(projectLoad(1) && projectCurrent() == 1 && projectFilled(1) && sceneCount() == 0 && sceneCurrent() == 0,
           "an empty slot: a new project, on its empty scene");
+    check(transportResumeBeat() == 0, "a project loaded: SHIFT+START from 1.1.1");
     bool empty = true;
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) empty = false;
     check(empty && !projectHasClips(), "its tracks empty, no clips");
@@ -1932,14 +1973,15 @@ int main(int argc, char **argv) {
     // Those values in the first track's clip of that scene: the gain from the volume step, the balance, the cutoffs.
     {
       char args[200];
-      snprintf(args, sizeof args, "%d %d %d %.4f %.4f", index, BALANCE_MAX, VOLUME_UNITY, (double)filterStepHz(8), (double)filterStepHz(24));
+      const float comp = filterCompOf(8, 24, profileOf(tracks[NUM_TRACKS - 1].overview));   // (the filters' compensation, in the clip's gain too)
+      snprintf(args, sizeof args, "%d %d %d %.4f %.4f %.6f", index, BALANCE_MAX, VOLUME_UNITY, (double)filterStepHz(8), (double)filterStepHz(24), (double)comp);
       std::string vp = "python3 -c \"import gzip,sys,os,math,xml.etree.ElementTree as E\n"
-                       "d=sys.argv[1]; i,bm,vu,hz1,hz2=[float(a) for a in sys.argv[2:7]]; i=int(i)\n"
+                       "d=sys.argv[1]; i,bm,vu,hz1,hz2,comp=[float(a) for a in sys.argv[2:8]]; i=int(i)\n"
                        "r=E.fromstring(gzip.open(d+'/'+os.path.basename(d)[:-8]+'.als').read()); t=r.find('LiveSet/Tracks')[0]\n"
                        "c=t.findall('DeviceChain/MainSequencer/ClipSlotList/ClipSlot')[i].find('ClipSlot/Value/AudioClip')\n"
                        "v=[float(e.find('Automation/Events/FloatEvent').get('Value')) for e in c.findall('Envelopes/Envelopes/ClipEnvelope')]\n"
                        "note=lambda hz: 69+12*math.log2(hz/440)\n"
-                       "want=[float(c.find('SampleVolume').get('Value'))-10**((6-vu)*1.875/20), v[0]-4/bm, v[1]-note(hz1), v[2]-note(hz2)]\n"
+                       "want=[float(c.find('SampleVolume').get('Value'))/comp-10**((6-vu)*1.875/20), v[0]-4/bm, v[1]-note(hz1), v[2]-note(hz2)]\n"
                        "print(*['%.4f'%w for w in want]); sys.exit(0 if all(abs(w)<0.01 for w in want) else 1)\" '" + dir + "' " + args;
       FILE *vout = popen(vp.c_str(), "r");
       char res[120] = {};

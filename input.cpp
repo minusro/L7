@@ -169,6 +169,13 @@ static void restartByHand() {
   transportStop();
   startByHand();
 }
+// SHIFT+START: stopped, from where the clock last stopped (a project loaded
+// since: 1.1.1); running, from 1.1.1 again.
+static void resumeByHand() {
+  if (transport.running) return restartByHand();
+  const int32_t from = transportResumeBeat();
+  if (!audioFollowStart(from)) transportStartAt(from);
+}
 
 // With SHIFT and B both held, which came first: A then pastes a scene (B
 // first) or cuts it (SHIFT first).
@@ -672,8 +679,8 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   // everywhere in the menu.
   if (!menuOpen()) armed = false;
   if (menuOpen() && !menuOnStatus()) {
-    if (pressed & m8::BTN_PLAY) {                    // START: the clock, as in the looper's view (SHIFT: from 1.1.1)
-      if (shift) restartByHand();
+    if (pressed & m8::BTN_PLAY) {                    // START: the clock, as in the looper's view (SHIFT: resume, or from 1.1.1)
+      if (shift) resumeByHand();
       else if (transport.running) transportStop();
       else startByHand();
     }
@@ -801,6 +808,12 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
     pressed &= ~(m8::BTN_UP | m8::BTN_DOWN);         // (nothing else: not the menu's edges either)
   }
+  // A scene shown before it plays (held, or waiting for its switch point,
+  // scenes.h scenePreviewing()): the selection still moves, the scene keys
+  // (SHIFT+UP/DOWN, B+UP/DOWN on the scene cell) and START still work;
+  // nothing else does (A, B's taps and edits, SHIFT+LEFT/RIGHT).
+  const bool previewing = scenePreviewing();
+  if (previewing) pressed &= ~(m8::BTN_EDIT | m8::BTN_OPT);
   // A on the status row's scene cell: as B+A (the panel); on the clock cell:
   // as START; on the tempo cell: tap tempo.
   bool onScene = onStatus && selectedCellIn(STATUS_ROW) == SCENE_CELL;
@@ -876,7 +889,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     }
   };
 
-  if (optA) {
+  if (optA && (!previewing || onScene)) {
     // OPT (B) + arrows: the current cell's parameters (none on empty tracks).
     if (onStatus) {
       if (selectedCellIn(STATUS_ROW) == SCENE_CELL) {   // scene: UP/DOWN as SHIFT+UP/DOWN
@@ -1074,7 +1087,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
     // (SHIFT+LEFT/RIGHT on the status row: the tempo nudged while held, nudgeService().)
     // SHIFT+LEFT/RIGHT on a track (any of its cells; its waveform cell framed
     // meanwhile, ui.h frameCell()): its sample, the previous / next on the card.
-    if (!onStatus && !recordingOn(selected)) {
+    if (!onStatus && !recordingOn(selected) && !previewing) {
       // (another sample: the waveform cell selected, to see it)
       // Held: the repeats stop before the letter changes (that way, the next
       // sample's name starts with another letter: right, A009 before B001;
@@ -1134,7 +1147,7 @@ FLASHMEM static void onKeys(uint8_t keys, uint8_t pressed, bool repeat) {   // (
   }
   bool transportKey = pressed & m8::BTN_PLAY;
   bool toggleTransport = transportKey && !shift;
-  if ((transportKey || (edit && onStatus && !onScene && !onTempo)) && shift) restartByHand();
+  if ((transportKey || (edit && onStatus && !onScene && !onTempo)) && shift) resumeByHand();
   if (edit && onStatus && shift && onTempo) audioFollowToggle();   // SHIFT+A on the tempo cell: audio follow on / off
   // SHIFT+A on the scene cell: a copy of the scene after it, as SHIFT+B
   // twice; A again with SHIFT still held: that copy's tracks all cleared.
@@ -1251,7 +1264,7 @@ static void nudgeService() {
   uint8_t k = board.keys();
   int dir = ((k & m8::BTN_RIGHT) ? 1 : 0) - ((k & m8::BTN_LEFT) ? 1 : 0);
   int src = syncSource();
-  bool want = arrowModifier() == m8::BTN_SHIFT && dir && !(k & (m8::BTN_EDIT | m8::BTN_PLAY)) && selected == STATUS_ROW &&
+  bool want = arrowModifier() == m8::BTN_SHIFT && dir && !scenePreviewing() && !(k & (m8::BTN_EDIT | m8::BTN_PLAY)) && selected == STATUS_ROW &&
               !menuOpen() && transport.running;
   static int nudgeSrc = SYNC_NONE;
   static uint32_t lastMs = 0;

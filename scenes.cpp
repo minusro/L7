@@ -66,6 +66,13 @@ static float sceneTempo = 0, resampleTempo = 0;
 
 int sceneCurrent() { return target >= 0 ? target : list.current; }
 bool sceneHeld() { return target >= 0; }
+static TrackUnit heldUnits[NUM_TRACKS];          // the held selection's tracks (shown before it plays)
+bool sceneHeldUnit(int t, TrackUnit &u) {
+  if (target < 0) return false;
+  u = heldUnits[t];
+  return true;
+}
+bool scenePreviewing() { return target >= 0 || sceneChangeWaiting(); }
 int sceneCount() { return list.count; }
 bool sceneClipboardFull() { return clipFull; }
 static uint32_t edits = 0;                       // the loaded project's edits so far (projectEdits())
@@ -207,7 +214,11 @@ static bool go(int pos, bool quick = false) {
   if (holding && !quick) {                       // only the label moves for now, the scene is prepared
     if (busy() || pos == sceneCurrent()) return false;
     target = pos == list.current ? -1 : pos;
-    if (target >= 0) prepareUnits(sceneAt(min(target, (int)list.count)).units);   // N+1*: a copy of N
+    if (target >= 0) {
+      const SceneInfo s = sceneAt(min(target, (int)list.count));   // N+1*: a copy of N
+      memcpy(heldUnits, s.units, sizeof heldUnits);
+      prepareUnits(s.units);
+    }
     else prepareUnits(nullptr);
     return true;
   }
@@ -273,7 +284,10 @@ bool sceneCut() {
   takeHeld();
   commit();
   if (busy()) return false;
-  if (list.current == 0) return true;            // the empty scene: stays, the clipboard too
+  if (list.current == 0) {                         // the empty scene: stays, the clipboard emptied
+    clipFull = false;
+    return true;
+  }
   if (!liveEmpty()) {                            // (a scene with no clips: cut, but not to the clipboard, which keeps what it had)
     clip = snapshot();
     clipFull = true;
@@ -290,16 +304,19 @@ bool sceneCut() {
 bool scenePaste() {
   takeHeld();
   commit();
-  if (busy() || !clipFull) return false;
+  if (busy()) return false;
   int pos = list.current == list.count + 1 ? list.count + 1 : list.current + 1;   // N+1*: replaced
   int slot = insertAt(pos);
   if (slot < 0) return false;
   if (recordSlot >= 0) writeRecordNow();
-  record = clip;
+  // The clipboard empty: an empty scene, at the tempo now.
+  SceneInfo s = clipFull ? clip : emptyScene();
+  if (!clipFull) s.tempo = getTempo();
+  record = s;
   recordSlot = slot;
   list.current = pos;
-  sceneTempo = clip.tempo;                         // (the scene moved: its own)
-  apply(clip, true, false, sceneTempo);
+  sceneTempo = s.tempo;                            // (the scene moved: its own)
+  apply(s, true, false, sceneTempo);
   return true;
 }
 
@@ -698,6 +715,7 @@ void projectTempoChanged() {
 bool projectLoad(int p) {
   if (p < 0 || p >= PROJECTS || busy() || projectCopying(p)) return false;
   if (p == project) return true;
+  transportForgetPosition();                       // (SHIFT+START: from 1.1.1 in it)
   target = -1;
   debugStage = "project load: closing prepared files";
   prepareUnits(nullptr);

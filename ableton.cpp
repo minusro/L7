@@ -300,8 +300,8 @@ FLASHMEM static void field(char code) {
       }
       break;
     case 'E': clipEnvelopes(); break;
-    case 'g':                                    // the clip's gain: the track's volume on the clip's scale (1: 0 dB)
-      putNumber(volumeGainOf(x.unit.volume, x.sample.headroomDb));
+    case 'g':                                    // the clip's gain: the track's volume on the clip's scale (1: 0 dB), and its filters' compensation
+      putNumber(volumeGainOf(x.unit.volume, x.sample.headroomDb) * filterCompOf(x.unit.filterLo, x.unit.filterHi, x.sample.profile));
       break;
   }
 }

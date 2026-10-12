@@ -72,6 +72,10 @@ int sceneFromResample(int t);
 // and duplicate.
 bool sceneHold(bool on);       // true: it went somewhere
 bool sceneHeld();              // a held selection not gone to yet
+bool sceneHeldUnit(int t, TrackUnit &u);   // its track t (false: none held)
+// A scene shown before it plays: a held selection, or a change waiting for its
+// switch point (the rows show its tracks, cells can't be changed meanwhile).
+bool scenePreviewing();
 
 // Display: the current position (0: 0*; sceneCount() + 1: N+1*; a held
 // selection while there is one) and how many scenes are stored.

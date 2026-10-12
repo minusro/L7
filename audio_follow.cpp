@@ -73,6 +73,7 @@ static constexpr int RESUME_BEATS = 3;
 static double pendingFrom = 0;                      // their phase when START was pressed
 // The clock at their tempo times 2^octave (B+arrows on the tempo cell: halved
 // or doubled; 0 again when turned on). Halved, our beat on every other one of theirs.
+static int32_t startBeat = 0;                     // START's beat (0: 1.1.1; SHIFT+START: where it stopped)
 static int octave = 0;
 static double ratio() { return ldexp(1.0, octave); }
 
@@ -459,17 +460,18 @@ void audioFollowService() {
     } else if (theirPhase() < pendingFrom - 0.25) {
       startPending = false;
       catchBeats = CATCH_BEATS;
-      transportStartAt(0, inBeatNow);
+      transportStartAt(startBeat, inBeatNow);
     }
   }
 }
 
-bool audioFollowStart() {
+bool audioFollowStart(int32_t from) {
   if (!audioFollowLocked() || transport.running) return false;
   double ph = theirPhase();
   catchBeats = CATCH_BEATS;
+  startBeat = from;
   if (ph < 0.5) {
-    transportStartAt(0, inBeatNow);                  // just past their beat: from there
+    transportStartAt(from, inBeatNow);               // just past their beat: from there
   } else {
     startPending = true;                             // before it: on it
     pendingFrom = ph;

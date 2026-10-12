@@ -48,6 +48,19 @@ namespace looper {
 
 volatile const char *debugStage = "boot";
 static uint32_t chunk[CHUNK_FRAMES];
+// The spectrum profiles' measuring (serviceProfiles()).
+static struct {
+  int index = 0;                                   // the next of sampleIds to look at (sampleTotal: all done)
+  uint32_t id = 0, frames = 0, at = 0;             // the one being measured (0: none), and how far
+  FsFile file;
+  SpectrumProfiler profiler;
+} scan;
+
+static void stopProfileScan() {
+  scan.file.close();
+  scan.id = 0;
+}
+
 static uint8_t headerDirty = 0;                  // bit t: track t's unit file needs saving
 // A write is waiting for the playback buffers to be topped up (see serviceStreams).
 static bool writePending = false;
@@ -240,7 +253,10 @@ static constexpr uint32_t SAMPLE_BARS_OFFSET = SAMPLE_TAG_OFFSET + 4;
 // After the bar lines: the loop's peak ("PK", max |sample| 16 bits; none:
 // from the overview, engine.h peakOf()).
 static constexpr uint32_t SAMPLE_PEAK_OFFSET = SAMPLE_BARS_OFFSET + 4 + MAX_BARS * 4;
-static_assert(SAMPLE_PEAK_OFFSET + 4 <= WAV_DATA_OFFSET - 8, "the overview, name, bar lines and peak must fit in the header");
+// After the peak: its spectrum profile (config.h PROFILE_BYTES; zeros: not
+// measured yet, profileService()).
+static constexpr uint32_t SAMPLE_PROFILE_OFFSET = SAMPLE_PEAK_OFFSET + 4;
+static_assert(SAMPLE_PROFILE_OFFSET + PROFILE_BYTES <= WAV_DATA_OFFSET - 8, "the overview, name, bar lines, peak and profile must fit in the header");
 
 // The samples holding recordings: their ids, sorted (the order of their
 // names). In RAM1 (20 KB; RAM2 is left to the rings, and to the MTP buffers
@@ -289,6 +305,7 @@ bool sampleDetails(uint32_t n, SampleDetails &d) {
   uint8_t overview[OVERVIEW_BYTES];
   if (!sampleExists(n) || !openSample(n, f, info, overview)) return false;
   d.headroomDb = headroomDbOf(overview);
+  memcpy(d.profile, profileOf(overview), PROFILE_BYTES);
   d.frames = info.frames;
   d.spb = info.spb;
   d.loopBars = info.loopBars;
@@ -385,6 +402,7 @@ static bool writeSampleHeader(FsFile &f, uint32_t frames, uint32_t spb, uint32_t
     h[SAMPLE_PEAK_OFFSET + 2] = overview[OVERVIEW_COLS];
     h[SAMPLE_PEAK_OFFSET + 3] = overview[OVERVIEW_COLS + 1];
   }
+  if (overview) memcpy(h + SAMPLE_PROFILE_OFFSET, profileOf(overview), PROFILE_BYTES);
   if (uint8_t tag = idTag(id)) {
     h[SAMPLE_TAG_OFFSET] = tagLetter(tag);
     h[SAMPLE_TAG_OFFSET + 1] = tagTrack(tag);
@@ -417,6 +435,7 @@ static bool readSampleHeader(FsFile &f, SampleInfo &info, uint8_t *overview, uin
     bool kept = h[SAMPLE_PEAK_OFFSET] == 'P' && h[SAMPLE_PEAK_OFFSET + 1] == 'K';
     overview[OVERVIEW_COLS] = kept ? h[SAMPLE_PEAK_OFFSET + 2] : 0;
     overview[OVERVIEW_COLS + 1] = kept ? h[SAMPLE_PEAK_OFFSET + 3] : 0;
+    memcpy(profileOf(overview), h + SAMPLE_PROFILE_OFFSET, PROFILE_BYTES);
   }
   if (tag) *tag = tagOf((char)h[SAMPLE_TAG_OFFSET], h[SAMPLE_TAG_OFFSET + 1]);
   if (number) *number = h[SAMPLE_TAG_OFFSET + 2] | h[SAMPLE_TAG_OFFSET + 3] << 8;
@@ -1191,6 +1210,7 @@ static void serviceHeaders() {
 // Peaks per PEAK_BIN_FRAMES of the recording in progress (max |sample|, both
 // channels), turned into the track's overview when it finishes.
 static uint16_t recPeaks[MAX_REC_FRAMES / PEAK_BIN_FRAMES + 2];
+static SpectrumProfiler recProfile;                // and its spectrum
 
 static void addPeaks(const uint32_t *frames, uint32_t n, uint32_t firstFrame, uint16_t *bins) {
   for (uint32_t i = 0; i < n; i++) {
@@ -1223,6 +1243,7 @@ static void buildOverview(Track &tr, const uint16_t *bins, uint32_t recordedFram
   peak = max(peak, (uint16_t)1);                   // (known: 0 is "not kept")
   tr.overview[OVERVIEW_COLS] = peak & 0xFF;
   tr.overview[OVERVIEW_COLS + 1] = peak >> 8;
+  memset(profileOf(tr.overview), 0, PROFILE_BYTES);   // (not measured: the recorder's, recProfile, or profileService())
   tr.overviewVersion++;
 }
 
@@ -1404,6 +1425,7 @@ FLASHMEM int deleteUnmarkedSamples(const uint32_t *only, int onlyCount) {
     char path[40];
     samplePath(id, path, sizeof path);
     debugStage = "SD remove (unused sample)";
+    if (!keep && scan.id == id) stopProfileScan();
     if (keep || !SD.sdfs.remove(path)) {
       sampleIds[kept++] = id;                    // (in place: kept <= i)
       continue;
@@ -2311,7 +2333,8 @@ static void finishRecording() {
       addPeaks(chunk, n, f0, recPeaks);
   }
   buildOverview(tr, recPeaks, tr.recordedFrames);
-  setTrackMix(t, tr.volume, tr.balance);           // (its scale: from its peak, now known)
+  recProfile.finish(profileOf(tr.overview));
+  setTrackMix(t, tr.volume, tr.balance);           // (its scale: from its peak, now known; its filters' compensation)
   // The sample's header: its length, tempo and overview. One 512-byte write,
   // like a unit file's (the file is cut down to size once stopped).
   // The pre-roll after the loop's frames, then the header (512 bytes each).
@@ -2437,6 +2460,7 @@ static void serviceRecorder() {
   for (uint32_t i = 0; i < n; i++) chunk[i] = inputRing[(next + i) % INPUT_FRAMES];
   if (!writeRecordingChunk(recording.written, n)) return;
   addPeaks(chunk, n, recording.written, recPeaks);
+  recProfile.feed(chunk, n);
   // The loop's beginning also goes into the track's ring (stream frame = loop
   // frame), so playback can start the moment the recording ends, without
   // reading it back first (see armRecordedLoop).
@@ -2526,6 +2550,7 @@ static void startRecording(int t, uint32_t from, int32_t beat, int32_t maxBehind
   gapCount = 0;
   recording.overruns = 0;
   memset(recPeaks, 0, sizeof recPeaks);
+  recProfile.reset();
   noInterrupts();
   recording.markCount = 0;                       // (the tempo marks begin on its first bar line)
   if (maxBehind >= 0 && (int32_t)(transport.now - from) <= maxBehind) {
@@ -2665,6 +2690,20 @@ void clearTrack(int t) {
 
 bool trackChangeOnWay(int t) { return changes[t].on || plans[t].on || tracks[t].sampleSwitch; }
 
+TrackUnit unitOnWay(int t) { return changes[t].on ? changes[t].u : streamUnit(t); }
+
+bool clipLooks(int t, uint32_t sample, ClipLooks &c) {
+  const Track &tr = tracks[t];
+  const Plan &p = plans[t];
+  const Prepared &q = prepared[t];
+  if (!sample) return false;
+  if (p.on && !p.stop && p.u.sample == sample && sample != tr.sample) c = {p.overview, p.loopBars, p.spb};
+  else if (tr.state != TrackState::Empty && tr.sample == sample) c = {tr.overview, tr.loopBars, tr.spbNative};
+  else if (q.sample == sample) c = {q.overview, q.info.loopBars, q.info.spb};
+  else return false;                               // (not opened yet)
+  return true;
+}
+
 void trackRange(int t, uint32_t &startBeat, uint32_t &beats) {
   const Track &tr = tracks[t];
   startBeat = tr.rangePending ? tr.pendingStartBeat : tr.rangeStartBeat;
@@ -2732,6 +2771,11 @@ static void queueRange(int t, uint32_t startBeat, uint32_t beats, uint32_t rotat
 // ---- Transport
 void transportStart() { transportStartAt(0); }
 
+// Where the clock last stopped (its bar and beat; SHIFT+START: from there).
+static int32_t resumeBeat = 0;
+int32_t transportResumeBeat() { return resumeBeat; }
+void transportForgetPosition() { resumeBeat = 0; }
+
 void transportStartAt(int32_t beat, uint32_t (*inBeat)()) {
   if (transport.running) return;
   transport.midiRestartBeat = INT32_MIN;
@@ -2775,6 +2819,7 @@ void transportStop() {
   }
   silenceTracks(0xFF);                           // faded out, not cut off
   silencedTracks = 0;
+  if (transport.running) resumeBeat = max((int32_t)0, transport.beat - transportOrigin());
   transport.running = false;
   transport.midiRestartBeat = INT32_MIN;
   transport.spbAtBeat = -1;                      // a scene's tempo: now
@@ -2832,6 +2877,55 @@ static void serviceFiles() {
   else openPoolNext();
 }
 
+// ---- Spectrum profiles (config.h): recordings made before they were kept
+// (or cut short) are measured while the clock is stopped, a chunk per loop()
+// pass, and the profile written into their headers; the tracks playing them
+// take it at once (their filters' compensation, engine.h filterCompOf()).
+FLASHMEM static void serviceProfiles() {
+  if (transport.running || recording.mode != Recording::Idle || sdFailed) return;
+  if (!scan.id) {
+    if (scan.index >= sampleTotal) return;
+    const uint32_t id = sampleIds[scan.index++];
+    char path[40];
+    samplePath(id, path, sizeof path);
+    debugStage = "SD read (spectrum profile?)";
+    FsFile f = SD.sdfs.open(path, O_RDWR);
+    SampleInfo info;
+    uint8_t p[PROFILE_BYTES];
+    if (!f || !readSampleHeader(f, info, nullptr) || !info.frames || !f.seekSet(SAMPLE_PROFILE_OFFSET) ||
+        f.read(p, sizeof p) != (int)sizeof p || p[0] == 'S')
+      return;                                      // (measured already, or not a recording)
+    scan.id = id;
+    scan.file = std::move(f);
+    scan.frames = info.frames;
+    scan.at = 0;
+    scan.profiler.reset();
+    return;
+  }
+  const uint32_t n = min(CHUNK_FRAMES, scan.frames - scan.at);
+  debugStage = "SD read (spectrum profile)";
+  if (!scan.file.seekSet(WAV_DATA_OFFSET + (uint64_t)scan.at * 4) || scan.file.read(chunk, n * 4) != (int)(n * 4)) {
+    stopProfileScan();
+    return;
+  }
+  scan.profiler.feed(chunk, n);
+  if ((scan.at += n) < scan.frames) return;
+  uint8_t p[PROFILE_BYTES];
+  scan.profiler.finish(p);
+  debugStage = "SD write (spectrum profile)";
+  if (scan.file.seekSet(SAMPLE_PROFILE_OFFSET) && scan.file.write(p, sizeof p) == (int)sizeof p && scan.file.sync()) {
+    for (int t = 0; t < NUM_TRACKS; t++) {
+      if (tracks[t].sample == scan.id) {
+        memcpy(profileOf(tracks[t].overview), p, PROFILE_BYTES);
+        setTrackMix(t, tracks[t].volume, tracks[t].balance);
+      }
+      if (prepared[t].sample == scan.id) memcpy(profileOf(prepared[t].overview), p, PROFILE_BYTES);
+      if (plans[t].on && plans[t].u.sample == scan.id) memcpy(profileOf(plans[t].overview), p, PROFILE_BYTES);
+    }
+  }
+  stopProfileScan();
+}
+
 void serviceStorage() {
   if (sdFailed) recoverSd();
   serviceFiles();
@@ -2843,6 +2937,7 @@ void serviceStorage() {
   serviceStreams();
   serviceRecorder();
   serviceHeaders();
+  serviceProfiles();
 }
 
 // Drops everything held from the card, without touching it (not even closing a
@@ -2895,6 +2990,9 @@ void storageForget() {
   writePending = false;
   sdFailed = false;
   sampleTotal = 0;
+  scan.file = FsFile();                            // (stale: dropped, measured again from the start)
+  scan.id = 0;
+  scan.index = 0;
   unnamedCount = 0;
   untrimmedCount = 0;
   olderCount = 0;

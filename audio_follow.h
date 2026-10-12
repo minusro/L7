@@ -32,7 +32,7 @@ void audioFollowToggle();
 bool audioFollowActive();                // on, and no MIDI clock followed meanwhile
 bool audioFollowLocked();                // their beat found (active)
 void audioFollowService();               // loop(): the tempo, the beat, the clock
-bool audioFollowStart();                 // START pressed: true if it starts (now or on their next beat) in step with them
+bool audioFollowStart(int32_t from = 0);   // START pressed: true if it starts (now or on their next beat) in step with them, from that beat
 // The beat to flash on (active): true in the first half of each beat (running:
 // ours; stopped: theirs, found or still being looked for; nothing found yet:
 // the tempo shown's); false when not active.

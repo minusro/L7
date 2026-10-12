@@ -108,6 +108,39 @@ static void takeLooks(int t, ShownTrack &s) {
   for (int c = 0; c < OVERVIEW_COLS; c++) s.overview[(c + shift) % OVERVIEW_COLS] = (uint8_t)min(255.0f, tr.overview[c] * norm + 0.5f);
 }
 
+// A scene shown before it plays (scenes.h scenePreviewing()): track t's looks
+// from its unit there (a held selection's, or the change on its way) and its
+// clip's (false: its file not opened yet, the row as it was meanwhile).
+FLASHMEM static bool previewLooks(int t, ShownTrack &s) {
+  TrackUnit u;
+  if (!sceneHeldUnit(t, u)) u = unitOnWay(t);
+  ClipLooks c = {nullptr, 0, 0};
+  if (u.sample && !clipLooks(t, u.sample, c)) return false;
+  memset(&s, 0, sizeof s);
+  s.state = !u.sample ? TrackState::Empty : u.muted ? TrackState::Muted : TrackState::Playing;
+  s.volume = volumeStepOf(u.volume, u.sample ? headroomDbOf(c.overview) : 0.0f);
+  s.balance = u.balance;
+  s.filterLo = u.filterLo;
+  s.filterHi = u.filterHi;
+  if (!u.sample) return true;
+  s.overviewVersion = shownTracks[t].overviewVersion;   // (another clip's: told apart in followTracks())
+  s.loopBars = c.loopBars;
+  const uint32_t loopBeats = c.loopBars * BEATS_PER_BAR;
+  const uint32_t len = u.rangeLen && u.rangeLen <= loopBeats ? u.rangeLen : loopBeats;   // (as storage.cpp applyRange())
+  s.rs = s.rangeStartBeat = u.rangeStart < loopBeats ? u.rangeStart : 0;
+  s.rb = s.rangeBeats = len;
+  s.rangeAnchorQ = len ? -(int32_t)(u.rangePhase % (4 * len)) : 0;
+  const int32_t quarters = loopBeats * 4, qf = (int32_t)(c.spb / 4);
+  const int32_t steps = quarters ? (int32_t)(u.steps % quarters) : 0;
+  s.steps = (uint16_t)steps;
+  const int64_t loop = (int64_t)loopBeats * c.spb, turn = (int64_t)u.rotate - (int64_t)steps * qf;
+  const int shift = loop ? (int)(((turn % loop + loop) % loop) * OVERVIEW_COLS / loop) : 0;
+  s.turn = shift;
+  const float norm = overviewNormOf(c.overview);
+  for (int k = 0; k < OVERVIEW_COLS; k++) s.overview[(k + shift) % OVERVIEW_COLS] = (uint8_t)min(255.0f, c.overview[k] * norm + 0.5f);
+  return true;
+}
+
 // Takes the tracks' looks (held ones as above); the rows that changed are
 // redrawn at once, together (their buttons too). drawTrack() calls it first.
 static void followTracks() {
@@ -118,11 +151,21 @@ static void followTracks() {
   for (int t = 0; t < NUM_TRACKS; t++)
     if (trackChangeOnWay(t)) onWay |= 1 << t;
   held = onWay ? held | onWay : 0;
+  // A scene shown before it plays: its tracks' looks instead (held ones too).
+  const bool preview = scenePreviewing();
   uint8_t changed = 0;
   for (int t = 0; t < NUM_TRACKS; t++) {
-    if (held & (1 << t)) continue;
     ShownTrack s;
-    takeLooks(t, s);
+    if (preview) {
+      if (!previewLooks(t, s)) continue;
+    } else {
+      if (held & (1 << t)) continue;
+      takeLooks(t, s);
+    }
+    // (Another waveform under the same version number: the drawn one not
+    // taken for it, ui_wave.cpp.)
+    if (s.overviewVersion == shownTracks[t].overviewVersion && memcmp(s.overview, shownTracks[t].overview, sizeof s.overview))
+      s.overviewVersion ^= 0x80;
     if (memcmp(&s, &shownTracks[t], sizeof s)) {
       shownTracks[t] = s;
       changed |= 1 << t;

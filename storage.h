@@ -77,6 +77,10 @@ void transportStart();               // from bar 1, all tracks in sync
 void transportStartAt(int32_t beat, uint32_t (*inBeat)() = nullptr);
 void transportStop();
 void transportRestart();             // from bar 1 again, running or not
+// The beat the clock last stopped in (as it read: 0 is 1.1.1), for resuming
+// from it (SHIFT+START); back to 1.1.1 when a project loads.
+int32_t transportResumeBeat();
+void transportForgetPosition();
 // Running (and not recording): jump to the nearest bar start (the playheads
 // follow, in phase); the bar count carries on from there.
 void transportSnapToBar();
@@ -165,7 +169,7 @@ bool moveFile(const char *from, const char *to);        // renames a file (an ol
 // name: "A30012", or "0012" for an older one) and a copy of its file.
 // bars: each bar line's frame (bars 1 .. loopBars; the last the clip's end):
 // where they fell when the tempo changed while it recorded, else evenly.
-struct SampleDetails { uint32_t frames, spb, loopBars; uint64_t bytes; char name[12]; uint32_t bars[MAX_BARS]; float headroomDb; };   // (headroomDb: its volume scale, engine.h)
+struct SampleDetails { uint32_t frames, spb, loopBars; uint64_t bytes; char name[12]; uint32_t bars[MAX_BARS]; float headroomDb; uint8_t profile[PROFILE_BYTES]; };   // (headroomDb: its volume scale, engine.h)
 bool sampleDetails(uint32_t n, SampleDetails &d);
 bool copySample(uint32_t n, const char *to, void (*progress)() = nullptr);
 bool copySampleDoubled(uint32_t n, uint32_t frames, const char *to, void (*progress)() = nullptr);   // its loop twice over, a plain WAV (the export)
@@ -183,6 +187,12 @@ void trackRange(int t, uint32_t &startBeat, uint32_t &beats);
 // or its clip switch planned or under way in the stream, until the switch
 // point has passed and the track has taken it on.
 bool trackChangeOnWay(int t);
+// For showing a scene before it plays (ui.cpp): the unit on its way to track
+// t (a change, a planned switch; none: its own), and a clip's looks (sample
+// on track t: playing, switched to, or prepared; false: not opened yet).
+TrackUnit unitOnWay(int t);
+struct ClipLooks { const uint8_t *overview; uint32_t loopBars, spb; };
+bool clipLooks(int t, uint32_t sample, ClipLooks &c);
 // The range's start position (a beat of the loop): for a range of a beat,
 // its start; shorter than a bar, the first bar start or middle in it; a bar
 // or longer, the first bar start in it. The transport starting at 1.1.1

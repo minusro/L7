@@ -113,6 +113,16 @@ version's `/L7/scenes.dat` are moved to these names at boot.
 * **Label**: flashes white/dim with the beat (first half of each beat white)
   while the selected scene isn't the one playing — SHIFT still held on
   another scene, or a change waiting for its switch point.
+* **Shown before it plays** (`scenePreviewing()`: that held selection, or the
+  change waiting): the rows show its tracks (ui.cpp `previewLooks()`: the
+  held scene's units, `sceneHeldUnit()`, or those on their way,
+  `unitOnWay()`; each clip's looks from its track, its planned switch or its
+  prepared file, `clipLooks()`; one not opened yet: its row as it was until it
+  is), no playheads, the track number badges blinking (on the first half of
+  each beat). Meanwhile nothing changes the cells: the selection still moves
+  (its frame grey, whatever's held), the scene keys (SHIFT+UP/DOWN, B+UP/DOWN
+  on the scene cell) and START work; A, B's taps and edits, SHIFT+LEFT/RIGHT
+  (samples, the tempo nudge) do nothing, the action button grey and empty.
 * Stopped: scene changes apply at once.
 * No scene changes while recording.
 * **Switching scenes** (`go()`): at the switch, a track that was playing a

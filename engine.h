@@ -255,6 +255,20 @@ float filterStepHz(int step);
 // then the pair shifted so they don't both lie outside 0..FILTER_MAX.
 void setTrackFilter(int t, int lo, int hi);
 float filterResponseDb(int lo, int hi, float hz);   // magnitude of the pair (analog approximation)
+// The filters' level compensation: the gain bringing a clip filtered by the
+// pair back to its unfiltered level, from its spectrum profile (config.h
+// profileOf(); 1: the filters open, or not measured), at most FILTER_COMP_MAX.
+float filterCompOf(int lo, int hi, const uint8_t *profile);
+// A clip's spectrum profile: its energy in PROFILE_BANDS octave bands (20 Hz
+// up), measured as its audio goes by (a band-pass each, both channels), kept as each
+// band's level below the loudest in 3 dB steps (a nibble: 15, 45 dB or more).
+struct SpectrumProfiler {
+  float z[PROFILE_BANDS][2][2];
+  double energy[PROFILE_BANDS];
+  void reset();
+  void feed(const uint32_t *frames, uint32_t n);
+  void finish(uint8_t *profile) const;             // (PROFILE_BYTES)
+};
 void setTrackMix(int t, int volume, int balance);   // volume: steps from unity (config.h), balance: steps, clamped
 // A clip's scale (config.h): from its overview (and peak, OVERVIEW_BYTES) the
 // dB its peak is below 0 dBFS (0: quiet or empty, QUIET_PEAK), its peak

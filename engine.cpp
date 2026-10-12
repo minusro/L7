@@ -58,6 +58,68 @@ FLASHMEM void setTrackFilter(int t, int lo, int hi) {   // (flash: on edits only
   if (tr.hpWet == 0) { tr.hpHz = hpHz; tr.hp = butterworth(hpHz, true); memset(tr.filterZ[0], 0, sizeof tr.filterZ[0]); }
   if (tr.lpWet == 0) { tr.lpHz = lpHz; tr.lp = butterworth(lpHz, false); memset(tr.filterZ[1], 0, sizeof tr.filterZ[1]); }
   interrupts();
+  setTrackMix(t, tr.volume, tr.balance);           // (its level compensation: filterCompOf())
+}
+
+// ---- Filter compensation (engine.h)
+static constexpr float PROFILE_BW = 1.0f;         // (octaves: each band-pass's width)
+static float bandHz(int k) { return FILTER_MIN_HZ * powf(2.0f, k + 0.5f); }
+
+FLASHMEM void SpectrumProfiler::reset() {
+  memset(z, 0, sizeof z);
+  for (double &e : energy) e = 0;
+}
+
+// Band-passes (RBJ, constant 0 dB peak), direct form II transposed, on each
+// channel (not their sum: one's opposite of the other would cancel).
+FLASHMEM void SpectrumProfiler::feed(const uint32_t *frames, uint32_t n) {
+  for (int k = 0; k < PROFILE_BANDS; k++) {
+    float w0 = 2 * (float)M_PI * bandHz(k) / AUDIO_SAMPLE_RATE_EXACT, s = sinf(w0);
+    float h = 0.34657359f * PROFILE_BW * w0 / s;   // (ln 2 / 2)
+    float alpha = s * (expf(h) - expf(-h)) / 2, a0 = 1 + alpha;   // (sinh)
+    float b0 = alpha / a0, a1 = -2 * cosf(w0) / a0, a2 = (1 - alpha) / a0;
+    float sum = 0;
+    for (int c = 0; c < 2; c++) {
+      float z1 = z[k][c][0], z2 = z[k][c][1];
+      for (uint32_t i = 0; i < n; i++) {
+        float x = (int16_t)(c ? frames[i] >> 16 : frames[i] & 0xFFFF) * (1.0f / 32768);
+        float y = b0 * x + z1;
+        z1 = -a1 * y + z2;                         // (b1 = 0)
+        z2 = -b0 * x - a2 * y;                     // (b2 = -b0)
+        sum += y * y;
+      }
+      z[k][c][0] = z1;
+      z[k][c][1] = z2;
+    }
+    energy[k] += sum;
+  }
+}
+
+FLASHMEM void SpectrumProfiler::finish(uint8_t *p) const {
+  double top = 0;
+  for (double e : energy) top = max(top, e);
+
+  memset(p, 0, PROFILE_BYTES);
+  p[0] = 'S';
+  for (int k = 0; k < PROFILE_BANDS; k++) {
+    int level = top <= 0 ? 0 : energy[k] <= 0 ? 15 : constrain((int)(10 * log10f((float)(top / energy[k])) / 3 + 0.5f), 0, 15);
+    p[1 + k / 2] |= level << (k & 1 ? 4 : 0);
+  }
+}
+
+// Each band's energy taken as spread evenly over its octave: its share
+// through the pair, from the response at four points across it.
+FLASHMEM float filterCompOf(int lo, int hi, const uint8_t *p) {
+  if ((lo <= 0 && hi >= FILTER_MAX) || p[0] != 'S') return 1.0f;
+  float all = 0, through = 0;
+  for (int k = 0; k < PROFILE_BANDS; k++) {
+    int level = p[1 + k / 2] >> (k & 1 ? 4 : 0) & 15;
+    float e = powf(10.0f, -0.3f * level), w = 0;
+    for (int j = 0; j < 4; j++) w += powf(10.0f, filterResponseDb(lo, hi, FILTER_MIN_HZ * powf(2.0f, k + (j + 0.5f) / 4)) / 10);
+    all += e;
+    through += e * w / 4;
+  }
+  return through * FILTER_COMP_MAX * FILTER_COMP_MAX <= all ? FILTER_COMP_MAX : sqrtf(all / through);
 }
 
 float filterResponseDb(int lo, int hi, float hz) {
@@ -105,7 +167,7 @@ FLASHMEM void setTrackMix(int t, int volume, int balance) {
   Track &tr = tracks[t];
   if (volume != VOLUME_OFF) volume = constrain(volume, -100, 100);   // (steps from unity: the clip's scale limits them, volumeStepOf())
   balance = constrain(balance, -BALANCE_MAX, BALANCE_MAX);
-  float g = volumeGainOf(volume, headroomDbOf(tr.overview));
+  float g = volumeGainOf(volume, headroomDbOf(tr.overview)) * filterCompOf(tr.filterLo, tr.filterHi, profileOf(tr.overview));
   float toL = balance < 0 ? -(float)balance / BALANCE_MAX : 0;   // share of the right channel moved left
   float toR = balance > 0 ? (float)balance / BALANCE_MAX : 0;    // share of the left channel moved right
   noInterrupts();

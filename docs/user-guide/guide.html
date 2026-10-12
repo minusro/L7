@@ -69,7 +69,7 @@
   <div class="legend">
     <p><b>Track rows</b>: tracks 7 (top) down to 1, just above the status row. Each row has three cells and a button.</p>
     <p><b>Waveform</b>: the recorded loop; the bright part is the range that plays, the line is the playhead.</p>
-    <p><b>Filter</b>: the response of the track's highpass and lowpass filter.</p>
+    <p><b>Filter</b>: the response of the track's highpass and lowpass filter. As you narrow it, L7 turns the track up to make up for what the filter takes away, so it keeps about the same level (by up to 12 dB; worked out from each recording's own mix of lows and highs, so a bass line under a lowpass isn't turned up, a hi-hat loop is).</p>
     <p><b>Volume</b>: the track's level and balance, with a level meter. Waveforms are drawn as if normalised: every clip's loudest point reaches the full height.</p>
     <p><b>Button</b> (right): the track number, filled while the track plays, outlined while it's muted, dim while it's empty.</p>
     <p><b>Status row</b> (bottom): the scene (<code>SCN 3/7</code>), the clock (bar.beat.step), the tempo, and the <b>action button</b>, which always shows what <span class="key">A</span> will do.</p>
@@ -88,7 +88,7 @@
   <tr><td><span class="key">SHIFT</span> + <span class="key">LEFT</span>/<span class="key">RIGHT</span></td><td>On a track: put the previous / next recording on the card on the track (in name order; while you hold <span class="key">SHIFT</span> the track's waveform is outlined in the accent colour, with the recording's name and number). On an empty track, <span class="key">LEFT</span> brings back the project's last recording you used, <span class="key">RIGHT</span> the one after it. Holding <span class="key">SHIFT</span> and <span class="key">B</span> together, the arrows do what the one you pressed last does. On the status row: nudge the clock faster / slower while you hold it, like Live's nudge buttons: the tempo comes back when you let go, the shift stays (following an external clock, the nudge moves L7's offset from it). Following one, <span class="key">B</span> + <span class="key">LEFT</span>/<span class="key">RIGHT</span> on the tempo cell moves L7 10 ms earlier / later against it (±250 ms, kept for each source; both arrows: back to 0), and <span class="key">B</span> + <span class="key">UP</span>/<span class="key">DOWN</span> doubles / halves the tempo taken from it.</td></tr>
   <tr><td><span class="key">SHIFT</span> + <span class="key">UP</span>/<span class="key">DOWN</span></td><td>Next / previous scene.</td></tr>
   <tr><td><span class="key">START</span></td><td>Play from 1.1.1 / stop.</td></tr>
-  <tr><td><span class="key">SHIFT</span> + <span class="key">START</span></td><td>Restart from 1.1.1, also while playing.</td></tr>
+  <tr><td><span class="key">SHIFT</span> + <span class="key">START</span></td><td>Stopped: carry on from where the clock last stopped (back to 1.1.1 once you load a project). Playing: restart from 1.1.1.</td></tr>
   <tr><td><span class="key">B</span> + <span class="key">A</span> on an empty track</td><td>Resample: record what you hear onto this track (as soon as you press <span class="key">A</span>).</td></tr>
   <tr><td><span class="key">LEFT</span> / <span class="key">RIGHT</span> past a row's first / last cell, <span class="key">UP</span> on track 7, or <span class="key">DOWN</span> on the status row</td><td>Open the menu (projects, export, storage mode), once you let go.</td></tr>
   <tr><td><span class="key">LEFT</span> + <span class="key">RIGHT</span> pressed together and held</td><td>Switch between the looper and the menu, from anywhere.</td></tr>
@@ -128,10 +128,10 @@
 <h2>Scenes</h2>
 <p>A scene is a snapshot of all 7 tracks: which clip each plays, its range, mute, filter, volume and balance. Whatever you change updates the current scene as you go; there is no save step. A project holds up to 200 scenes.</p>
 <ul>
-  <li><span class="key">SHIFT</span> + <span class="key">UP</span>/<span class="key">DOWN</span> steps through the scenes. While playing, the change happens on the next bar line after you let go of <span class="key">SHIFT</span>; the scene number flashes until then. Each loop carries on as far past its start point as the one before it on that track was, going round within its own length if it's shorter (a track that was empty starts from its start point).</li>
+  <li><span class="key">SHIFT</span> + <span class="key">UP</span>/<span class="key">DOWN</span> steps through the scenes. While playing, the change happens on the next bar line after you let go of <span class="key">SHIFT</span>; the scene number flashes until then. Meanwhile the tracks show the scene you've picked (without playheads, the track numbers blinking every half beat), and you can move around but not change anything: only the scene keys and <span class="key">START</span> work. Each loop carries on as far past its start point as the one before it on that track was, going round within its own length if it's shorter (a track that was empty starts from its start point).</li>
   <li>Below the first scene is <b>0*</b>, an empty scene. Above the last is <b>N+1*</b>, a copy of the last one. Changing either (its tempo too, once it holds clips) turns it into a real scene. Tap <span class="key">UP</span> or <span class="key">DOWN</span> three times quickly with <span class="key">SHIFT</span> to jump to N+1* or 0*.</li>
   <li><span class="key">SHIFT</span> + <span class="key">B</span> twice duplicates the scene.</li>
-  <li>Cut a scene with <span class="key">SHIFT</span>, then <span class="key">B</span>, then <span class="key">A</span> (in that order). Paste it after the current one with <span class="key">B</span>, then <span class="key">SHIFT</span>, then <span class="key">A</span>. Cutting a scene with no clips removes it but leaves the clipboard as it was. The cut takes you to the scene before, except for a scene you've just made by changing N+1*: cut before you leave it, it takes you back to N+1*.</li>
+  <li>Cut a scene with <span class="key">SHIFT</span>, then <span class="key">B</span>, then <span class="key">A</span> (in that order). Paste it after the current one with <span class="key">B</span>, then <span class="key">SHIFT</span>, then <span class="key">A</span>. Cutting a scene with no clips removes it but leaves the clipboard as it was. Cutting 0* empties the clipboard, and pasting with an empty clipboard inserts an empty scene (the button shows the empty checkered square, as when clearing a duplicate). The cut takes you to the scene before, except for a scene you've just made by changing N+1*: cut before you leave it, it takes you back to N+1*.</li>
 </ul>
 
 <h2>Following a MIDI clock</h2>
@@ -180,7 +180,7 @@
 <ul>
   <li>7 audio tracks, coloured like the project, each with a highpass and a lowpass Auto Filter and a Utility.</li>
   <li>One scene per L7 scene that has clips, each with its L7 scene's tempo (Live switches to it when the scene launches), plus an empty one at the end. The current scene's clips are armed to play when the set opens.</li>
-  <li>Each clip keeps its loop range, start, mute, volume (as clip gain), balance and filter settings (as clip envelopes).</li>
+  <li>Each clip keeps its loop range, start, mute, volume (as clip gain, with the filter's level make-up), balance and filter settings (as clip envelopes).</li>
   <li>The samples are copied into the project, so you can move it anywhere. A clip whose range runs across the end of its loop gets a second copy of its sample with the loop written twice (<code>A001x2.wav</code>), so Live can play the range without wrapping.</li>
 </ul>
 

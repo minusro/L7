@@ -185,13 +185,15 @@ inline int frameCell(int i) { return selectedCellIn(i); }
 // sample switch shown on its waveform cell, whichever cell is selected (an
 // accent frame, its arrows, the sample's label: ui_wave.cpp).
 inline bool sampleSwitchShown(int i) {
-  return i == selected && i != STATUS_ROW && shiftArrows() && !recordingOn(i) && !menuOpen() && !screenSwitchPending() && !optThenEdit();
+  return i == selected && i != STATUS_ROW && shiftArrows() && !recordingOn(i) && !menuOpen() && !screenSwitchPending() && !optThenEdit() &&
+         !scenePreviewing();                       // (a scene shown before it plays: nothing changes)
 }
 // A frame in black (BG means none): black to the eye.
 constexpr uint16_t FRAME_BLACK = 0x0001;
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != frameCell(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
   if (screenSwitchPending()) return BG;            // (an edge line shown: no frame meanwhile)
+  if (scenePreviewing()) return DIM;               // (a scene shown before it plays: grey, whatever's held)
   if (i != STATUS_ROW && optThenEdit()) return BG;   // (B then A on a track, its fine rotate: no frame)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
@@ -208,6 +210,7 @@ inline bool bAlone() {
 // waveform cell's instead, whichever cell is selected (a clip; none else).
 bool clipRotating();                      // (input.cpp)
 inline bool editingCell(int i, int cell) {
+  if (scenePreviewing()) return false;             // (nothing edited meanwhile)
   if (i != STATUS_ROW && optThenEdit()) return shownSelected(i) && cell == WAVE_CELL && clipRotating();
   return shownSelected(i) && cell == selectedCellIn(i) && bArrows();
 }

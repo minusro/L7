@@ -24,9 +24,9 @@ Keys are on/off only (no pressure). The full key list is the header comment of
 | B + LEFT/RIGHT, B + UP/DOWN (tempo cell, following an external clock) | LEFT/RIGHT: our clock's offset from it, 10 ms a press or repeat, RIGHT later (L7's material plays later), LEFT earlier, within ±250 ms; each source its own, 0 by default, saved in the session (`offmidi=`, `offusb=`, `offaudio=`); both together: back to 0; while held, and for 1 s after it last changed, the tempo cell shows it (e.g. +20, the tag MS) in the accent colour (`syncOffsetMs`, `syncOffsetChangedMs` in midi_in.h). UP/DOWN: the tempo doubled / halved (fresh presses; within 30–240 BPM): audio follow's (playback.md), or a MIDI clock's taken times that (ours restarting on their next beat that fits; `midiScale()`) |
 | SHIFT + UP/DOWN | Newer / older scene (see scenes.md); B + UP/DOWN does the same on the status row's scene cell (triple taps and holding B included) |
 | SHIFT + UP/DOWN three quick taps (each within 0.2 s, `TRIPLE_TAP_MS`; no hold) | To N+1\* / 0\* (the first two step as ever) |
-| B, SHIFT, A / SHIFT, B, A | Paste scene (B first) / cut scene (SHIFT first; a scene with no clips on its tracks is removed but doesn't replace the clipboard, and cutting 0* does nothing) |
+| B, SHIFT, A / SHIFT, B, A | Paste scene (B first) / cut scene (SHIFT first; a scene with no clips on its tracks is removed but doesn't replace the clipboard; cutting 0* empties the clipboard, 0* staying; pasting with the clipboard empty inserts an empty scene, the icon then SCENE_CLEAR, as SHIFT+A's second press on the scene cell) |
 | PLAY | Start from 1.1.1 / stop |
-| SHIFT + PLAY (or SHIFT + A on status) | Restart from 1.1.1 |
+| SHIFT + PLAY (or SHIFT + A on status) | Stopped: resume from the beat the clock last stopped in (`transportResumeBeat()`, the clock reading it, each track where it would be then, as a MIDI Continue; a project loaded since: 1.1.1); running: restart from 1.1.1 |
 
 Tap tempo (A on the status row): the tempo follows the taps, each tap in a
 series refining it (a least-squares fit of every tap since the series began,
@@ -47,7 +47,12 @@ clock stopped, the 5th tap starts it from 1.1.1 (that tap not in the estimate: a
 * The start stays when the length changes.
 
 Other cells with B + arrows: filter (LEFT/RIGHT move, UP/DOWN width; width
-scales from the edge at the edge), volume (UP/DOWN: 0–10, each step a half line, on the clip's own scale: the
+scales from the edge at the edge; the track's level compensated for what the
+filters take away: `filterCompOf()`, from the clip's spectrum profile (storage.md),
+the gain bringing the filtered clip back to its unfiltered energy, x1 with
+the filters open or not measured yet, at most +12 dB `FILTER_COMP_MAX`; in the
+track's gain, `setTrackMix()`, the volume cell not showing it; exported in the
+clip's gain), volume (UP/DOWN: 0–10, each step a half line, on the clip's own scale: the
 top step plays it peaking at 0 dBFS, its unity step — where it starts — plays it as
 recorded, as many 1.875 dB steps below the top as its peak is below 0 dBFS, rounded
 up, the step just below the top taking what's left; 1.875 dB steps below unity (20 in all, unity 16; shown two to a half line, an odd step's last half dotted, every other pixel row lit, the meter lighting it the same way: none lit only when off; saved volumes from before, with half as many steps, are not converted); 0
@@ -181,7 +186,7 @@ A recording track's waveform area is in the accent colour (a block of black betw
   last, UP on track 7, DOWN on the status row), it takes the whole screen; it has no
   action button (nothing in that place). Opening and leaving the menu never starts or stops the clock;
   exporting to Ableton and storage mode stop it first, and start it again (from 1.1.1) when done if it was running. On its items A and B both act
-  (SHIFT with them: cut and paste); START starts / stops the clock there too (SHIFT+START: from 1.1.1). A new project opens with the selection on track 1 (another project: the selection as it was). Loading a project, or making a new one, doesn't start the clock either
+  (SHIFT with them: cut and paste); START starts / stops the clock there too (SHIFT+START: resume, as in the looper). A new project opens with the selection on track 1 (another project: the selection as it was). Loading a project, or making a new one, doesn't start the clock either
   (playing: the project comes in on the next bar line; one with no clips at once). On its items A
   runs the item's action when let go; B does nothing. The way out
   is loading a project (A on the loaded one: just back), or RIGHT off its right edge (on a card of the right column, or on a list item), LEFT off its left edge (on a card of the left column, or on a list item), UP off its top (on the top card row) or DOWN off its bottom (on the list's last item), once let go; with no project loaded those make a new one in the first empty slot (the menu's selection staying where it was) and go back (all slots full: nowhere to go); with the dummy

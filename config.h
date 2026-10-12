@@ -75,8 +75,15 @@ constexpr bool DELETE_UNUSED_SAMPLES = false;
 constexpr int OVERVIEW_COLS = 286;                 // one per pixel: x = 30..315
 // In memory the overview is followed by the loop's peak (max |sample|, uint16
 // little-endian; 0: not known, then taken from the overview), kept in the WAV
-// header too.
-constexpr int OVERVIEW_BYTES = OVERVIEW_COLS + 2;
+// header too. Then its spectrum profile (PROFILE_BYTES, engine.h
+// SpectrumProfiler: 'S', then PROFILE_BANDS octave bands' levels, a nibble
+// each; zeros: not measured yet), for the filters' level compensation.
+constexpr int PROFILE_BANDS = 10, PROFILE_BYTES = 1 + PROFILE_BANDS / 2;
+constexpr int OVERVIEW_BYTES = OVERVIEW_COLS + 2 + PROFILE_BYTES;
+inline const uint8_t *profileOf(const uint8_t *overview) { return overview + OVERVIEW_COLS + 2; }
+inline uint8_t *profileOf(uint8_t *overview) { return overview + OVERVIEW_COLS + 2; }
+// The most the filters' compensation lifts a track (filterCompOf()).
+constexpr float FILTER_COMP_MAX = 4.0f;            // (+12 dB)
 constexpr uint32_t PEAK_BIN_FRAMES = 4096;
 
 // Per-track filters: a highpass at step `lo`, then a lowpass at step `hi`.

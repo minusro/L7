@@ -139,7 +139,8 @@ loaded or pasted to (a short stall if playing), so saving never allocates.
   (re-run it after a Teensyduino update). Checked on a FAT disk image: macOS
   read the flags and the icon from such files.
 * Each clip carries its track's settings: the clip's own gain is the volume
-  (`SampleVolume`, linear: 0 dB = 1, from the volume step), and three flat
+  (`SampleVolume`, linear: 0 dB = 1, from the volume step, times the
+  filters' level compensation, `filterCompOf()`), and three flat
   clip envelopes (a value at the start and at 0): the Utility's balance (the
   pan, balance / BALANCE_MAX, -1..1) and the two Auto Filters' cutoffs (a
   note number, Hz = 440 * 2^((n - 69) / 12), 20-135; fully open: 135 lowpass,

@@ -47,6 +47,15 @@ static bool flashOn() {
   return ((uint64_t)sampleInBeat * phases / spb) % 2 == 0;
 }
 
+// On for the first half of each beat (the clock stopped: on).
+static bool halfBeatOn() {
+  noInterrupts();
+  bool running = transport.running;
+  uint32_t sampleInBeat = transport.sampleInBeat, spb = transport.spb;
+  interrupts();
+  return !running || sampleInBeat < spb / 2;
+}
+
 // What A does on the selected row (mirrors onKeys()).
 static int actionIcon() {
   bool shift = mainKeys() & m8::BTN_SHIFT;
@@ -58,8 +67,9 @@ static int actionIcon() {
     if (slot == projectCurrent()) return ICON_HOME;   // (the loaded one: back to the looper)
     return projectFilled(slot) ? ICON_LOAD : ICON_NEW;
   }
+  if (scenePreviewing() && !menuOpen()) return ICON_NONE;   // (a scene shown before it plays: A does nothing, the button grey)
   if (mainKeys() & m8::BTN_OPT) {                  // B: adjusting the cell (B + arrows); with SHIFT, the scene
-    if (shift) return optBeforeShift() ? ICON_SCENE_PASTE : ICON_SCENE_CUT;
+    if (shift) return optBeforeShift() ? (sceneClipboardFull() ? ICON_SCENE_PASTE : ICON_SCENE_CLEAR) : ICON_SCENE_CUT;   // (paste, the clipboard empty: an empty scene)
     if (selected != STATUS_ROW && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
         recordQueued() != selected)
       return ICON_RESAMPLE;                          // an empty track: B+A resamples (unavailable with no clip playing unmuted)
@@ -141,6 +151,7 @@ enum : uint8_t { BADGE_NONE, BADGE_EMPTY, BADGE_MUTED, BADGE_PLAYING, BADGE_LABE
 
 static uint8_t trackBadge(int i) {
   if (i == STATUS_ROW || recordingOn(i) || recordQueued() == i || trackIcon(i) == ICON_MOVE) return BADGE_NONE;   // (its icons instead)
+  if (scenePreviewing() && !halfBeatOn()) return BADGE_NONE;   // (a scene shown before it plays: blinking, a half beat each way)
   if (!shownClip(i)) return BADGE_EMPTY;          // (as the row shows it: a switch all at once)
   return shownTrack(i).state == TrackState::Muted ? BADGE_MUTED : BADGE_PLAYING;
 }
@@ -219,7 +230,8 @@ static bool unavailable(int i, int icon) {
       return (recording.mode != Recording::Idle && menuSlot() != projectCurrent()) || projectCopying(menuSlot());
     return false;
   }
-  return (icon == ICON_PASTE && !clipboardFull()) || (icon == ICON_SCENE_PASTE && !sceneClipboardFull()) ||
+  if (i == STATUS_ROW && icon == ICON_NONE && scenePreviewing() && !menuOpen()) return true;
+  return (icon == ICON_PASTE && !clipboardFull()) ||
          (icon == ICON_NEXT && sceneCount() < 2);   // (the next scene: none with fewer than two)
 }
 
