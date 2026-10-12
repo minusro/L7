@@ -131,15 +131,18 @@ constexpr int BALANCE_MAX = 20;                    // (doubled: saved balances f
 // Master volume and balance: the final output (tracks and monitored input),
 // the clock cell's control a line per step (ui_status.cpp): volume
 // 0..MASTER_VOLUME_MAX in MASTER_STEP_DB steps up to MASTER_VOLUME_UNITY 100%
-// (the default), then MASTER_UP_DB ones to the top, 200 % (+6.02 dB), balance
+// (the default), then MASTER_UP_DB ones to the top, 400 % (+12.04 dB), balance
 // -MASTER_BALANCE_MAX..MASTER_BALANCE_MAX (as a track's). Its meter: the same
 // scale (the unity step's half: 0 dBFS).
-constexpr int MASTER_VOLUME_MAX = 21, MASTER_VOLUME_UNITY = 17, MASTER_BALANCE_MAX = MASTER_VOLUME_MAX;   // (all the way: the other side's lines all off, at any volume)
+constexpr int MASTER_VOLUME_MAX = 22, MASTER_VOLUME_UNITY = 11, MASTER_BALANCE_MAX = MASTER_VOLUME_MAX;   // (all the way: the other side's lines all off, at any volume)
 constexpr float MASTER_STEP_DB = 1.875f;
-constexpr float MASTER_UP_DB = 6.0206f / (MASTER_VOLUME_MAX - MASTER_VOLUME_UNITY);   // (~1.5 dB: 200 % in four)
+constexpr float MASTER_TOP_GAIN = 4.0f;           // (the top step: 400 %)
+constexpr float MASTER_UP_DB = 12.0412f / (MASTER_VOLUME_MAX - MASTER_VOLUME_UNITY);   // (~1.1 dB: 400 % in eleven, 100 % half way)
 // A master volume step's (or meter line's) dB from 100 %, and back (lines, rounded).
 inline float masterStepDb(int step) { return (step - MASTER_VOLUME_UNITY) * (step > MASTER_VOLUME_UNITY ? MASTER_UP_DB : MASTER_STEP_DB); }
 inline float masterSteps(float db) { return MASTER_VOLUME_UNITY + db / (db > 0 ? MASTER_UP_DB : MASTER_STEP_DB); }
+// The nearest step to a level (a volume saved on another scale; at least 1: not off).
+inline int masterStepForDb(float db) { return max(1, min(MASTER_VOLUME_MAX, (int)lroundf(masterSteps(db)))); }
 
 // Declicking: loop and range edges, and clip switches, are crossfaded over
 // this many frames (~3 ms); track levels (mute, volume, start, stop) glide

@@ -1528,7 +1528,7 @@ int main(int argc, char **argv) {
       check(pl <= LIMIT_CEILING / 32768 + 0.001f && fabsf(20 * log10f(rl / pl) - cut) < 0.5f, mp);
       snprintf(mp, sizeof mp, "the master limiter: a track 24 dB over, its peak at the output %d (ceiling %.0f), %d samples clipped, %.1f dB taken off (metered)", top, LIMIT_CEILING, clipped, cut);
       check(top <= (int)LIMIT_CEILING + 1 && top >= (int)(LIMIT_CEILING * 0.95f) && clipped == 0 && cut > 3, mp);
-      {                                              // the master volume at 200 %: the one limiter's ceiling halved, the output under full scale still
+      {                                              // the master volume at its top (400 %): the one limiter's ceiling a quarter, the output under full scale still
         const int vol = masterVolume();
         setMasterVolume(MASTER_VOLUME_MAX);
         runBeats(1);
@@ -1542,7 +1542,7 @@ int main(int argc, char **argv) {
         runBeats(2);
         afterAudio = nullptr;
         setMasterVolume(vol);
-        snprintf(mp, sizeof mp, "master volume 200%%: the output's peak %d, %d samples clipped", top, clipped);
+        snprintf(mp, sizeof mp, "master volume 400%%: the output's peak %d, %d samples clipped", top, clipped);
         check(top <= (int)LIMIT_CEILING + 1 && top >= (int)(LIMIT_CEILING * 0.9f) && clipped == 0, mp);
       }
       for (int t = 0; t < NUM_TRACKS; t++) tracks[t].gain = gains[t];

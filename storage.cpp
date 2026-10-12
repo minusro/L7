@@ -1610,24 +1610,29 @@ FLASHMEM Session loadSession() {
     else if (!strncmp(line, "newbpm=", 7)) s.newBpm = strtof(line + 7, nullptr);   // (new projects' tempo)
     else if (!strncmp(line, "row=", 4)) s.row = (int)strtol(line + 4, nullptr, 10);
     else if (!strncmp(line, "cell=", 5)) s.cell = (int)strtol(line + 5, nullptr, 10);
-    // ("out=" / "pan=": the master volume and balance on today's scale; older:
-    // "gain=" (1.875 dB steps, 16: 100%), "level=" (10 steps of 3.75 dB, 8:
-    // 100%) and "balance=" (+-10), "volume=" (21 steps of 1.5 dB, 17: 100%),
-    // converted; "master=" left: 100% again)
-    else if (!strncmp(line, "out=", 4)) s.master = (int)strtol(line + 4, nullptr, 10);
+    // ("vol=" / "pan=": the master volume and balance on today's scale; older,
+    // converted by level: "out=" (1.875 dB steps, 17: 100%), "gain=" (1.875 dB
+    // steps, 16: 100%), "level=" (10 steps of 3.75 dB, 8: 100%) and
+    // "balance=" (+-10), "volume=" (21 steps of 1.5 dB, 17: 100%); "master="
+    // left: 100% again)
+    else if (!strncmp(line, "vol=", 4)) s.master = (int)strtol(line + 4, nullptr, 10);
+    else if (!strncmp(line, "out=", 4)) {
+      int v = (int)strtol(line + 4, nullptr, 10);
+      s.master = v <= 0 ? 0 : masterStepForDb((v - 17) * 1.875f);
+    }
     else if (!strncmp(line, "gain=", 5)) {
       int v = (int)strtol(line + 5, nullptr, 10);
-      s.master = v <= 0 ? 0 : v + MASTER_VOLUME_UNITY - 16;
+      s.master = v <= 0 ? 0 : masterStepForDb((v - 16) * 1.875f);
     }
     else if (!strncmp(line, "pan=", 4)) s.balance = (int)strtol(line + 4, nullptr, 10);
     else if (!strncmp(line, "level=", 6)) {
       int v = (int)strtol(line + 6, nullptr, 10);
-      s.master = v <= 0 ? 0 : MASTER_VOLUME_UNITY + 2 * (v - 8);
+      s.master = v <= 0 ? 0 : masterStepForDb((v - 8) * 3.75f);
     }
     else if (!strncmp(line, "balance=", 8)) s.balance = 2 * (int)strtol(line + 8, nullptr, 10);
     else if (!strncmp(line, "volume=", 7)) {
       int v = (int)strtol(line + 7, nullptr, 10);
-      s.master = v <= 0 ? 0 : MASTER_VOLUME_UNITY + (int)lroundf((v - 17) * 1.50515f / MASTER_STEP_DB);
+      s.master = v <= 0 ? 0 : masterStepForDb((v - 17) * 1.50515f);
     }
     else if (!strncmp(line, "project=", 8)) s.project = (int)strtol(line + 8, nullptr, 10) - 1;
     else if (!strncmp(line, "menu=", 5)) s.menu = (int)strtol(line + 5, nullptr, 10);
@@ -1671,7 +1676,7 @@ FLASHMEM Session loadSession() {
 FLASHMEM void saveSession(const Session &s) {
   FsFile f = SD.sdfs.open("/L7/DATA/SESSION.DAT", O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return;
-  f.printf("bpm=%.2f\nnewbpm=%.2f\nout=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\noffmidi=%d\noffusb=%d\noffaudio=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
+  f.printf("bpm=%.2f\nnewbpm=%.2f\nvol=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\noffmidi=%d\noffusb=%d\noffaudio=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
            s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro, s.follow ? 1 : 0, s.offsets[0], s.offsets[1], s.offsets[2]);
   f.printf("monitor=%d\nplaynew=%d\nnextfree=%d\nemptyclick=%d\n", s.settings[0], s.settings[1], s.settings[2], s.settings[3]);
   f.printf("helpseen=%d\nhelppage=%d\n", s.helpSeen, s.helpPage);

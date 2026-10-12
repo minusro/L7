@@ -257,7 +257,7 @@ static float clickSample() {
 static volatile float outPeakL = 0, outPeakR = 0;
 static volatile float rawPeakL = 0, rawPeakR = 0;   // (the output as it'd be without the limiter)
 FLASHMEM static void setOutputMix() {
-  float g = masterStep >= MASTER_VOLUME_MAX ? 2.0f                // (the top: 200 %)
+  float g = masterStep >= MASTER_VOLUME_MAX ? MASTER_TOP_GAIN      // (the top: exactly)
           : masterStep ? powf(10.0f, masterStepDb(masterStep) / 20) : 0.0f;
   float toL = masterBal < 0 ? -(float)masterBal / MASTER_BALANCE_MAX : 0, toR = masterBal > 0 ? (float)masterBal / MASTER_BALANCE_MAX : 0;
   noInterrupts();
