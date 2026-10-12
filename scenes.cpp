@@ -213,11 +213,16 @@ static bool go(int pos, bool quick = false) {
   if (quick) prepareUnits(nullptr);                // (files prepared for another scene: not these)
   commit();
   if (busy() || pos == list.current) return false;
+  const int from = list.current;
   list.current = pos;
   listDirty = true;
   SceneInfo s = sceneAt(min(pos, (int)list.count));   // N+1*: a copy of N
   sceneTempo = pos >= 1 && pos <= list.count ? s.tempo : 0;   // (0* and N+1*: none until made a scene)
-  apply(s, quick, true, sceneTempo, false);        // (every clip from its start position, the clock running on; each scene its own tempo: 0*, N+1*: as it is)
+  // Every clip from its start position (as long a range: as far from it as the
+  // one before), the clock running on; between N and N+1* (its copy) nothing
+  // starts over. Each scene its own tempo (0*, N+1*: as it is).
+  const bool copyStep = (from == list.count && pos == list.count + 1) || (from == list.count + 1 && pos == list.count);
+  apply(s, quick, !copyStep, sceneTempo, false);
   return true;
 }
 

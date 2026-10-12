@@ -149,6 +149,8 @@ static int finishedResample = -1;                // a resampling just saved: its
 struct Plan {
   bool on = false;
   bool restart = false;                          // the new clip from its 1.1.1 position at q (a project switch)
+  bool keepLen = false;                          // (a scene switch: a range as long as the one playing at the same distance from its start position)
+  int32_t outStartQ = 0;                         // the one playing: its start position, quarters into its range
   bool stop = false;                             // the track goes empty there (nothing new to read)
   uint32_t outBeats = 0;                         // the range playing before the switch: its length
   int32_t outAnchorQ = 0;                        // and anchor (a new range as long carries on from it)
@@ -177,6 +179,7 @@ struct Change {
   bool planned = false;                          // its clip switch is set up (or none is needed)
   bool scene = false;                            // part of a scene change
   bool restart = false;                          // ... that starts over from 1.1.1 at its switch point (a project)
+  bool keepLen = false;                          // (a scene: as long a range keeps its distance from the start position)
   int32_t grid = 0;                              // its switch points (beats; 0: quarter beats)
   int32_t q = 0;
   TrackUnit u;
@@ -845,10 +848,11 @@ static TrackUnit streamUnit(int t) {
 // Plans a gapless switch of playing track t to unit u's clip (none: the
 // track stops) on quarter beat q (see Plan).
 enum PlanResult { PLANNED, WAIT, FAILED };
-static PlanResult planSwitch(int t, const TrackUnit &u, int32_t q, bool restart) {
+static PlanResult planSwitch(int t, const TrackUnit &u, int32_t q, bool restart, bool keepLen) {
   Track &tr = tracks[t];
   Plan &p = plans[t];
   p.restart = restart;
+  p.keepLen = keepLen;
   noInterrupts();
   uint32_t tail = tr.tail;
   bool pending = p.on || tr.sampleSwitch;
@@ -866,6 +870,8 @@ static PlanResult planSwitch(int t, const TrackUnit &u, int32_t q, bool restart)
     if (!pending) {                              // (moved: still the clip playing before)
       p.outBeats = tr.rangeBeats;
       p.outAnchorQ = tr.rangeAnchorQ;
+      const uint32_t lb = tr.loopBars * BEATS_PER_BAR;
+      p.outStartQ = lb ? 4 * (int32_t)posMod((int32_t)startPosition(lb, tr.rangeStartBeat, tr.rangeBeats) - (int32_t)tr.rangeStartBeat, lb) : 0;
     }
     p.beforeSaved = false;                       // a new switch point
   }
@@ -932,7 +938,14 @@ static void applyPlan(int t) {
   applyRange(t, p.u);
   // A range as long as the one playing carries on from the same spot in it
   // (a project switch: from its 1.1.1 position instead).
-  if (p.restart) anchorAsStart(t, p.q);
+  if (p.restart && p.keepLen && tr.rangeBeats == p.outBeats && p.outBeats) {
+    // A scene switch, a range as long as the one playing: as far from its
+    // start position as that one was from its own.
+    const int32_t len = 4 * (int32_t)tr.rangeBeats, lb = tr.loopBars * BEATS_PER_BAR;
+    const int32_t d = posMod(posMod(p.q - p.outAnchorQ, len) - p.outStartQ, len);
+    const int32_t sNew = 4 * posMod((int32_t)startPosition(lb, tr.rangeStartBeat, tr.rangeBeats) - (int32_t)tr.rangeStartBeat, lb);
+    tr.rangeAnchorQ = p.q - posMod(sNew + d, len);
+  } else if (p.restart) anchorAsStart(t, p.q);
   else if (tr.rangeBeats == p.outBeats) tr.rangeAnchorQ = p.outAnchorQ;
   if (tr.state == TrackState::Empty) tr.state = TrackState::Muted;   // (its settings follow at the switch)
   int32_t phaseQ = posMod(p.q - tr.rangeAnchorQ, 4 * tr.rangeBeats);
@@ -1020,7 +1033,7 @@ static void serviceChange(int t) {
     if (sameClip(streamUnit(t), c.u) && !switchElsewhere && !startElsewhere && !(c.restart && c.u.sample)) {
       // The stream has that clip already (or both are empty).
     } else if (tr.live || plans[t].on || tr.sampleSwitch) {
-      PlanResult r = planSwitch(t, c.u, c.q, c.restart);
+      PlanResult r = planSwitch(t, c.u, c.q, c.restart, c.keepLen);
       if (r == WAIT) return;
       if (r == FAILED) {                         // restarts on the next beat instead
         settleNow(t);
@@ -1068,7 +1081,7 @@ static void serviceChanges() {
 // Scene changes (see storage.h).
 static int32_t sceneQ = -1;                      // the latest one's switch point, in quarter beats
 static int32_t sceneGrid = BEATS_PER_BAR;        // and its grid
-static bool inSceneChange = false, sceneRestart = false;
+static bool inSceneChange = false, sceneRestart = false, sceneKeepLen = false;
 // The clock's 1.1.1: transport beat clockOrigin (a project switch while
 // playing moves it to its switch point, from clockOriginNext on).
 static int32_t clockOrigin = 0, clockOriginNext = -1;
@@ -1089,6 +1102,7 @@ static bool sceneChangeOn() {
 int32_t beginSceneChange(bool quick, bool prepared, bool restart, bool clockToo) {
   inSceneChange = true;
   sceneRestart = restart && transport.running;
+  sceneKeepLen = sceneRestart && !clockToo;      // (a scene's: as long ranges keep their distance from the start position)
   if (!transport.running) return -1;
   int64_t spb, now = nowSamples(spb);
   int32_t grid = quick ? 1 : BEATS_PER_BAR;
@@ -1110,7 +1124,7 @@ int32_t beginSceneChange(bool quick, bool prepared, bool restart, bool clockToo)
   }
   if (sceneRestart) {                            // every change of this scene restarts (also ones carried along)
     for (auto &c : changes)
-      if (c.on && c.scene) c.restart = true;
+      if (c.on && c.scene) { c.restart = true; c.keepLen = sceneKeepLen; }
     if (clockToo) {                              // (a project switch: the clock back to 1.1.1 there too; a scene's: it runs on)
       clockOriginNext = sceneQ / 4;
       transport.midiRestartBeat = sceneQ / 4;    // (MIDI followers: back to 1.1.1 there too)
@@ -1119,7 +1133,7 @@ int32_t beginSceneChange(bool quick, bool prepared, bool restart, bool clockToo)
   return sceneQ / 4;
 }
 
-void endSceneChange() { inSceneChange = sceneRestart = false; }
+void endSceneChange() { inSceneChange = sceneRestart = sceneKeepLen = false; }
 
 bool sceneChangeWaiting() { return transport.running && sceneChangeOn(); }
 int32_t sceneSwitchBeat() { return sceneChangeWaiting() && sceneQ >= 0 ? (sceneQ + 3) / 4 : INT32_MIN; }
@@ -1131,6 +1145,7 @@ static void requestChange(int t, const TrackUnit &u, int32_t q, bool scene) {
   c.planned = false;
   c.scene = scene;
   c.restart = scene && sceneRestart;
+  c.keepLen = scene && sceneKeepLen;
   c.q = q;
   c.u = u;
   serviceChange(t);

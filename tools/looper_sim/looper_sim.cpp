@@ -1295,7 +1295,13 @@ int main(int argc, char **argv) {
     afterAudio = [&] { if (!tracks[5].live) stop.mark(); };
     uint32_t beatsBefore[NUM_TRACKS];
     int32_t anchorBefore[NUM_TRACKS];
-    for (int t = 0; t < NUM_TRACKS; t++) { beatsBefore[t] = tracks[t].rangeBeats; anchorBefore[t] = tracks[t].rangeAnchorQ; }
+    int32_t startBefore[NUM_TRACKS];                // (each one's start position, quarters into its range)
+    for (int t = 0; t < NUM_TRACKS; t++) {
+      beatsBefore[t] = tracks[t].rangeBeats;
+      anchorBefore[t] = tracks[t].rangeAnchorQ;
+      const uint32_t lb = tracks[t].loopBars * BEATS_PER_BAR;
+      startBefore[t] = lb ? 4 * (int32_t)pmod((int32_t)startPosition(lb, tracks[t].rangeStartBeat, tracks[t].rangeBeats) - (int32_t)tracks[t].rangeStartBeat, lb) : 0;
+    }
     check(sceneStep(1), "to scene B");
     setTrackMix(0, 6, 0);
     trackChanged(0);
@@ -1305,18 +1311,25 @@ int main(int argc, char **argv) {
     snprintf(m, sizeof m, "track 6 stops on the bar line (beat %d +%u), then empty", stop.beat, stop.sib);
     check(onBar(stop, AUDIO_BLOCK_SAMPLES) && tracks[5].state == TrackState::Empty, m);
     check(tracks[0].volume == 6, "the volume set while waiting stayed");
-    int fromStart = 0, elsewhere = 0;              // (every clip from its start position at the switch: the bar line)
+    // At the switch (the bar line): a range as long as before as far from its
+    // start position as the one before was from its own; another, from its start position.
+    int sameLen = 0, fromStart = 0, wrong = 0;
     for (int t = 0; t < NUM_TRACKS; t++) {
       const Track &tr = tracks[t];
       if (tr.state == TrackState::Empty) continue;
       const uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
-      const int32_t sp = (int32_t)startPosition(loopBeats, tr.rangeStartBeat, tr.rangeBeats);
-      const int32_t want = 4 * stop.beat - 4 * (int32_t)pmod(sp - (int32_t)tr.rangeStartBeat, loopBeats);
-      if (pmod(tr.rangeAnchorQ - want, 4 * tr.rangeBeats) == 0) fromStart++; else elsewhere++;
+      const int32_t q = 4 * stop.beat, len = 4 * tr.rangeBeats;
+      const int32_t sNew = 4 * (int32_t)pmod((int32_t)startPosition(loopBeats, tr.rangeStartBeat, tr.rangeBeats) - (int32_t)tr.rangeStartBeat, loopBeats);
+      const int32_t at = pmod(q - tr.rangeAnchorQ, len);   // (quarters into its range at the switch)
+      if (tr.rangeBeats == beatsBefore[t] && anchorBefore[t] != INT32_MIN) {
+        const int32_t d = pmod(pmod(q - anchorBefore[t], len) - startBefore[t], len);
+        if (at == pmod(sNew + d, len)) sameLen++; else wrong++;
+      } else {
+        if (at == sNew) fromStart++; else wrong++;
+      }
     }
-    (void)beatsBefore; (void)anchorBefore;
-    snprintf(m, sizeof m, "every clip from its start position at the switch (%d from it, %d elsewhere)", fromStart, elsewhere);
-    check(fromStart > 0 && elsewhere == 0, m);
+    snprintf(m, sizeof m, "the switch: as long ranges as far from their start positions (%d), others from them (%d), %d wrong", sameLen, fromStart, wrong);
+    check(sameLen + fromStart > 0 && wrong == 0, m);
     checkSync(2, "track 3 on B's sample");
     setTrackMix(0, VOLUME_UNITY, 0);
     trackChanged(0);
