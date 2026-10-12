@@ -53,6 +53,7 @@ static bool loading = false;                     // a scene is being put on the 
 static bool listDirty = false;
 static SceneInfo record;                         // waiting to be written to recordSlot
 static int recordSlot = -1;
+static int madeSlot = -1;                         // the scene just made from N+1* (cut there and then: back to N+1*)
 static SceneInfo clip;                           // the scene clipboard
 static bool holding = false;                     // stepping with the change held back (see sceneHold)
 static int target = -1;                          // where the held steps got to (-1: none)
@@ -148,6 +149,7 @@ static void removeAt(int pos) {
   clipsKnown = -1;
   edits++;
   if (list.slot[pos - 1] == recordSlot) recordSlot = -1;   // no need to write it now
+  if (list.slot[pos - 1] == madeSlot) madeSlot = -1;
   memmove(list.slot + pos - 1, list.slot + pos, (list.count - pos) * sizeof list.slot[0]);
   list.count--;
   listDirty = true;
@@ -166,6 +168,7 @@ static void commit() {
       return;
     }
     list.current = pos;
+    madeSlot = pos == list.count ? list.slot[pos - 1] : -1;
     if (sceneTempo <= 0) sceneTempo = getTempo();   // made now: the tempo now (a recording made it: its own, already)
   }
   int slot = list.slot[list.current - 1];
@@ -216,6 +219,7 @@ static bool go(int pos, bool quick = false) {
   commit();
   if (busy() || pos == list.current) return false;
   const int from = list.current;
+  madeSlot = -1;                                   // (left: no longer just made)
   list.current = pos;
   listDirty = true;
   SceneInfo s = sceneAt(min(pos, (int)list.count));   // N+1*: a copy of N
@@ -274,8 +278,12 @@ bool sceneCut() {
     clip = snapshot();
     clipFull = true;
   }
+  // Just made from N+1* (still the last): back to N+1*, a copy of the scene
+  // before it; otherwise to the scene before.
+  const bool made = list.current == list.count && madeSlot >= 0 && list.slot[list.current - 1] == madeSlot;
   if (list.current <= list.count) removeAt(list.current);   // N+1* was only a copy
-  go(list.current - 1, true);
+  if (made) list.current--;                        // (as if from N: the step to N+1*)
+  go(made ? list.current + 1 : list.current - 1, true);
   return true;
 }
 
@@ -596,6 +604,7 @@ FLASHMEM static bool openAs(int p, bool apply_) {
   l.current = min(l.current, (uint16_t)(l.count + 1));
   file = std::move(f);
   list = l;
+  madeSlot = -1;
   project = p;
   setRecordingLetter(p < PROJECTS ? (char)('A' + p) : 0);   // its recordings are named after it
   if (p < PROJECTS) filled[p] = true;

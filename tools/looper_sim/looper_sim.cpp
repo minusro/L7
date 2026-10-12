@@ -850,6 +850,12 @@ int main(int argc, char **argv) {
     trackChanged(1);
     block();
     check(sceneCount() == 2 && sceneCurrent() == 2, "changing 2* makes it scene 2");
+    check(sceneCut() && waitScene() && sceneCount() == 1 && sceneCurrent() == 2 && tracks[1].state == TrackState::Playing,
+          "cutting it there and then: back on 2*, the copy of scene 1");
+    tracks[1].state = TrackState::Muted;           // (made again)
+    trackChanged(1);
+    block();
+    check(sceneCount() == 2 && sceneCurrent() == 2, "(changed again: scene 2)");
     check(sceneStep(-1) && waitScene() && tracks[1].state == TrackState::Playing, "scene 1 keeps track 2 playing");
     check(sceneStep(1) && waitScene() && tracks[1].state == TrackState::Muted, "scene 2 has it muted");
     check(sceneCut() && waitScene() && sceneClipboardFull() && sceneCount() == 1 && sceneCurrent() == 1 &&

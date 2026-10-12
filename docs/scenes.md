@@ -107,7 +107,9 @@ version's `/L7/scenes.dat` are moved to these names at boot.
     on the next beat once SHIFT is let go (leaving 0\* waits as usual;
     changing it makes it scene 1, as before),
   * the double-tap jumps to 0\* / N+1\* (second tap held `EDGE_HOLD_MS`),
-  * scene cut, paste, duplicate (these first take a held target).
+  * scene cut, paste, duplicate (these first take a held target). A cut goes
+    to the scene before; the scene just made from N+1\* (`madeSlot`, not left
+    since), cut, goes back to N+1\* instead.
 * **Label**: flashes white/dim with the beat (first half of each beat white)
   while the selected scene isn't the one playing — SHIFT still held on
   another scene, or a change waiting for its switch point.
