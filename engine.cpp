@@ -255,6 +255,7 @@ static float clickSample() {
   return s;
 }
 static volatile float outPeakL = 0, outPeakR = 0;
+static volatile float rawPeakL = 0, rawPeakR = 0;   // (the output as it'd be without the limiter)
 FLASHMEM static void setOutputMix() {
   float g = masterStep >= MASTER_VOLUME_MAX ? 2.0f                // (the top: 200 %)
           : masterStep ? powf(10.0f, (masterStep - MASTER_VOLUME_UNITY) * MASTER_STEP_DB / 20) : 0.0f;
@@ -277,11 +278,13 @@ void setMasterBalance(int balance) {
   setOutputMix();
 }
 int masterBalance() { return masterBal; }
-void takeOutputPeaks(float &left, float &right) {
+void takeOutputPeaks(float &left, float &right, float *rawLeft, float *rawRight) {
   noInterrupts();
   left = outPeakL;
   right = outPeakR;
-  outPeakL = outPeakR = 0;
+  if (rawLeft) *rawLeft = rawPeakL;
+  if (rawRight) *rawRight = rawPeakR;
+  outPeakL = outPeakR = rawPeakL = rawPeakR = 0;
   interrupts();
 }
 
@@ -896,7 +899,7 @@ void LooperEngine::update() {
   const float outGain = outputGain, outTo[4] = {outLL, outLR, outRL, outRR};
   static float outNow[4] = {1, 0, 0, 1};           // (the master's mix as it glides, MASTER_GLIDE_MS)
   for (auto &tr : tracks) glideFilters(tr);
-  float outPeak[2] = {0, 0};
+  float outPeak[2] = {0, 0}, rawPeak[2] = {0, 0};
   float blockPeak = 0;                             // (the click's reference: clickLevel())
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
     // USB's latency: the first sharp sound after each beat line (well above the
@@ -1035,6 +1038,7 @@ void LooperEngine::update() {
 
     mixL += monL;                                    // the tracks and the input, limited (the master's first stage)
     mixR += monR;
+    const float preL = mixL, preR = mixR;            // (unlimited: metered)
     mixLimiter.run(mixL, mixR);
     {                                                // (without the metronome) the tracks and the input as they are:
       int16_t cl = (int16_t)constrain(mixL, -32767.0f, 32767.0f);   // the master volume is not in it
@@ -1050,6 +1054,8 @@ void LooperEngine::update() {
       blockPeak = max(blockPeak, max(fabsf(l), fabsf(r)));   // (the click's reference: before the master volume, the click left out)
       mixL = l * outNow[0] + r * outNow[1];
       mixR = l * outNow[2] + r * outNow[3];
+      rawPeak[0] = max(rawPeak[0], fabsf(preL * outNow[0] + preR * outNow[1]));   // (as it'd be unlimited)
+      rawPeak[1] = max(rawPeak[1], fabsf(preL * outNow[2] + preR * outNow[3]));
       outLimiter.run(mixL, mixR);                    // (the master volume over unity: the limiter's second stage)
     }
     if (usbFrame) {                                  // USB: the mix as the line out has it, without the metronome
@@ -1097,6 +1103,8 @@ void LooperEngine::update() {
     mixLimiter.low = mixLimiter.gain;
     outLimiter.low = outLimiter.gain;
   }
+  if (rawPeak[0] > rawPeakL * 32768) rawPeakL = rawPeak[0] / 32768;
+  if (rawPeak[1] > rawPeakR * 32768) rawPeakR = rawPeak[1] / 32768;
   if (outPeak[0] > outPeakL * 32768) outPeakL = outPeak[0] / 32768;
   if (outPeak[1] > outPeakR * 32768) outPeakR = outPeak[1] / 32768;
 

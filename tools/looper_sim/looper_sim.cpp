@@ -1518,9 +1518,14 @@ int main(int argc, char **argv) {
         }
       };
       takeLimiterReduction();
+      float pl, pR, rl, rR;
+      takeOutputPeaks(pl, pR, &rl, &rR);
       runBeats(2);
       afterAudio = nullptr;
       const float cut = takeLimiterReduction();
+      takeOutputPeaks(pl, pR, &rl, &rR);
+      snprintf(mp, sizeof mp, "the master meter: out %.2f, as it'd be unlimited %.2f (%.1f dB over)", pl, rl, 20 * log10f(rl / pl));
+      check(pl <= LIMIT_CEILING / 32768 + 0.001f && fabsf(20 * log10f(rl / pl) - cut) < 0.5f, mp);
       snprintf(mp, sizeof mp, "the master limiter: a track 24 dB over, its peak at the output %d (ceiling %.0f), %d samples clipped, %.1f dB taken off (metered)", top, LIMIT_CEILING, clipped, cut);
       check(top <= (int)LIMIT_CEILING + 1 && top >= (int)(LIMIT_CEILING * 0.95f) && clipped == 0 && cut > 3, mp);
       for (int t = 0; t < NUM_TRACKS; t++) tracks[t].gain = gains[t];

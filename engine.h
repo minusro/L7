@@ -334,7 +334,8 @@ extern volatile const char *underrunStage;        // loop()'s step (debugStage) 
 // first beat's): tap tempo's taps, stopped (input.cpp).
 void metronomeClick(bool bar);
 int masterVolume();
-void takeOutputPeaks(float &left, float &right);
+// (raw: as they'd be without the master limiter, its two stages)
+void takeOutputPeaks(float &left, float &right, float *rawLeft = nullptr, float *rawRight = nullptr);
 // Transients in a track's stream (stretching locks its grains to them): the
 // frames written into its ring from stream frame `at` on (loop(), as it fills
 // it); resetTransients(): the stream starts afresh at `at` (none queued; the

@@ -173,9 +173,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   in the accent colour, as many as that channel's level (the volume less the balance away
   from it; none at 0), black after it; each half meters its channel (white, line 17
   0 dBFS — the master limiter holding it just under —, falling back from peaks), the
-  limiter's reduction as grey lines right after the meter's white ones (a line per
-  1.875 dB taken off, both stages', `takeLimiterReduction()`, falling likewise; while
-  there are any, the white ones reach the 100 % line, or the level's end if lower),
+  output as it would be without the master limiter metered under it in grey (its
+  peaks, the pre-volume mix through the master volume, `takeOutputPeaks()`'s raw
+  ones, falling likewise): what the limiter takes off shows as grey lines past the
+  white ones, also past the level's end,
   from silence each time it shows (`drawMasterVolume()` in ui_status.cpp).
 * Track buttons: the track's number (tracks count from the bottom: 1 is
   the row just above the status row, 7 the first) — dark grey on an empty track (black when selected, on the panel); in a grey-outlined

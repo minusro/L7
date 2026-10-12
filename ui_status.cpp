@@ -45,10 +45,9 @@ static const Cell &statusCell(int cell) {
 // volume less the balance away from that side; none at 0), black after them.
 // Each half meters its channel's output over them: white up to its level, on
 // the same scale (MASTER_VOLUME_UNITY lines: 0 dBFS), falling at
-// MV_FALL_DB_PER_S. The master limiter's reduction, in the same steps, as
-// grey lines right after the meter's (falling likewise); while there are any,
-// the meter's reach the 100 % line (or the level's end, if lower) and the
-// grey ones follow on from there.
+// MV_FALL_DB_PER_S. Under it in grey, the output as it would be without the
+// master limiter (likewise): what the limiter takes off shows as grey lines
+// past the white ones.
 // Shown again, it starts from silence.
 static constexpr int MV_COLS = CLOCK_BOX.w / PX, MV_ROWS = STATUS_H / PX;   // 47 x 13, the border's included
 static constexpr int MV_LINES = MASTER_VOLUME_MAX;                          // (a line per step above 0)
@@ -59,35 +58,33 @@ static constexpr float MV_FALL_DB_PER_S = 24;
 
 FLASHMEM static void drawMasterVolume(bool full) {   // (flash: RAM1 is full)
   static uint16_t shown[MV_LINES][2];
-  static float meterDb[2] = {-200, -200}, cutDb = 0;
+  static float meterDb[2] = {-200, -200}, rawDb[2] = {-200, -200};
   static uint32_t lastMs = 0;
   auto &t = board.tft();
   const int top = rowTop(STATUS_ROW);
-  float peak[2];
-  takeOutputPeaks(peak[0], peak[1]);
-  if (full) peak[0] = peak[1] = 0;                 // (what played while hidden: not shown)
+  float peak[2], raw[2];
+  takeOutputPeaks(peak[0], peak[1], &raw[0], &raw[1]);
+  if (full) peak[0] = peak[1] = raw[0] = raw[1] = 0;   // (what played while hidden: not shown)
   uint32_t now = millis();
   float fall = (now - lastMs) * (MV_FALL_DB_PER_S / 1000);
   lastMs = now;
-  float cut = takeLimiterReduction();
   if (full) {
     t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, rowGround(STATUS_ROW));   // (inside the border)
-    meterDb[0] = meterDb[1] = -200;
-    cut = cutDb = 0;
+    meterDb[0] = meterDb[1] = rawDb[0] = rawDb[1] = -200;
   }
-  cutDb = max(cut, cutDb - fall);
-  const int cutLines = (int)floorf(cutDb / MASTER_STEP_DB + 0.5f);
+  auto lines = [](float db) { return db < -150 ? 0 : constrain((int)floorf(db / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f), 0, MV_LINES); };
   const int vol = masterVolume(), bal = masterBalance();
   const int levels[2] = {vol - max(0, bal), vol - max(0, -bal)};
   for (int ch = 0; ch < 2; ch++) {
     float db = peak[ch] > 0 ? 20 * log10f(peak[ch]) : -200.0f;
     meterDb[ch] = max(db, meterDb[ch] - fall);
+    float rdb = raw[ch] > 0 ? 20 * log10f(raw[ch]) : -200.0f;
+    rawDb[ch] = max(rdb, rawDb[ch] - fall);
     // (Line j: step j + 1's level, (j + 1 - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB.)
-    int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f), 0, MV_LINES);
-    if (cutLines > 0) lit = min(MASTER_VOLUME_UNITY, levels[ch]);   // (limiting: the meter at full scale)
+    const int lit = lines(meterDb[ch]), rawLit = lines(rawDb[ch]);
     for (int j = 0; j < MV_LINES; j++) {
       bool inLevel = j < levels[ch];                 // (0: none)
-      uint16_t color = j < lit && inLevel ? INK : j >= lit && j < lit + cutLines ? DIM : inLevel ? ACCENT : BG;   // (the limiter's: grey, after the meter's)
+      uint16_t color = j < lit && inLevel ? INK : j < rawLit ? DIM : inLevel ? ACCENT : BG;   // (unlimited, under it: grey)
       if (!full && color == shown[j][ch]) continue;
       shown[j][ch] = color;
       t.fillRect(CLOCK_BOX.x + (MV_LEFT + 2 * j) * PX, top + (2 + ch * (MV_HALF + 1)) * PX, PX, MV_HALF * PX, color);
