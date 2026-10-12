@@ -121,8 +121,9 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   `unitOnWay()`; each clip's looks from its track, its planned switch or its
   prepared file, `clipLooks()`; one not opened yet: its row as it was until it
   is), drawn as if the clock were stopped and nothing selected (no playheads,
-  no meters, no selection frame or selected row's ground, `shownSelected()`
-  false), the track number badges blinking (on the first half of each beat).
+  no meters, no selected row's ground, `shownSelected()` false; the
+  selection's frame: none while held, grey while the change waits for its
+  switch point), the track number badges blinking (on the first half of each beat).
   Meanwhile nothing changes the cells: the selection still moves (unseen),
   the scene keys (SHIFT+UP/DOWN, B+UP/DOWN
   on the scene cell) and START work; A, B's taps and edits, SHIFT+LEFT/RIGHT

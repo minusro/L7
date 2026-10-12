@@ -194,7 +194,7 @@ constexpr uint16_t FRAME_BLACK = 0x0001;
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != frameCell(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
   if (screenSwitchPending()) return BG;            // (an edge line shown: no frame meanwhile)
-  if (scenePreviewing()) return BG;                // (a scene shown before it plays: no frame, as if nothing were selected)
+  if (scenePreviewing()) return sceneHeld() ? BG : DIM;   // (a scene shown before it plays: held, no frame; waiting for its switch, grey)
   if (i != STATUS_ROW && optThenEdit()) return BG;   // (B then A on a track, its fine rotate: no frame)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
