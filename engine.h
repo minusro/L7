@@ -93,12 +93,10 @@ struct Track {
   // glide to silence, then go off (live false).
   float curMix[4] = {};
   // The filters' level make-up (setTrackMix(): filterCompOf()), before the
-  // mix, and a limiter keeping it under the clip's own peak (compCeiling,
-  // sample units): it uses no more headroom than the clip unfiltered. comp
-  // set by loop(); compNow (gliding to it) and compLimit (the limiter's gain,
-  // 1: none) the interrupt's.
-  volatile float comp = 1.0f, compCeiling = 32767.0f;
-  float compNow = 1.0f, compLimit = 1.0f;
+  // mix (in float: the track's own headroom unlimited; the master limiter
+  // catches the mix). comp set by loop(); compNow (gliding to it) the interrupt's.
+  volatile float comp = 1.0f;
+  float compNow = 1.0f;
   volatile bool stopping = false;
   volatile uint32_t underruns = 0;
   // Ran short and fell behind the clock (a snag): where the stream should be
@@ -264,7 +262,8 @@ void setTrackFilter(int t, int lo, int hi);
 float filterResponseDb(int lo, int hi, float hz);   // magnitude of the pair (analog approximation)
 // The filters' level compensation: the gain bringing a clip filtered by the
 // pair back to its unfiltered level, from its spectrum profile (config.h
-// profileOf(); 1: the filters open, or not measured), at most FILTER_COMP_MAX.
+// profileOf(); exactly 1: the filters open, or not measured), at most
+// FILTER_COMP_MAX, then taken to FILTER_COMP_STRENGTH of it in dB.
 float filterCompOf(int lo, int hi, const uint8_t *profile);
 // A clip's spectrum profile: its energy in PROFILE_BANDS octave bands (20 Hz
 // up), measured as its audio goes by (a band-pass each, both channels), kept as each
@@ -276,7 +275,8 @@ struct SpectrumProfiler {
   void feed(const uint32_t *frames, uint32_t n);
   void finish(uint8_t *profile) const;             // (PROFILE_BYTES)
 };
-void setTrackMix(int t, int volume, int balance);   // volume: steps from unity (config.h), balance: steps, clamped
+void setTrackMix(int t, int volume, int balance);
+bool limiterResting();                             // the master limiter not turning anything down (tests)   // volume: steps from unity (config.h), balance: steps, clamped
 // A clip's scale (config.h): from its overview (and peak, OVERVIEW_BYTES) the
 // dB its peak is below 0 dBFS (0: quiet or empty, QUIET_PEAK), its peak
 // (max |sample|), and the normalising factor for its overview's columns

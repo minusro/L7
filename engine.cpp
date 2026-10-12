@@ -119,7 +119,8 @@ FLASHMEM float filterCompOf(int lo, int hi, const uint8_t *p) {
     all += e;
     through += e * w / 4;
   }
-  return through * FILTER_COMP_MAX * FILTER_COMP_MAX <= all ? FILTER_COMP_MAX : sqrtf(all / through);
+  const float full = through * FILTER_COMP_MAX * FILTER_COMP_MAX <= all ? FILTER_COMP_MAX : sqrtf(all / through);
+  return full <= 1.0f ? 1.0f : powf(full, FILTER_COMP_STRENGTH);   // (part of it, in dB: FILTER_COMP_STRENGTH)
 }
 
 float filterResponseDb(int lo, int hi, float hz) {
@@ -168,15 +169,13 @@ FLASHMEM void setTrackMix(int t, int volume, int balance) {
   if (volume != VOLUME_OFF) volume = constrain(volume, -100, 100);   // (steps from unity: the clip's scale limits them, volumeStepOf())
   balance = constrain(balance, -BALANCE_MAX, BALANCE_MAX);
   float g = volumeGainOf(volume, headroomDbOf(tr.overview));
-  const float comp = filterCompOf(tr.filterLo, tr.filterHi, profileOf(tr.overview));   // (the filters' make-up: before the mix, limited)
-  const float ceiling = max(1.0f, (float)peakOf(tr.overview));
+  const float comp = filterCompOf(tr.filterLo, tr.filterHi, profileOf(tr.overview));   // (the filters' make-up: before the mix)
   float toL = balance < 0 ? -(float)balance / BALANCE_MAX : 0;   // share of the right channel moved left
   float toR = balance > 0 ? (float)balance / BALANCE_MAX : 0;    // share of the left channel moved right
   noInterrupts();
   tr.volume = volume;
   tr.balance = balance;
   tr.comp = comp;
-  tr.compCeiling = ceiling;
   tr.mixLL = g * (1 - toR);
   tr.mixLR = g * toL;
   tr.mixRL = g * toR;
@@ -691,7 +690,23 @@ static void takeSwitch(Track &tr) {
 // Per-sample step of the level glide (one-pole, GAIN_GLIDE_MS).
 static const float GLIDE = 1.0f - expf(-1000.0f / (GAIN_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));
 static const float MASTER_GLIDE = 1.0f - expf(-1000.0f / (MASTER_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));
-static const float COMP_RELEASE = 1.0f - expf(-1000.0f / (FILTER_COMP_RELEASE_MS * AUDIO_SAMPLE_RATE_EXACT));
+static const float LIMIT_RELEASE = 1.0f - expf(-1000.0f / (LIMIT_RELEASE_MS * AUDIO_SAMPLE_RATE_EXACT));
+// The master limiter (config.h): a stage's gain, down at once to keep a peak
+// at the ceiling, back up over the release.
+struct Limiter {
+  float gain = 1.0f;
+  void run(float &l, float &r) {
+    float a = max(fabsf(l), fabsf(r));
+    if (a * gain > LIMIT_CEILING) gain = LIMIT_CEILING / a;
+    if (gain == 1.0f) return;
+    l *= gain;
+    r *= gain;
+    gain += (1.0f - gain) * LIMIT_RELEASE;
+    if (gain > 0.9995f) gain = 1.0f;               // (within 0.005 dB: done; closer, a float's steps stall it)
+  }
+};
+static Limiter mixLimiter, outLimiter;            // before the master volume (what's resampled too), and after it
+bool limiterResting() { return mixLimiter.gain == 1.0f && outLimiter.gain == 1.0f; }
 static const float FADE = 1.0f - expf(-1000.0f / (FILTER_FADE_MS * AUDIO_SAMPLE_RATE_EXACT));
 static const float CUTOFF_GLIDE = 1.0f - expf(-1000.0f * AUDIO_BLOCK_SAMPLES / (FILTER_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));   // (a block's)
 
@@ -967,17 +982,14 @@ void LooperEngine::update() {
           sl += (fl - sl) * tr.lpWet;
           sr += (fr - sr) * tr.lpWet;
         }
-        // The filters' make-up, limited to the clip's own peak (Track::comp).
-        float cg = tr.compNow += (tr.comp - tr.compNow) * GLIDE;
-        if (cg != 1.0f || tr.compLimit != 1.0f) {
-          float a = max(fabsf(sl), fabsf(sr)) * cg;
-          if (a * tr.compLimit > tr.compCeiling) tr.compLimit = tr.compCeiling / a;   // (at once)
-          float k = cg * tr.compLimit;
-          sl *= k;
-          sr *= k;
-          tr.compLimit += (1.0f - tr.compLimit) * COMP_RELEASE;   // (back up slowly)
-          if (tr.compLimit > 0.99999f) tr.compLimit = 1.0f;
-          if (fabsf(tr.comp - cg) < 1e-5f) tr.compNow = tr.comp;
+        // The filters' make-up (Track::comp).
+        if (tr.compNow != tr.comp) {
+          tr.compNow += (tr.comp - tr.compNow) * GLIDE;
+          if (fabsf(tr.comp - tr.compNow) < 1e-5f) tr.compNow = tr.comp;
+        }
+        if (tr.compNow != 1.0f) {
+          sl *= tr.compNow;
+          sr *= tr.compNow;
         }
         const float *m = mix[t];
         float *c = tr.curMix;                        // levels glide (no clicks on mute, volume, start, stop)
@@ -1009,9 +1021,12 @@ void LooperEngine::update() {
     }
     transport.now = transport.now + 1;
 
+    mixL += monL;                                    // the tracks and the input, limited (the master's first stage)
+    mixR += monR;
+    mixLimiter.run(mixL, mixR);
     {                                                // (without the metronome) the tracks and the input as they are:
-      int16_t cl = (int16_t)constrain(mixL + monL, -32767.0f, 32767.0f);   // the master volume is not in it
-      int16_t cr = (int16_t)constrain(mixR + monR, -32767.0f, 32767.0f);
+      int16_t cl = (int16_t)constrain(mixL, -32767.0f, 32767.0f);   // the master volume is not in it
+      int16_t cr = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
       const uint32_t m = (uint16_t)cl | ((uint32_t)(uint16_t)cr << 16);
       mixRing[at % MIX_FRAMES] = m;                  // (always: a resample pressed late takes it from here)
       if (captureOutput) inputRing[at % INPUT_FRAMES] = m;
@@ -1019,17 +1034,18 @@ void LooperEngine::update() {
     float click = clickSample() * outGain;           // (its level from the mix before the master volume: the master volume on it now)
     {                                                // the master volume and balance
       for (int k = 0; k < 4; k++) outNow[k] += (outTo[k] - outNow[k]) * MASTER_GLIDE;
-      float l = mixL + monL, r = mixR + monR;
+      float l = mixL, r = mixR;
       blockPeak = max(blockPeak, max(fabsf(l), fabsf(r)));   // (the click's reference: before the master volume, the click left out)
       mixL = l * outNow[0] + r * outNow[1];
       mixR = l * outNow[2] + r * outNow[3];
+      outLimiter.run(mixL, mixR);                    // (the master volume over unity: the limiter's second stage)
     }
     if (usbFrame) {                                  // USB: the mix as the line out has it, without the metronome
       float uc = USB_OUT_CLICK ? click : 0.0f;
       usbFrame[0] = (int16_t)constrain(mixL + uc, -32767.0f, 32767.0f);
       usbFrame[1] = (int16_t)constrain(mixR + uc, -32767.0f, 32767.0f);
     }
-    mixL += click;
+    mixL += click;                                   // (the click not in the limiter: it'd duck the mix on every beat)
     mixR += click;
     outPeak[0] = max(outPeak[0], fabsf(mixL));
     outPeak[1] = max(outPeak[1], fabsf(mixR));

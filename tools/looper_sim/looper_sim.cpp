@@ -320,6 +320,7 @@ static void checkSync(int t, const char *label) {
   for (auto &tr : tracks) tr.gain = 0;
   tracks[t].gain = 1;
   for (int i = 0; i < 6; i++) block();             // the other tracks' levels glide down (~1 ms time constant)
+  for (int i = 0; i < 2000 && !limiterResting(); i++) block();   // (the master limiter let go, after a loud mix)
   const Track &tr = tracks[t];
   int bad = 0, checked = 0;
   for (int b = 0; b < 12; b++) {
@@ -1494,26 +1495,33 @@ int main(int argc, char **argv) {
       check(pr[0] == 'S' && level(pr, 2) == 0 && level(pr, 9) >= 10 && read && !memcmp(sd.profile, pr, PROFILE_BYTES), mp);
       const float open = filterCompOf(0, FILTER_MAX, pr), lp = filterCompOf(0, 16, pr), hp = filterCompOf(20, FILTER_MAX, pr);
       uint8_t none[PROFILE_BYTES] = {};
-      snprintf(mp, sizeof mp, "compensation: filters open x%.3f, a lowpass at 640 Hz (the sine through) x%.3f, a highpass at 1.6 kHz (gone) x%.3f, not measured x%.3f",
+      snprintf(mp, sizeof mp, "compensation (half strength): filters open x%.3f, a lowpass at 640 Hz (the sine through) x%.3f, a highpass at 1.6 kHz (gone) x%.3f (the cap, halved), not measured x%.3f",
                open, lp, hp, filterCompOf(0, 16, none));
-      check(open == 1 && lp < 1.1f && hp == FILTER_COMP_MAX && filterCompOf(0, 16, none) == 1, mp);
+      check(open == 1 && lp < 1.05f && fabsf(hp - powf(FILTER_COMP_MAX, FILTER_COMP_STRENGTH)) < 1e-4f && filterCompOf(0, 16, none) == 1, mp);
       const float before = tr.levelL;
       setTrackFilter(6, 20, FILTER_MAX);
       const float after = tr.comp, mixAfter = tr.levelL;
       setTrackFilter(6, 0, FILTER_MAX);
       snprintf(mp, sizeof mp, "the track's make-up follows its filters (x%.3f), and back (x%.3f), its mix as it was", after, (float)tr.comp);
       check(fabsf(after - hp) < 1e-4f && tr.comp == 1 && mixAfter == before && tr.levelL == before, mp);
-      // A band round the sine: little of it lost, its neighbours' share more,
-      // so made up past its own peak: limited to it (no more headroom used).
-      setTrackFilter(6, 6, 9);
+      // The master limiter: the sine turned up 16 times (+24 dB) at the output,
+      // its peaks held at the ceiling, never clipped.
+      float gains[NUM_TRACKS];
+      for (int t = 0; t < NUM_TRACKS; t++) { gains[t] = tracks[t].gain; tracks[t].gain = 0; }
+      tr.gain = 16;
       runBeats(1);
-      float l, r;
-      takeTrackPeaks(6, l, r);
+      int top = 0, clipped = 0;
+      afterAudio = [&] {
+        for (int k = 0; k < AUDIO_BLOCK_SAMPLES; k++) {
+          top = max(top, abs((int)outL.data[k]));
+          if (abs((int)outL.data[k]) >= 32767) clipped++;
+        }
+      };
       runBeats(2);
-      takeTrackPeaks(6, l, r);
-      const float ceiling = peakOf(tr.overview) * tr.mixLL / 32768;   // (the meter's scale: 1 full)
-      snprintf(mp, sizeof mp, "a band round the sine, made up x%.3f: its peak %.0f, kept under the clip's own (%.0f)", (float)tr.comp, l * 32768, ceiling * 32768);
-      check(tr.comp > 1.05f && l <= ceiling * 1.005f && l >= ceiling * 0.9f, mp);
+      afterAudio = nullptr;
+      snprintf(mp, sizeof mp, "the master limiter: a track 24 dB over, its peak at the output %d (ceiling %.0f), %d samples clipped", top, LIMIT_CEILING, clipped);
+      check(top <= (int)LIMIT_CEILING + 1 && top >= (int)(LIMIT_CEILING * 0.95f) && clipped == 0, mp);
+      for (int t = 0; t < NUM_TRACKS; t++) tracks[t].gain = gains[t];
       setTrackFilter(6, 0, FILTER_MAX);
       runBeats(1);
     }

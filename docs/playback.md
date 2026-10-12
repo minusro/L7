@@ -429,6 +429,17 @@ macOS and Windows 10 (1703) and later have the class driver built in.
   Teensyduino's stereo audio) may need it removed once in Device Manager
   (View > Show hidden devices, the "L7" entries: Uninstall device) before the
   16 channels show up.
+* The master limiter (engine.cpp `Limiter`, config.h `LIMIT_*`): the mix is
+  float all the way (tracks, filters, their make-up, the sum: no clipping
+  inside); it's limited before the master volume (the tracks and the
+  monitored input: what a resampling records, `mixRing`) and again after it
+  (a master volume over 100 %), each peak over `LIMIT_CEILING` (~-0.2 dBFS)
+  turned down at once (no look-ahead), the gain back up over
+  `LIMIT_RELEASE_MS`. The click is added after it (it would duck the mix on
+  every beat). Only the per-track USB channels (3-16) can still clip, a track
+  alone over full scale. Buffers stay 16-bit (the rings hold 16-bit
+  recordings; the codec and USB are 16-bit at full scale, so wider buffers
+  wouldn't add headroom where it's needed, and RAM2 has no room for them).
 * Out, channels 1-2: the mix as the line out has it (the tracks and the
   monitored input, while MONITOR AUDIO IN is on: `inputMonitored`; the master volume in it) without the metronome; channels
   3-16: each track as heard in the mix before the master volume (its volume,

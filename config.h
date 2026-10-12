@@ -83,8 +83,13 @@ constexpr int OVERVIEW_BYTES = OVERVIEW_COLS + 2 + PROFILE_BYTES;
 inline const uint8_t *profileOf(const uint8_t *overview) { return overview + OVERVIEW_COLS + 2; }
 inline uint8_t *profileOf(uint8_t *overview) { return overview + OVERVIEW_COLS + 2; }
 // The most the filters' compensation lifts a track (filterCompOf()).
-constexpr float FILTER_COMP_MAX = 4.0f;            // (+12 dB)
-constexpr float FILTER_COMP_RELEASE_MS = 150.0f;   // its limiter (under the clip's own peak) letting go
+constexpr float FILTER_COMP_MAX = 4.0f;            // (+12 dB, before its strength)
+constexpr float FILTER_COMP_STRENGTH = 0.5f;       // how much of the loss it makes up, in dB (0.5: half)
+// The master limiter (engine.cpp): on the mix (the tracks and the input)
+// before the master volume, and again after it (the click added after); peaks over the ceiling are
+// turned down at once, the gain back up over the release.
+constexpr float LIMIT_CEILING = 32000.0f;          // (~-0.2 dBFS)
+constexpr float LIMIT_RELEASE_MS = 150.0f;
 constexpr uint32_t PEAK_BIN_FRAMES = 4096;
 
 // Per-track filters: a highpass at step `lo`, then a lowpass at step `hi`.
