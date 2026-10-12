@@ -84,7 +84,7 @@ inline const uint8_t *profileOf(const uint8_t *overview) { return overview + OVE
 inline uint8_t *profileOf(uint8_t *overview) { return overview + OVERVIEW_COLS + 2; }
 // The most the filters' compensation lifts a track (filterCompOf()).
 constexpr float FILTER_COMP_MAX = 4.0f;            // (+12 dB, before its strength)
-constexpr float FILTER_COMP_STRENGTH = 0.5f;       // how much of the loss it makes up, in dB (0.5: half)
+constexpr float FILTER_COMP_STRENGTH = 1.0f;       // how much of the loss it makes up, in dB (1: all of it)
 // The master limiter (engine.cpp): on the mix (the tracks and the input)
 // before the master volume, and again after it (the click added after); peaks over the ceiling are
 // turned down at once, the gain back up over the release.
