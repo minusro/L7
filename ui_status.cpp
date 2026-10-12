@@ -275,7 +275,6 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   }
   const bool sceneFlash = pickedAt && millis() - pickedAt < 100;
   if (!sceneAccent) drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneFlash ? INK : labelInk(SCENE_CELL), G);
-  bool temporary = scene == 0 || scene > count;
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
   else snprintf(text, sizeof text, "%d/%d", scene, count);       // (0: the empty scene)
   uint16_t ink = sceneAccent ? ACCENT : labelInk(SCENE_CELL);
