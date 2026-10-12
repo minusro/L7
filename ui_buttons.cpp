@@ -72,7 +72,7 @@ static int actionIcon() {
     if (shift) return optBeforeShift() ? (sceneClipboardFull() ? ICON_SCENE_PASTE : ICON_SCENE_CLEAR) : ICON_SCENE_CUT;   // (paste, the clipboard empty: an empty scene)
     if (selected != STATUS_ROW && tracks[selected].state == TrackState::Empty && !recordingOn(selected) &&
         recordQueued() != selected)
-      return ICON_RESAMPLE;                          // an empty track: B+A resamples (unavailable with no clip playing unmuted)
+      return ICON_RESAMPLE;                          // an empty track: B+A resamples (nothing playing: the input, as heard)
     if (mainKeys() & m8::BTN_PLAY) return ICON_NONE;
     const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
     if (selected == STATUS_ROW && !(board.keys() & arrows))
