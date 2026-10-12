@@ -1495,7 +1495,7 @@ int main(int argc, char **argv) {
       check(pr[0] == 'S' && level(pr, 2) == 0 && level(pr, 9) >= 10 && read && !memcmp(sd.profile, pr, PROFILE_BYTES), mp);
       const float open = filterCompOf(0, FILTER_MAX, pr), lp = filterCompOf(0, 16, pr), hp = filterCompOf(20, FILTER_MAX, pr);
       uint8_t none[PROFILE_BYTES] = {};
-      snprintf(mp, sizeof mp, "compensation: filters open x%.3f, a lowpass at 640 Hz (the sine through) x%.3f, a highpass at 1.6 kHz (gone) x%.3f (the cap), not measured x%.3f",
+      snprintf(mp, sizeof mp, "compensation: filters open x%.3f, a lowpass at 640 Hz (the sine through) x%.3f, a highpass at 1.6 kHz (gone) x%.3f (the cap, at its strength), not measured x%.3f",
                open, lp, hp, filterCompOf(0, 16, none));
       check(open == 1 && lp < 1.05f && fabsf(hp - powf(FILTER_COMP_MAX, FILTER_COMP_STRENGTH)) < 1e-4f && filterCompOf(0, 16, none) == 1, mp);
       const float before = tr.levelL;

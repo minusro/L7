@@ -50,8 +50,8 @@ Other cells with B + arrows: filter (LEFT/RIGHT move, UP/DOWN width; width
 scales from the edge at the edge; the track's level compensated for what the
 filters take away: `filterCompOf()`, from the clip's spectrum profile (storage.md),
 the gain bringing the filtered clip back to its unfiltered energy, x1 with
-the filters open or not measured yet, at most +12 dB `FILTER_COMP_MAX`, all of it in dB
-(`FILTER_COMP_STRENGTH` 1; tried at half); applied before the mix,
+the filters open or not measured yet, at most +12 dB `FILTER_COMP_MAX`, then half of that in dB,
+`FILTER_COMP_STRENGTH` (so at most +6 dB); applied before the mix,
 `Track::comp`, in float: the track's own headroom unlimited, the master
 limiter catching the mix, playback.md; the volume cell not showing it;
 exported in the clip's gain), volume (UP/DOWN: 0–10, each step a half line, on the clip's own scale: the
