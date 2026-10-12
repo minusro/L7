@@ -256,7 +256,8 @@ static float clickSample() {
 }
 static volatile float outPeakL = 0, outPeakR = 0;
 FLASHMEM static void setOutputMix() {
-  float g = masterStep ? powf(10.0f, (masterStep - MASTER_VOLUME_UNITY) * MASTER_STEP_DB / 20) : 0.0f;
+  float g = masterStep >= MASTER_VOLUME_MAX ? 2.0f                // (the top: 200 %)
+          : masterStep ? powf(10.0f, (masterStep - MASTER_VOLUME_UNITY) * MASTER_STEP_DB / 20) : 0.0f;
   float toL = masterBal < 0 ? -(float)masterBal / MASTER_BALANCE_MAX : 0, toR = masterBal > 0 ? (float)masterBal / MASTER_BALANCE_MAX : 0;
   noInterrupts();
   outputGain = g;

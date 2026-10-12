@@ -149,7 +149,7 @@ static void tempoByHand(float b) {
   projectTempoChanged();
 }
 // And the master volume (the app's stepMasterVolume(): one for all projects).
-static void volumeByHand(int v) { setMasterVolume(v); }
+static void volumeByHand(int v) { setMasterVolume(v); projectMasterChanged(); }   // (as app.cpp: the loaded project keeps it)
 
 #include <map>
 static std::map<std::string, uint32_t> dropStages;   // what loop() was doing when tracks ran dry
@@ -1714,14 +1714,22 @@ int main(int argc, char **argv) {
     int scenes = sceneCount(), pos = sceneCurrent();
     uint32_t sample0 = tracks[0].sample;
     check(projectCurrent() == 0 && projectFilled(0) && !projectFilled(1), "project 1 loaded (the first version's scenes), slot 2 empty");
+    setMasterVolume(12);
+    setMasterBalance(-3);
+    projectMasterChanged();
     check(projectLoad(1) && projectCurrent() == 1 && projectFilled(1) && sceneCount() == 0 && sceneCurrent() == 0,
           "an empty slot: a new project, on its empty scene");
+    check(masterVolume() == MASTER_VOLUME_UNITY && masterBalance() == 0, "its master volume at 100 %, centred (each project its own)");
     check(transportResumeBeat() == 0, "a project loaded: SHIFT+START from 1.1.1");
     bool empty = true;
     for (int t = 0; t < NUM_TRACKS; t++) if (tracks[t].state != TrackState::Empty) empty = false;
     check(empty && !projectHasClips(), "its tracks empty, no clips");
     check(projectLoad(0) && sceneCount() == scenes && sceneCurrent() == pos && tracks[0].sample == sample0,
           "back to project 1: its scenes and tracks");
+    check(masterVolume() == 12 && masterBalance() == -3, "and its own master volume and balance");
+    setMasterVolume(MASTER_VOLUME_UNITY);
+    setMasterBalance(0);
+    projectMasterChanged();
     check(projectHasClips(), "project 1 has clips");
     {
       uint32_t e = projectEdits();
@@ -1838,7 +1846,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  printf("projects: one tempo each, new ones take the last set by hand; the master volume is the app's, not a project's\n");
+  printf("projects: one tempo and master volume each; new ones take the tempo last set by hand, the volume at 100%%\n");
   {
     lastAction = "project tempo";
     auto at = [](float b, int v) { return fabsf(simTempo() - b) < 0.05f && masterVolume() == v; };
@@ -1851,19 +1859,21 @@ int main(int argc, char **argv) {
     check((sceneStep(-1) || sceneStep(1)) && sceneCurrent() != pos && masterVolume() == U - 2, "another scene: the same master volume (its own tempo)");
     check(sceneGoEmpty() && masterVolume() == U - 2, "the empty scene too");
     tempoByHand(133);
-    check(projectLoad(3) && sceneCount() == 0 && at(133, U - 2), "a new project (slot 4): the tempo last set by hand, the volume unchanged");
+    check(projectLoad(3) && sceneCount() == 0 && at(133, U), "a new project (slot 4): the tempo last set by hand, the volume at 100%");
     tempoByHand(97);
     volumeByHand(U + 2);
-    check(projectLoad(2) && at(133, U + 2), "project 3 again: its own tempo, the volume as it is (100% + 2 steps)");
-    check(projectLoad(4) && at(97, U + 2), "another new project (slot 5): 97, the last set by hand (loading project 3 didn't count)");
-    check(projectLoad(2) && at(133, U + 2), "and project 3");
+    check(projectLoad(2) && at(133, U - 2), "project 3 again: its own tempo and volume");
+    check(projectLoad(4) && at(97, U), "another new project (slot 5): 97, the last set by hand (loading project 3 didn't count), 100%");
+    check(projectLoad(3) && at(97, U + 2), "slot 4 again: its own (100% + 2 steps)");
+    check(projectLoad(2) && at(133, U - 2), "and project 3");
     for (int i = 0; i < 20; i++) serviceScenes();
-    simSetTempo(120);                              // (power off: the tempo forgotten; the volume comes back from the session, not tested here)
+    simSetTempo(120);                              // (power off: the tempo and the volume forgotten)
+    setMasterVolume(U + 1);
     for (int i = 0; i < 5; i++) block();
     storageBegin([](const char *) {});
     scenesBegin(simTempo, simSetTempo, 2, simNewTempo);
     for (int i = 0; i < 5; i++) block();
-    check(projectCurrent() == 2 && at(133, U + 2), "after a power cycle: project 3's tempo, the volume not changed by loading it");
+    check(projectCurrent() == 2 && at(133, U - 2), "after a power cycle: project 3's tempo and volume");
     volumeByHand(U);                               // (the rest at 100%)
     check(projectDelete(3) && projectDelete(4), "(the new ones deleted)");
   }
@@ -2402,7 +2412,7 @@ for f in os.listdir("."):
     check(worst < 0.01 && fabs(transport.spb - expectSpb(133.5)) < expectSpb(133.5) * 0.003, m);
     {                                                // B+DOWN: ours theirs halved, from their next beat; B+UP: back
       measure = false;
-      check(!midiScale(1), "B+UP following MIDI at 133.5: refused (267, over the clock's range)");
+      check(midiScale(1) && !midiScale(1) && midiScale(-1), "B+UP following MIDI at 133.5: doubled (267), again refused (534, over the clock's range), B+DOWN: back");
       check(midiScale(-1), "B+DOWN following MIDI: halved");
       mult = 0.5;
       runCounted(4);
@@ -3082,7 +3092,8 @@ for f in os.listdir("."):
       n = offBy(inputIndex - (uint32_t)(6 * AUDIO_SAMPLE_RATE_EXACT), mean, worst);
       snprintf(m9, sizeof m9, "doubled back: on their beat again (the last 6 s: %d kicks, worst %.1f ms; %.2f BPM)", n, worst, bpm);
       check(n >= 10 && worst < 10 && fabs(bpm - 126) <= 0.15f, m9);
-      check(!audioFollowScale(1) && fabs(bpm - 126) <= 0.15f, "doubled again (252): out of the clock's range, refused");
+      check(audioFollowScale(1) && !audioFollowScale(1) && audioFollowScale(-1) && fabs(bpm - 126) <= 0.15f,
+            "doubled again (252, in range), and again refused (504, out of the clock's range), then back");
     }
     for (int k = 0; k < 8 * (int)fps; k++) {        // their tempo rising to 132 over 8 s
       drumBpm = 126 + 6.0 * k / (8 * fps);

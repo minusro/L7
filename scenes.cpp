@@ -30,10 +30,16 @@ struct SceneList {
   uint16_t version, count, current;
   uint8_t row, cell;                             // (unused: the selection a project kept, before it stopped keeping one)
   uint16_t slot[LIST_SLOTS];                     // record slot of each scene, in list order
-  uint16_t recTempo10;                           // (unused: the tempo its last recording was made at, before each scene kept its own;
-                                                 // these 2 bytes were a project's master volume and a spare before that)
+  // Its master volume and balance: MASTER_KEPT, the volume's step << 6, the
+  // balance + 32 (MASTER_KEPT not there: not kept yet, older files, where
+  // these 2 bytes held the tempo its last recording was made at, before each
+  // scene kept its own, and before that a master volume and a spare).
+  uint16_t master;
   uint16_t tempo10;                              // the project's tempo, tenths of a BPM (0: not kept yet, older files)
 };
+static constexpr uint16_t MASTER_KEPT = 0xF000;   // (no tempo's tenths reach it)
+static uint16_t masterOf(int volume, int balance) { return MASTER_KEPT | volume << 6 | (balance + 32); }
+static_assert(MASTER_VOLUME_MAX < 32 && MASTER_BALANCE_MAX < 32, "the master volume and balance fit their bits");
 static constexpr uint32_t BLOCK = 512;
 static constexpr uint64_t FILE_BYTES = BLOCK * (1 + (uint64_t)LIST_SLOTS);
 static_assert(sizeof(SceneList) <= BLOCK && sizeof(SceneInfo) <= BLOCK, "a block each");
@@ -470,6 +476,7 @@ static SceneList newList() {
   memcpy(l.magic, "M8SL", 4);
   l.version = 1;
   l.tempo10 = tenths(newTempo ? newTempo() : 120.0f);   // a new project: the last tempo set by hand
+  l.master = masterOf(MASTER_VOLUME_UNITY, 0);     // (and the master volume at 100 %, centred)
   return l;
 }
 
@@ -639,6 +646,14 @@ FLASHMEM static bool openAs(int p, bool apply_) {
     list.tempo10 = tenths(tempo);
     listDirty = true;
   }
+  // Its master volume and balance (one saved before projects kept them: the
+  // one playing, the app's as it was, kept now).
+  if ((list.master & MASTER_KEPT) != MASTER_KEPT) {
+    list.master = masterOf(masterVolume(), masterBalance());
+    listDirty = true;
+  }
+  setMasterVolume(list.master >> 6 & 31);
+  setMasterBalance((list.master & 63) - 32);
   loading = true;                                 // (the scene's units go on as they are)
   if (apply_) apply(s, false, true, tempo);       // from 1.1.1
   else setTempo(tempo);
@@ -697,6 +712,14 @@ float sceneSavedTempo() {
   float b = list.current >= 1 && list.current <= list.count ? sceneTempo
           : list.current == list.count + 1 && list.count ? sceneAt(list.count).tempo : 0;   // (N+1*: the copy of N's)
   return b >= MIN_BPM && b <= MAX_BPM ? b : 0;
+}
+
+void projectMasterChanged() {
+  const uint16_t m = masterOf(masterVolume(), masterBalance());
+  if (m == list.master) return;
+  list.master = m;
+  listDirty = true;
+  edits++;
 }
 
 void projectTempoChanged() {

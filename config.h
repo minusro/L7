@@ -49,7 +49,7 @@ constexpr uint32_t LATENCY_FRAMES = 153;
 
 // Tempo range. Loops play at any speed this allows vs their recorded tempo
 // (1/8x to 8x); high ratios need that much more from the card.
-constexpr float MIN_BPM = 30.0f, MAX_BPM = 240.0f;
+constexpr float MIN_BPM = 30.0f, MAX_BPM = 300.0f;
 
 // Loops up to this many bars: their range's start moves a beat at a time
 // (input.cpp), and the start position is the range's first half bar or bar
@@ -130,10 +130,10 @@ constexpr int BALANCE_MAX = 20;                    // (doubled: saved balances f
 // Master volume and balance: the final output (tracks and monitored input),
 // the clock cell's control a line per step (ui_status.cpp): volume
 // 0..MASTER_VOLUME_MAX in MASTER_STEP_DB steps, MASTER_VOLUME_UNITY 100% (the
-// default; the top +9.375 dB), balance
+// default; the top 200 %, +6.02 dB, the step below it taking what's left), balance
 // -MASTER_BALANCE_MAX..MASTER_BALANCE_MAX (as a track's). Its meter: the same
 // scale (the unity step's half: 0 dBFS).
-constexpr int MASTER_VOLUME_MAX = 22, MASTER_VOLUME_UNITY = 17, MASTER_BALANCE_MAX = MASTER_VOLUME_MAX;   // (all the way: the other side's lines all off, at any volume)
+constexpr int MASTER_VOLUME_MAX = 20, MASTER_VOLUME_UNITY = 17, MASTER_BALANCE_MAX = MASTER_VOLUME_MAX;   // (all the way: the other side's lines all off, at any volume)
 constexpr float MASTER_STEP_DB = 1.875f;
 
 // Declicking: loop and range edges, and clip switches, are crossfaded over

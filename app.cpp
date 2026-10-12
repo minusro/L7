@@ -56,13 +56,16 @@ void followTempo(uint32_t spb, float shownBpm) {
 }
 float newProjectTempo() { return newBpm; }
 
-// ---- Master volume (steps, config.h): the app's, one for all projects (kept in the session).
+// ---- Master volume (steps, config.h): each project's own (scenes.cpp; new
+// ones at 100 %); the session keeps the one playing too.
 void stepMasterVolume(int by) {
   setMasterVolume(masterVolume() + by);
+  projectMasterChanged();
   changedMs = millis();
 }
 void stepMasterBalance(int by) {
   setMasterBalance(masterBalance() + by);
+  projectMasterChanged();
   changedMs = millis();
 }
 

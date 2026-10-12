@@ -46,7 +46,9 @@ static const Cell &statusCell(int cell) {
 // Each half meters its channel's output over them: white up to its level, on
 // the same scale (MASTER_VOLUME_UNITY lines: 0 dBFS), falling at
 // MV_FALL_DB_PER_S. The master limiter's reduction, in the same steps, as
-// grey lines in place of the meter's rightmost ones (falling likewise).
+// grey lines right after the meter's (falling likewise); while there are any,
+// the meter's reach the 100 % line (or the level's end, if lower) and the
+// grey ones follow on from there.
 // Shown again, it starts from silence.
 static constexpr int MV_COLS = CLOCK_BOX.w / PX, MV_ROWS = STATUS_H / PX;   // 47 x 13, the border's included
 static constexpr int MV_LINES = MASTER_VOLUME_MAX;                          // (a line per step above 0)
@@ -82,9 +84,10 @@ FLASHMEM static void drawMasterVolume(bool full) {   // (flash: RAM1 is full)
     meterDb[ch] = max(db, meterDb[ch] - fall);
     // (Line j: step j + 1's level, (j + 1 - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB.)
     int lit = meterDb[ch] < -150 ? 0 : constrain((int)floorf(meterDb[ch] / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f), 0, MV_LINES);
+    if (cutLines > 0) lit = min(MASTER_VOLUME_UNITY, levels[ch]);   // (limiting: the meter at full scale)
     for (int j = 0; j < MV_LINES; j++) {
       bool inLevel = j < levels[ch];                 // (0: none)
-      uint16_t color = j < lit && inLevel ? (j >= lit - cutLines ? DIM : INK) : inLevel ? ACCENT : BG;   // (the limiter's: grey)
+      uint16_t color = j < lit && inLevel ? INK : j >= lit && j < lit + cutLines ? DIM : inLevel ? ACCENT : BG;   // (the limiter's: grey, after the meter's)
       if (!full && color == shown[j][ch]) continue;
       shown[j][ch] = color;
       t.fillRect(CLOCK_BOX.x + (MV_LEFT + 2 * j) * PX, top + (2 + ch * (MV_HALF + 1)) * PX, PX, MV_HALF * PX, color);

@@ -11,8 +11,13 @@ row and cell, and its tempo (block 0: `tempo10`, tenths of a BPM, in the
 place of a 250th scene: room for 248 scenes, `LIST_SLOTS`; 200 at most for
 now, `MAX_SCENES`; 0 in a project saved before, which
 then keeps its current scene's tempo; `volume1` next to it is no longer used).
-Changing the tempo, in any scene, changes the project's. The master volume is
-the app's, one for all projects (in the session). `DATA/SESSION.DAT` names the
+Changing the tempo, in any scene, changes the project's. The master volume and
+balance are the project's too (block 0's `master`, in the 2 bytes that held
+`recTempo10`: `MASTER_KEPT` | step << 6 | balance + 32; without the marker, a
+file from before: it takes the one playing), set as it loads and kept as
+they're changed (`projectMasterChanged()`); a new project's: 100 %, centred.
+The session's `out=`/`pan=` still keep the one playing (the value an older
+project takes). `DATA/SESSION.DAT` names the
 loaded project and keeps the tempo last set by hand (`newbpm=`; before any:
 120 BPM): a new project starts with it. Loading a project doesn't change it. Twelve slots:
 `/L7/PROJECTS/A.L7P` … `L.L7P`, and `/L7/DATA/CLIP.DAT` for the project

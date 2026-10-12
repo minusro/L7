@@ -8,9 +8,9 @@
 // stored scene every change updates it.
 //
 // Projects: 12 slots, each a scene list with its current scene, the selected
-// row and cell, its tempo and its master volume. A new project takes the
-// tempo and master volume last set by hand (in any project; before any: 120
-// BPM, 100%). The loaded one is
+// row and cell, its tempo and its master volume and balance. A new project
+// takes the tempo last set by hand (in any project; before any: 120 BPM), its
+// master volume at 100 %, centred. The loaded one is
 // saved as it changes. A slot's file holds no audio, only the scenes (which
 // name their samples): /L7/PROJECTS/A.L7P ... L.L7P (none for an empty slot),
 // made once at full size: saving only overwrites 512-byte blocks.
@@ -35,9 +35,11 @@ void scenesForget();
 // After storageBegin(): loads project `project` (0-11; -1: the dummy one). The tempo goes
 // through the app (rounding, limits): getTempo returns it, setTempo applies a
 // project's as it loads (not a change by hand), newTempo gives new projects'
-// (the last set by hand; none: 120 BPM). (The master volume is the app's, not
-// a project's.)
+// (the last set by hand; none: 120 BPM). Each project's master volume and
+// balance go on the engine as it loads (one saved before they were kept: the
+// one playing, kept now).
 void scenesBegin(float (*getTempo)(), bool (*setTempo)(float), int project = 0, float (*newTempo)() = nullptr);
+void projectMasterChanged();   // the master volume or balance set by hand: the loaded project keeps them
 void projectTempoChanged();    // the tempo was set by hand: the loaded project keeps it (all its scenes)
 // Each scene keeps a tempo of its own (not the project's, which is the same in
 // all of them): the one it was made at (0* or N+1* made a scene, a duplicate,
@@ -93,7 +95,7 @@ bool projectFilled(int p);     // the slot holds a project (the loaded one alway
 // Loads project p: its current scene goes on the looper (playing: on a bar
 // line, as a scene change, every track starting over from 1.1.1 there and
 // the clock with them). An empty slot: a new project there, on its empty
-// scene (the tracks cleared, the tempo and master volume last set by hand).
+// scene (the tracks cleared, the tempo last set by hand, the master volume 100 %).
 // Loading keeps those for new projects as they were. false: recording.
 bool projectLoad(int p);
 // Cut and paste (projectsMayCopy(): not while recording or while another
