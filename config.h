@@ -84,6 +84,7 @@ inline const uint8_t *profileOf(const uint8_t *overview) { return overview + OVE
 inline uint8_t *profileOf(uint8_t *overview) { return overview + OVERVIEW_COLS + 2; }
 // The most the filters' compensation lifts a track (filterCompOf()).
 constexpr float FILTER_COMP_MAX = 4.0f;            // (+12 dB)
+constexpr float FILTER_COMP_RELEASE_MS = 150.0f;   // its limiter (under the clip's own peak) letting go
 constexpr uint32_t PEAK_BIN_FRAMES = 4096;
 
 // Per-track filters: a highpass at step `lo`, then a lowpass at step `hi`.

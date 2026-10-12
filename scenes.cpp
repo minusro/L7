@@ -243,11 +243,14 @@ static bool go(int pos, bool quick = false) {
   return true;
 }
 
-// Steps to and from N+1* (the copy of the last scene) are quick.
+// Steps to and from N+1* (the copy of the last scene) are quick, once the
+// modifier is let go (held: as any other, launchHeld()).
 bool sceneStep(int dir) {
   int from = sceneCurrent(), end = list.count + 1;
-  return go(from + dir, from == end || from + dir == end);
+  return go(from + dir, !holding && (from == end || from + dir == end));
 }
+// (Launched from a hold: quick to or from 0* or N+1*, as a step there.)
+static bool quickTo(int pos) { return pos == 0 || pos == list.count + 1 || list.current == list.count + 1; }
 
 // Let go: the held selection launches once its samples are open (at once if
 // they are; otherwise from serviceScenes(), the label flashing meanwhile).
@@ -255,7 +258,7 @@ static bool launchHeld() {
   if (holding || target < 0 || !unitsPrepared()) return false;
   int pos = target;
   target = -1;
-  return go(pos);
+  return go(pos, quickTo(pos));
 }
 
 bool sceneHold(bool on) {
@@ -270,7 +273,7 @@ static void takeHeld() {
   target = -1;
   go(pos, true);
 }
-bool sceneGoEmpty() { return go(0, true); }
+bool sceneGoEmpty() { return go(0, !holding); }   // (held: once let go, as any step)
 
 bool sceneNext() {
   int from = sceneCurrent(), end = list.count + 1;
@@ -278,7 +281,7 @@ bool sceneNext() {
   if (from >= (int)list.count) return go(1, from == end);   // the last, or N+1*: round to 1 (from N+1*: quick, as a step from it)
   return sceneStep(1);                             // (0*: to 1 too)
 }
-bool sceneGoEnd() { return go(list.count + 1, true); }
+bool sceneGoEnd() { return go(list.count + 1, !holding); }
 
 bool sceneCut() {
   takeHeld();

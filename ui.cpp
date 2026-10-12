@@ -317,6 +317,11 @@ FLASHMEM void drawEdgeLine() {   // (flash: RAM1 is full)
 
 void uiRefresh() {
   followProjectColor();
+  static bool wasPreviewing = false;               // (a scene shown before it plays, or not any more: every row at once)
+  if (scenePreviewing() != wasPreviewing && !menuOpen()) {
+    wasPreviewing = !wasPreviewing;
+    for (int i = 0; i < ROWS; i++) drawTrack(i);
+  }
   followTracks();                                  // (a switch through: its rows at once)
   // Redraw a little at a time so SD streaming keeps going.
   static uint32_t lastDraw = 0;

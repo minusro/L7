@@ -101,12 +101,14 @@ version's `/L7/scenes.dat` are moved to these names at boot.
 * Stepping on before the bar reuses the same bar line (unless < 50 ms away;
   then the next one, with no gap).
 * **Quick operations** — switch on the **next beat** (≥ 150 ms ahead), ignore
-  the SHIFT hold, and pull any waiting change forward to that beat:
-  * steps to and from N+1\*,
+  the SHIFT hold (except the steps and jumps to 0\* and N+1\*, which wait for
+  SHIFT to be let go like any step, then go on the next beat:
+  `quickTo()`), and pull any waiting change forward to that beat:
+  * steps to and from N+1\* (SHIFT held: once it's let go, as any step),
   * a step to the empty scene 0\* — but SHIFT held still holds it back:
     on the next beat once SHIFT is let go (leaving 0\* waits as usual;
     changing it makes it scene 1, as before),
-  * the double-tap jumps to 0\* / N+1\* (second tap held `EDGE_HOLD_MS`),
+  * the jumps to 0\* / N+1\* (SHIFT held: once it's let go),
   * scene cut, paste, duplicate (these first take a held target). A cut goes
     to the scene before; the scene just made from N+1\* (`madeSlot`, not left
     since), cut, goes back to N+1\* instead.
@@ -118,9 +120,11 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   held scene's units, `sceneHeldUnit()`, or those on their way,
   `unitOnWay()`; each clip's looks from its track, its planned switch or its
   prepared file, `clipLooks()`; one not opened yet: its row as it was until it
-  is), no playheads, the track number badges blinking (on the first half of
-  each beat). Meanwhile nothing changes the cells: the selection still moves
-  (its frame grey, whatever's held), the scene keys (SHIFT+UP/DOWN, B+UP/DOWN
+  is), drawn as if the clock were stopped and nothing selected (no playheads,
+  no meters, no selection frame or selected row's ground, `shownSelected()`
+  false), the track number badges blinking (on the first half of each beat).
+  Meanwhile nothing changes the cells: the selection still moves (unseen),
+  the scene keys (SHIFT+UP/DOWN, B+UP/DOWN
   on the scene cell) and START work; A, B's taps and edits, SHIFT+LEFT/RIGHT
   (samples, the tempo nudge) do nothing, the action button grey and empty.
 * Stopped: scene changes apply at once.

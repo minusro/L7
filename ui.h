@@ -143,7 +143,8 @@ bool screenSwitchPending();               // (input.cpp) an arrow held that swit
 // (An arrow held off an edge, the screen about to switch: none.)
 // Row i shows as selected: the selected one, but while an edge line's shown
 // (it then looks as the others).
-inline bool shownSelected(int i) { return i == selected && !menuOpen() && !screenSwitchPending(); }
+// (A scene shown before it plays, scenes.h scenePreviewing(): none, as if nothing were selected.)
+inline bool shownSelected(int i) { return i == selected && !menuOpen() && !screenSwitchPending() && !scenePreviewing(); }
 inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && shownSelected(i) ? DARK : BG; }
 // Something drawn dark grey that would vanish on it: black there instead.
 inline uint16_t onGround(uint16_t color, uint16_t ground) { return ground == DARK && color == DARK ? BG : color; }
@@ -193,7 +194,7 @@ constexpr uint16_t FRAME_BLACK = 0x0001;
 inline uint16_t cellFrame(int i, int cell) {
   if (i != selected || cell != frameCell(i) || (menuOpen() && !menuOnStatus())) return BG;   // (the menu's items have their own)
   if (screenSwitchPending()) return BG;            // (an edge line shown: no frame meanwhile)
-  if (scenePreviewing()) return DIM;               // (a scene shown before it plays: grey, whatever's held)
+  if (scenePreviewing()) return BG;                // (a scene shown before it plays: no frame, as if nothing were selected)
   if (i != STATUS_ROW && optThenEdit()) return BG;   // (B then A on a track, its fine rotate: no frame)
   uint8_t k = board.keys();
   const uint8_t arrows = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;

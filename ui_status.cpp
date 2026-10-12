@@ -160,7 +160,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
     else snprintf(text, sizeof text, "%+.1f", ms / 1000.0f);      // (10 s and more: seconds, the tag S)
   }
   const bool inSeconds = rotateShown && strchr(text, '.');
-  int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) && !screenSwitchPending() ? selectedCellIn(STATUS_ROW) : -1;   // (an arrow held off an edge: no selection shown)
+  int cell = selected == STATUS_ROW && !(menuOpen() && !menuOnStatus()) && !screenSwitchPending() && !scenePreviewing() ? selectedCellIn(STATUS_ROW) : -1;   // (an arrow held off an edge: no selection shown)
   auto labelInk = [&](int c) -> uint16_t {        // (only the selected cell: not the whole row, as on a track)
     if (c == TEMPO_CELL && src != SYNC_NONE && src != SYNC_AUDIO) return cell == c ? LIGHT : DIM;   // (an external clock's tempo, MIDI or USB: grey, light grey selected)
     if (c == SCENE_CELL || c == TEMPO_CELL) return cell == c ? INK : LIGHT;   // (the scene and the tempo: light grey, white selected)

@@ -70,7 +70,7 @@ void drawMix(int i) {
   float fall = (now - lastMs[i]) * (METER_FALL_DB_PER_S / 1000);
   lastMs[i] = now;
   for (int ch = 0; ch < 2; ch++) meterDb[i][ch] = max(gainDb(peak[ch]), meterDb[i][ch] - fall);
-  if (tr.state == TrackState::Muted || !transport.running)   // muted or stopped: no meter at once
+  if (tr.state == TrackState::Muted || !transport.running || scenePreviewing())   // muted or stopped (or a scene shown before it plays): no meter at once
     meterDb[i][0] = meterDb[i][1] = -200;                       // (not the peak hold falling)
 
   uint64_t frame = bordersOf(i, MIX_CELL);
@@ -80,7 +80,7 @@ void drawMix(int i) {
   bool muted = tr.state == TrackState::Muted, here = shownSelected(i);   // (the selected track: all its cells look selected)
   bool editing = editingCell(i, MIX_CELL);         // (B held, with other keys or not: as the filter cell)
   uint16_t ground = rowGround(i);
-  const bool noMeter = muted || !transport.running;   // (stopped or muted: no meter)
+  const bool noMeter = muted || !transport.running || scenePreviewing();   // (stopped or muted: no meter; a scene shown before it plays: as if stopped)
   uint16_t levelInk = onGround(editing ? (noMeter ? ACCENT : ACCENT_DARK) : muted ? DARK : here ? LIGHT : DIM, ground);   // (editing: the dark accent under the accent meter, as the filter's fill; no meter: all the accent colour)
   const uint16_t meterInk = editing ? ACCENT : INK;
   uint16_t outerInk = editing ? DIM : muted ? ground : here ? DIM : DARK;   // (muted: none)

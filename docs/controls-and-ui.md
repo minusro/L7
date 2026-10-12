@@ -50,9 +50,11 @@ Other cells with B + arrows: filter (LEFT/RIGHT move, UP/DOWN width; width
 scales from the edge at the edge; the track's level compensated for what the
 filters take away: `filterCompOf()`, from the clip's spectrum profile (storage.md),
 the gain bringing the filtered clip back to its unfiltered energy, x1 with
-the filters open or not measured yet, at most +12 dB `FILTER_COMP_MAX`; in the
-track's gain, `setTrackMix()`, the volume cell not showing it; exported in the
-clip's gain), volume (UP/DOWN: 0–10, each step a half line, on the clip's own scale: the
+the filters open or not measured yet, at most +12 dB `FILTER_COMP_MAX`; applied before the mix,
+`Track::comp`, with a limiter keeping the made-up signal under the clip's own
+peak, `compCeiling`, instant down, back up over `FILTER_COMP_RELEASE_MS`, so it
+uses no more headroom than the clip unfiltered; the volume cell not showing
+it; exported in the clip's gain, unlimited), volume (UP/DOWN: 0–10, each step a half line, on the clip's own scale: the
 top step plays it peaking at 0 dBFS, its unity step — where it starts — plays it as
 recorded, as many 1.875 dB steps below the top as its peak is below 0 dBFS, rounded
 up, the step just below the top taking what's left; 1.875 dB steps below unity (20 in all, unity 16; shown two to a half line, an odd step's last half dotted, every other pixel row lit, the meter lighting it the same way: none lit only when off; saved volumes from before, with half as many steps, are not converted); 0

@@ -167,12 +167,16 @@ FLASHMEM void setTrackMix(int t, int volume, int balance) {
   Track &tr = tracks[t];
   if (volume != VOLUME_OFF) volume = constrain(volume, -100, 100);   // (steps from unity: the clip's scale limits them, volumeStepOf())
   balance = constrain(balance, -BALANCE_MAX, BALANCE_MAX);
-  float g = volumeGainOf(volume, headroomDbOf(tr.overview)) * filterCompOf(tr.filterLo, tr.filterHi, profileOf(tr.overview));
+  float g = volumeGainOf(volume, headroomDbOf(tr.overview));
+  const float comp = filterCompOf(tr.filterLo, tr.filterHi, profileOf(tr.overview));   // (the filters' make-up: before the mix, limited)
+  const float ceiling = max(1.0f, (float)peakOf(tr.overview));
   float toL = balance < 0 ? -(float)balance / BALANCE_MAX : 0;   // share of the right channel moved left
   float toR = balance > 0 ? (float)balance / BALANCE_MAX : 0;    // share of the left channel moved right
   noInterrupts();
   tr.volume = volume;
   tr.balance = balance;
+  tr.comp = comp;
+  tr.compCeiling = ceiling;
   tr.mixLL = g * (1 - toR);
   tr.mixLR = g * toL;
   tr.mixRL = g * toR;
@@ -687,6 +691,7 @@ static void takeSwitch(Track &tr) {
 // Per-sample step of the level glide (one-pole, GAIN_GLIDE_MS).
 static const float GLIDE = 1.0f - expf(-1000.0f / (GAIN_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));
 static const float MASTER_GLIDE = 1.0f - expf(-1000.0f / (MASTER_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));
+static const float COMP_RELEASE = 1.0f - expf(-1000.0f / (FILTER_COMP_RELEASE_MS * AUDIO_SAMPLE_RATE_EXACT));
 static const float FADE = 1.0f - expf(-1000.0f / (FILTER_FADE_MS * AUDIO_SAMPLE_RATE_EXACT));
 static const float CUTOFF_GLIDE = 1.0f - expf(-1000.0f * AUDIO_BLOCK_SAMPLES / (FILTER_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));   // (a block's)
 
@@ -961,6 +966,18 @@ void LooperEngine::update() {
           float fl = runBiquad(tr.lp, tr.filterZ[1][0], sl), fr = runBiquad(tr.lp, tr.filterZ[1][1], sr);
           sl += (fl - sl) * tr.lpWet;
           sr += (fr - sr) * tr.lpWet;
+        }
+        // The filters' make-up, limited to the clip's own peak (Track::comp).
+        float cg = tr.compNow += (tr.comp - tr.compNow) * GLIDE;
+        if (cg != 1.0f || tr.compLimit != 1.0f) {
+          float a = max(fabsf(sl), fabsf(sr)) * cg;
+          if (a * tr.compLimit > tr.compCeiling) tr.compLimit = tr.compCeiling / a;   // (at once)
+          float k = cg * tr.compLimit;
+          sl *= k;
+          sr *= k;
+          tr.compLimit += (1.0f - tr.compLimit) * COMP_RELEASE;   // (back up slowly)
+          if (tr.compLimit > 0.99999f) tr.compLimit = 1.0f;
+          if (fabsf(tr.comp - cg) < 1e-5f) tr.compNow = tr.comp;
         }
         const float *m = mix[t];
         float *c = tr.curMix;                        // levels glide (no clicks on mute, volume, start, stop)

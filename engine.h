@@ -92,6 +92,13 @@ struct Track {
   // towards the targets; 0 while not live. stopping (loop() -> interrupt):
   // glide to silence, then go off (live false).
   float curMix[4] = {};
+  // The filters' level make-up (setTrackMix(): filterCompOf()), before the
+  // mix, and a limiter keeping it under the clip's own peak (compCeiling,
+  // sample units): it uses no more headroom than the clip unfiltered. comp
+  // set by loop(); compNow (gliding to it) and compLimit (the limiter's gain,
+  // 1: none) the interrupt's.
+  volatile float comp = 1.0f, compCeiling = 32767.0f;
+  float compNow = 1.0f, compLimit = 1.0f;
   volatile bool stopping = false;
   volatile uint32_t underruns = 0;
   // Ran short and fell behind the clock (a snag): where the stream should be

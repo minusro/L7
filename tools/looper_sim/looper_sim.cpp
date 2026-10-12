@@ -1407,22 +1407,25 @@ int main(int argc, char **argv) {
     waitScene();
   }
 
-  printf("quick scene changes: on the next beat, SHIFT held or not\n");
+  printf("quick scene changes: on the next beat once SHIFT is let go\n");
   {
     auto empty = [] { for (auto &x : tracks) if (x.state != TrackState::Empty) return false; return true; };
     while (transport.beat % 4 != 0 || transport.sampleInBeat > transport.spb / 4) block();   // early in a bar
-    int32_t pressed = transport.beat;
     sceneHold(true);
-    check(sceneGoEmpty() && !sceneHeld() && sceneCurrent() == 0 && sceneChangeWaiting(),
-          "SHIFT held, jump to 0*: goes at once");
+    check(sceneGoEmpty() && sceneHeld() && sceneCurrent() == 0 && !sceneChangeWaiting(),
+          "SHIFT held, jump to 0*: held, as any step");
+    for (int i = 0; i < 10; i++) block();
+    check(sceneHeld() && !sceneChangeWaiting(), "still held while SHIFT is");
+    int32_t pressed = transport.beat;
+    sceneHold(false);
+    check(!sceneHeld() && sceneCurrent() == 0 && sceneChangeWaiting(), "SHIFT let go: on its way");
     int32_t at = -1;
     afterAudio = [&] { if (at < 0 && !sceneChangeWaiting()) at = transport.beat; };
     waitScene();
     for (int i = 0; i < 5; i++) block();
     afterAudio = nullptr;
-    sceneHold(false);
     char m[128];
-    snprintf(m, sizeof m, "switched on the next beat (beat %d, pressed in %d), tracks empty", at, pressed);
+    snprintf(m, sizeof m, "switched on the next beat (beat %d, let go in %d), tracks empty", at, pressed);
     check(at == pressed + 1 && empty(), m);
     // A step waiting for its bar line, then a quick jump: all on the next beat.
     while (transport.beat % 4 != 0 || transport.sampleInBeat > transport.spb / 4) block();
@@ -1496,10 +1499,23 @@ int main(int argc, char **argv) {
       check(open == 1 && lp < 1.1f && hp == FILTER_COMP_MAX && filterCompOf(0, 16, none) == 1, mp);
       const float before = tr.levelL;
       setTrackFilter(6, 20, FILTER_MAX);
-      const float after = tr.levelL;
+      const float after = tr.comp, mixAfter = tr.levelL;
       setTrackFilter(6, 0, FILTER_MAX);
-      snprintf(mp, sizeof mp, "the track's gain follows its filters (x%.3f), and back (x%.3f)", after / before, tr.levelL / before);
-      check(fabsf(after / before - hp) < 1e-4f && fabsf(tr.levelL / before - 1) < 1e-4f, mp);
+      snprintf(mp, sizeof mp, "the track's make-up follows its filters (x%.3f), and back (x%.3f), its mix as it was", after, (float)tr.comp);
+      check(fabsf(after - hp) < 1e-4f && tr.comp == 1 && mixAfter == before && tr.levelL == before, mp);
+      // A band round the sine: little of it lost, its neighbours' share more,
+      // so made up past its own peak: limited to it (no more headroom used).
+      setTrackFilter(6, 6, 9);
+      runBeats(1);
+      float l, r;
+      takeTrackPeaks(6, l, r);
+      runBeats(2);
+      takeTrackPeaks(6, l, r);
+      const float ceiling = peakOf(tr.overview) * tr.mixLL / 32768;   // (the meter's scale: 1 full)
+      snprintf(mp, sizeof mp, "a band round the sine, made up x%.3f: its peak %.0f, kept under the clip's own (%.0f)", (float)tr.comp, l * 32768, ceiling * 32768);
+      check(tr.comp > 1.05f && l <= ceiling * 1.005f && l >= ceiling * 0.9f, mp);
+      setTrackFilter(6, 0, FILTER_MAX);
+      runBeats(1);
     }
     recordSine(5, 331, 3.6);
     inputMonitored = false;
