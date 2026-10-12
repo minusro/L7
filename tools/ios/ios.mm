@@ -154,7 +154,7 @@ struct Key { uint8_t bit; const char *label; CGRect rect; };
     _screen.magnificationFilter = kCAFilterNearest;
     _screen.backgroundColor = UIColor.blackColor.CGColor;
     [self.layer addSublayer:_screen];
-    const Key keys[8] = {{m8::BTN_UP, "▲"}, {m8::BTN_LEFT, "◀"}, {m8::BTN_DOWN, "▼"}, {m8::BTN_RIGHT, "▶"},
+    const Key keys[8] = {{m8::BTN_UP, "▲\uFE0E"}, {m8::BTN_LEFT, "◀\uFE0E"}, {m8::BTN_DOWN, "▼\uFE0E"}, {m8::BTN_RIGHT, "▶\uFE0E"},
                          {m8::BTN_OPT, "OPTION"}, {m8::BTN_EDIT, "EDIT"}, {m8::BTN_SHIFT, "SHIFT"}, {m8::BTN_PLAY, "PLAY"}};
     for (int i = 0; i < 8; i++) {
       _keys[i] = keys[i];
