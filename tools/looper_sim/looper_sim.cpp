@@ -1305,13 +1305,18 @@ int main(int argc, char **argv) {
     snprintf(m, sizeof m, "track 6 stops on the bar line (beat %d +%u), then empty", stop.beat, stop.sib);
     check(onBar(stop, AUDIO_BLOCK_SAMPLES) && tracks[5].state == TrackState::Empty, m);
     check(tracks[0].volume == 6, "the volume set while waiting stayed");
-    int kept = 0, jumped = 0;
+    int fromStart = 0, elsewhere = 0;              // (every clip from its start position at the switch: the bar line)
     for (int t = 0; t < NUM_TRACKS; t++) {
-      if (tracks[t].state == TrackState::Empty || tracks[t].rangeBeats != beatsBefore[t]) continue;
-      if (pmod(tracks[t].rangeAnchorQ - anchorBefore[t], 4 * beatsBefore[t]) == 0) kept++; else jumped++;
+      const Track &tr = tracks[t];
+      if (tr.state == TrackState::Empty) continue;
+      const uint32_t loopBeats = tr.loopBars * BEATS_PER_BAR;
+      const int32_t sp = (int32_t)startPosition(loopBeats, tr.rangeStartBeat, tr.rangeBeats);
+      const int32_t want = 4 * stop.beat - 4 * (int32_t)pmod(sp - (int32_t)tr.rangeStartBeat, loopBeats);
+      if (pmod(tr.rangeAnchorQ - want, 4 * tr.rangeBeats) == 0) fromStart++; else elsewhere++;
     }
-    snprintf(m, sizeof m, "loops as long as before carry on from the same spot (%d kept, %d jumped)", kept, jumped);
-    check(kept > 0 && jumped == 0, m);
+    (void)beatsBefore; (void)anchorBefore;
+    snprintf(m, sizeof m, "every clip from its start position at the switch (%d from it, %d elsewhere)", fromStart, elsewhere);
+    check(fromStart > 0 && elsewhere == 0, m);
     checkSync(2, "track 3 on B's sample");
     setTrackMix(0, VOLUME_UNITY, 0);
     trackChanged(0);

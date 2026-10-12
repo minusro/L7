@@ -44,7 +44,7 @@ bool setTrackUnit(int t, const TrackUnit &u);
 // of ~60 ms is enough. restart (a project switch): at that bar line every
 // track starts over from its 1.1.1 position (as transportStart() places it),
 // and the clock reads 1.1.1 there (transportOrigin()).
-int32_t beginSceneChange(bool quick = false, bool prepared = false, bool restart = false);
+int32_t beginSceneChange(bool quick = false, bool prepared = false, bool restart = false, bool clockToo = true);   // restart: every clip from its start position there (clockToo: the clock from 1.1.1 too: a project switch)
 // The transport beat the clock counts from (its 1.1.1): 0, or where a
 // project switch while playing started over.
 int32_t transportOrigin();

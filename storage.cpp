@@ -1086,7 +1086,7 @@ static bool sceneChangeOn() {
   return false;
 }
 
-int32_t beginSceneChange(bool quick, bool prepared, bool restart) {
+int32_t beginSceneChange(bool quick, bool prepared, bool restart, bool clockToo) {
   inSceneChange = true;
   sceneRestart = restart && transport.running;
   if (!transport.running) return -1;
@@ -1111,8 +1111,10 @@ int32_t beginSceneChange(bool quick, bool prepared, bool restart) {
   if (sceneRestart) {                            // every change of this scene restarts (also ones carried along)
     for (auto &c : changes)
       if (c.on && c.scene) c.restart = true;
-    clockOriginNext = sceneQ / 4;
-    transport.midiRestartBeat = sceneQ / 4;      // (MIDI followers: back to 1.1.1 there too)
+    if (clockToo) {                              // (a project switch: the clock back to 1.1.1 there too; a scene's: it runs on)
+      clockOriginNext = sceneQ / 4;
+      transport.midiRestartBeat = sceneQ / 4;    // (MIDI followers: back to 1.1.1 there too)
+    }
   }
   return sceneQ / 4;
 }

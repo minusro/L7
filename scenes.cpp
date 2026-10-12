@@ -176,10 +176,10 @@ static void commit() {
 // after the tracks (a scene keeps the tempo: it's the project's). While
 // playing, all of it changes on the next bar line with time to load (quick:
 // the next beat).
-static void apply(const SceneInfo &s, bool quick, bool restart = false, float tempo = 0) {
+static void apply(const SceneInfo &s, bool quick, bool restart = false, float tempo = 0, bool clockToo = true) {
   debugStage = "scene apply";
   loading = true;
-  int32_t at = beginSceneChange(quick, unitsPrepared(), restart);
+  int32_t at = beginSceneChange(quick, unitsPrepared(), restart, clockToo);
   for (int t = 0; t < NUM_TRACKS; t++) setTrackUnit(t, s.units[t]);   // (they take the prepared files)
   prepareUnits(nullptr);
   if (tempo > 0) {
@@ -217,7 +217,7 @@ static bool go(int pos, bool quick = false) {
   listDirty = true;
   SceneInfo s = sceneAt(min(pos, (int)list.count));   // N+1*: a copy of N
   sceneTempo = pos >= 1 && pos <= list.count ? s.tempo : 0;   // (0* and N+1*: none until made a scene)
-  apply(s, quick, false, sceneTempo);              // (each scene its own tempo, on the switch: 0*, N+1*: as it is)
+  apply(s, quick, true, sceneTempo, false);        // (every clip from its start position, the clock running on; each scene its own tempo: 0*, N+1*: as it is)
   return true;
 }
 

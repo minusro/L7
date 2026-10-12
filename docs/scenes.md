@@ -111,6 +111,9 @@ version's `/L7/scenes.dat` are moved to these names at boot.
   another scene, or a change waiting for its switch point.
 * Stopped: scene changes apply at once.
 * No scene changes while recording.
+* **Switching scenes** (`go()`): every clip starts from its start position at
+  the switch, the same clip too (`beginSceneChange(..., restart, clockToo = false)`:
+  as a project switch, but the clock runs on).
 * **After a resampling** (`sceneFromResample(t)`, from `followRecording()`):
   a new scene is inserted after the current one, holding
   the resampled clip, on track 1 (the bottom row; another recording running there: on its own track; its volume a step over unity: the mix it recorded already had the tracks' headroom, `masterGain` ~-3.1 dB, in it, so it plays as loud as what it resampled), and the current scene's muted clips,
