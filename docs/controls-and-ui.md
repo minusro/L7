@@ -64,7 +64,7 @@ recorded. Its meter: the top half at 0 dBFS. `volumeStepOf()` in engine.cpp; the
 clip's peak is kept in its WAV header, older ones' taken from their overview) and balance (while B is held on it: its level lines light grey, the meter in the accent colour; stopped or muted, no meter: the level all in the accent colour; LEFT/RIGHT: ±20, two steps a half line, an odd one dotting it; each step moves the
 other channel's level by a half line, so every press shows; all the way one side, that way again: the volume up a step; UP at the top step, panned: the balance a step back to the centre),
 tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–300 BPM),
-the clock cell: the master volume and balance, each project's own (new ones: 100 %, centred) (UP/DOWN the volume a step, LEFT/RIGHT the balance, ±20, all the way: the other side silent; past it, the volume up a step; UP at full volume, panned: the balance a step back; B twice: back to 100% and centred, as B twice resets any cell; saved in the session as `out=` and `pan=`, older `gain=`, `level=`/`balance=` and `volume=` converted).
+the clock cell: the master volume and balance, each project's own (new ones: 100 %, centred) (UP/DOWN the volume a step, LEFT/RIGHT the balance, ±21, all the way: the other side silent; past it, the volume up a step; UP at full volume, panned: the balance a step back; B twice: back to 100% and centred, as B twice resets any cell; saved in the session as `out=` and `pan=`, older `gain=`, `level=`/`balance=` and `volume=` converted).
 
 Timing constants (input.cpp): key repeat after 200 ms, every 50 ms;
 double tap within 200 ms (100 ms was too short); edge-jump hold 350 ms.
@@ -166,14 +166,13 @@ A recording track's waveform area is in the accent colour (a block of black betw
   running), two grey dots 2 × 2 blocks a block in from the cell's right inner edge, one over the other a block
   apart: while the clock runs the top one white for 100 ms from each bar's first beat (X.1.1), the
   bottom one light grey from the other beats'. While B alone is held on the clock
-  cell it shows the master volume and balance instead: 20 vertical lines across the
-  cell (one per step 1–20, 1.875 dB apart: 0 off, 17 100% — the default —, 20 200 %, +6.02 dB, the step
-  below it taking what's left;
+  cell it shows the master volume and balance instead: 21 vertical lines across the
+  cell (one per step 1–21, 1.875 dB apart up to 17, 100 % — the default —, then ~1.5 dB apart to 21, 200 %, +6.02 dB; 0 off;
   balance ±20), their upper halves the left channel's, the lower halves the right's:
   in the accent colour, as many as that channel's level (the volume less the balance away
   from it; none at 0), black after it; each half meters its channel (white, line 17
   0 dBFS — the master limiter holding it just under —, falling back from peaks), the
-  output as it would be without the master limiter metered under it in grey (its
+  output as it would be without the master limiter (one, on the summed mix) metered under it in grey (its
   peaks, the pre-volume mix through the master volume, `takeOutputPeaks()`'s raw
   ones, falling likewise): what the limiter takes off shows as grey lines past the
   white ones, also past the level's end,

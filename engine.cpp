@@ -258,7 +258,7 @@ static volatile float outPeakL = 0, outPeakR = 0;
 static volatile float rawPeakL = 0, rawPeakR = 0;   // (the output as it'd be without the limiter)
 FLASHMEM static void setOutputMix() {
   float g = masterStep >= MASTER_VOLUME_MAX ? 2.0f                // (the top: 200 %)
-          : masterStep ? powf(10.0f, (masterStep - MASTER_VOLUME_UNITY) * MASTER_STEP_DB / 20) : 0.0f;
+          : masterStep ? powf(10.0f, masterStepDb(masterStep) / 20) : 0.0f;
   float toL = masterBal < 0 ? -(float)masterBal / MASTER_BALANCE_MAX : 0, toR = masterBal > 0 ? (float)masterBal / MASTER_BALANCE_MAX : 0;
   noInterrupts();
   outputGain = g;
@@ -695,14 +695,14 @@ static void takeSwitch(Track &tr) {
 static const float GLIDE = 1.0f - expf(-1000.0f / (GAIN_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));
 static const float MASTER_GLIDE = 1.0f - expf(-1000.0f / (MASTER_GLIDE_MS * AUDIO_SAMPLE_RATE_EXACT));
 static const float LIMIT_RELEASE = 1.0f - expf(-1000.0f / (LIMIT_RELEASE_MS * AUDIO_SAMPLE_RATE_EXACT));
-// The master limiter (config.h): a stage's gain, down at once to keep a peak
-// at the ceiling, back up over the release.
+// The master limiter (config.h): its gain, down at once to keep a peak at
+// the ceiling, back up over the release.
 struct Limiter {
   float gain = 1.0f, low = 1.0f;                   // (low: its least this block, metered)
-  void run(float &l, float &r) {
+  void run(float &l, float &r, float ceiling) {
     float a = max(fabsf(l), fabsf(r));
-    if (a * gain > LIMIT_CEILING) {
-      gain = LIMIT_CEILING / a;
+    if (a * gain > ceiling) {
+      gain = ceiling / a;
       if (gain < low) low = gain;
     }
     if (gain == 1.0f) return;
@@ -712,8 +712,11 @@ struct Limiter {
     if (gain > 0.9995f) gain = 1.0f;               // (within 0.005 dB: done; closer, a float's steps stall it)
   }
 };
-static Limiter mixLimiter, outLimiter;            // before the master volume (what's resampled too), and after it
-bool limiterResting() { return mixLimiter.gain == 1.0f && outLimiter.gain == 1.0f; }
+// One, on the tracks summed (and the input), before the master volume: its
+// ceiling lowered by the master volume's gain over 100 % (so the output stays
+// under full scale too).
+static Limiter mixLimiter;
+bool limiterResting() { return mixLimiter.gain == 1.0f; }
 static volatile float limitLow = 1.0f;            // the most it turned down since last taken (a gain: 1 none)
 float takeLimiterReduction() {
   noInterrupts();
@@ -897,6 +900,7 @@ void LooperEngine::update() {
   // Resampling: the output goes in the input history (what's recorded) instead.
   const bool captureOutput = recording.resample && recording.mode != Recording::Idle;
   const float outGain = outputGain, outTo[4] = {outLL, outLR, outRL, outRR};
+  const float limitCeiling = LIMIT_CEILING / max(1.0f, max(outTo[0] + outTo[1], outTo[2] + outTo[3]));   // (the master volume's most on a side)
   static float outNow[4] = {1, 0, 0, 1};           // (the master's mix as it glides, MASTER_GLIDE_MS)
   for (auto &tr : tracks) glideFilters(tr);
   float outPeak[2] = {0, 0}, rawPeak[2] = {0, 0};
@@ -1039,7 +1043,7 @@ void LooperEngine::update() {
     mixL += monL;                                    // the tracks and the input, limited (the master's first stage)
     mixR += monR;
     const float preL = mixL, preR = mixR;            // (unlimited: metered)
-    mixLimiter.run(mixL, mixR);
+    mixLimiter.run(mixL, mixR, limitCeiling);
     {                                                // (without the metronome) the tracks and the input as they are:
       int16_t cl = (int16_t)constrain(mixL, -32767.0f, 32767.0f);   // the master volume is not in it
       int16_t cr = (int16_t)constrain(mixR, -32767.0f, 32767.0f);
@@ -1056,7 +1060,6 @@ void LooperEngine::update() {
       mixR = l * outNow[2] + r * outNow[3];
       rawPeak[0] = max(rawPeak[0], fabsf(preL * outNow[0] + preR * outNow[1]));   // (as it'd be unlimited)
       rawPeak[1] = max(rawPeak[1], fabsf(preL * outNow[2] + preR * outNow[3]));
-      outLimiter.run(mixL, mixR);                    // (the master volume over unity: the limiter's second stage)
     }
     if (usbFrame) {                                  // USB: the mix as the line out has it, without the metronome
       float uc = USB_OUT_CLICK ? click : 0.0f;
@@ -1098,10 +1101,8 @@ void LooperEngine::update() {
   }
 
   {                                                // the master limiter's most this block (both stages)
-    float g = mixLimiter.low * outLimiter.low;
-    if (g < limitLow) limitLow = g;
+    if (mixLimiter.low < limitLow) limitLow = mixLimiter.low;
     mixLimiter.low = mixLimiter.gain;
-    outLimiter.low = outLimiter.gain;
   }
   if (rawPeak[0] > rawPeakL * 32768) rawPeakL = rawPeak[0] / 32768;
   if (rawPeak[1] > rawPeakR * 32768) rawPeakR = rawPeak[1] / 32768;

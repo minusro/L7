@@ -72,7 +72,7 @@ FLASHMEM static void drawMasterVolume(bool full) {   // (flash: RAM1 is full)
     t.fillRect(CLOCK_BOX.x + PX, top + PX, CLOCK_BOX.w - 2 * PX, STATUS_H - 2 * PX, rowGround(STATUS_ROW));   // (inside the border)
     meterDb[0] = meterDb[1] = rawDb[0] = rawDb[1] = -200;
   }
-  auto lines = [](float db) { return db < -150 ? 0 : constrain((int)floorf(db / MASTER_STEP_DB + MASTER_VOLUME_UNITY + 0.5f), 0, MV_LINES); };
+  auto lines = [](float db) { return db < -150 ? 0 : constrain((int)floorf(masterSteps(db) + 0.5f), 0, MV_LINES); };
   const int vol = masterVolume(), bal = masterBalance();
   const int levels[2] = {vol - max(0, bal), vol - max(0, -bal)};
   for (int ch = 0; ch < 2; ch++) {
@@ -80,7 +80,7 @@ FLASHMEM static void drawMasterVolume(bool full) {   // (flash: RAM1 is full)
     meterDb[ch] = max(db, meterDb[ch] - fall);
     float rdb = raw[ch] > 0 ? 20 * log10f(raw[ch]) : -200.0f;
     rawDb[ch] = max(rdb, rawDb[ch] - fall);
-    // (Line j: step j + 1's level, (j + 1 - MASTER_VOLUME_UNITY) * MASTER_STEP_DB dB.)
+    // (Line j: step j + 1's level, masterStepDb(j + 1) dB.)
     const int lit = lines(meterDb[ch]), rawLit = lines(rawDb[ch]);
     for (int j = 0; j < MV_LINES; j++) {
       bool inLevel = j < levels[ch];                 // (0: none)

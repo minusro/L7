@@ -431,11 +431,13 @@ macOS and Windows 10 (1703) and later have the class driver built in.
   16 channels show up.
 * The master limiter (engine.cpp `Limiter`, config.h `LIMIT_*`): the mix is
   float all the way (tracks, filters, their make-up, the sum: no clipping
-  inside); it's limited before the master volume (the tracks and the
-  monitored input: what a resampling records, `mixRing`) and again after it
-  (a master volume over 100 %), each peak over `LIMIT_CEILING` (~-0.2 dBFS)
-  turned down at once (no look-ahead), the gain back up over
-  `LIMIT_RELEASE_MS`. The click is added after it (it would duck the mix on
+  inside); one limiter, on the tracks summed (and the monitored input: what a
+  resampling records, `mixRing`), before the master volume: each peak over
+  its ceiling turned down at once (no look-ahead), the gain back up over
+  `LIMIT_RELEASE_MS`; the ceiling `LIMIT_CEILING` (~-0.2 dBFS), lowered by the
+  master volume's gain over 100 % (its most on either side, balance counted),
+  so the output stays under full scale too (a resampling with the master over
+  100 % comes out that much lower). The click is added after it (it would duck the mix on
   every beat). Only the per-track USB channels (3-16) can still clip, a track
   alone over full scale. Buffers stay 16-bit (the rings hold 16-bit
   recordings; the codec and USB are 16-bit at full scale, so wider buffers

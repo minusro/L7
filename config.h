@@ -85,8 +85,9 @@ inline uint8_t *profileOf(uint8_t *overview) { return overview + OVERVIEW_COLS +
 // The most the filters' compensation lifts a track (filterCompOf()).
 constexpr float FILTER_COMP_MAX = 4.0f;            // (+12 dB, before its strength)
 constexpr float FILTER_COMP_STRENGTH = 0.5f;       // how much of the loss it makes up, in dB (0.5: half)
-// The master limiter (engine.cpp): on the mix (the tracks and the input)
-// before the master volume, and again after it (the click added after); peaks over the ceiling are
+// The master limiter (engine.cpp): one, on the mix (the tracks summed and the
+// input) before the master volume, its ceiling lowered by the master volume
+// over 100 % (the output under full scale too; the click added after); peaks over the ceiling are
 // turned down at once, the gain back up over the release.
 constexpr float LIMIT_CEILING = 32000.0f;          // (~-0.2 dBFS)
 constexpr float LIMIT_RELEASE_MS = 150.0f;
@@ -129,12 +130,16 @@ constexpr int EMPTY_SPAN = 256;
 constexpr int BALANCE_MAX = 20;                    // (doubled: saved balances from before, half as many steps, not converted)
 // Master volume and balance: the final output (tracks and monitored input),
 // the clock cell's control a line per step (ui_status.cpp): volume
-// 0..MASTER_VOLUME_MAX in MASTER_STEP_DB steps, MASTER_VOLUME_UNITY 100% (the
-// default; the top 200 %, +6.02 dB, the step below it taking what's left), balance
+// 0..MASTER_VOLUME_MAX in MASTER_STEP_DB steps up to MASTER_VOLUME_UNITY 100%
+// (the default), then MASTER_UP_DB ones to the top, 200 % (+6.02 dB), balance
 // -MASTER_BALANCE_MAX..MASTER_BALANCE_MAX (as a track's). Its meter: the same
 // scale (the unity step's half: 0 dBFS).
-constexpr int MASTER_VOLUME_MAX = 20, MASTER_VOLUME_UNITY = 17, MASTER_BALANCE_MAX = MASTER_VOLUME_MAX;   // (all the way: the other side's lines all off, at any volume)
+constexpr int MASTER_VOLUME_MAX = 21, MASTER_VOLUME_UNITY = 17, MASTER_BALANCE_MAX = MASTER_VOLUME_MAX;   // (all the way: the other side's lines all off, at any volume)
 constexpr float MASTER_STEP_DB = 1.875f;
+constexpr float MASTER_UP_DB = 6.0206f / (MASTER_VOLUME_MAX - MASTER_VOLUME_UNITY);   // (~1.5 dB: 200 % in four)
+// A master volume step's (or meter line's) dB from 100 %, and back (lines, rounded).
+inline float masterStepDb(int step) { return (step - MASTER_VOLUME_UNITY) * (step > MASTER_VOLUME_UNITY ? MASTER_UP_DB : MASTER_STEP_DB); }
+inline float masterSteps(float db) { return MASTER_VOLUME_UNITY + db / (db > 0 ? MASTER_UP_DB : MASTER_STEP_DB); }
 
 // Declicking: loop and range edges, and clip switches, are crossfaded over
 // this many frames (~3 ms); track levels (mute, volume, start, stop) glide
