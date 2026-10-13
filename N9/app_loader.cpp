@@ -22,10 +22,28 @@ static int hexByte(const char *p) {
   return h < 0 || l < 0 ? -1 : h << 4 | l;
 }
 
+// The linker's length of the RUNNING image: the buffer starts just above
+// it. (FlasherX's own scan walks down from the top of flash until it meets
+// non-erased data - the Teensy 4 EEPROM emulation at 0x601F0000 sits below
+// its 16 KB reserve, so one historical EEPROM write collapses the buffer to
+// nothing and every record reports "image too large".)
+extern "C" unsigned long _flashimagelen;
+
+static bool ownBuffer(uint32_t *baddr, uint32_t *bsize, const char **err) {
+  uint32_t imgEnd = FLASH_BASE_ADDR + (uint32_t)&_flashimagelen;
+  uint32_t start = (imgEnd + FLASH_SECTOR_SIZE - 1) & ~(uint32_t)(FLASH_SECTOR_SIZE - 1);
+  uint32_t top = FLASH_BASE_ADDR + FLASH_SIZE - 0x10000;   // the EEPROM emulation lives above
+  if (top <= start + 0x60000) { *err = "NO ROOM ABOVE APP"; return false; }
+  if (flash_erase_block(start, top - start)) { *err = "ERASE FAILED"; return false; }   // dirty sectors only
+  *baddr = start;
+  *bsize = top - start;
+  return true;
+}
+
 bool appLoaderFlash(FsFile &file, const char **err,
                     void (*progress)(int pct), void (*preMove)()) {
   uint32_t baddr = 0, bsize = 0;
-  if (firmware_buffer_init(&baddr, &bsize) == 0) { *err = "NO FLASH BUFFER"; return false; }
+  if (!ownBuffer(&baddr, &bsize, err)) return false;
 
   uint32_t base = 0, minA = 0xFFFFFFFF, maxA = 0;
   uint32_t total = file.size(), seen = 0;
