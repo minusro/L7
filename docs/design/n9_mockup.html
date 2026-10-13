@@ -127,8 +127,10 @@
       <figure class="shot">
         <span class="label">INST &mdash; engine select and its parameters</span>
         <canvas id="inst" width="320" height="240"></canvas>
-        <figcaption>The selected track's engine: the selector on top (B + LEFT/RIGHT steps
-        engines, gapless at the next bar like L7's sample switch; the X/N count beside it),
+        <figcaption>The selected track's engine: on top the preset cell (engines with banks
+        show number + name — the M1 its program, steppable with B + LEFT/RIGHT and MIDI program
+        change; others a dash), then the engine selector (B + LEFT/RIGHT steps engines, gapless
+        at the next bar like L7's sample switch; the X/N count beside it),
         then two rows of four parameter cells — the engine defines their names. ADSR preview
         bottom-left; voice info beside it (the 32 voices are a shared pool across the nine
         tracks). Engine names here are placeholders.</figcaption>
@@ -472,9 +474,12 @@
   screen('inst', () => {
     title('INST', 'TRACK 3');
     // Engine selector: < PLUCK >  4/12
-    text(8, 32, '<', C.DIM);
-    text(24, 32, 'PLUCK', C.INK);
-    text(24 + textW('PLUCK') + 10, 32, '>', C.DIM);
+    // Preset cell (engines with banks: number + name; others a dash),
+    // then the engine selector; B + LEFT/RIGHT steps the selected one.
+    text(10, 32, '-', C.DIM);
+    text(140, 32, '<', C.DIM);
+    text(156, 32, 'PLUCK', C.INK);
+    text(156 + textW('PLUCK') + 10, 32, '>', C.DIM);
     text(282, 32, '6/13', C.DIM);
     rect(4, 46, 312, 2, C.DARK);
     const r1 = [['TUNE', '+0', 0.5], ['SHAPE', '38', 0.38], ['CUTOFF', '86', 0.86], ['RES', '22', 0.22]];

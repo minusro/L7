@@ -38,7 +38,7 @@ enum OscType : uint8_t {
              // multisound category; MIDI program change picks the program
 };
 
-constexpr uint8_t E_303 = 8, E_M1 = 12;   // their places in ENGINE_NAMES
+// (E_303 / E_M1: n9_state.h)
 
 // Per-engine fixed settings (ms; the real app gets these from the INST cells).
 struct EngineDef {
@@ -332,7 +332,9 @@ static HardwareSerial *midiSerial = nullptr;
 
 void synthMidiBegin() { midiSerial = board.midiInBegin(); }
 
-static void setM1Program(uint8_t p) {
+uint8_t m1Program() { return m1Prog; }
+
+void m1SetProgram(uint8_t p) {
   if (p > 99) return;
   m1Prog = p;
   Serial.printf("m1: program %02u %s\n", p, M1_BANK[p].name);
@@ -344,7 +346,7 @@ void synthServiceMidi() {
     uint8_t type = usbMIDI.getType();
     if (type == usbMIDI.NoteOn && usbMIDI.getData2() > 0) synth.noteOn(usbMIDI.getData1(), usbMIDI.getData2());
     else if (type == usbMIDI.NoteOff || type == usbMIDI.NoteOn) synth.noteOff(usbMIDI.getData1());
-    else if (type == usbMIDI.ProgramChange) setM1Program(usbMIDI.getData1());
+    else if (type == usbMIDI.ProgramChange) m1SetProgram(usbMIDI.getData1());
   }
   if (!midiSerial) return;
   static uint8_t status = 0, d1 = 255;
@@ -352,7 +354,7 @@ void synthServiceMidi() {
     uint8_t b = midiSerial->read();
     if (b >= 0xF8) continue;                      // realtime
     if (b & 0x80) { status = b; d1 = 255; continue; }
-    if (status == 0xC0) { setM1Program(b); continue; }   // channel 1 program change
+    if (status == 0xC0) { m1SetProgram(b); continue; }   // channel 1 program change
     if (status == 0x90 || status == 0x80) {       // channel 1 only
       if (d1 == 255) { d1 = b; continue; }
       if (status == 0x90 && b > 0) synth.noteOn(d1, b);

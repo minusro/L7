@@ -3,7 +3,9 @@
 
 #include <stdio.h>
 
+#include "n9_m1_bank.h"
 #include "n9_state.h"
+#include "n9_synth.h"
 
 static constexpr int PX = 2;
 
@@ -286,10 +288,18 @@ static void drawInst() {
   title("INST", ctx);
   const char *name = ENGINE_NAMES[nav.engine];
   snprintf(cnt, sizeof cnt, "%d/%d", nav.engine + 1, ENGINE_COUNT);
-  if (nav.instRow == 0) frm(4, 26, 312, 18, LIGHT);
-  txt(8, 32, "<", DIM);
-  txt(24, 32, name, INK);
-  txt(24 + txtW(name) + 10, 32, ">", DIM);
+  // The preset cell (engines with banks; the M1's program) left of the
+  // engine selector; B + LEFT/RIGHT steps whichever is selected.
+  if (nav.instRow == 0) frm(nav.instTop == 0 ? 4 : 136, 26, nav.instTop == 0 ? 128 : 180, 18, LIGHT);
+  if (nav.engine == E_M1) {
+    char pn[16];
+    snprintf(pn, sizeof pn, "%02u %s", m1Program(), M1_BANK[m1Program()].name);
+    for (char *q = pn; *q; q++) *q = toupper(*q);
+    txt(10, 32, pn, INK);
+  } else txt(10, 32, "-", DIM);
+  txt(140, 32, "<", DIM);
+  txt(156, 32, name, INK);
+  txt(156 + txtW(name) + 10, 32, ">", DIM);
   txt(282, 32, cnt, DIM);
   rct(4, 46, 312, 2, DARK);
   struct { const char *n, *v; float a; } r1[] = {{"TUNE", "+0", 0.5f}, {"SHAPE", "38", 0.38f}, {"CUTOFF", "86", 0.86f}, {"RES", "22", 0.22f}},

@@ -58,3 +58,8 @@ extern N9Synth synth;
 // Reads MIDI (USB + the serial in port) and plays channel 1. Call every loop.
 void synthServiceMidi();
 void synthMidiBegin();
+
+// The M1 engine's program (0-99): MIDI program change and the INST screen's
+// preset cell both go through these.
+uint8_t m1Program();
+void m1SetProgram(uint8_t p);

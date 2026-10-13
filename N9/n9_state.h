@@ -18,8 +18,10 @@ struct NavState {
   // edit the source row last stood on (modSrc).
   uint8_t modRow = 0, modCell = 3, modSrc = 0;
 
-  // INST: row 0 the engine selector, rows 1..2 the parameter cells (col 0..3).
-  uint8_t instRow = 0, instCol = 0;
+  // INST: row 0 holds two cells — the preset (0, engines with banks only)
+  // and the engine selector (1, instTop) — rows 1..2 the parameter cells
+  // (col 0..3).
+  uint8_t instRow = 0, instCol = 0, instTop = 1;
 
   // TFX (the track's two FX slots): rows 0/2 the slots' selectors, 1/3 their
   // parameter cells (col 0..3).
@@ -42,3 +44,4 @@ extern NavState nav;
 // placeholder voices until their emulations exist (n9_synth.cpp).
 constexpr uint8_t ENGINE_COUNT = 13;
 extern const char *const ENGINE_NAMES[ENGINE_COUNT];
+constexpr uint8_t E_303 = 8, E_M1 = 12;   // engines the code treats specially

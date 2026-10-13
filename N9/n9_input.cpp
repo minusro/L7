@@ -3,6 +3,7 @@
 
 #include "M8Board.h"
 #include "n9_state.h"
+#include "n9_synth.h"
 
 using namespace m8;
 
@@ -46,7 +47,10 @@ static bool move(int dx, int dy) {
     case SCR_INST: {
       bool c = false;
       if (dy) c = to(nav.instRow, clamp(nav.instRow + dy, 0, 2));
-      if (dx && nav.instRow > 0) c |= to(nav.instCol, clamp(nav.instCol + dx, 0, 3));
+      if (dx) {
+        if (nav.instRow > 0) c |= to(nav.instCol, clamp(nav.instCol + dx, 0, 3));
+        else c |= to(nav.instTop, clamp(nav.instTop + dx, 0, 1));
+      }
       return c;
     }
     case SCR_TFX: {
@@ -99,10 +103,14 @@ bool inputService() {
     if (shift) {                                   // the screen stack (fresh presses only)
       if (i == A_UP && nav.screen > 0) { nav.screen--; dirty = true; }
       if (i == A_DOWN && nav.screen < SCR_COUNT - 1) { nav.screen++; dirty = true; }
-    } else if (opt) {                              // B + LEFT/RIGHT on INST: step the engine
-      if (nav.screen == SCR_INST && (i == A_LEFT || i == A_RIGHT)) {
-        nav.engine = (nav.engine + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
-        dirty = true;
+    } else if (opt) {                              // B + LEFT/RIGHT on INST: step the engine,
+      if (nav.screen == SCR_INST && (i == A_LEFT || i == A_RIGHT)) {   // or, on the preset cell, the preset
+        if (nav.instRow == 0 && nav.instTop == 0) {
+          if (nav.engine == E_M1) { m1SetProgram((m1Program() + (i == A_RIGHT ? 1 : 99)) % 100); dirty = true; }
+        } else {
+          nav.engine = (nav.engine + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
+          dirty = true;
+        }
       }
     } else {
       dirty |= move(i == A_LEFT ? -1 : i == A_RIGHT ? 1 : 0, i == A_UP ? -1 : i == A_DOWN ? 1 : 0);

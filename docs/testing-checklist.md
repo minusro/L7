@@ -26,6 +26,9 @@ checked, or turn it into a fix.
 - [ ] **N9: the M1.** Engine 13 plays the factory bank's parameters (the
   user's sysex dump, sounds/M1 soundbank): MIDI program change on channel 1
   picks among the 100 programs (serial logs the name; boots on 00 Universe).
+  The INST screen's preset cell (left of the engine selector, LEFT/RIGHT on
+  the top row between the two) shows "NN NAME" on the M1, a dash elsewhere;
+  B + LEFT/RIGHT on it steps the program, wrapping at 99.
   Real per program: osc pair (octave/interval/detune), the VDA EG segments,
   VDF cutoff + env sweep, osc level and velocity sens. Stand-ins: the PCM
   multisounds are approximated by category (saw/pulse/super/sine/organ/FM
