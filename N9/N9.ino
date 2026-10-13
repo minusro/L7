@@ -53,7 +53,7 @@ void setup() {
 void loop() {
   if (inputService()) dirty = true;
   synthServiceMidi();
-  if (dirty && !board.tft().asyncUpdateActive()) { drawScreen(nav.screen); dirty = false; }
+  if (dirty) { drawScreen(nav.screen); dirty = false; }
 
   bool hp;
   if (board.headphonesChanged(hp)) board.setSpeaker(!hp);

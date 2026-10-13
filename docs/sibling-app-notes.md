@@ -41,9 +41,12 @@ L7 itself; this is the extract you need to start fresh.
 * ILI9341 320×240 over SPI at 30 MHz (stock firmware runs 70; 30 is known
   good). No frame buffer in L7 (RAM is full) — it redraws only what changed.
 * A sibling with RAM to spare: `tft().useFrameBuffer(true)` + draw whole
-  screens + `updateScreenAsync()` (DMA) is far simpler and flicker-free.
-  A full frame is ~40 ms: don't block on it (check `asyncUpdateActive()`
-  before drawing again), or MIDI/keys stall.
+  screens + the synchronous `updateScreen()` is simple and flicker-free; a
+  full frame is ~40 ms of blocking, fine for key-driven redraws. **Don't use
+  `updateScreenAsync()`**: on the M8 (N9, 30 MHz SPI, Audio library running)
+  the DMA transfer stalled — a partial first frame, `asyncUpdateActive()`
+  never clearing, the screen frozen for good while `loop()` ran on. Not
+  investigated further.
 
 ## Audio
 

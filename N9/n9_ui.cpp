@@ -361,7 +361,9 @@ void drawScreen(uint8_t ix) {
     case SCR_EDIT: drawEdit(); break;
   }
   statusRow(ix);
-  // Sent by DMA so loop() (and MIDI) isn't held up for the ~40 ms a frame
-  // takes; the caller waits for asyncUpdateActive() before drawing again.
-  if (!board.tft().updateScreenAsync()) board.tft().updateScreen();
+  // Synchronous: ~40 ms per frame, only on key-driven redraws. (The DMA
+  // updateScreenAsync() stalled on this panel: the first frame went out
+  // partly and asyncUpdateActive() never cleared, the screen frozen for
+  // good. Not investigated further.)
+  board.tft().updateScreen();
 }
