@@ -23,6 +23,13 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
+- [ ] **N9: per-track engines and FX.** Each track keeps its own engine, its
+  per-engine cells, and its two TFX slot settings; the grid cursor's track is
+  what plays, and switching tracks swaps its FX settings into the two track
+  processors (tails clear - two "fx: slot" lines on serial). Check: set
+  different engines/FX on two tracks, flip between them on the grid, and
+  confirm INST/TFX follow and edits stick per track; held notes from the old
+  track keep their own cells (no cross-bleed).
 - [ ] **Charge guard (L7 + N9, M8Board::chargeGuard).** Every 5 s on variant
   B: pauses charging (CHG_CONFIG off) on a charger fault, thermal regulation,
   battery over 4.25 V, or measured charge current over 900 mA; retries after

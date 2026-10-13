@@ -15,7 +15,13 @@ enum FxType : uint8_t {
 extern const char *const FX_TYPE_NAMES[FX_TYPES];
 
 struct FxSlot { uint8_t type; uint8_t p[4]; };
-extern FxSlot fxSlots[4];                 // 0,1 track; 2,3 master
+extern FxSlot fxSlots[4];                 // the processors: 0,1 track; 2,3 master
+
+// Each track keeps its own two slot settings; only the selected track's
+// chain processes (there is one voice chain for now), so switching tracks
+// swaps its settings into processors 0/1 (tails clear).
+extern FxSlot trackFx[9][2];
+void fxApplyTrack(uint8_t t);
 
 const ParamInfo *fxParams(uint8_t type);  // the type's four cells
 void fxSlotsInit();

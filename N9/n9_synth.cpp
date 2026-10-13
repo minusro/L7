@@ -42,14 +42,18 @@ const ParamInfo *engineParams(uint8_t e) {
   return e == E_PRO5 ? PROPHET_P : e == E_303 ? P303_P : e == E_JUNO ? JUNO_P : MI_P;
 }
 
-uint8_t engParams[ENGINE_COUNT][8];
+uint8_t trackEngine[9];
+uint8_t engParams[9][ENGINE_COUNT][8];
 
 static void paramsInit() {
-  for (uint8_t e = 0; e < ENGINE_COUNT; e++) {
-    const ParamInfo *pi = engineParams(e);
-    for (int i = 0; i < 8; i++) engParams[e][i] = pi[i].def;
+  for (uint8_t t = 0; t < 9; t++) {
+    trackEngine[t] = 0;
+    for (uint8_t e = 0; e < ENGINE_COUNT; e++) {
+      const ParamInfo *pi = engineParams(e);
+      for (int i = 0; i < 8; i++) engParams[t][e][i] = pi[i].def;
+    }
+    engParams[t][E_MI_FIRST + 15][0] = 80;       // SPEECH starts in the word banks
   }
-  engParams[E_MI_FIRST + 15][0] = 80;            // SPEECH starts in the word banks
 }
 
 // 0-99 as an easing time constant (ms) for the analog engines' envelopes.
@@ -169,7 +173,7 @@ static inline float decay(float ms) { return expf(-1.0f / (ms * 44.1f)); }
 // while it sounds and its engine is on screen, eased toward the cells every
 // block (~20 ms) so edits land on held notes without zipper noise.
 static void applyLiveParams(N9Synth::Voice &v, bool snap) {
-  const uint8_t *p = engParams[v.engine];
+  const uint8_t *p = engParams[v.track][v.engine];
   auto set = [snap](float &f, float target) { if (snap) f = target; else f += 0.14f * (target - f); };
   if (v.engine == E_PRO5) {
     set(v.minc, v.inc * (1.0f + 0.012f * p[0] / 99.0f));
@@ -226,15 +230,15 @@ static inline float m1oscS(uint8_t cat, float ph, float dt, float fmPhase, float
 }
 
 void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
-  if (nav.engine >= E_MI_FIRST) {            // the plaits pool plays the Mutable models
-    miNoteOn(note, vel, nav.engine - E_MI_FIRST);
+  if (curEngine() >= E_MI_FIRST) {            // the plaits pool plays the Mutable models
+    miNoteOn(note, vel, curEngine() - E_MI_FIRST);
     return;
   }
-  const EngineDef &d = ENGINES[nav.engine];
+  const EngineDef &d = ENGINES[curEngine()];
   float hz = 440.0f * exp2f((note - 69) / 12.0f);
   float inc = hz / 44100.0f;
   Voice *v = nullptr;
-  if (nav.engine == E_303) {                   // mono: one 303 voice, reused
+  if (curEngine() == E_303) {                   // mono: one 303 voice, reused
     for (auto &c : _v) if (c.state != IDLE && c.engine == E_303) { v = &c; break; }
     if (v && v->state != RELEASE) {            // legato: slide there, envelopes kept running
       v->tinc = inc;
@@ -251,7 +255,7 @@ void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
       if (!v) { uint32_t old = UINT32_MAX; for (auto &c : _v) if (c.age < old) { old = c.age; v = &c; } }
     }
   }
-  v->note = note; v->engine = nav.engine;
+  v->note = note; v->engine = curEngine(); v->track = nav.gridT;
   v->accent = vel >= 100;
   v->inc = v->tinc = inc;
   v->minc = d.osc == O_SUPER ? inc * 1.0045f : inc * d.ratio;
@@ -262,9 +266,9 @@ void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
   v->fenv = v->accent ? 1.25f : 0.85f;
   v->env = 0; v->lp = 0;
   v->vel = vel / 127.0f;
-  if (nav.engine == E_303 && v->accent) v->vel = 1.2f;   // the accent's kick
+  if (curEngine() == E_303 && v->accent) v->vel = 1.2f;   // the accent's kick
   v->rng = _ageCounter * 2654435761u + note * 7919u + 1;
-  if (nav.engine == E_M1) {                  // cache the program into the voice
+  if (curEngine() == E_M1) {                  // cache the program into the voice
     const M1Program &pr = M1_BANK[m1Prog];
     float velN = vel / 127.0f;
     v->dual = pr.oscMode == 1;               // (drum programs play as single)
@@ -303,7 +307,7 @@ void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
     v->mindex = v->cat1 == M1C_BELL ? 2.5f : v->cat1 == M1C_PLUCK ? 3.0f : 1.2f;
     v->midxC = v->cat1 == M1C_BELL ? decay(400) : v->cat1 == M1C_PLUCK ? decay(100) : decay(600);
     v->inc3 = v->inc * (v->cat1 == M1C_BELL ? 3.5f : 1.0f);      // the FM stand-ins' modulator
-  } else if (nav.engine == E_MWAVE) {        // cache the sound into the voice
+  } else if (curEngine() == E_MWAVE) {        // cache the sound into the voice
     const MWSound &sn = MW_BANK[mwProg];
     v->eAc = mwcoef(sn.a); v->eDc = mwcoef(sn.dec);
     v->eSc = v->eDc; v->eRc = mwcoef(sn.r);
@@ -320,8 +324,8 @@ void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
     v->midxC = 1.0f - expf(-1.0f / (900.0f * 44.1f));
   } else {                                   // the analog engines read the INST cells
     v->velN = vel / 127.0f;
-    if (nav.engine == E_PRO5 || nav.engine == E_JUNO) { v->mseg = 0; v->fenv = 1.0f; }
-    if (nav.engine == E_303) v->fenv = 1.0f;
+    if (curEngine() == E_PRO5 || curEngine() == E_JUNO) { v->mseg = 0; v->fenv = 1.0f; }
+    if (curEngine() == E_303) v->fenv = 1.0f;
     applyLiveParams(*v, true);
   }
   v->age = ++_ageCounter;
@@ -412,7 +416,8 @@ void N9Synth::update() {
     float idxC = d.osc == O_FM ? decay(d.idxDecMs) : 1.0f;
     // (the 303's and PROPHET's filter decays are per-voice now: v.fdC)
     float amp = v.vel * 0.12f;
-    if (v.engine == nav.engine && v.engine < E_MI_FIRST) applyLiveParams(v, false);   // live cell edits, eased
+    if (v.track == nav.gridT && v.engine == curEngine() && v.engine < E_MI_FIRST)
+      applyLiveParams(v, false);                 // live cell edits, eased
     float i1 = v.inc, i2 = v.minc, fmgVal = 0;
     if (d.osc == O_M1) {                         // pitch EG and the MGs, at block rate
       if (v.state == RELEASE) v.penv += v.pRc * (v.pRelL - v.penv);
@@ -630,7 +635,7 @@ void mwSetProgram(uint8_t p) {
 
 // A MIDI program change goes to the current engine's bank.
 static void setPreset(uint8_t p) {
-  if (nav.engine == E_MWAVE) mwSetProgram(p);
+  if (curEngine() == E_MWAVE) mwSetProgram(p);
   else m1SetProgram(p);
 }
 

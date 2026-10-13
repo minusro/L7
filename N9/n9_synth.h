@@ -35,7 +35,7 @@ public:
   enum : uint8_t { IDLE, ATTACK, HOLD, RELEASE };
   struct Voice {
     volatile uint8_t state = IDLE;
-    uint8_t note = 0, engine = 0;
+    uint8_t note = 0, engine = 0, track = 0;
     bool accent = false;             // 303: velocity >= 100
     // M1: the program's parameters, cached at noteOn (n9_m1_bank.h)
     uint8_t cat1 = 0, cat2 = 0, mseg = 0;

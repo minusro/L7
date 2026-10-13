@@ -117,14 +117,14 @@ bool inputService() {
       if (nav.screen == SCR_INST) {                // the preset, or a parameter cell
         if (nav.instRow == 0) {
           if (nav.instTop == 0 && (i == A_LEFT || i == A_RIGHT)) {
-            nav.engine = (nav.engine + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
+            curEngine() = (curEngine() + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
             dirty = true;
           }                                        // (the preset cell: no banked engine right now)
         } else {
           int idx = (nav.instRow - 1) * 4 + nav.instCol;
-          if (engineParams(nav.engine)[idx].name[0] != '-') {
+          if (engineParams(curEngine())[idx].name[0] != '-') {
             int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
-            uint8_t &p = engParams[nav.engine][idx];
+            uint8_t &p = engParams[nav.gridT][curEngine()][idx];
             p = (uint8_t)clamp(p + d, 0, 99);
             dirty = true;
           }
@@ -147,18 +147,28 @@ bool inputService() {
         uint8_t col = nav.screen == SCR_TFX ? nav.tfxCol : nav.mfxCol;
         uint8_t slot = (nav.screen == SCR_MFX ? 2 : 0) + (row >= 2 ? 1 : 0);
         if (!(row & 1)) {                        // the type selector
-          if (i == A_LEFT || i == A_RIGHT)
-            { fxSetType(slot, (fxSlots[slot].type + (i == A_RIGHT ? 1 : FX_TYPES - 1)) % FX_TYPES); dirty = true; }
+          if (i == A_LEFT || i == A_RIGHT) {
+            fxSetType(slot, (fxSlots[slot].type + (i == A_RIGHT ? 1 : FX_TYPES - 1)) % FX_TYPES);
+            if (slot < 2) trackFx[nav.gridT][slot] = fxSlots[slot];   // the track keeps it
+            dirty = true;
+          }
         } else if (fxParams(fxSlots[slot].type)[col].name[0] != '-') {
           int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
           uint8_t &p = fxSlots[slot].p[col];
           p = (uint8_t)clamp(p + d, 0, 99);
+          if (slot < 2) trackFx[nav.gridT][slot].p[col] = p;
           dirty = true;
         }
       }
     } else {
       dirty |= move(i == A_LEFT ? -1 : i == A_RIGHT ? 1 : 0, i == A_UP ? -1 : i == A_DOWN ? 1 : 0);
     }
+  }
+  static uint8_t lastTrack = 0;                  // a track switch brings its engine's
+  if (nav.gridT != lastTrack) {                  // screens and its FX chain with it
+    lastTrack = nav.gridT;
+    fxApplyTrack(nav.gridT);
+    dirtyNow = true;
   }
   return dirty || dirtyNow;
 }

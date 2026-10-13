@@ -213,7 +213,7 @@ static void drawMix() {
 
 static void drawMod() {
   char ctx[24];
-  snprintf(ctx, sizeof ctx, "TRACK %d  %s", nav.gridT + 1, engineName(nav.engine));
+  snprintf(ctx, sizeof ctx, "TRACK %d  %s", nav.gridT + 1, engineName(curEngine()));
   title("MOD", ctx);
   static const char *const SRC_NAMES[4] = {"LFO1", "LFO2", "ENV", "VEL"};
   struct { const char *src, *d1, *a1, *d2, *a2; } rows[] = {
@@ -292,7 +292,7 @@ static void drawInst() {
   char ctx[12], cnt[8];
   snprintf(ctx, sizeof ctx, "TRACK %d", nav.gridT + 1);
   title("INST", ctx);
-  const char *name = engineName(nav.engine);
+  const char *name = engineName(curEngine());
   (void)cnt;
   // The engine selector (left, a quarter of the row) and the preset cell
   // (engines with banks; the rest of the row). B + LEFT/RIGHT steps
@@ -303,14 +303,14 @@ static void drawInst() {
   txt(20 + txtW(name) + 6, 32, ">", DIM);
   txt(118, 32, "-", DIM);                        // the preset cell: no banked engine right now
   rct(4, 50, 312, 2, DARK);
-  const ParamInfo *pi = engineParams(nav.engine);
+  const ParamInfo *pi = engineParams(curEngine());
   for (int i = 0; i < 8; i++) {
     int row = i / 4, col = i % 4;
     char val[8];
     bool empty = pi[i].name[0] == '-';
-    if (!empty) snprintf(val, sizeof val, "%d", engParams[nav.engine][i]);
+    if (!empty) snprintf(val, sizeof val, "%d", engParams[nav.gridT][curEngine()][i]);
     paramCell(4 + col * 79, 54 + row * 48, 76, 44, pi[i].name, empty ? "" : val,
-              empty ? -1.0f : engParams[nav.engine][i] / 99.0f,
+              empty ? -1.0f : engParams[nav.gridT][curEngine()][i] / 99.0f,
               nav.instRow == row + 1 && nav.instCol == col);
   }
   // ADSR preview in the accent colour.

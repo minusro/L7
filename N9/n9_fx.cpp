@@ -28,6 +28,7 @@ static const ParamInfo FX_PARAMS[FX_TYPES][4] = {
 const ParamInfo *fxParams(uint8_t type) { return FX_PARAMS[type < FX_TYPES ? type : 0]; }
 
 FxSlot fxSlots[4];
+FxSlot trackFx[9][2];
 
 // Per-slot DSP state. `line` holds the type's delay memory:
 //   CHORUS/FLANGER/WOW: L at 0, R at 4096 (2048 samples each is plenty)
@@ -77,6 +78,17 @@ void fxSetType(uint8_t slot, uint8_t type) {
 
 void fxSlotsInit() {
   for (int s = 0; s < 4; s++) { memset(&st[s], 0, sizeof(FxState)); st[s].gain = 1; fxSlots[s] = {FXT_NONE, {0, 0, 0, 0}}; }
+  for (int t = 0; t < 9; t++) for (int k = 0; k < 2; k++) trackFx[t][k] = {FXT_NONE, {0, 0, 0, 0}};
+}
+
+void fxApplyTrack(uint8_t t) {
+  for (int k = 0; k < 2; k++) {
+    fxSetType(k, trackFx[t][k].type);            // defaults in, state cleared
+    for (int i = 0; i < 4; i++) {
+      fxSlots[k].p[i] = trackFx[t][k].p[i];
+      st[k].sp[i] = trackFx[t][k].p[i] / 99.0f;
+    }
+  }
 }
 
 static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {

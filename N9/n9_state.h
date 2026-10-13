@@ -34,10 +34,10 @@ struct NavState {
 
   uint8_t editStep = 8, editRow = 0;   // piano roll cursor (16 steps x 13 rows)
 
-  uint8_t engine = 0;            // the selected track's engine (one global for now)
 };
 
 extern NavState nav;
+inline uint8_t &curEngine();   // defined below NavState
 
 // The engine lineup (user-trimmed 2026-10-13): Prophet-5, 303, Juno, then
 // every Mutable Instruments model as its own engine (n9_mi.h). The M1 and
@@ -51,6 +51,14 @@ const char *engineName(uint8_t e);   // n9_synth.cpp
 // defaults per engine kind (n9_synth.cpp). A "-" name is an empty cell.
 struct ParamInfo { const char *name; uint8_t def; };
 const ParamInfo *engineParams(uint8_t e);
-extern uint8_t engParams[ENGINE_COUNT][8];
+
+// Per track: its engine and, per engine, its eight cells (edits are kept
+// when stepping engines or tracks). The selected track (the grid cursor)
+// is what MIDI, the sequencer and the INST/MOD/TFX screens act on.
+extern uint8_t trackEngine[9];
+extern uint8_t engParams[9][ENGINE_COUNT][8];
 // Parked engines: sentinel ids no selector position reaches.
 constexpr uint8_t E_MWAVE = 254, E_M1 = 253;
+
+inline uint8_t &curEngine() { return trackEngine[nav.gridT]; }
+inline uint8_t *curParams(uint8_t engine) { return engParams[nav.gridT][engine]; }
