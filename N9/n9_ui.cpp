@@ -1,6 +1,10 @@
 // n9_ui.cpp — see n9_ui.h. All sizes are in pixels on L7's 2x2 block grid.
 #include "n9_ui.h"
 
+#include <stdio.h>
+
+#include "n9_state.h"
+
 static constexpr int PX = 2;
 
 // ---- Primitives -----------------------------------------------------------
@@ -155,14 +159,14 @@ static void drawFx() {
   struct { const char *n, *v; float a; } d[] = {{"TIME", "3/16", 0.45f}, {"FDBK", "52", 0.52f}, {"HP", "160", 0.25f}, {"MIX", "100", 1.0f}},
                                          r[] = {{"SIZE", "72", 0.72f}, {"DAMP", "45", 0.45f}, {"PRE", "20", 0.2f}, {"MIX", "100", 1.0f}};
   txt(6, 26, "DELAY", LIGHT);
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 38, 76, 42, d[i].n, d[i].v, d[i].a, false);
+  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 38, 76, 42, d[i].n, d[i].v, d[i].a, nav.fxRow == 0 && nav.fxCol == i);
   txt(6, 88, "REVERB", LIGHT);
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 100, 76, 42, r[i].n, r[i].v, r[i].a, false);
+  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 100, 76, 42, r[i].n, r[i].v, r[i].a, nav.fxRow == 1 && nav.fxCol == i);
   txt(6, 150, "SENDS", LIGHT);
   const float a[9] = {0.3f, 0, 0.7f, 0.2f, 0, 0.5f, 0.1f, 0, 0},
               b[9] = {0.5f, 0.2f, 0.4f, 0, 0.6f, 0.3f, 0, 0.2f, 0};
-  sendRow(162, "A DEL", a, 2);
-  sendRow(188, "B REV", b, -1);
+  sendRow(162, "A DEL", a, nav.fxRow == 2 ? nav.fxCol : -1);
+  sendRow(188, "B REV", b, nav.fxRow == 3 ? nav.fxCol : -1);
 }
 
 // ---- 2 · Mixer -------------------------------------------------------------
@@ -173,7 +177,7 @@ static void drawMix() {
               mets[9] = {0.6f, 0.4f, 0.68f, 0.3f, 0.5f, 0, 0.2f, 0.6f, 0},
               pans[9] = {0, -0.4f, 0, 0.3f, 0, 0, -0.2f, 0.5f, 0};
   const bool muted[9] = {0, 0, 0, 0, 0, 1, 0, 0, 0}, empty[9] = {0, 0, 0, 0, 0, 0, 0, 0, 1};
-  const int SEL = 2;
+  const int SEL = nav.mixSel;
   for (int t = 0; t < 9; t++) {
     int x = 2 + t * 35;
     if (t == SEL) { rct(x, 24, 33, 186, DARK); frm(x, 24, 33, 186, LIGHT); }
@@ -198,7 +202,10 @@ static void drawMix() {
 // Four selectable sources per track, two destination slots each.
 
 static void drawMod() {
-  title("MOD", "TRACK 3  PLUCK");
+  char ctx[24];
+  snprintf(ctx, sizeof ctx, "TRACK %d  %s", nav.gridT + 1, ENGINE_NAMES[nav.engine]);
+  title("MOD", ctx);
+  static const char *const SRC_NAMES[4] = {"LFO1", "LFO2", "ENV", "VEL"};
   struct { const char *src, *d1, *a1, *d2, *a2; } rows[] = {
       {"1 LFO1", "CUTOFF", "+42", "PITCH", "-12"},
       {"2 LFO2", "SHAPE", "+20", "-", ""},
@@ -207,7 +214,7 @@ static void drawMod() {
   };
   for (int i = 0; i < 4; i++) {
     int y = 26 + i * 17;
-    bool sel = i == 0;
+    bool sel = nav.modRow == i;
     if (sel) { rct(4, y, 312, 16, DARK); frm(4, y, 312, 16, LIGHT); }
     txt(10, y + 3, rows[i].src, sel ? INK : DIM);
     txt(80, y + 3, rows[i].d1, sel ? LIGHT : DIM);
@@ -215,9 +222,9 @@ static void drawMod() {
     txt(200, y + 3, rows[i].d2, sel ? LIGHT : DIM);
     txt(266, y + 3, rows[i].a2, sel ? ACCENT : DIM);
   }
-  txt(6, 98, "LFO1", LIGHT);
+  txt(6, 98, SRC_NAMES[nav.modSrc], LIGHT);
   struct { const char *n, *v; float a; } p[] = {{"SHAPE", "TRI", -1}, {"RATE", "1/8", 0.4f}, {"SYNC", "ON", -1}, {"DEPTH", "+42", 0.66f}};
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 110, 76, 42, p[i].n, p[i].v, p[i].a, i == 3);
+  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 110, 76, 42, p[i].n, p[i].v, p[i].a, nav.modRow == 4 && nav.modCell == i);
   // LFO shape preview: a triangle wave in the accent colour.
   frm(4, 158, 180, 48, DARK);
   rct(8, 181, 172, 2, DARK);
@@ -233,16 +240,21 @@ static void drawMod() {
 // ---- 4 · Track instrument ---------------------------------------------------
 
 static void drawInst() {
-  title("INST", "TRACK 3");
+  char ctx[12], cnt[8];
+  snprintf(ctx, sizeof ctx, "TRACK %d", nav.gridT + 1);
+  title("INST", ctx);
+  const char *name = ENGINE_NAMES[nav.engine];
+  snprintf(cnt, sizeof cnt, "%d/%d", nav.engine + 1, ENGINE_COUNT);
+  if (nav.instRow == 0) frm(4, 26, 312, 18, LIGHT);
   txt(8, 32, "<", DIM);
-  txt(24, 32, "PLUCK", INK);
-  txt(24 + txtW("PLUCK") + 10, 32, ">", DIM);
-  txt(282, 32, "4/12", DIM);
+  txt(24, 32, name, INK);
+  txt(24 + txtW(name) + 10, 32, ">", DIM);
+  txt(282, 32, cnt, DIM);
   rct(4, 46, 312, 2, DARK);
   struct { const char *n, *v; float a; } r1[] = {{"TUNE", "+0", 0.5f}, {"SHAPE", "38", 0.38f}, {"CUTOFF", "86", 0.86f}, {"RES", "22", 0.22f}},
                                          r2[] = {{"ATK", "2", 0.05f}, {"DEC", "340", 0.45f}, {"SUS", "60", 0.6f}, {"REL", "180", 0.3f}};
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 54, 76, 44, r1[i].n, r1[i].v, r1[i].a, i == 2);
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 102, 76, 44, r2[i].n, r2[i].v, r2[i].a, false);
+  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 54, 76, 44, r1[i].n, r1[i].v, r1[i].a, nav.instRow == 1 && nav.instCol == i);
+  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 102, 76, 44, r2[i].n, r2[i].v, r2[i].a, nav.instRow == 2 && nav.instCol == i);
   // ADSR preview in the accent colour.
   frm(4, 152, 180, 54, DARK);
   const int base = 198, top = 160;
@@ -259,7 +271,7 @@ static void drawInst() {
 
 static void drawGrid() {
   // No title tag: the header row is the tracks; the dot column places the screen.
-  const int SEL_T = 2, PLAY_S = 1, CUR_T = 2, CUR_S = 1, QUEUED_T = 4, QUEUED_S = 3;
+  const int SEL_T = nav.gridT, PLAY_S = 1, CUR_T = nav.gridT, CUR_S = nav.gridS, QUEUED_T = 4, QUEUED_S = 3;
   // 0 none, 1 clip, 2 playing
   static const uint8_t cells[8][9] = {
       {1, 0, 1, 0, 0, 1, 0, 0, 0},
@@ -300,7 +312,9 @@ static void drawGrid() {
 // ---- 6 · Clip editor --------------------------------------------------------
 
 static void drawEdit() {
-  title("EDIT", "T3 S2  BAR 1/2  1/16");
+  char ctx[32];
+  snprintf(ctx, sizeof ctx, "T%d S%d  BAR 1/2  1/16", nav.gridT + 1, nav.gridS + 1);
+  title("EDIT", ctx);
   const int ROWS = 13, rowH = 12, top = 24, left = 14, stepW = 19;
   // Pitches top to bottom, chromatic: C4 B3 A#3 A3 G#3 G3 F#3 F3 E3 D#3 D3 C#3 C3.
   static const bool blackRow[ROWS] = {0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0};
@@ -314,12 +328,17 @@ static void drawEdit() {
   for (int s = 0; s <= 16; s += 4) rct(left + s * stepW, top, 2, ROWS * rowH, DARK);   // beat lines
   struct { int r, s, l; float v; } notes[] = {
       {12, 0, 2, 0.8f}, {8, 2, 2, 0.6f}, {5, 4, 4, 0.9f}, {0, 8, 2, 0.7f}, {3, 10, 2, 0.5f}, {5, 12, 3, 0.75f}};
-  const int SEL = 3;
+  // The note under the cursor is the selected one; on an empty cell the
+  // cursor itself shows as a frame.
+  int SEL = -1;
+  for (int i = 0; i < 6; i++)
+    if (notes[i].r == nav.editRow && nav.editStep >= notes[i].s && nav.editStep < notes[i].s + notes[i].l) SEL = i;
   for (int i = 0; i < 6; i++) {
     int x = left + notes[i].s * stepW + 2, y = top + notes[i].r * rowH + 2;
     rct(x, y, notes[i].l * stepW - 4, rowH - 4, i == SEL ? INK : LIGHT);
     if (i == SEL) frm(x - 2, y - 2, notes[i].l * stepW, rowH, ACCENT);
   }
+  if (SEL < 0) frm(left + nav.editStep * stepW, top + nav.editRow * rowH, stepW, rowH, INK);
   rct(left + 9 * stepW, top - 2, 2, ROWS * rowH + 4, ACCENT);   // playhead
   int vy = top + ROWS * rowH + 6;                               // velocity lane
   txt(2, vy + 6, "V", DIM);
@@ -342,5 +361,7 @@ void drawScreen(uint8_t ix) {
     case SCR_EDIT: drawEdit(); break;
   }
   statusRow(ix);
-  board.tft().updateScreen();
+  // Sent by DMA so loop() (and MIDI) isn't held up for the ~40 ms a frame
+  // takes; the caller waits for asyncUpdateActive() before drawing again.
+  if (!board.tft().updateScreenAsync()) board.tft().updateScreen();
 }

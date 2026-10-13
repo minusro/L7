@@ -6,6 +6,17 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **N9: cursors on every screen** (arrows, held = repeating): FX cells and
+  send bars, mixer strips, mod sources + cells (the cells' header follows the
+  source row), INST selector + cells, grid cursor (its track shows in the
+  INST/MOD/EDIT titles), piano roll (a note under the cursor shows selected,
+  an empty cell shows a white frame). Clamped at all edges, no wrap.
+- [ ] **N9: first sound.** MIDI channel 1 (USB and serial in) plays the synth;
+  B + LEFT/RIGHT on INST steps SAW / PULSE / FM2 / PLUCK (takes effect for new
+  notes). 32 voices, stealing beyond that. Headphones mute the speaker. Serial
+  logs `synth: N voices, max block ...` once a second while playing — note the
+  % with ~8 and ~32 voices (the engine-budget question). Redraws are DMA'd:
+  listen for clicks or stuck keys while switching screens with notes held.
 - [ ] **Ableton export, the fine rotate's direction.** Export a project with a
   clip shifted (B then A + LEFT/RIGHT) and play it in Live next to the M8.
   The whole loop moves the clip's start marker; a range inside the loop moves
