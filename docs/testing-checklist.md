@@ -23,6 +23,15 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
+- [ ] **N9: the M1.** Engine 13 plays the factory bank's parameters (the
+  user's sysex dump, sounds/M1 soundbank): MIDI program change on channel 1
+  picks among the 100 programs (serial logs the name; boots on 00 Universe).
+  Real per program: osc pair (octave/interval/detune), the VDA EG segments,
+  VDF cutoff + env sweep, osc level and velocity sens. Stand-ins: the PCM
+  multisounds are approximated by category (saw/pulse/super/sine/organ/FM
+  bell/EP/pluck/noise — tools/m1_bank.py). Checked finite and audible on the
+  PC for all 100; judge by ear per family (pads, organs, basses, bells).
+  Drum programs (09, 29, 49, 95) play as single-osc stand-ins, far from real.
 - [ ] **N9: the Prophet-5.** Poly voice: two detuned polyBLEP saws into the
   ladder (mild resonance 1.3), filter easing to a sustain level over ~600 ms,
   velocity opens it. Numbers by ear: detune (0.4%), cutoff floor, env sweep,

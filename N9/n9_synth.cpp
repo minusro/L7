@@ -2,7 +2,11 @@
 #include "n9_synth.h"
 
 #include "M8Board.h"
+#include "n9_m1_bank.h"
 #include "n9_state.h"
+
+// The M1 engine's current program (0-99), set by MIDI program change.
+static volatile uint8_t m1Prog = 0;
 
 // (synth itself is defined in N9.ino, before the AudioConnections that take
 // it: across files the construction order would be undefined, and a
@@ -29,9 +33,12 @@ enum OscType : uint8_t {
   O_PRO5,    // poly: two detuned polyBLEP saws into the ladder, mild
              // resonance, the filter easing to a sustain level (velocity
              // opens it: fenv starts from the velocity)
+  O_M1,      // the factory bank's parameters (n9_m1_bank.h: osc pair, VDA
+             // EG segments, VDF sweep) over stand-in oscillators by
+             // multisound category; MIDI program change picks the program
 };
 
-constexpr uint8_t E_303 = 8;   // its place in ENGINE_NAMES
+constexpr uint8_t E_303 = 8, E_M1 = 12;   // their places in ENGINE_NAMES
 
 // Per-engine fixed settings (ms; the real app gets these from the INST cells).
 struct EngineDef {
@@ -54,8 +61,13 @@ static const EngineDef ENGINES[ENGINE_COUNT] = {
     {O_SUPER, 3, 300, false, 0, 0, 0, 0},              // JUNO   (placeholder)
     {O_PRO5, 5, 350, false, 0, 1.004f, 0, 0},          // PRO5 (ratio = osc B's detune)
     {O_FM, 2, 220, false, 0, 1.5f, 2.0f, 600},         // MWAVE  (placeholder)
-    {O_FM, 1, 300, false, 0, 3.5f, 2.0f, 500},         // M1     (placeholder)
+    {O_M1, 1, 300, false, 0, 0, 0, 0},                 // M1 (envelopes come from the program)
 };
+
+// M1 helpers: a time value 0-99 as milliseconds (roughly the M1's log
+// scale), and as a per-sample easing coefficient.
+static inline float m1ms(uint8_t v) { return 2.0f * expf(0.0816f * v); }
+static inline float m1coef(uint8_t v) { return 1.0f - expf(-1.0f / (m1ms(v) * 44.1f)); }
 
 // Note/velocity events cross from loop() to the audio interrupt through this
 // little ring; all voice state is touched by update() only.
@@ -96,6 +108,21 @@ static inline float polyblep(float t, float dt) {
   if (t < dt) { t /= dt; return t + t - t * t - 1.0f; }
   if (t > 1.0f - dt) { t = (t - 1.0f) / dt; return t * t + t + t + 1.0f; }
   return 0.0f;
+}
+
+static inline float sinT(float ph);
+
+// An M1 multisound's stand-in, by category. FM categories take the voice's
+// modulator (index 0 degrades them to a sine: the second oscillator).
+static inline float m1oscS(uint8_t cat, float ph, float dt, float fmPhase, float fmIndex, uint32_t &rng) {
+  switch (cat) {
+    case M1C_SAW: case M1C_SUPER: return 2.0f * ph - 1.0f - polyblep(ph, dt);
+    case M1C_PULSE: return ph < 0.5f ? 1.0f : -1.0f;
+    case M1C_SINE: return sinT(ph);
+    case M1C_ORGAN: return 0.55f * sinT(ph) + 0.33f * sinT(2.0f * ph) + 0.18f * sinT(4.0f * ph);
+    case M1C_BELL: case M1C_EP: case M1C_PLUCK: return sinT(ph + 0.15915f * fmIndex * sinT(fmPhase));
+    default: rng = rng * 1664525u + 1013904223u; return (int32_t)rng * 4.6566e-10f;
+  }
 }
 
 void N9Synth::update() {
@@ -144,6 +171,29 @@ void N9Synth::update() {
       v->vel = e.vel / 127.0f;
       if (nav.engine == E_303 && v->accent) v->vel = 1.2f;   // the accent's kick
       v->rng = _ageCounter * 2654435761u + e.note * 7919u + 1;
+      if (nav.engine == E_M1) {                  // cache the program into the voice
+        const M1Program &pr = M1_BANK[m1Prog];
+        v->dual = pr.oscMode == 1;               // (drum programs play as single)
+        v->cat1 = pr.ms1 < 100 ? M1_MS_CAT[pr.ms1] : M1C_SINE;
+        v->cat2 = pr.ms2 < 100 ? M1_MS_CAT[pr.ms2] : M1C_SINE;
+        v->inc = inc * exp2f(pr.oct1);
+        v->minc = inc * exp2f(pr.oct2 + pr.interval / 12.0f + pr.detune / 1200.0f);
+        v->eAc = m1coef(pr.aA); v->eDc = m1coef(pr.aD);
+        v->eSc = m1coef(pr.aSl); v->eRc = m1coef(pr.aR);
+        v->lAtk = pr.aAl / 99.0f; v->lBreak = pr.aB / 99.0f; v->lSus = pr.aS / 99.0f;
+        v->mseg = 0;
+        float c = pr.vdfCutoff / 99.0f;
+        v->cutB = 0.003f + 0.22f * c * c;
+        v->cutE = 0.15f * pr.vdfEgInt / 99.0f;
+        v->fSus = pr.vdfSus / 99.0f;
+        v->fdC = m1coef(pr.vdfDecay);
+        v->fenv = 1.0f;
+        float s = pr.ampVel > 0 ? pr.ampVel / 99.0f : 0;
+        v->vel = (pr.vdaLevel / 99.0f) * ((1.0f - s) + s * v->vel);
+        v->mindex = v->cat1 == M1C_BELL ? 2.5f : v->cat1 == M1C_PLUCK ? 3.0f : 1.2f;
+        v->midxC = v->cat1 == M1C_BELL ? decay(400) : v->cat1 == M1C_PLUCK ? decay(100) : decay(600);
+        v->inc3 = v->inc * (v->cat1 == M1C_BELL ? 3.5f : 1.0f);   // the FM stand-ins' modulator
+      }
       v->age = ++_ageCounter;
       v->state = ATTACK;
     } else {
@@ -172,7 +222,7 @@ void N9Synth::update() {
                 : d.osc == O_PRO5 ? decay(600) : 1.0f;
     float amp = v.vel * 0.12f;
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-      switch (v.state) {
+      if (d.osc != O_M1) switch (v.state) {    // (the M1 runs its program's EG instead)
         case ATTACK:  v.env += atkC * (1.0f - v.env); if (v.env > 0.999f) v.state = HOLD; break;
         case HOLD:    v.env *= decC; break;
         default:      v.env *= relC; break;    // RELEASE
@@ -228,6 +278,30 @@ void N9Synth::update() {
           v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
           break;
         }
+        case O_M1: {
+          // VDA EG: attack to its level, decay to break, slope to sustain.
+          if (v.state == RELEASE) v.env += v.eRc * (0.0f - v.env);
+          else switch (v.mseg) {
+            case 0: v.env += v.eAc * (v.lAtk - v.env + 0.001f); if (v.env >= v.lAtk) { v.env = v.lAtk; v.mseg = 1; } break;
+            case 1: v.env += v.eDc * (v.lBreak - v.env); if (fabsf(v.env - v.lBreak) < 0.004f) v.mseg = 2; break;
+            default: v.env += v.eSc * (v.lSus - v.env); break;
+          }
+          float s0 = m1oscS(v.cat1, v.phase, v.inc, v.p3, v.mindex, v.rng);
+          if (v.dual) {
+            s0 = 0.6f * (s0 + m1oscS(v.cat2, v.mphase, v.minc, 0, 0, v.rng));
+            v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
+          }
+          // VDF: a plain 4-pole lowpass, swept by its decaying envelope.
+          v.fenv += v.fdC * (v.fSus - v.fenv);
+          float fc = v.cutB + v.cutE * v.fenv; if (fc > 0.3f) fc = 0.3f;
+          float w = 6.2832f * fc, g = w / (1.0f + w);
+          v.f1 += g * (s0 - v.f1); v.f2 += g * (v.f1 - v.f2);
+          v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
+          s = v.f4 * 1.3f;
+          v.mindex *= v.midxC;
+          v.p3 += v.inc3; if (v.p3 >= 1.0f) v.p3 -= 1.0f;
+          break;
+        }
         default:                               // O_SAW, O_PULSE
           s = d.osc == O_SAW ? 2.0f * v.phase - 1.0f : (v.phase < 0.5f ? 1.0f : -1.0f);
           v.lp += 0.5f * (s - v.lp); s = v.lp;
@@ -258,12 +332,19 @@ static HardwareSerial *midiSerial = nullptr;
 
 void synthMidiBegin() { midiSerial = board.midiInBegin(); }
 
+static void setM1Program(uint8_t p) {
+  if (p > 99) return;
+  m1Prog = p;
+  Serial.printf("m1: program %02u %s\n", p, M1_BANK[p].name);
+}
+
 void synthServiceMidi() {
   while (usbMIDI.read()) {
     if (usbMIDI.getChannel() != 1) continue;
     uint8_t type = usbMIDI.getType();
     if (type == usbMIDI.NoteOn && usbMIDI.getData2() > 0) synth.noteOn(usbMIDI.getData1(), usbMIDI.getData2());
     else if (type == usbMIDI.NoteOff || type == usbMIDI.NoteOn) synth.noteOff(usbMIDI.getData1());
+    else if (type == usbMIDI.ProgramChange) setM1Program(usbMIDI.getData1());
   }
   if (!midiSerial) return;
   static uint8_t status = 0, d1 = 255;
@@ -271,6 +352,7 @@ void synthServiceMidi() {
     uint8_t b = midiSerial->read();
     if (b >= 0xF8) continue;                      // realtime
     if (b & 0x80) { status = b; d1 = 255; continue; }
+    if (status == 0xC0) { setM1Program(b); continue; }   // channel 1 program change
     if (status == 0x90 || status == 0x80) {       // channel 1 only
       if (d1 == 255) { d1 = b; continue; }
       if (status == 0x90 && b > 0) synth.noteOn(d1, b);

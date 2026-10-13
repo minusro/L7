@@ -29,6 +29,13 @@ private:
     volatile uint8_t state = IDLE;
     uint8_t note = 0, engine = 0;
     bool accent = false;             // 303: velocity >= 100
+    // M1: the program's parameters, cached at noteOn (n9_m1_bank.h)
+    uint8_t cat1 = 0, cat2 = 0, mseg = 0;
+    bool dual = false;
+    float eAc = 0, eDc = 0, eSc = 0, eRc = 0;       // VDA EG coefficients
+    float lAtk = 1, lBreak = 0, lSus = 0;           // and its levels
+    float cutB = 0, cutE = 0, fSus = 0, fdC = 1;    // VDF: base, env amount, sustain, decay
+    float midxC = 1;                                // FM stand-ins: index decay
     float phase = 0, inc = 0;        // carrier, 0..1 per sample
     float tinc = 0;                  // 303: the slide's target increment
     float mphase = 0, minc = 0;      // FM modulator / SUPER's second saw
