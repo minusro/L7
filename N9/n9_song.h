@@ -14,9 +14,29 @@ constexpr uint8_t EDIT_TOP_PITCH = 60;
 // its own bar count, which follows the notes (polymeter between tracks is
 // free); the editor shows one bar page at a time.
 struct ClipNote { uint8_t pitch, vel, start, len; };
-struct Clip { uint8_t count; uint8_t bars = 1; ClipNote notes[CLIP_MAX_NOTES]; };
+// used: the slot holds a clip (A on an empty slot creates one; it may still
+// have no notes). Adding a note in the editor marks the slot used too.
+struct Clip { uint8_t used; uint8_t count; uint8_t bars = 1; ClipNote notes[CLIP_MAX_NOTES]; };
 
 extern Clip clips[9][8];
+
+// Clip launching, session style: per track, the playing scene (-1: none) and
+// what's pending for the next bar line (-1: nothing, CLIP_STOP: stop, else a
+// scene to start from its top). Pendings are set in loop() (the grid's A),
+// applied and consumed in the audio interrupt at each bar line (n9_synth
+// fireStep); clipPlaying persists over a stopped transport, so PLAY resumes
+// the same clips from their tops.
+constexpr int8_t CLIP_STOP = -2;
+extern volatile int8_t clipPlaying[9];
+extern volatile int8_t clipPending[9];
+// clipFreeze: the sequencer keeps off the clips (a project load is swapping
+// them); clipTakeNow: pendings apply on the next step, not the bar line (a
+// project came in on the beat).
+extern volatile uint8_t clipFreeze, clipTakeNow;
+
+// SHIFT+A on the grid: a used slot cuts here, an empty one pastes.
+extern Clip clipClipboard;
+extern bool clipClipFull;
 
 // The project's key (0 = C .. 11 = B) and scale. The piano roll only
 // navigates in-scale rows and MIDI input snaps to the scale; notes already

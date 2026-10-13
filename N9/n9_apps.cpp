@@ -5,6 +5,7 @@
 #include <SdFat.h>
 
 #include "app_loader.h"
+#include "n9_project.h"
 #include "n9_ui.h"
 
 static SdFs sd;
@@ -40,6 +41,7 @@ static void preMove() {
 }
 
 void appSwitchToL7() {
+  projectSaveCurrent();             // the state survives the trip to L7
   uiMessage("SWITCHING TO L7", "READING CARD");
   const char *err = "NO CARD";
   if (sdBegin()) {

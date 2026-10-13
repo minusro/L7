@@ -3,6 +3,12 @@
 
 Clip clips[9][8];
 
+volatile int8_t clipPlaying[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
+volatile int8_t clipPending[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
+Clip clipClipboard;
+bool clipClipFull = false;
+volatile uint8_t clipFreeze = 0, clipTakeNow = 0;
+
 const char *const KEY_NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 const char *const SCALE_NAMES[SCALE_COUNT] = {
     "CHROM", "MAJOR", "MINOR", "DORIAN", "PHRYGIAN", "LYDIAN",
@@ -63,6 +69,7 @@ void clipToggle(Clip &c, uint8_t pitch, uint8_t step, uint8_t vel) {
   ClipNote &n = c.notes[c.count];     // fields first, the count last
   n.pitch = pitch; n.vel = vel; n.start = step; n.len = 1;
   c.count++;
+  c.used = 1;                         // an edit in an empty slot creates the clip
   clipRefreshBars(c);
 }
 

@@ -25,6 +25,7 @@
 #include "n9_input.h"
 #include "n9_state.h"
 #include "n9_apps.h"
+#include "n9_project.h"
 #include "n9_synth.h"
 #include "n9_ui.h"
 #include "n9_usb_drive.h"
@@ -51,6 +52,7 @@ void setup() {
   synthMidiBegin();
   appsInit();                                      // the card's /N9 and /APPS folders
   usbDriveBegin();                                 // the computer's disk probing answered from now on
+  projectsBegin();                                 // the last project back in
   // The frame buffer is STATIC: left to malloc it silently fails once
   // RAM2's heap runs low, and the library falls back to direct drawing -
   // which is exactly a full-screen flicker on every sequencer step.
@@ -62,6 +64,7 @@ void setup() {
 
 void loop() {
   if (inputService()) dirty = true;
+  if (projectService()) dirty = true;              // a beat-load came due
   synthServiceMidi();
   static uint8_t lastStep = 255;                 // the playhead and clock follow the transport
   if (synth.seqOn() && synth.seqStepN() != lastStep) { lastStep = synth.seqStepN(); dirty = true; }
@@ -72,7 +75,7 @@ void loop() {
   bool hp;
   if (board.headphonesChanged(hp)) board.setSpeaker(!hp);
   board.chargeGuard();
-  if (board.powerButtonPressed()) { codec.volume(0.0f); board.powerOff(); }
+  if (board.powerButtonPressed()) { codec.volume(0.0f); projectSaveCurrent(); board.powerOff(); }
 
   // One line once USB serial is likely up, so a host sees the app is alive.
   static bool announced = false;

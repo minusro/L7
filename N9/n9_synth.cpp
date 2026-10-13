@@ -45,7 +45,7 @@ const ParamInfo *engineParams(uint8_t e) {
 uint8_t trackEngine[9];
 uint8_t engParams[9][ENGINE_COUNT][8];
 
-static void paramsInit() {
+void paramsInit() {
   for (uint8_t t = 0; t < 9; t++) {
     trackEngine[t] = 0;
     for (uint8_t e = 0; e < ENGINE_COUNT; e++) {
@@ -344,17 +344,31 @@ void N9Synth::seqToggle() {
   else _seqStartReq = true;
 }
 
-// Offs due this step first, then the clip's notes that start on it.
-// Offs due this step first, then every track's clip notes that start on it.
+// Offs due this step first; on a bar line each track's pending launch or
+// stop is taken (the grid's A, quantised to the bar); then every playing
+// clip's notes that start on this step fire. Each clip loops its own bars
+// from the bar it was launched on (polymeter between tracks is free).
+static uint32_t clipLaunchAt[9];                 // abs sixteenth of each launch (interrupt only)
 void N9Synth::fireStep(uint8_t step) {
   for (int i = 0; i < _seqNoteCount;) {
     if (--_seqNotes[i].left == 0) { noteOffNow(_seqNotes[i].track, _seqNotes[i].pitch); _seqNotes[i] = _seqNotes[--_seqNoteCount]; }
     else i++;
   }
+  if (clipFreeze) return;                        // a project load is swapping the clips
   uint32_t abs = (uint32_t)_seqBar * 16 + step;
+  bool barLine = step == 0 || clipTakeNow;       // takeNow: a project came in on the beat
+  clipTakeNow = 0;
   for (uint8_t t = 0; t < 9; t++) {
-    const Clip &c = clipAt(t, nav.gridS);
-    uint16_t local = abs % (c.bars * 16);        // each clip loops its own bars
+    if (barLine && clipPending[t] != -1) {
+      int8_t p = clipPending[t];
+      clipPending[t] = -1;
+      if (p == CLIP_STOP) clipPlaying[t] = -1;
+      else { clipPlaying[t] = p; clipLaunchAt[t] = abs; }
+    }
+    int8_t s = clipPlaying[t];
+    if (s < 0) continue;
+    const Clip &c = clipAt(t, (uint8_t)s);
+    uint16_t local = (abs - clipLaunchAt[t]) % (c.bars * 16);
     uint8_t n = c.count;
     for (uint8_t i = 0; i < n && i < CLIP_MAX_NOTES; i++) {
       const ClipNote &cn = c.notes[i];
@@ -390,6 +404,7 @@ void N9Synth::update() {
   if (_seqStartReq) {
     _seqStartReq = false; _seqOn = true;
     _seqStep = 0; _seqBar = 0; _seqAcc = 0;
+    for (int t = 0; t < 9; t++) clipLaunchAt[t] = 0;   // still-armed clips: from their tops
     fireStep(0);
   }
   if (_seqOn) {

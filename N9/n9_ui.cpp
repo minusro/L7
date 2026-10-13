@@ -7,6 +7,7 @@
 #include "n9_mw_bank.h"
 #include "n9_mi.h"
 #include "n9_fx.h"
+#include "n9_project.h"
 #include "n9_song.h"
 #include "n9_state.h"
 #include "n9_synth.h"
@@ -124,7 +125,7 @@ static void title(const char *name, const char *context) {
 // cell gets a light frame; B+arrows there edit it (the scene, the tempo).
 static void statusRow(uint8_t screenIx) {
   char scene[4], clock[16], bpm[8];
-  snprintf(scene, sizeof scene, "%d", nav.gridS + 1);
+  snprintf(scene, sizeof scene, "%d", gridScene() + 1);
   uint8_t stp = synth.seqStepN();
   snprintf(clock, sizeof clock, "%u.%u.%u", synth.seqBarN() + 1, stp / 4 + 1, stp % 4 + 1);
   snprintf(bpm, sizeof bpm, "%d.0", (int)(synth.seqBpm() + 0.5f));
@@ -352,14 +353,18 @@ static void drawInst() {
 
 static void drawGrid() {
   // No title tag: the header row is the tracks; the dot column places the screen.
+  // Cells: playing = accent fill, pending (launch or stop, taken on the next
+  // bar line) = dark accent fill, a clip at rest = light fill, empty = a dark
+  // frame. Under the eight scene rows, the stop row: a small square a track,
+  // lit while the track plays, accented while its stop waits for the bar.
   const int SEL_T = nav.gridT;
   bool playing = synth.seqOn();
   for (int t = 0; t < 9; t++) {
     int x = 16 + t * 33 + 9;
     char num[2] = {(char)('1' + t), 0};
     bool any = false;
-    for (int s2 = 0; s2 < 8; s2++) any |= clips[t][s2].count != 0;
-    if (playing && t == SEL_T) { rct(x, 2, 13, 17, ACCENT); txt(x + 4, 6, num, BG); }
+    for (int s2 = 0; s2 < 8; s2++) any |= clips[t][s2].used != 0;
+    if (playing && clipPlaying[t] >= 0) { rct(x, 2, 13, 17, ACCENT); txt(x + 4, 6, num, BG); }
     else txt(x + 4, 6, num, any ? DIM : DARK);
     if (t == SEL_T) frm(x - 2, 0, 17, 21, LIGHT);
   }
@@ -370,17 +375,31 @@ static void drawGrid() {
     tagI((320 - (txtW(ks) + 8)) / 2, 2, ks);
   }
   for (int sc = 0; sc < 8; sc++) {
-    int y = 28 + sc * 23;
+    int y = 27 + sc * 21;
     char num[2] = {(char)('1' + sc), 0};
-    txt(4, y + 6, num, playing && sc == nav.gridS ? ACCENT : DIM);
+    txt(4, y + 4, num, DIM);
     for (int t = 0; t < 9; t++) {
       int x = 16 + t * 33;
-      bool has = clips[t][sc].count != 0;
-      if (playing && t == nav.gridT && sc == nav.gridS) rct(x + 2, y, 29, 19, ACCENT);
-      else if (has) rct(x + 2, y, 29, 19, LIGHT);
-      else frm(x + 2, y, 29, 19, DARK);
-      if (t == nav.gridT && sc == nav.gridS) frm(x, y - 2, 33, 23, INK);
+      const Clip &c = clips[t][sc];
+      bool isPlaying = playing && clipPlaying[t] == sc;
+      bool isPending = clipPending[t] == sc;
+      if (isPending) rct(x + 2, y, 29, 17, ACCENT_DARK);
+      else if (isPlaying) rct(x + 2, y, 29, 17, ACCENT);
+      else if (c.used) rct(x + 2, y, 29, 17, LIGHT);
+      else frm(x + 2, y, 29, 17, DARK);
+      if (c.used && !c.count)                    // an empty clip: hollow middle
+        rct(x + 2 + PX, y + PX, 29 - 2 * PX, 17 - 2 * PX, isPending ? ACCENT_DARK : isPlaying ? ACCENT : BG);
+      if (t == nav.gridT && sc == nav.gridS) frm(x, y - 2, 33, 21, INK);
     }
+  }
+  const int sy = 197;                            // the stop row
+  for (int t = 0; t < 9; t++) {
+    int x = 16 + t * 33;
+    bool active = playing && clipPlaying[t] >= 0;
+    bool stopping = clipPending[t] == CLIP_STOP;
+    frm(x + 2, sy, 29, 12, DARK);
+    rct(x + 2 + 12, sy + 3, 6, 6, stopping ? ACCENT : active ? LIGHT : DIM);
+    if (t == nav.gridT && nav.gridS == 8) frm(x, sy - 2, 33, 16, INK);
   }
 }
 
@@ -393,9 +412,9 @@ static bool inLoopRange(int b, int clipBars, int loopStart, int loopLen) {
 
 static void drawEdit() {
   char ctx[8];
-  snprintf(ctx, sizeof ctx, "T%d S%d", nav.gridT + 1, nav.gridS + 1);
+  snprintf(ctx, sizeof ctx, "T%d S%d", nav.gridT + 1, gridScene() + 1);
   title("EDIT", ctx);
-  const Clip &c = clipAt(nav.gridT, nav.gridS);
+  const Clip &c = clipAt(nav.gridT, gridScene());
   // Bar strip: the clip's bars filled, the shown page framed white, the
   // playing bar's slot underlined in accent; the brace spans the loop
   // (the whole clip for now).
@@ -571,9 +590,32 @@ static void drawMenuScr() {
         }
         fillRing(s, 1, 0, DARK);
       }
-      fillRing(s, 0, -1, DIM);                     // every slot empty for now: an outline,
-      const char letter[2] = {(char)('A' + k), 0}; // its letter grey
-      txt((s.x + (s.w - txtW(letter) / PX) / 2) * PX, (s.y + (s.h - 5) / 2) * PX, letter, DIM);
+      // The card, L7's looks: the loaded project filled (its letter black,
+      // a play icon while the clock runs), another project a thick outline
+      // in its colour, an empty slot a grey outline.
+      uint16_t color = PROJECT_COLORS[k];
+      bool loaded = k == projCurrent, filled = projExists[k];
+      uint16_t letterInk = loaded ? BG : filled ? color : DIM;
+      if (loaded) {
+        fillRing(s, 0, -s.w, color);
+      } else if (filled) {
+        fillRing(s, 0, -2, color);
+        rct((s.x + s.w - 3) * PX, (s.y + s.h - s.cut - 1) * PX, PX, PX, color);
+        rct((s.x + s.w - 4) * PX, (s.y + s.h - s.cut) * PX, PX, PX, color);
+      } else {
+        fillRing(s, 0, -1, DIM);
+      }
+      const char letter[2] = {(char)('A' + k), 0};
+      bool playIcon = loaded && synth.seqOn();
+      int lw = txtW(letter) / PX;
+      int x0 = s.x + (s.w - lw) / 2 - (playIcon ? 2 : 0), y0 = s.y + (s.h - 5) / 2;
+      txt(x0 * PX, y0 * PX, letter, letterInk);
+      if (playIcon) {                              // a small play triangle after the letter
+        static const char *const PLAY[5] = {"#..", "##.", "###", "##.", "#.."};
+        for (int r = 0; r < 5; r++)
+          for (int cc = 0; cc < 3; cc++)
+            if (PLAY[r][cc] == '#') rct((x0 + lw + 2 + cc) * PX, (y0 + r) * PX, PX, PX, BG);
+      }
     } else {
       if (sel) {
         fillRing(s, M_LIST_SPACE + 1, M_LIST_SPACE, LIGHT, true);

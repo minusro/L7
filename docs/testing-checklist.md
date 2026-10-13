@@ -6,6 +6,28 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **N9: clip launching + the stop row + the clip clipboard.** The grid's
+  rows are tighter (17 px cells) with a stop-button row underneath. A on an
+  empty slot makes a clip (a hollow light frame: a clip with no notes); A on
+  a resting clip arms it (dark-accent fill) and it starts from its top on the
+  next bar line (the clock starts if stopped); A on the running clip (accent
+  fill) opens the editor; A on a stop cell arms that track's stop (the small
+  square accented, dies on the next bar). SHIFT+A cuts a clip to the
+  clipboard (silencing it if it played), SHIFT+A on an empty slot pastes.
+  Track numbers light up per playing track. Polymeter: launch clips of
+  different lengths at different bars; each loops from its own launch bar.
+- [ ] **N9: projects (menu cards) + state persistence.** The live state (all
+  clips, engines + cells, FX, mixer, key/scale, tempo, armed clips) saves to
+  /N9/PROJECTS/A-L.N9P: on project switch, before storage mode, before the
+  app switch, at power off; /N9/CURRENT.TXT remembers the card and boot
+  reloads it. Menu cards: the loaded one filled (play icon while the clock
+  runs; A on it saves + closes the menu), other projects a thick outline in
+  their colour (A loads - while playing it commits on the NEXT BEAT and its
+  armed clips come in on the next bar line), empty grey (A = new fresh
+  project, saved at once). SHIFT+A cuts a card's file to CLIP.N9P / pastes
+  onto an empty card (the current card can't be cut). After storage mode the
+  card's version of the current project is reloaded. Check a power cycle
+  brings everything back, and a round trip through L7 does too.
 - [ ] **N9: the menu's L7 layout + storage mode.** The menu now has L7's
   twelve cards (A-L, all empty-looking, grey) and the list (EXPORT ABLETON
   SET / STORAGE MODE / SETTINGS / HELP); the cursor walks cards and list as

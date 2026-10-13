@@ -9,6 +9,7 @@
 #include "n9_song.h"
 #include "n9_apps.h"
 #include "n9_usb_drive.h"
+#include "n9_project.h"
 
 using namespace m8;
 
@@ -76,7 +77,7 @@ static bool move(int dx, int dy) {
     case SCR_GRID: {
       bool c = false;
       if (dx) c = to(nav.gridT, clamp(nav.gridT + dx, 0, 8));
-      if (dy) c |= to(nav.gridS, clamp(nav.gridS + dy, 0, 7));
+      if (dy) c |= to(nav.gridS, clamp(nav.gridS + dy, 0, 8));   // 8: the stop row
       return c;
     }
     case SCR_EDIT: {
@@ -157,19 +158,67 @@ bool inputService() {
   if (overlay != nav.scaleShow) { nav.scaleShow = overlay; dirtyNow = true; }
   if (pressed & BTN_PLAY) { synth.seqToggle(); dirtyNow = true; }   // start from 1.1.1 / stop
   bool plainA = (pressed & BTN_EDIT) && !shift && !opt && !nav.menu && !nav.statusFocus;
-  if ((pressed & BTN_EDIT) && !shift && !opt && nav.menu) {
-    // A on a menu item: only STORAGE MODE is live for now (blocks until a
-    // key or the computer ejects, then the menu redraws).
-    if (nav.menuSel == MENU_CARDS + MENU_STORAGE) usbDriveMode();
+  if ((pressed & BTN_EDIT) && !opt && nav.menu) {
+    if (shift) {                                   // SHIFT+A on a card: cut its file
+      if (nav.menuSel < MENU_CARDS) {              // to the clipboard, or paste onto
+        if (projExists[nav.menuSel]) projectCut(nav.menuSel);   // an empty one
+        else projectPaste(nav.menuSel);
+      }
+    } else if (nav.menuSel < MENU_CARDS) {         // a card, L7's grammar: the loaded
+      if (nav.menuSel == projCurrent) {            // one saves and closes the menu,
+        projectSaveCurrent();                      // a project loads (on the beat
+        nav.menu = false;                          // while playing), an empty slot
+      } else if (projExists[nav.menuSel]) {        // becomes a new project
+        projectRequestLoad(nav.menuSel);
+      } else {
+        projectNew(nav.menuSel);
+      }
+    } else if (nav.menuSel == MENU_CARDS + MENU_STORAGE) {
+      projectSaveCurrent();                        // (blocks until a key or an eject)
+      usbDriveMode();
+      projectReloadCurrent();                      // the card's version wins now
+    }
     dirtyNow = true;
   }
   if (plainA && nav.screen == SCR_MIX && nav.mixSel < 9) {
     trackMute[nav.mixSel] = !trackMute[nav.mixSel];
     dirtyNow = true;
   }
+  if (plainA && nav.screen == SCR_GRID) {
+    uint8_t t = nav.gridT;
+    if (nav.gridS == 8) {                          // a stop cell: that track's clip
+      if (clipPlaying[t] >= 0 || clipPending[t] >= 0) clipPending[t] = CLIP_STOP;   // dies on the next bar
+    } else {
+      Clip &c = clipAt(t, nav.gridS);
+      if (!c.used) {                               // empty: a clip appears
+        c.count = 0; c.bars = 1; c.used = 1;
+      } else if (synth.seqOn() && clipPlaying[t] == (int8_t)nav.gridS && clipPending[t] == -1) {
+        nav.screen = SCR_EDIT;                     // running: into the editor
+      } else {                                     // stopped: plays from the next bar
+        clipPending[t] = (int8_t)nav.gridS;
+        if (!synth.seqOn()) synth.seqToggle();     // the clock starts; bar line 0 takes it
+      }
+    }
+    dirtyNow = true;
+  }
+  if ((pressed & BTN_EDIT) && shift && !opt && !nav.menu && !nav.statusFocus &&
+      nav.screen == SCR_GRID && nav.gridS < 8) {
+    // SHIFT+A: a used slot cuts to the clipboard, an empty one pastes.
+    Clip &c = clipAt(nav.gridT, nav.gridS);
+    if (c.used) {
+      clipClipboard = c;
+      clipClipFull = true;
+      if (clipPlaying[nav.gridT] == (int8_t)nav.gridS) clipPlaying[nav.gridT] = -1;   // silenced before the wipe
+      if (clipPending[nav.gridT] == (int8_t)nav.gridS) clipPending[nav.gridT] = -1;
+      c = Clip{};
+    } else if (clipClipFull) {
+      c = clipClipboard;
+    }
+    dirtyNow = true;
+  }
   if (plainA && nav.screen == SCR_EDIT) {
     // A on the roll: add a step note at the cursor, or remove the one there.
-    clipToggle(clipAt(nav.gridT, nav.gridS), nav.editPitch, nav.editPage * 16 + nav.editStep, 100);
+    clipToggle(clipAt(nav.gridT, gridScene()), nav.editPitch, nav.editPage * 16 + nav.editStep, 100);
     dirtyNow = true;
   }
   static uint32_t pressedAt[4], lastRep[4];
@@ -252,7 +301,7 @@ bool inputService() {
         nav.editPitch = scaleSnap(nav.editPitch);   // keep the roll cursor legal
         dirty = true;
       } else if (nav.screen == SCR_EDIT) {       // B + arrows on a note: length / velocity
-        Clip &c = clipAt(nav.gridT, nav.gridS);
+        Clip &c = clipAt(nav.gridT, gridScene());
         int ni = clipFindAt(c, nav.editPitch, nav.editPage * 16 + nav.editStep);
         if (ni >= 0) {
           ClipNote &cn = c.notes[ni];

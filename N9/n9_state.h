@@ -28,7 +28,8 @@ struct NavState {
   uint8_t tfxRow = 0, tfxCol = 0, tfxSlot = 0;
   uint8_t mfxRow = 0, mfxCol = 0;
 
-  uint8_t gridT = 2, gridS = 1;  // clip grid cursor: its track is the selected track
+  uint8_t gridT = 2, gridS = 1;  // clip grid cursor: its track is the selected
+                                 // track; row 8 is the stop-button row
 
   // Piano roll cursor: the bar page shown, the step within it, and the
   // cursor's absolute pitch; the 13-row window slides by octaves (editOct).
@@ -57,6 +58,10 @@ struct NavState {
 extern NavState nav;
 inline uint8_t &curEngine();   // defined below NavState
 
+// The grid cursor's scene (the editor's, the status row's): the stop row
+// counts as the last scene for everything that needs a clip.
+inline uint8_t gridScene() { return nav.gridS > 7 ? 7 : nav.gridS; }
+
 // The engine lineup (user-trimmed 2026-10-13): Prophet-5, 303, Juno, then
 // every Mutable Instruments model as its own engine (n9_mi.h). The M1 and
 // Microwave emulations are parked (code kept, selector entries gone) until
@@ -74,6 +79,7 @@ const ParamInfo *engineParams(uint8_t e);
 // when stepping engines or tracks). The selected track (the grid cursor)
 // is what MIDI, the sequencer and the INST/MOD/TFX screens act on.
 extern uint8_t trackEngine[9];
+void paramsInit();             // every track's cells to their engine defaults (n9_synth.cpp)
 extern uint8_t engParams[9][ENGINE_COUNT][8];
 // Parked engines: sentinel ids no selector position reaches.
 constexpr uint8_t E_MWAVE = 254, E_M1 = 253;
