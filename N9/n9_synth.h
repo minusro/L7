@@ -2,12 +2,11 @@
 // from MIDI channel 1 (USB and serial). A placeholder for the real per-track
 // engines: one engine at a time (nav.engine), fixed envelopes, no modulation.
 //
-// Engines (ENGINE_NAMES, n9_state.h):
-//   0 SAW    naive sawtooth through a one-pole lowpass
-//   1 PULSE  naive square through the same lowpass
-//   2 FM2    two-operator FM, 2:1, the index easing off after the attack
-//   3 PLUCK  two-operator FM, 1:1, a fast-decaying index and a plucked decay
-//            (no sustain: the note rings down on its own)
+// The full lineup is in the selector (ENGINE_NAMES, n9_state.h); the sounds
+// behind it are simple stand-ins so far (ENGINES in n9_synth.cpp): saw /
+// pulse / three detuned saws / 2-op FM / noise, each through a one-pole
+// lowpass, with per-engine envelope settings. The emulations (303, JUNO,
+// PRO5, MWAVE, M1) and FM4/WT/PLUCK-as-string are still to be written.
 #pragma once
 #include <Audio.h>
 
@@ -30,10 +29,12 @@ private:
     volatile uint8_t state = IDLE;
     uint8_t note = 0, engine = 0;
     float phase = 0, inc = 0;        // carrier, 0..1 per sample
-    float mphase = 0, minc = 0;      // modulator
+    float mphase = 0, minc = 0;      // FM modulator / SUPER's second saw
+    float p3 = 0, inc3 = 0;          // SUPER's third saw
     float mindex = 0;                // FM index, decaying
     float env = 0, lp = 0;
     float vel = 0;
+    uint32_t rng = 1;                // the NOISE engine's generator
     uint32_t age = 0;                // for stealing: noteOn order
   };
   Voice _v[32];

@@ -9,21 +9,44 @@
 // connection built on a not-yet-constructed stream corrupts the update list
 // — a hard fault in the first audio interrupt.)
 
-const char *const ENGINE_NAMES[ENGINE_COUNT] = {"SAW", "PULSE", "FM2", "PLUCK"};
+// The lineup (decided 2026-10-13): 8 generic engines plus the five
+// emulations — TB-303, Juno-60 (with chorus I + II), Prophet-5, Waldorf
+// Microwave, Korg M1. The emulations (and FM4/WT) are placeholder voices
+// for now: the selector and voice pool are real, the sound isn't yet.
+const char *const ENGINE_NAMES[ENGINE_COUNT] = {
+    "SAW", "PULSE", "SUPER", "FM2", "FM4", "PLUCK", "WT", "NOISE",
+    "303", "JUNO", "PRO5", "MWAVE", "M1"};
+
+enum OscType : uint8_t {
+  O_SAW,     // naive saw through the one-pole lowpass
+  O_PULSE,   // naive square, same lowpass
+  O_SUPER,   // three saws, detuned +-0.45%
+  O_FM,      // two-operator FM
+  O_NOISE,   // white noise through the lowpass
+};
 
 // Per-engine fixed settings (ms; the real app gets these from the INST cells).
 struct EngineDef {
+  OscType osc;
   float atkMs, relMs;
-  bool fm;         // two-operator FM (else saw/pulse through the lowpass)
   bool pluck;      // no sustain: the note decays on its own
   float decMs;     // the pluck's decay
   float ratio, index0, idxDecMs;   // FM: modulator ratio, index and its decay
 };
 static const EngineDef ENGINES[ENGINE_COUNT] = {
-    {2, 150, false, false, 0, 0, 0, 0},            // SAW
-    {2, 150, false, false, 0, 0, 0, 0},            // PULSE
-    {1, 200, true, false, 0, 2.0f, 2.5f, 300},     // FM2
-    {0.5f, 60, true, true, 500, 1.0f, 4.0f, 80},   // PLUCK
+    {O_SAW, 2, 150, false, 0, 0, 0, 0},                // SAW
+    {O_PULSE, 2, 150, false, 0, 0, 0, 0},              // PULSE
+    {O_SUPER, 4, 200, false, 0, 0, 0, 0},              // SUPER
+    {O_FM, 1, 200, false, 0, 2.0f, 2.5f, 300},         // FM2
+    {O_FM, 1, 250, false, 0, 3.0f, 3.5f, 400},         // FM4    (placeholder: brighter 2-op)
+    {O_FM, 0.5f, 60, true, 500, 1.0f, 4.0f, 80},       // PLUCK  (Karplus-Strong later)
+    {O_FM, 2, 200, false, 0, 0.5f, 1.5f, 1000},        // WT     (placeholder)
+    {O_NOISE, 1, 120, true, 250, 0, 0, 0},             // NOISE
+    {O_SAW, 1, 80, false, 0, 0, 0, 0},                 // 303    (placeholder)
+    {O_SUPER, 3, 300, false, 0, 0, 0, 0},              // JUNO   (placeholder)
+    {O_SUPER, 2, 250, false, 0, 0, 0, 0},              // PRO5   (placeholder)
+    {O_FM, 2, 220, false, 0, 1.5f, 2.0f, 600},         // MWAVE  (placeholder)
+    {O_FM, 1, 300, false, 0, 3.5f, 2.0f, 500},         // M1     (placeholder)
 };
 
 // Note/velocity events cross from loop() to the audio interrupt through this
@@ -83,11 +106,13 @@ void N9Synth::update() {
       float hz = 440.0f * exp2f((e.note - 69) / 12.0f);
       v->note = e.note; v->engine = nav.engine;
       v->inc = hz / 44100.0f;
-      v->minc = v->inc * d.ratio;
-      v->phase = v->mphase = 0;
+      v->minc = d.osc == O_SUPER ? v->inc * 1.0045f : v->inc * d.ratio;
+      v->inc3 = v->inc * 0.9955f;
+      v->phase = v->mphase = v->p3 = 0;
       v->mindex = d.index0;
       v->env = 0; v->lp = 0;
       v->vel = e.vel / 127.0f;
+      v->rng = _ageCounter * 2654435761u + e.note * 7919u + 1;
       v->age = ++_ageCounter;
       v->state = ATTACK;
     } else {
@@ -111,7 +136,7 @@ void N9Synth::update() {
     float atkC = 1.0f - decay(d.atkMs < 0.1f ? 0.1f : d.atkMs);
     float decC = d.pluck ? decay(d.decMs) : 1.0f;
     float relC = decay(d.relMs);
-    float idxC = d.fm ? decay(d.idxDecMs) : 1.0f;
+    float idxC = d.osc == O_FM ? decay(d.idxDecMs) : 1.0f;
     float amp = v.vel * 0.12f;
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
       switch (v.state) {
@@ -120,15 +145,29 @@ void N9Synth::update() {
         default:      v.env *= relC; break;    // RELEASE
       }
       float s;
-      if (d.fm) {
-        float mod = sinT(v.mphase) * v.mindex;
-        v.mindex *= idxC;
-        s = sinT(v.phase + mod * 0.15915f);    // index in radians -> cycles
-        v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
-      } else {
-        s = v.engine == 0 ? 2.0f * v.phase - 1.0f : (v.phase < 0.5f ? 1.0f : -1.0f);
-        v.lp += 0.5f * (s - v.lp);             // take the top edge off the naive shapes
-        s = v.lp;
+      switch (d.osc) {
+        case O_FM: {
+          float mod = sinT(v.mphase) * v.mindex;
+          v.mindex *= idxC;
+          s = sinT(v.phase + mod * 0.15915f);  // index in radians -> cycles
+          v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
+          break;
+        }
+        case O_SUPER:
+          s = ((2.0f * v.phase - 1.0f) + (2.0f * v.mphase - 1.0f) + (2.0f * v.p3 - 1.0f)) * 0.333f;
+          v.lp += 0.5f * (s - v.lp); s = v.lp;
+          v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
+          v.p3 += v.inc3; if (v.p3 >= 1.0f) v.p3 -= 1.0f;
+          break;
+        case O_NOISE:
+          v.rng = v.rng * 1664525u + 1013904223u;
+          s = (int32_t)v.rng * 4.6566e-10f;
+          v.lp += 0.5f * (s - v.lp); s = v.lp;
+          break;
+        default:                               // O_SAW, O_PULSE
+          s = d.osc == O_SAW ? 2.0f * v.phase - 1.0f : (v.phase < 0.5f ? 1.0f : -1.0f);
+          v.lp += 0.5f * (s - v.lp); s = v.lp;
+          break;
       }
       v.phase += v.inc; if (v.phase >= 1.0f) v.phase -= 1.0f;
       mix[i] += s * v.env * amp;

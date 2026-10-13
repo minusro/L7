@@ -30,6 +30,8 @@ struct NavState {
 
 extern NavState nav;
 
-// The engines the prototype knows (n9_synth.cpp): names for the INST screen.
-constexpr uint8_t ENGINE_COUNT = 4;
+// The agreed engine lineup (2026-10-13; docs/design/n9_mockup.html). The
+// synth implements SAW, PULSE, SUPER, FM2, PLUCK and NOISE; the rest play
+// placeholder voices until their emulations exist (n9_synth.cpp).
+constexpr uint8_t ENGINE_COUNT = 13;
 extern const char *const ENGINE_NAMES[ENGINE_COUNT];

@@ -159,13 +159,17 @@
       <li><strong>Piano roll</strong> for the clip editor.</li>
       <li><strong>Modulation</strong> — four selectable sources per track, each with two destination slots.</li>
       <li><strong>Voices</strong> — 32, a shared pool across the nine tracks.</li>
+      <li><strong>Engines (13)</strong> — SAW, PULSE, SUPER (detuned saw stack), FM2, FM4, PLUCK
+      (Karplus-Strong), WT (wavetable), NOISE, plus five emulations: 303, Juno-60 (with
+      chorus I + II), Prophet-5, Waldorf Microwave, Korg M1.</li>
     </ul>
   </section>
 
   <section>
     <h2>Open questions</h2>
     <ul>
-      <li><strong>Engines</strong> — which engines; what fits the Teensy beside 9 tracks of mixing and two send effects.</li>
+      <li><strong>Emulation depth</strong> — per-engine CPU cost of the five emulations against the
+      32-voice pool; measured per block on the prototype's serial log.</li>
       <li><strong>Clip length</strong> — per clip (1–8 bars?) with the grid showing length, or scene-wide like L7?</li>
       <li><strong>MIDI</strong> — channel 1 to the selected track for now; later one channel per track (1–9)?</li>
     </ul>
@@ -405,7 +409,7 @@
     text(8, 32, '<', C.DIM);
     text(24, 32, 'PLUCK', C.INK);
     text(24 + textW('PLUCK') + 10, 32, '>', C.DIM);
-    text(282, 32, '4/12', C.DIM);
+    text(282, 32, '6/13', C.DIM);
     rect(4, 46, 312, 2, C.DARK);
     const r1 = [['TUNE', '+0', 0.5], ['SHAPE', '38', 0.38], ['CUTOFF', '86', 0.86], ['RES', '22', 0.22]];
     const r2 = [['ATK', '2', 0.05], ['DEC', '340', 0.45], ['SUS', '60', 0.6], ['REL', '180', 0.3]];
