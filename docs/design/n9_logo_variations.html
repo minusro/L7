@@ -37,12 +37,12 @@ const fl = Math.floor;
 // A variant: slantDiv (off = floor((25-p)/slantDiv)), cuts rows, and spans(p, off)
 // returning [x, w] pairs in units.
 const variants = [
-  { name: 'V1 — CURRENT', note: 'Vertical-middle N, square-bowl 9, the L7 cuts, every diagonal at a 1:2 step. What ships today.',
+  { name: 'V1 — CURRENT', note: 'Vertical-middle N, square-bowl 9, the L7 cuts, 1:2 diagonals, a two-unit-wider gap between the glyphs (the mark runs 57 units). What ships today.',
     slantDiv: 2, cuts: [[18,20],[22,24]],
     spans(p, off) {
-      const s = [[off, 6], [15, 6], [off + 16, 6], [off + 36, 7]];
-      if (p < 3 || (p >= 10 && p < 13)) s.push([off + 24, 12]);
-      else if (p < 10) s.push([off + 24, 7]);
+      const s = [[off, 6], [15, 6], [off + 16, 6], [off + 38, 7]];
+      if (p < 3 || (p >= 10 && p < 13)) s.push([off + 26, 12]);
+      else if (p < 10) s.push([off + 26, 7]);
       return s;
     } },
   { name: 'V2 — SEVEN-KIN', note: 'The 9’s right edge slopes at the same 1:2 as the italic, like the L7 seven’s diagonal; the bowl hangs off it.',
