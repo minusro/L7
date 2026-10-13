@@ -28,6 +28,9 @@
 
 m8::Board board;
 
+// The synth is defined here, not in n9_synth.cpp: the connections below must
+// construct after it, and across files that order isn't guaranteed.
+N9Synth synth;
 AudioOutputI2S i2sOut;
 AudioConnection c1(synth, 0, i2sOut, 0), c2(synth, 1, i2sOut, 1);
 AudioControlSGTL5000 codec;
@@ -56,13 +59,17 @@ void loop() {
   if (board.headphonesChanged(hp)) board.setSpeaker(!hp);
   if (board.powerButtonPressed()) { codec.volume(0.0f); board.powerOff(); }
 
+  // One line once USB serial is likely up, so a host sees the app is alive.
+  static bool announced = false;
+  if (!announced && millis() > 2000) { announced = true; Serial.printf("n9: up, screen %u\n", nav.screen); }
+
   // The synth's cost on the serial log, once a second while it plays:
   // the dearest audio block since the last line, against the 2.9 ms budget.
   static uint32_t logAt = 0;
   if (millis() - logAt >= 1000) {
     logAt = millis();
     uint32_t cyc = synth.takeMaxCycles();
-    if (synth.active() || cyc)
+    if (synth.active())
       Serial.printf("synth: %u voices, max block %lu us (%lu%% of 2902 us)\n",
                     synth.active(), cyc / 600, cyc / 600 * 100 / 2902);
   }

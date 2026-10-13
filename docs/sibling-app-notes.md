@@ -55,6 +55,13 @@ L7 itself; this is the extract you need to start fresh.
 * Put the whole engine in **one AudioStream subclass** (`update()` every
   128 samples at 44.1 kHz) rather than a graph of Audio-library objects:
   one place to reason about, one place to measure.
+* **Define every AudioStream and its AudioConnections in the same file (the
+  .ino), streams before connections.** Across files the static construction
+  order is undefined; a connection built on a not-yet-constructed stream
+  corrupts the audio update list and hard-faults in the first audio interrupt
+  — on N9 that looked like a crash while the first frame drew, with nothing
+  on serial (it died before USB came up, and the printed CrashReport was
+  dropped the same way on each reboot).
 * **Threading rule** (L7's hard-won one): the audio interrupt owns playback
   state; `loop()` changes it only through explicit handshakes (volatile
   fields set whole, or a small lock-free ring of events — N9's note queue).

@@ -4,7 +4,10 @@
 #include "M8Board.h"
 #include "n9_state.h"
 
-N9Synth synth;
+// (synth itself is defined in N9.ino, before the AudioConnections that take
+// it: across files the construction order would be undefined, and a
+// connection built on a not-yet-constructed stream corrupts the update list
+// — a hard fault in the first audio interrupt.)
 
 const char *const ENGINE_NAMES[ENGINE_COUNT] = {"SAW", "PULSE", "FM2", "PLUCK"};
 
