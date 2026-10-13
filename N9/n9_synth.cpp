@@ -3,10 +3,13 @@
 
 #include "M8Board.h"
 #include "n9_m1_bank.h"
+#include "n9_mw_bank.h"
 #include "n9_state.h"
 
 // The M1 engine's current program (0-99), set by MIDI program change.
 static volatile uint8_t m1Prog = 0;
+// And the Microwave engine's current sound (0-255).
+static volatile uint8_t mwProg = 0;
 
 // (synth itself is defined in N9.ino, before the AudioConnections that take
 // it: across files the construction order would be undefined, and a
@@ -36,6 +39,10 @@ enum OscType : uint8_t {
   O_M1,      // the factory bank's parameters (n9_m1_bank.h: osc pair, VDA
              // EG segments, VDF sweep) over stand-in oscillators by
              // multisound category; MIDI program change picks the program
+  O_MWAVE,   // the Microwave factory bank's parameters (n9_mw_bank.h,
+             // offsets inferred from the data): VCA ADSR, resonant VCF with
+             // its env sweep, and a morphing wave (sine-saw-square) swept
+             // from the sound's start wave — the wavetable stand-in
 };
 
 // (E_303 / E_M1: n9_state.h)
@@ -60,7 +67,7 @@ static const EngineDef ENGINES[ENGINE_COUNT] = {
     {O_303, 3, 12, true, 3500, 0, 0, 0},               // 303 (the VCA decays while gated, off fast)
     {O_SUPER, 3, 300, false, 0, 0, 0, 0},              // JUNO   (placeholder)
     {O_PRO5, 5, 350, false, 0, 1.004f, 0, 0},          // PRO5 (ratio = osc B's detune)
-    {O_FM, 2, 220, false, 0, 1.5f, 2.0f, 600},         // MWAVE  (placeholder)
+    {O_MWAVE, 2, 220, false, 0, 0, 0, 0},              // MWAVE (envelopes come from the sound)
     {O_M1, 1, 300, false, 0, 0, 0, 0},                 // M1 (envelopes come from the program)
 };
 
@@ -68,6 +75,13 @@ static const EngineDef ENGINES[ENGINE_COUNT] = {
 // scale), and as a per-sample easing coefficient.
 static inline float m1ms(uint8_t v) { return 2.0f * expf(0.0816f * v); }
 static inline float m1coef(uint8_t v) { return 1.0f - expf(-1.0f / (m1ms(v) * 44.1f)); }
+
+// Microwave times (0-127), the scale a guess until a spec surfaces.
+static inline float mwcoef(uint8_t v) {
+  float ms = 4.0f * expf(0.0677f * v);
+  if (ms > 8000.0f) ms = 8000.0f;
+  return 1.0f - expf(-1.0f / (ms * 44.1f));
+}
 
 // Note/velocity events cross from loop() to the audio interrupt through this
 // little ring; all voice state is touched by update() only.
@@ -193,6 +207,21 @@ void N9Synth::update() {
         v->mindex = v->cat1 == M1C_BELL ? 2.5f : v->cat1 == M1C_PLUCK ? 3.0f : 1.2f;
         v->midxC = v->cat1 == M1C_BELL ? decay(400) : v->cat1 == M1C_PLUCK ? decay(100) : decay(600);
         v->inc3 = v->inc * (v->cat1 == M1C_BELL ? 3.5f : 1.0f);   // the FM stand-ins' modulator
+      } else if (nav.engine == E_MWAVE) {        // cache the sound into the voice
+        const MWSound &sn = MW_BANK[mwProg];
+        v->eAc = mwcoef(sn.a); v->eDc = mwcoef(sn.dec);
+        v->eSc = v->eDc; v->eRc = mwcoef(sn.r);
+        v->lAtk = 1.0f; v->lBreak = v->lSus = sn.s / 127.0f;
+        v->mseg = 0;
+        float c = sn.cutoff / 127.0f;
+        v->cutB = 0.004f + 0.26f * c * c;
+        v->cutE = 0.2f * sn.fenvAmt / 127.0f;
+        v->fSus = 0; v->fdC = mwcoef(sn.fdec);
+        v->fenv = 1.0f;
+        v->resK = 3.2f * sn.reso / 127.0f;
+        v->wStart = sn.startWave / 63.0f;
+        v->mindex = 0;                           // the wave env, rising
+        v->midxC = 1.0f - expf(-1.0f / (900.0f * 44.1f));
       }
       v->age = ++_ageCounter;
       v->state = ATTACK;
@@ -222,7 +251,7 @@ void N9Synth::update() {
                 : d.osc == O_PRO5 ? decay(600) : 1.0f;
     float amp = v.vel * 0.12f;
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-      if (d.osc != O_M1) switch (v.state) {    // (the M1 runs its program's EG instead)
+      if (d.osc != O_M1 && d.osc != O_MWAVE) switch (v.state) {   // (the banks run their own EGs)
         case ATTACK:  v.env += atkC * (1.0f - v.env); if (v.env > 0.999f) v.state = HOLD; break;
         case HOLD:    v.env *= decC; break;
         default:      v.env *= relC; break;    // RELEASE
@@ -302,6 +331,32 @@ void N9Synth::update() {
           v.p3 += v.inc3; if (v.p3 >= 1.0f) v.p3 -= 1.0f;
           break;
         }
+        case O_MWAVE: {
+          // VCA ADSR (the M1's segment machinery with attack to full).
+          if (v.state == RELEASE) v.env += v.eRc * (0.0f - v.env);
+          else switch (v.mseg) {
+            case 0: v.env += v.eAc * (1.0f - v.env + 0.001f); if (v.env >= 1.0f) { v.env = 1.0f; v.mseg = 1; } break;
+            default: v.env += v.eDc * (v.lSus - v.env); break;
+          }
+          // The wave sweep: morph sine -> saw -> square from the start wave.
+          v.mindex += v.midxC * (1.0f - v.mindex);
+          float w = v.wStart + 0.45f * v.mindex; if (w > 1.0f) w = 1.0f;
+          float sn = sinT(v.phase);
+          float sw = 2.0f * v.phase - 1.0f - polyblep(v.phase, v.inc);
+          float s0 = w < 0.5f ? sn + (sw - sn) * (w * 2.0f)
+                              : sw + ((v.phase < 0.5f ? 1.0f : -1.0f) - sw) * ((w - 0.5f) * 2.0f);
+          // Resonant VCF with its decaying env sweep.
+          v.fenv += v.fdC * (0.0f - v.fenv);
+          float fc = v.cutB + v.cutE * v.fenv; if (fc > 0.3f) fc = 0.3f;
+          float wc = 6.2832f * fc, g = wc / (1.0f + wc);
+          float in = s0 - v.resK * v.f4;
+          if (in > 1.4f) in = 1.4f; else if (in < -1.4f) in = -1.4f;
+          in -= in * in * in * (1.0f / 6.0f);
+          v.f1 += g * (in - v.f1); v.f2 += g * (v.f1 - v.f2);
+          v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
+          s = v.f4 * (1.2f + 0.5f * v.resK);
+          break;
+        }
         default:                               // O_SAW, O_PULSE
           s = d.osc == O_SAW ? 2.0f * v.phase - 1.0f : (v.phase < 0.5f ? 1.0f : -1.0f);
           v.lp += 0.5f * (s - v.lp); s = v.lp;
@@ -340,13 +395,26 @@ void m1SetProgram(uint8_t p) {
   Serial.printf("m1: program %02u %s\n", p, M1_BANK[p].name);
 }
 
+uint8_t mwProgram() { return mwProg; }
+
+void mwSetProgram(uint8_t p) {
+  mwProg = p;
+  Serial.printf("mwave: sound %03u %s\n", p, MW_BANK[p].name);
+}
+
+// A MIDI program change goes to the current engine's bank.
+static void setPreset(uint8_t p) {
+  if (nav.engine == E_MWAVE) mwSetProgram(p);
+  else m1SetProgram(p);
+}
+
 void synthServiceMidi() {
   while (usbMIDI.read()) {
     if (usbMIDI.getChannel() != 1) continue;
     uint8_t type = usbMIDI.getType();
     if (type == usbMIDI.NoteOn && usbMIDI.getData2() > 0) synth.noteOn(usbMIDI.getData1(), usbMIDI.getData2());
     else if (type == usbMIDI.NoteOff || type == usbMIDI.NoteOn) synth.noteOff(usbMIDI.getData1());
-    else if (type == usbMIDI.ProgramChange) m1SetProgram(usbMIDI.getData1());
+    else if (type == usbMIDI.ProgramChange) setPreset(usbMIDI.getData1());
   }
   if (!midiSerial) return;
   static uint8_t status = 0, d1 = 255;
@@ -354,7 +422,7 @@ void synthServiceMidi() {
     uint8_t b = midiSerial->read();
     if (b >= 0xF8) continue;                      // realtime
     if (b & 0x80) { status = b; d1 = 255; continue; }
-    if (status == 0xC0) { m1SetProgram(b); continue; }   // channel 1 program change
+    if (status == 0xC0) { setPreset(b); continue; }   // channel 1 program change
     if (status == 0x90 || status == 0x80) {       // channel 1 only
       if (d1 == 255) { d1 = b; continue; }
       if (status == 0x90 && b > 0) synth.noteOn(d1, b);

@@ -23,6 +23,14 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
+- [ ] **N9: the Microwave.** Engine 12 plays the user's factory bank (256
+  sounds, sounds/Microwave soundbank): preset cell shows "NNN NAME", B +
+  LEFT/RIGHT or MIDI program change steps it. Parameter offsets were
+  INFERRED from the data, not a spec (tools/mw_bank.py): VCA ADSR, resonant
+  VCF + env sweep, wavetable stand-in = sine->saw->square morph swept from
+  the start wave. Check: the three "303" sounds squelch, pads swell and
+  sustain, "Noisefloor"-type sounds at least behave; if envelopes feel
+  systematically wrong the offsets or the time scale (mwcoef) are off.
 - [ ] **N9: the M1.** Engine 13 plays the factory bank's parameters (the
   user's sysex dump, sounds/M1 soundbank): MIDI program change on channel 1
   picks among the 100 programs (serial logs the name; boots on 00 Universe).

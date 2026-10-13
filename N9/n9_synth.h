@@ -35,7 +35,8 @@ private:
     float eAc = 0, eDc = 0, eSc = 0, eRc = 0;       // VDA EG coefficients
     float lAtk = 1, lBreak = 0, lSus = 0;           // and its levels
     float cutB = 0, cutE = 0, fSus = 0, fdC = 1;    // VDF: base, env amount, sustain, decay
-    float midxC = 1;                                // FM stand-ins: index decay
+    float midxC = 1;                                // FM stand-ins: index decay; MWAVE: wave-env rise
+    float wStart = 0, resK = 0;                     // MWAVE: wave start position, filter resonance
     float phase = 0, inc = 0;        // carrier, 0..1 per sample
     float tinc = 0;                  // 303: the slide's target increment
     float mphase = 0, minc = 0;      // FM modulator / SUPER's second saw
@@ -63,3 +64,7 @@ void synthMidiBegin();
 // preset cell both go through these.
 uint8_t m1Program();
 void m1SetProgram(uint8_t p);
+
+// The Microwave engine's sound (0-255), likewise.
+uint8_t mwProgram();
+void mwSetProgram(uint8_t p);

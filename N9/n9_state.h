@@ -44,4 +44,4 @@ extern NavState nav;
 // placeholder voices until their emulations exist (n9_synth.cpp).
 constexpr uint8_t ENGINE_COUNT = 13;
 extern const char *const ENGINE_NAMES[ENGINE_COUNT];
-constexpr uint8_t E_303 = 8, E_M1 = 12;   // engines the code treats specially
+constexpr uint8_t E_303 = 8, E_MWAVE = 11, E_M1 = 12;   // engines the code treats specially

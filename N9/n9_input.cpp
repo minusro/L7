@@ -107,6 +107,7 @@ bool inputService() {
       if (nav.screen == SCR_INST && (i == A_LEFT || i == A_RIGHT)) {   // or, on the preset cell, the preset
         if (nav.instRow == 0 && nav.instTop == 0) {
           if (nav.engine == E_M1) { m1SetProgram((m1Program() + (i == A_RIGHT ? 1 : 99)) % 100); dirty = true; }
+          else if (nav.engine == E_MWAVE) { mwSetProgram((uint8_t)(mwProgram() + (i == A_RIGHT ? 1 : 255))); dirty = true; }
         } else {
           nav.engine = (nav.engine + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
           dirty = true;
