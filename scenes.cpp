@@ -852,7 +852,7 @@ FLASHMEM int deleteEmptySamples() {
   return deleted;
 }
 
-int deleteUnusedSamples(bool silentToo) {
+FLASHMEM int deleteUnusedSamples(bool silentToo) {
   if (transport.running || busy() || job.on) return 0;
   // The silent recordings first: off every scene of every project (their
   // tracks emptied there) and off the tracks now, so they go with the unused.

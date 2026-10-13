@@ -641,7 +641,7 @@ static bool preparing = false;
 
 // Sample n was renamed (stopped): the handles open on it, opened again by its
 // new name, each where it was.
-static void reopenSample(uint32_t n) {
+FLASHMEM static void reopenSample(uint32_t n) {
   char path[40];
   samplePath(n, path, sizeof path);
   auto reopen = [&](FsFile &f) {
@@ -1654,7 +1654,7 @@ FLASHMEM bool sampleFirstOfLetter(uint32_t id) {
   return i <= 0 || i >= sampleTotal || sampleLetter(sampleIds[i - 1]) != sampleLetter(id);
 }
 
-bool stepSample(int t, int dir) {
+FLASHMEM bool stepSample(int t, int dir) {
   if (sampleTotal < 2 || recordingTrack(t)) return false;
   TrackUnit u = unitOf(t);                       // (a planned change counts)
   u.rotate = 0;                                  // (another recording: not turned)
@@ -3047,7 +3047,7 @@ void serviceStorage() {
 // handles and what was read are stale): every track empty, no file open, the
 // lists of samples and recording space forgotten. Stopped and not recording
 // only. storageBegin() then reads it all again, as at a start.
-void storageForget() {
+FLASHMEM void storageForget() {
   if (growing) {                                 // (recording space grown part way: dropped)
     char path[40];
     poolPath(growingNumber, path, sizeof path);

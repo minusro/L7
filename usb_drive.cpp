@@ -94,7 +94,7 @@ static bool leave(const char *why, uint16_t ink = BG) {
   return true;
 }
 
-bool usbDriveMode() {
+FLASHMEM bool usbDriveMode() {   // (flash: RAM1 is full)
   // Everything the app holds is written out; the card is the computer's now.
   if (recording.mode != Recording::Idle) return false;
   transportStop();
@@ -165,7 +165,7 @@ bool usbDriveMode() {
 #elif defined(USB_MTPDISK) || defined(USB_MTPDISK_SERIAL)
 extern "C" volatile uint8_t usb_configuration;
 
-bool usbDriveMode() {
+FLASHMEM bool usbDriveMode() {   // (flash: RAM1 is full)
   // Everything the app holds is written out; the card is the computer's now.
   if (recording.mode != Recording::Idle) return false;
   transportStop();

@@ -118,7 +118,7 @@ int splashBottom() { return LOGO_Y + LOGO_H; }      // (startup messages go unde
 
 // OKLCH (lightness, chroma, hue in degrees) to RGB565; a chroma out of sRGB's
 // reach at that lightness comes down until it fits.
-static uint16_t oklch565(float L, float C, float hDeg) {
+FLASHMEM static uint16_t oklch565(float L, float C, float hDeg) {
   float h = hDeg * (float)M_PI / 180, r = 0, g = 0, b = 0;
   for (int i = 0; i < 12; i++, C *= 0.9f) {
     float a = C * cosf(h), bb = C * sinf(h);
@@ -179,7 +179,7 @@ static bool lineHidden = false, lineChanged = false;
 // The splash now: the logo fading in, then its hue (the accent's, OKLCH 0.824,
 // 0.164, 164.8 deg) turned once round, eased in and out (smoothstep); the
 // copyright line fading in.
-void splashTick() {
+FLASHMEM void splashTick() {
   static uint16_t shownLogo = 0, shownText = 0;
   static int shownShift = -1;
   uint32_t ms = millis() - shownAt;

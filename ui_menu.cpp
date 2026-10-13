@@ -234,7 +234,7 @@ static int playingCard() {
 // it clipped to those columns.
 static bool emptyLook = false;
 static void drawItem(int k);
-static void drawCutWipe(int k) {
+FLASHMEM static void drawCutWipe(int k) {
   int slot;
   float cut = menuCutProgress(slot);
   if (slot != k || cut <= 0) return;
@@ -262,7 +262,7 @@ FLASHMEM void menuCutFlash(int k) {
   emptyLook = false;
 }
 
-static void drawItem(int k) {
+FLASHMEM static void drawItem(int k) {
   if (!listInView(k)) return;
   auto &t = board.tft();
   Shape s = itemShape(k);
