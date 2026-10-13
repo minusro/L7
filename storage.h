@@ -60,6 +60,7 @@ bool unitsPrepared();
 // A write may go to the card now (stopped, or the playback buffers are full);
 // false also asks for the buffers to be topped up first.
 bool storageMayWrite();
+bool smallWriteDue();                // an edit's small write may go now (playing: one every 2 s at most); true: it's counted
 
 // Mount SD, load saved tracks; prepares recording space the first time
 // (progress messages go to `progress`). false = no card / no space.

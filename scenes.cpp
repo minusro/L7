@@ -426,7 +426,7 @@ void serviceScenes() {
       return;                                      // (one write per call)
     }
   }
-  if (!file || (recordSlot < 0 && !listDirty) || !storageMayWrite()) return;
+  if (!file || (recordSlot < 0 && !listDirty) || !smallWriteDue()) return;   // (playing: one every 2 s at most)
   if (recordSlot >= 0) {                          // one write per call
     writeRecordNow();
   } else {

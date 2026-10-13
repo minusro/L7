@@ -811,6 +811,20 @@ bool storageMayWrite() {
   return false;
 }
 
+// The small writes edits make (a track's unit, a scene's block, the list):
+// stopped, at once; playing, one at most every SMALL_WRITE_GAP_MS, the streams
+// topped up first. Each is a sector written and its file's directory entry
+// updated: a run of them (a held arrow editing a cell) kept the card busy
+// long enough that a stream's read timed out (1 s), and every track ran dry.
+static constexpr uint32_t SMALL_WRITE_GAP_MS = 2000;
+static uint32_t smallWriteAt = 0;
+bool smallWriteDue() {
+  if (!transport.running) return true;
+  if (millis() - smallWriteAt < SMALL_WRITE_GAP_MS || !storageMayWrite()) return false;
+  smallWriteAt = millis();
+  return true;
+}
+
 // Lead time for a change while playing: it goes on the first quarter beat
 // (scene changes: bar line) at least this far ahead, leaving time to open the
 // new samples and read their starts. A planned switch can still be changed
@@ -1192,10 +1206,7 @@ bool setTrackUnit(int t, const TrackUnit &u) {
 // Writes pending unit files, but only when the streams can afford a pause.
 static void serviceHeaders() {
   if (!headerDirty) return;
-  if (transport.running && !streamsTopped()) {
-    writePending = true;
-    return;
-  }
+  if (!smallWriteDue()) return;                    // (playing: one every 2 s at most)
   for (int t = 0; t < NUM_TRACKS; t++) {
     if (!(headerDirty & (1 << t))) continue;
     if (recording.track == t && recording.mode != Recording::Idle) continue;  // written at the end
@@ -1430,6 +1441,25 @@ static bool fragmented(uint32_t id, uint64_t &bytes) {
   bytes = f.fileSize();
   return true;
 }
+// The recording space dropped (its empty files deleted): their room for
+// the defrag's copies; serviceFiles() makes it again while stopped.
+FLASHMEM static void dropPool() {
+  char path[40];
+  poolNext.close();
+  poolNextSample = 0;
+  if (growing) {
+    growing.close();
+    poolPath(growingNumber, path, sizeof path);
+    SD.sdfs.remove(path);
+  }
+  for (int k = 0; k < poolCount; k++) {
+    poolPath(pool[k], path, sizeof path);
+    SD.sdfs.remove(path);
+  }
+  poolCount = 0;
+  poolBlocked = false;
+}
+
 FLASHMEM int defragSamples(int &noRoom) {
   noRoom = 0;
   if (transport.running || recording.mode != Recording::Idle) return 0;
@@ -1442,9 +1472,15 @@ FLASHMEM int defragSamples(int &noRoom) {
   Serial.printf("defrag: %d recordings, %d in pieces (%d KB), the card %s\n", sampleTotal, pieces, kb,
                 SD.sdfs.fatType() == FAT_TYPE_EXFAT ? "exFAT" : "FAT");
   int moved = 0;
+  bool dropped = false;
   for (int i = 0; i < sampleTotal; i++) {
     const uint32_t id = sampleIds[i];
     if (!fragmented(id, bytes)) continue;
+    if (!dropped) {                                // (the recording space's room first: made again afterwards)
+      dropPool();
+      dropped = true;
+      Serial.println("defrag: the recording space dropped for room (made again after)");
+    }
     char path[40], fresh[40], old[40];
     defragNames(id, path, fresh, old, sizeof path);
     debugStage = "SD defrag (a recording copied)";

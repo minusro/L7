@@ -1923,6 +1923,21 @@ int main(int argc, char **argv) {
       transportStart();
       runBeats(4);
       checkSync(t, "playing on after the defrag");
+      // Editing while playing (a held arrow on the filter, 20 steps a second for
+      // 6 s): its small writes (the unit, the scene) one every 2 s at most.
+      static int smallWrites = 0;
+      smallWrites = 0;
+      simSdLatency = [](size_t bytes, bool write) { if (write && bytes <= 4096) smallWrites++; };
+      for (int k = 0; k < 120; k++) {
+        setTrackFilter(t, k % 2 ? 2 : 3, FILTER_MAX);
+        trackChanged(t);
+        runBeats(0.1);
+      }
+      simSdLatency = nullptr;
+      setTrackFilter(t, 0, FILTER_MAX);
+      trackChanged(t);
+      snprintf(m, sizeof m, "a held edit while playing: %d small writes (one every 2 s at most)", smallWrites);
+      check(smallWrites > 0 && smallWrites <= 8, m);
       transportStop();
       runUntilIdle();
     }
