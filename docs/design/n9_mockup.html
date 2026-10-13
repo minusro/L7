@@ -1,0 +1,490 @@
+<title>N9 Screen Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&display=swap">
+<style>
+  /* Same page style as l8_restyle.html: one dark column of 320x240 screens at 2x.
+     Unlike that document these screens are not rendered from firmware (there is
+     none yet) — they are drawn by the script below, on L7's 2x2 block grid,
+     with L7's palette and 3x5 pixel font (copied from colors.h / ui_font.cpp). */
+  :root {
+    color-scheme: dark;
+    --ground: #0d0d0c;
+    --panel: #161615;
+    --ink: #f2f2ee;
+    --muted: #9a9a92;
+    --line: #2b2b28;
+    --display: "Silkscreen", "IBM Plex Mono", ui-monospace, monospace;
+    --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  body { background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; padding-inline: 20px; padding-block: 36px 64px; }
+  main { max-width: 1360px; margin-inline: auto; display: grid; gap: 44px; }
+  header { display: grid; gap: 10px; max-width: 68ch; }
+  h1 { font-family: var(--display); font-weight: 400; font-size: 34px; letter-spacing: 0.04em; margin: 0; text-wrap: balance; }
+  h2 { font-family: var(--display); font-weight: 400; font-size: 17px; letter-spacing: 0.08em; margin: 0 0 14px; color: var(--muted); }
+  p { margin: 0; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr)); gap: 20px; }
+  .shot { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: grid; gap: 10px; align-content: start; }
+  .shot canvas { width: 100%; height: auto; max-width: 640px; image-rendering: pixelated; display: block; border-radius: 2px; }
+  figcaption { color: var(--muted); font-size: 14px; }
+  .label { display: block; font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); margin-bottom: 2px; }
+  ul { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; max-width: 72ch; }
+  li strong { color: var(--ink); font-weight: 600; }
+  footer { color: var(--muted); font-size: 13px; font-family: var(--mono); }
+</style>
+<main>
+  <header>
+    <h1>N9 Screen Mockups</h1>
+    <p>N9 is L7's sister app on the same M8 hardware: nine MIDI clip tracks, each with its own
+    selectable synthesizer engine. Six screens, stepped through with SHIFT + UP/DOWN, top to
+    bottom: master effects &amp; sends, mixer, track modulation, track instrument, clip grid,
+    clip editor. Notes are edited by hand in the clip editor or recorded from USB/serial MIDI
+    (channel 1 plays and records into the selected track). These screens reuse L7's visual
+    language: the 2&times;2 block grid, the five greys plus accent, the 3&times;5 pixel font,
+    and the status row along the bottom. The small dot column at the status row's left shows
+    where you are in the screen stack (accent dot = this screen).</p>
+  </header>
+
+  <section>
+    <h2>1 &middot; Master effects &amp; sends (top screen)</h2>
+    <div class="grid">
+      <figure class="shot">
+        <span class="label">FX &mdash; two send effects and per-track send levels</span>
+        <canvas id="fx" width="320" height="240"></canvas>
+        <figcaption>Two fixed send effects for now, delay and reverb, each a row of four
+        parameter cells (name dim, value white, amount bar below) — LEFT/RIGHT selects a cell,
+        B + arrows adjust it, B twice resets, exactly L7's cell grammar. Below, the send levels:
+        one bar per track per effect, selected the same way. Track 3's delay send is selected.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>2 &middot; Mixer</h2>
+    <div class="grid">
+      <figure class="shot">
+        <span class="label">MIX &mdash; nine channel strips</span>
+        <canvas id="mix" width="320" height="240"></canvas>
+        <figcaption>One strip per track: pan marker on top, volume level (wide bar, lit from the
+        bottom) with the live meter beside it (white, falls back from peaks), the track badge at
+        the foot — L7's badge rules: accent square = playing, outlined grey = muted (track 6),
+        plain dark number = empty (track 9). LEFT/RIGHT selects a strip (track 3 here, on the
+        dark row ground), B + UP/DOWN volume, B + LEFT/RIGHT pan, A mutes, B twice resets to
+        unity/centre.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>3 &middot; Track modulation</h2>
+    <div class="grid">
+      <figure class="shot">
+        <span class="label">MOD &mdash; the selected track's modulation slots</span>
+        <canvas id="mod" width="320" height="240"></canvas>
+        <figcaption>Three modulation slots per track, each source &gt; destination &gt; amount;
+        UP/DOWN picks a slot (slot 1 selected), the parameter cells below edit the selected
+        slot's source (here LFO 1: shape, rate, sync, depth). The shape preview bottom-left
+        draws the configured LFO; the dim notes beside it are the slot's remaining settings.
+        Destinations come from the selected engine's parameter list.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>4 &middot; Track instrument</h2>
+    <div class="grid">
+      <figure class="shot">
+        <span class="label">INST &mdash; engine select and its parameters</span>
+        <canvas id="inst" width="320" height="240"></canvas>
+        <figcaption>The selected track's engine: the selector on top (B + LEFT/RIGHT steps
+        engines, gapless at the next bar like L7's sample switch; the X/N count beside it),
+        then two rows of four parameter cells — the engine defines their names. ADSR preview
+        bottom-left; voice info (polyphony, MIDI channel) beside it. Engine names here are
+        placeholders.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>5 &middot; Clip grid</h2>
+    <div class="grid">
+      <figure class="shot">
+        <span class="label">GRID &mdash; 9 tracks &times; 8 scenes</span>
+        <canvas id="clipgrid" width="320" height="240"></canvas>
+        <figcaption>Session view: columns are tracks (numbers on top, L7 badge rules — track 3
+        selected and playing), rows are scenes (numbers left, playing scene 2 in accent). Filled
+        cell = clip, accent = playing, accent outline = queued for the next bar (track 5),
+        dark outline = empty. Arrows move the cursor (white frame); A launches/stops a clip
+        (queued to the bar), A on a scene number launches the row; the cursor's track is the
+        selected track the other screens and MIDI input follow. B + A opens the clip in the
+        editor.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>6 &middot; Clip editor (bottom screen)</h2>
+    <div class="grid">
+      <figure class="shot">
+        <span class="label">EDIT &mdash; piano roll of the cursor's clip</span>
+        <canvas id="editor" width="320" height="240"></canvas>
+        <figcaption>A piano roll, one bar of sixteenth steps per page: pitches down the left
+        (white keys light in the key strip, octave line above each C), beats as dark vertical
+        lines, the playhead in accent. Arrows move the cursor; A adds or removes a note; with a
+        note under the cursor (white, framed) B + LEFT/RIGHT sets its length, B + UP/DOWN its
+        velocity — shown in the lane along the bottom. Recording from MIDI writes into this
+        view live. Page/zoom and a tracker-style alternative are open questions below.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reused from L7</h2>
+    <ul>
+      <li><strong>Hardware and chrome</strong> — same M8 (Teensy 4.0, 320&times;240, arrows/SHIFT/PLAY/A/B), same block grid, palette, font, status row (scene &middot; clock &middot; tempo &middot; action button), selection frames, row grounds, badges.</li>
+      <li><strong>Cell grammar</strong> — arrows select, B + arrows adjust, B twice resets, A is the context action, SHIFT + A cut/paste.</li>
+      <li><strong>Timing</strong> — the master clock, bar-line queueing (clips, scenes, engine switches land on the bar), tap tempo, external MIDI clock follow.</li>
+      <li><strong>Projects</strong> — the menu, 12 project slots, scenes; sessions on the SD card under <code>/N9/</code>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Open questions</h2>
+    <ul>
+      <li><strong>Four vs six</strong> — the brief said four main screens but listed six; are FX and the editor secondary (e.g. only via B + A), or is it simply six in the stack?</li>
+      <li><strong>Scene stepping</strong> — SHIFT + UP/DOWN meant scenes in L7 and means screens here. Scenes from the grid only, or keep a shortcut (SHIFT + LEFT/RIGHT?)?</li>
+      <li><strong>Editor style</strong> — piano roll (mocked) or an M8-style tracker column? The piano roll suits the d-pad but holds less per screen.</li>
+      <li><strong>Engines</strong> — which engines, how many voices per track fit the Teensy beside 9 tracks of mixing and two send effects?</li>
+      <li><strong>Modulation model</strong> — free slots (mocked, 3 per track) vs fixed LFO + envelope pages per engine.</li>
+      <li><strong>Clip length</strong> — per clip (1–8 bars?) with the grid showing length, or scene-wide like L7?</li>
+      <li><strong>MIDI</strong> — channel 1 to the selected track for now; later one channel per track (1–9)?</li>
+    </ul>
+  </section>
+
+  <footer>docs/design/n9_mockup.html &mdash; drawn by this page's script with L7's palette and font; no firmware behind it yet.</footer>
+</main>
+<script>
+(() => {
+  const PX = 2;
+  // L7 palette (colors.h), RGB565 rounded back to 8-bit.
+  const C = { BG:'#000000', DARK:'#2c2c2c', DIM:'#707070', LIGHT:'#d0d0d0', INK:'#ffffff',
+              ACC:'#30e6aa', ACCD:'#187848' };
+
+  // The 3x5 font (ui_font.cpp), upper case + digits + signs.
+  const F = {
+    ' ':['..','..','..','..','..'],
+    '.':['.','.','.','.','#'],
+    ':':['.','#','.','#','.'],
+    '/':['..#','..#','.#.','#..','#..'],
+    '*':['...','#.#','.#.','#.#','...'],
+    '-':['...','...','###','...','...'],
+    '+':['...','.#.','###','.#.','...'],
+    '<':['...#','..##','.###','..##','...#'],
+    '>':['#...','##..','###.','##..','#...'],
+    '0':['###','#.#','#.#','#.#','###'],
+    '1':['.#.','##.','.#.','.#.','###'],
+    '2':['###','..#','###','#..','###'],
+    '3':['###','..#','###','..#','###'],
+    '4':['#.#','#.#','###','..#','..#'],
+    '5':['###','#..','###','..#','###'],
+    '6':['###','#..','###','#.#','###'],
+    '7':['###','..#','..#','..#','..#'],
+    '8':['###','#.#','###','#.#','###'],
+    '9':['###','#.#','###','..#','###'],
+    'A':['.#.','#.#','###','#.#','#.#'],
+    'B':['##.','#.#','##.','#.#','##.'],
+    'C':['.##','#..','#..','#..','.##'],
+    'D':['##.','#.#','#.#','#.#','##.'],
+    'E':['###','#..','##.','#..','###'],
+    'F':['###','#..','##.','#..','#..'],
+    'G':['.##','#..','#.#','#.#','.##'],
+    'H':['#.#','#.#','###','#.#','#.#'],
+    'I':['###','.#.','.#.','.#.','###'],
+    'J':['..#','..#','..#','#.#','.#.'],
+    'K':['#.#','#.#','##.','#.#','#.#'],
+    'L':['#..','#..','#..','#..','###'],
+    'M':['#...#','##.##','#.#.#','#...#','#...#'],
+    'N':['#..#','##.#','#.##','#..#','#..#'],
+    'O':['.#.','#.#','#.#','#.#','.#.'],
+    'P':['##.','#.#','##.','#..','#..'],
+    'Q':['.#.','#.#','#.#','##.','.##'],
+    'R':['##.','#.#','##.','#.#','#.#'],
+    'S':['###','#..','###','..#','###'],
+    'T':['###','.#.','.#.','.#.','.#.'],
+    'U':['#.#','#.#','#.#','#.#','###'],
+    'V':['#.#','#.#','#.#','#.#','.#.'],
+    'W':['#...#','#...#','#.#.#','##.##','#...#'],
+    'X':['#.#','#.#','.#.','#.#','#.#'],
+    'Y':['#.#','#.#','.#.','.#.','.#.'],
+    'Z':['###','..#','.#.','#..','###'],
+  };
+
+  let g;
+  const rect = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); };
+  const frame = (x, y, w, h, c) => {
+    rect(x, y, w, PX, c); rect(x, y + h - PX, w, PX, c);
+    rect(x, y, PX, h, c); rect(x + w - PX, y, PX, h, c);
+  };
+  const textW = s => {
+    let b = 0;
+    for (const ch of s) if (F[ch]) b += F[ch][0].length + 1;
+    return b ? b * PX - PX : 0;
+  };
+  const text = (x, y, s, ink) => {
+    let bx = 0;
+    for (const ch of s) {
+      const gl = F[ch]; if (!gl) continue;
+      gl.forEach((row, r) => { [...row].forEach((p, c) => {
+        if (p === '#') rect(x + (bx + c) * PX, y + r * PX, PX, PX, ink);
+      }); });
+      bx += gl[0].length + 1;
+    }
+  };
+  // Inverted tag, L7 style: ink box, cut corners, black text; 18 px tall.
+  const tag = (x, y, s, bg = C.INK, ink = C.BG) => {
+    const w = textW(s) + 8, h = 18;
+    rect(x, y, w, h, bg);
+    rect(x, y, PX, PX, C.BG); rect(x + w - PX, y, PX, PX, C.BG);
+    rect(x, y + h - PX, PX, PX, C.BG); rect(x + w - PX, y + h - PX, PX, PX, C.BG);
+    text(x + (w - textW(s)) / 2, y + 4, s, ink);
+    return w;
+  };
+
+  // The screen title row (y 0-21): inverted name tag, dim context text after.
+  const title = (name, context) => {
+    const w = tag(4, 2, name);
+    if (context) text(4 + w + 8, 6, context, C.DIM);
+  };
+
+  // Status row (y 214-239): screen-stack dots, scene, clock, tempo, action button.
+  const statusRow = (screenIx, { scene = '2', clock = '2.3.1', bpm = '132.0', playing = true } = {}) => {
+    for (let k = 0; k < 6; k++) rect(4, 216 + k * 4, 2, 2, k === screenIx ? C.ACC : C.DARK);
+    const w = tag(12, 218, 'SCN');
+    text(12 + w + 4, 222, scene, C.LIGHT);
+    // Play icon + clock, roughly centred as L7's clock cell.
+    const px0 = 128, py0 = 218;
+    [10, 8, 6, 4, 2].forEach((hh, i) => rect(px0 + i * 2, py0 + (10 - hh) / 2, 2, hh, playing ? C.ACC : C.DIM));
+    text(px0 + 14, 218, clock, C.LIGHT);
+    const bw = textW(bpm);
+    text(292 - bw - textW('BPM') - 12, 222, bpm, C.DIM);
+    tag(292 - textW('BPM') - 8, 218, 'BPM');
+    // Action button: accent, top/bottom-left corners cut, black icon (a plus).
+    rect(294, 214, 26, 26, C.ACC);
+    rect(294, 214, PX, PX, C.BG); rect(294, 238, PX, PX, C.BG);
+    rect(304, 222, 6, 2, C.BG); rect(306, 220, 2, 6, C.BG);
+  };
+
+  // A parameter cell: name dim, value white, amount bar under; selected = frame + ground.
+  const paramCell = (x, y, w, h, name, val, amt, sel) => {
+    if (sel) { rect(x, y, w, h, C.DARK); frame(x, y, w, h, C.LIGHT); }
+    text(x + 6, y + 6, name, sel ? C.LIGHT : C.DIM);
+    text(x + 6, y + 20, val, C.INK);
+    if (amt != null) {
+      rect(x + 6, y + h - 10, w - 12, 4, sel ? C.BG : C.DARK);
+      rect(x + 6, y + h - 10, Math.round((w - 12) * amt), 4, sel ? C.ACC : C.LIGHT);
+    }
+  };
+
+  const screen = (id, draw) => {
+    const cv = document.getElementById(id);
+    g = cv.getContext('2d');
+    rect(0, 0, 320, 240, C.BG);
+    draw();
+  };
+
+  // ---- 1 · Master effects & sends -----------------------------------------
+  screen('fx', () => {
+    title('FX', 'MASTER');
+    text(6, 26, 'DELAY', C.LIGHT);
+    const d = [['TIME', '3/16', 0.45], ['FDBK', '52', 0.52], ['HP', '160', 0.25], ['MIX', '100', 1.0]];
+    d.forEach((p, i) => paramCell(4 + i * 79, 38, 76, 42, p[0], p[1], p[2], false));
+    text(6, 88, 'REVERB', C.LIGHT);
+    const r = [['SIZE', '72', 0.72], ['DAMP', '45', 0.45], ['PRE', '20', 0.2], ['MIX', '100', 1.0]];
+    r.forEach((p, i) => paramCell(4 + i * 79, 100, 76, 42, p[0], p[1], p[2], false));
+    text(6, 150, 'SENDS', C.LIGHT);
+    const send = (y, label, levels, selTrack) => {
+      text(4, y + 8, label, C.DIM);
+      levels.forEach((lv, t) => {
+        const x = 64 + t * 28, bh = Math.round(18 * lv);
+        const sel = t === selTrack;
+        frame(x, y, 20, 22, sel ? C.LIGHT : C.DARK);
+        rect(x + 4, y + 18 - bh, 12, bh + 2 - PX, sel ? C.ACC : (lv ? C.LIGHT : C.DARK));
+      });
+    };
+    send(162, 'A DEL', [0.3, 0, 0.7, 0.2, 0, 0.5, 0.1, 0, 0], 2);
+    send(188, 'B REV', [0.5, 0.2, 0.4, 0, 0.6, 0.3, 0, 0.2, 0], -1);
+    statusRow(0);
+  });
+
+  // ---- 2 · Mixer ----------------------------------------------------------
+  screen('mix', () => {
+    title('MIX', 'N9 A02');
+    const vols = [0.8, 0.6, 0.7, 0.5, 0.65, 0.55, 0.4, 0.75, 0];
+    const mets = [0.6, 0.4, 0.68, 0.3, 0.5, 0, 0.2, 0.6, 0];
+    const pans = [0, -0.4, 0, 0.3, 0, 0, -0.2, 0.5, 0];
+    const muted = [false, false, false, false, false, true, false, false, false];
+    const empty = [false, false, false, false, false, false, false, false, true];
+    const SEL = 2;
+    for (let t = 0; t < 9; t++) {
+      const x = 2 + t * 35;
+      if (t === SEL) { rect(x, 24, 33, 186, C.DARK); frame(x, 24, 33, 186, C.LIGHT); }
+      const ground = t === SEL ? C.BG : C.DARK;
+      // Pan: a dark line with the marker block on it.
+      rect(x + 4, 32, 25, 2, ground);
+      if (!empty[t]) rect(x + 13 + Math.round(pans[t] * 9), 30, 4, 6, muted[t] ? C.DIM : C.LIGHT);
+      // Volume level (wide bar, lit from the bottom) and the meter beside it.
+      const fy = 44, fh = 136;
+      rect(x + 8, fy, 8, fh, ground);
+      if (!empty[t]) {
+        const lh = Math.round(fh * vols[t]);
+        rect(x + 8, fy + fh - lh, 8, lh, muted[t] ? C.DIM : C.LIGHT);
+      }
+      rect(x + 20, fy, 2, fh, ground);
+      if (!empty[t] && !muted[t] && mets[t]) {
+        const mh = Math.round(fh * mets[t]);
+        rect(x + 20, fy + fh - mh, 2, mh, C.INK);
+      }
+      // Track badge, L7 rules: accent square playing, outlined muted, dark empty.
+      const bx = x + 11, by = 188;
+      if (empty[t]) text(bx + 4, by + 4, String(t + 1), C.DARK);
+      else if (muted[t]) { frame(bx, by, 13, 17, C.DIM); text(bx + 4, by + 4, String(t + 1), C.DIM); }
+      else { rect(bx, by, 13, 17, C.ACC); text(bx + 4, by + 4, String(t + 1), C.BG); }
+    }
+    statusRow(1);
+  });
+
+  // ---- 3 · Track modulation ----------------------------------------------
+  screen('mod', () => {
+    title('MOD', 'TRACK 3  PLUCK');
+    const slots = [
+      ['1  LFO1 > CUTOFF', '+42'],
+      ['2  ENV2 > PITCH', '-12'],
+      ['3  VEL  > LEVEL', '+64'],
+    ];
+    slots.forEach((s, i) => {
+      const y = 26 + i * 17;
+      if (i === 0) { rect(4, y, 312, 16, C.DARK); frame(4, y, 312, 16, C.LIGHT); }
+      text(10, y + 3, s[0], i === 0 ? C.INK : C.DIM);
+      text(282, y + 3, s[1], i === 0 ? C.ACC : C.DIM);
+    });
+    text(6, 84, 'LFO1', C.LIGHT);
+    const p = [['SHAPE', 'TRI', null], ['RATE', '1/8', 0.4], ['SYNC', 'ON', null], ['DEPTH', '+42', 0.66]];
+    p.forEach((c, i) => paramCell(4 + i * 79, 96, 76, 42, c[0], c[1], c[2], i === 3));
+    // LFO shape preview: a triangle wave in the accent colour.
+    frame(4, 148, 180, 56, C.DARK);
+    rect(8, 175, 172, 2, C.DARK);
+    for (let i = 0; i < 86; i++) {
+      const ph = (i % 43) / 43, v = ph < 0.5 ? ph * 2 : 2 - ph * 2;
+      rect(8 + i * 2, 196 - Math.round(v * 20) * 2, 2, 2, C.ACC);
+    }
+    text(196, 156, 'RETRIG ON', C.DIM);
+    text(196, 170, 'FADE 0', C.DIM);
+    text(196, 184, 'MODE FREE', C.DIM);
+    statusRow(2);
+  });
+
+  // ---- 4 · Track instrument ----------------------------------------------
+  screen('inst', () => {
+    title('INST', 'TRACK 3');
+    // Engine selector: < PLUCK >  4/12
+    text(8, 32, '<', C.DIM);
+    text(24, 32, 'PLUCK', C.INK);
+    text(24 + textW('PLUCK') + 10, 32, '>', C.DIM);
+    text(282, 32, '4/12', C.DIM);
+    rect(4, 46, 312, 2, C.DARK);
+    const r1 = [['TUNE', '+0', 0.5], ['SHAPE', '38', 0.38], ['CUTOFF', '86', 0.86], ['RES', '22', 0.22]];
+    const r2 = [['ATK', '2', 0.05], ['DEC', '340', 0.45], ['SUS', '60', 0.6], ['REL', '180', 0.3]];
+    r1.forEach((c, i) => paramCell(4 + i * 79, 54, 76, 44, c[0], c[1], c[2], i === 2));
+    r2.forEach((c, i) => paramCell(4 + i * 79, 102, 76, 44, c[0], c[1], c[2], false));
+    // ADSR preview in the accent colour.
+    frame(4, 152, 180, 54, C.DARK);
+    const base = 198, top = 160;
+    for (let i = 0; i < 8; i++)  rect(8 + i * 2, base - Math.round((i / 8) * (base - top)), 2, 2, C.ACC);     // attack
+    for (let i = 0; i < 24; i++) rect(24 + i * 2, top + Math.round((i / 24) * 16), 2, 2, C.ACC);              // decay
+    rect(72, top + 16, 60, 2, C.ACC);                                                                          // sustain
+    for (let i = 0; i < 22; i++) rect(132 + i * 2, top + 16 + Math.round((i / 22) * (base - top - 16)), 2, 2, C.ACC); // release
+    text(196, 160, 'POLY 4', C.DIM);
+    text(196, 174, 'MIDI CH 1', C.DIM);
+    text(196, 188, 'OUT A+B', C.DIM);
+    statusRow(3);
+  });
+
+  // ---- 5 · Clip grid ------------------------------------------------------
+  screen('clipgrid', () => {
+    // No title tag: the header row is the tracks. The dot column places the screen.
+    const colX = t => 16 + t * 33;
+    const SEL_T = 2, PLAY_S = 1, CUR = [2, 1], QUEUED = [4, 3];
+    // 0 none, 1 clip, 2 playing
+    const cells = [
+      [1, 0, 1, 0, 0, 1, 0, 0, 0],
+      [2, 0, 2, 1, 0, 2, 0, 2, 0],
+      [1, 1, 0, 1, 0, 0, 0, 1, 0],
+      [0, 1, 0, 1, 1, 0, 0, 0, 0],
+      [1, 0, 1, 0, 1, 0, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 1, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    // Header: track numbers, L7 badge rules.
+    for (let t = 0; t < 9; t++) {
+      const x = colX(t) + 9, playing = cells[PLAY_S][t] === 2;
+      if (playing) { rect(x, 2, 13, 17, C.ACC); text(x + 4, 6, String(t + 1), C.BG); }
+      else text(x + 4, 6, String(t + 1), cells.some(r => r[t]) ? C.DIM : C.DARK);
+      if (t === SEL_T) frame(x - 2, 0, 17, 21, C.LIGHT);
+    }
+    rect(0, 22, 320, 2, C.DARK);
+    // Scene labels and cells.
+    for (let s = 0; s < 8; s++) {
+      const y = 28 + s * 23;
+      text(4, y + 6, String(s + 1), s === PLAY_S ? C.ACC : C.DIM);
+      for (let t = 0; t < 9; t++) {
+        const x = colX(t), st = cells[s][t];
+        if (st === 0) frame(x + 2, y, 29, 19, C.DARK);
+        else if (st === 2) rect(x + 2, y, 29, 19, C.ACC);
+        else rect(x + 2, y, 29, 19, C.LIGHT);
+        if (QUEUED[0] === t && QUEUED[1] === s) { rect(x + 2, y, 29, 19, C.BG); frame(x + 2, y, 29, 19, C.ACC); }
+        if (CUR[0] === t && CUR[1] === s) frame(x, y - 2, 33, 23, C.INK);
+      }
+    }
+    statusRow(4);
+  });
+
+  // ---- 6 · Clip editor ----------------------------------------------------
+  screen('editor', () => {
+    title('EDIT', 'T3 S2  BAR 1/2  1/16');
+    const ROWS = 13, rowH = 12, top = 24, left = 14, stepW = 19;
+    // Pitches top to bottom, chromatic: C4 B3 A#3 A3 G#3 G3 F#3 F3 E3 D#3 D3 C#3 C3.
+    const blackRow = [false, false, true, false, true, false, true, false, false, true, false, true, false];
+    for (let r = 0; r < ROWS; r++) {
+      const y = top + r * rowH;
+      if (!blackRow[r]) rect(0, y + 1, 10, rowH - 2, C.DIM);   // white keys in the strip
+      else rect(0, y + 1, 6, rowH - 2, C.DARK);                 // black keys shorter, darker
+    }
+    rect(0, top - 2, 320, 2, C.DARK);                            // octave line above C4
+    rect(0, top + ROWS * rowH, 320, 2, C.DARK);                  // and above C3's lower neighbour
+    // Beat lines every 4 steps; faint step grid skipped to keep it clean.
+    for (let s = 0; s <= 16; s += 4) rect(left + s * stepW, top, 2, ROWS * rowH, C.DARK);
+    // Notes: row (0 = C4 at the top), start step, length, velocity 0-1.
+    const notes = [
+      { r: 12, s: 0, l: 2, v: 0.8 }, { r: 8, s: 2, l: 2, v: 0.6 }, { r: 5, s: 4, l: 4, v: 0.9 },
+      { r: 0, s: 8, l: 2, v: 0.7 }, { r: 3, s: 10, l: 2, v: 0.5 }, { r: 5, s: 12, l: 3, v: 0.75 },
+    ];
+    const SEL = 3; // the note under the cursor
+    notes.forEach((n, i) => {
+      const x = left + n.s * stepW + 2, y = top + n.r * rowH + 2;
+      rect(x, y, n.l * stepW - 4, rowH - 4, i === SEL ? C.INK : C.LIGHT);
+      if (i === SEL) frame(x - 2, y - 2, n.l * stepW, rowH, C.ACC);
+    });
+    // Playhead.
+    rect(left + 9 * stepW, top - 2, 2, ROWS * rowH + 4, C.ACC);
+    // Velocity lane.
+    const vy = top + ROWS * rowH + 6;
+    text(2, vy + 6, 'V', C.DIM);
+    notes.forEach((n, i) => {
+      const bh = Math.round(20 * n.v);
+      rect(left + n.s * stepW + 2, vy + 22 - bh, 8, bh, i === SEL ? C.INK : C.DIM);
+    });
+    statusRow(5);
+  });
+})();
+</script>
