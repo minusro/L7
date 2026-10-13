@@ -14,7 +14,14 @@ checked, or turn it into a fix.
 - [ ] **N9: first sound.** MIDI channel 1 (USB and serial in) plays the synth;
   B + LEFT/RIGHT on INST steps the 13 engines (takes effect for new notes).
   SAW, PULSE, SUPER, FM2, PLUCK and NOISE are real (simple) voices; FM4, WT
-  and the five emulations (303, JUNO, PRO5, MWAVE, M1) are placeholder sounds. 32 voices, stealing beyond that. Headphones mute the speaker. Serial
+  and the emulations JUNO, PRO5, MWAVE, M1 are placeholder sounds.
+- [ ] **N9: the 303.** Mono with slide (overlapping notes glide, ~35 ms, no
+  retrigger) and accent (velocity >= 100: louder, more filter env, faster
+  "wow" decay). PolyBLEP saw into a resonant 4-pole ladder (feedback 3.3,
+  cubic squash), filter env 300 ms / 130 ms accented, cutoff ~265 Hz-5 kHz.
+  The numbers are first guesses — judge by ear: squelch, slide feel, accent
+  pop, resonance short of self-oscillation, level against the other engines
+  (makeup x2.4). Voice math checked stable on the PC, never heard yet. 32 voices, stealing beyond that. Headphones mute the speaker. Serial
   logs `synth: N voices, max block ...` once a second while playing — note the
   % with ~8 and ~32 voices (the engine-budget question). Redraws are DMA'd:
   listen for clicks or stuck keys while switching screens with notes held.

@@ -23,7 +23,12 @@ enum OscType : uint8_t {
   O_SUPER,   // three saws, detuned +-0.45%
   O_FM,      // two-operator FM
   O_NOISE,   // white noise through the lowpass
+  O_303,     // mono acid voice: polyBLEP saw into a resonant 4-pole ladder,
+             // the filter swept by its own decaying envelope; slide on
+             // overlapping notes, accent on velocity >= 100
 };
+
+constexpr uint8_t E_303 = 8;   // its place in ENGINE_NAMES
 
 // Per-engine fixed settings (ms; the real app gets these from the INST cells).
 struct EngineDef {
@@ -42,7 +47,7 @@ static const EngineDef ENGINES[ENGINE_COUNT] = {
     {O_FM, 0.5f, 60, true, 500, 1.0f, 4.0f, 80},       // PLUCK  (Karplus-Strong later)
     {O_FM, 2, 200, false, 0, 0.5f, 1.5f, 1000},        // WT     (placeholder)
     {O_NOISE, 1, 120, true, 250, 0, 0, 0},             // NOISE
-    {O_SAW, 1, 80, false, 0, 0, 0, 0},                 // 303    (placeholder)
+    {O_303, 3, 12, true, 3500, 0, 0, 0},               // 303 (the VCA decays while gated, off fast)
     {O_SUPER, 3, 300, false, 0, 0, 0, 0},              // JUNO   (placeholder)
     {O_SUPER, 2, 250, false, 0, 0, 0, 0},              // PRO5   (placeholder)
     {O_FM, 2, 220, false, 0, 1.5f, 2.0f, 600},         // MWAVE  (placeholder)
@@ -83,6 +88,13 @@ static inline float sinT(float ph) {
 // decay multiplier per sample for a time constant in ms
 static inline float decay(float ms) { return expf(-1.0f / (ms * 44.1f)); }
 
+// polyBLEP residual: subtracts the saw's step discontinuity alias
+static inline float polyblep(float t, float dt) {
+  if (t < dt) { t /= dt; return t + t - t * t - 1.0f; }
+  if (t > 1.0f - dt) { t = (t - 1.0f) / dt; return t * t + t + t + 1.0f; }
+  return 0.0f;
+}
+
 void N9Synth::update() {
   uint32_t t0 = ARM_DWT_CYCCNT;
   if (!sineReady) {
@@ -95,23 +107,39 @@ void N9Synth::update() {
     Ev e = evq[evr];
     evr = (evr + 1) & 31;
     if (e.on) {
-      Voice *v = nullptr;
-      for (auto &c : _v) if (c.state == IDLE) { v = &c; break; }
-      if (!v) {                                    // steal: the quietest releasing, else the oldest
-        float quiet = 2.0f;
-        for (auto &c : _v) if (c.state == RELEASE && c.env < quiet) { quiet = c.env; v = &c; }
-        if (!v) { uint32_t old = UINT32_MAX; for (auto &c : _v) if (c.age < old) { old = c.age; v = &c; } }
-      }
       const EngineDef &d = ENGINES[nav.engine];
       float hz = 440.0f * exp2f((e.note - 69) / 12.0f);
+      float inc = hz / 44100.0f;
+      Voice *v = nullptr;
+      if (nav.engine == E_303) {                   // mono: one 303 voice, reused
+        for (auto &c : _v) if (c.state != IDLE && c.engine == E_303) { v = &c; break; }
+        if (v && v->state != RELEASE) {            // legato: slide there, envelopes kept running
+          v->tinc = inc;
+          v->note = e.note;
+          v->accent = e.vel >= 100;
+          continue;
+        }
+      }
+      if (!v) {
+        for (auto &c : _v) if (c.state == IDLE) { v = &c; break; }
+        if (!v) {                                  // steal: the quietest releasing, else the oldest
+          float quiet = 2.0f;
+          for (auto &c : _v) if (c.state == RELEASE && c.env < quiet) { quiet = c.env; v = &c; }
+          if (!v) { uint32_t old = UINT32_MAX; for (auto &c : _v) if (c.age < old) { old = c.age; v = &c; } }
+        }
+      }
       v->note = e.note; v->engine = nav.engine;
-      v->inc = hz / 44100.0f;
-      v->minc = d.osc == O_SUPER ? v->inc * 1.0045f : v->inc * d.ratio;
-      v->inc3 = v->inc * 0.9955f;
+      v->accent = e.vel >= 100;
+      v->inc = v->tinc = inc;
+      v->minc = d.osc == O_SUPER ? inc * 1.0045f : inc * d.ratio;
+      v->inc3 = inc * 0.9955f;
       v->phase = v->mphase = v->p3 = 0;
       v->mindex = d.index0;
+      v->f1 = v->f2 = v->f3 = v->f4 = 0;
+      v->fenv = v->accent ? 1.25f : 0.85f;
       v->env = 0; v->lp = 0;
       v->vel = e.vel / 127.0f;
+      if (nav.engine == E_303 && v->accent) v->vel = 1.2f;   // the accent's kick
       v->rng = _ageCounter * 2654435761u + e.note * 7919u + 1;
       v->age = ++_ageCounter;
       v->state = ATTACK;
@@ -137,6 +165,7 @@ void N9Synth::update() {
     float decC = d.pluck ? decay(d.decMs) : 1.0f;
     float relC = decay(d.relMs);
     float idxC = d.osc == O_FM ? decay(d.idxDecMs) : 1.0f;
+    float fdecC = d.osc == O_303 ? decay(v.accent ? 130 : 300) : 1.0f;   // the filter env's decay; accent: the "wow"
     float amp = v.vel * 0.12f;
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
       switch (v.state) {
@@ -164,6 +193,20 @@ void N9Synth::update() {
           s = (int32_t)v.rng * 4.6566e-10f;
           v.lp += 0.5f * (s - v.lp); s = v.lp;
           break;
+        case O_303: {
+          v.inc += (v.tinc - v.inc) * 0.0008f;             // slide, ~35 ms
+          v.fenv *= fdecC;
+          float saw = 2.0f * v.phase - 1.0f - polyblep(v.phase, v.inc);
+          float fc = 0.006f + 0.11f * v.fenv;              // cutoff, cycles/sample: ~265 Hz up to ~5 kHz
+          float w = 6.2832f * fc, g = w / (1.0f + w);
+          float in = saw - 3.3f * v.f4;                    // resonance feedback
+          if (in > 1.4f) in = 1.4f; else if (in < -1.4f) in = -1.4f;
+          in -= in * in * in * (1.0f / 6.0f);              // the ladder's soft squash
+          v.f1 += g * (in - v.f1); v.f2 += g * (v.f1 - v.f2);
+          v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
+          s = v.f4 * 2.4f;                                 // makeup for what the ladder takes
+          break;
+        }
         default:                               // O_SAW, O_PULSE
           s = d.osc == O_SAW ? 2.0f * v.phase - 1.0f : (v.phase < 0.5f ? 1.0f : -1.0f);
           v.lp += 0.5f * (s - v.lp); s = v.lp;

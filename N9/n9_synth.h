@@ -28,10 +28,13 @@ private:
   struct Voice {
     volatile uint8_t state = IDLE;
     uint8_t note = 0, engine = 0;
+    bool accent = false;             // 303: velocity >= 100
     float phase = 0, inc = 0;        // carrier, 0..1 per sample
+    float tinc = 0;                  // 303: the slide's target increment
     float mphase = 0, minc = 0;      // FM modulator / SUPER's second saw
     float p3 = 0, inc3 = 0;          // SUPER's third saw
     float mindex = 0;                // FM index, decaying
+    float f1 = 0, f2 = 0, f3 = 0, f4 = 0, fenv = 0;   // 303: ladder stages + filter env
     float env = 0, lp = 0;
     float vel = 0;
     uint32_t rng = 1;                // the NOISE engine's generator
