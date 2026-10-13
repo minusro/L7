@@ -17,6 +17,10 @@ static bool sdBegin() {
   return sdUp;
 }
 
+SdFs &appsSd() { return sd; }
+bool appsCardRestart() { sdUp = sd.begin(SdioConfig(FIFO_SDIO)); return sdUp; }
+bool appsCardResponds() { return sdUp && sd.card() && sd.card()->status() != 0; }
+
 void appsInit() {
   if (!sdBegin()) return;           // no card: nothing to set up
   sd.mkdir("/N9");

@@ -27,6 +27,7 @@
 #include "n9_apps.h"
 #include "n9_synth.h"
 #include "n9_ui.h"
+#include "n9_usb_drive.h"
 
 m8::Board board;
 
@@ -49,6 +50,7 @@ void setup() {
   codec.volume(0.6f);
   synthMidiBegin();
   appsInit();                                      // the card's /N9 and /APPS folders
+  usbDriveBegin();                                 // the computer's disk probing answered from now on
   // The frame buffer is STATIC: left to malloc it silently fails once
   // RAM2's heap runs low, and the library falls back to direct drawing -
   // which is exactly a full-screen flicker on every sequencer step.

@@ -43,7 +43,9 @@ struct NavState {
   bool statusFocus = false;
   uint8_t statusSel = 0;
 
-  bool menu = false;                   // past the left edge: the (empty) menu
+  bool menu = false;                   // past the left edge: the menu
+  uint8_t menuSel = 0;                 // its item: cards 0-11, the list 12-15
+  uint8_t menuCardCol = 0;             // the card column last stood on (UP from the list returns to it)
 
   // An arrow held past an edge: its line shows on that edge (light its first
   // 50 ms, then grey, L7's grammar) and the switch fires when it's let go,

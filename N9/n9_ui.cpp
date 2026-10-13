@@ -465,9 +465,8 @@ void uiMessage(const char *l1, const char *l2) {
 
 // ---- Menu (past the left edge; RIGHT off its edge leaves) -------------------
 
-// Empty for now: a dark ground and the N9 logo in the bottom left corner —
-// L7's corner-logo place and size (55 x 26 px at (PX, 214)) and style
-// (ui_splash.cpp: italic, a pixel right every three rows up, the 7's/9's
+// The N9 logo, L7's corner-logo place and size (55 x 26 px at (PX, 214)) and
+// style (ui_splash.cpp: italic, a pixel right every three rows up, the 9's
 // right edge slanting with it, two cuts near the bottom).
 static void drawN9Logo(int x, int y, uint16_t c) {
   for (int p = 0; p < 26; p++) {
@@ -482,9 +481,131 @@ static void drawN9Logo(int x, int y, uint16_t c) {
   }
 }
 
+// The battery, top right, L7's (ui_menu.cpp drawBatteryIcon): 11 x 7 blocks,
+// outline + fill in sevenths (90 % and up: full); charging: filled whole with
+// a lightning bolt cut out. (The frame buffer makes the caching unnecessary.)
+static void batteryIcon(uint16_t ink, uint16_t ground) {
+  constexpr int STEPS = 7, W = 11, H = 7, X = 320 / PX - 2 - (W + 1), Y = 2;
+  int pct = board.batteryPercent(), fill = pct < 0 || pct >= 90 ? STEPS : (pct * STEPS + 50) / 100;
+  bool charging = pct >= 0 && board.batteryCharging();
+  static const char *const BOLT[5] = {"....#....", "...##....", "..#####..", "....##...", "....#...."};
+  for (int r = 0; r < H; r++)
+    for (int c = 0; c <= W; c++) {
+      bool edge = r == 0 || r == H - 1 || c == 0 || c == W - 1, tip = c == W && r >= 2 && r <= H - 3;
+      bool inside = r >= 2 && r <= H - 3 && c >= 2 && c - 2 < fill;
+      bool on = c < W ? edge || inside : tip;
+      if (charging && !edge && c < W) on = BOLT[r - 1][c - 1] != '#';
+      rct((X + c) * PX, (Y + r) * PX, PX, PX, on ? ink : ground);
+    }
+}
+
+// L7's menu layout (ui_menu.cpp): twelve project cards, three rows of four
+// (21 x 15 blocks, the bottom right corner cut diagonally, a block missing
+// from the others), and under them the list. Only STORAGE MODE is live for
+// now: the cards draw as empty slots and the other items grey; the cursor
+// walks everything as L7's does (n9_input.cpp).
+struct Shape { int x, y, w, h, cut; };   // in blocks; cut: the corner's size (0: plain)
+
+// Row r (screen block row) of shape s grown by d: its first and last column
+// (false: the row isn't in it). round: the corner blocks left out. (L7's.)
+static bool rowSpan(const Shape &s, int d, int r, int &c0, int &c1, bool round = false) {
+  int y = r - s.y;
+  if (y < -d || y > s.h - 1 + d) return false;
+  c0 = -d;
+  c1 = s.w - 1 + d;
+  bool top = y == -d, bottom = y == s.h - 1 + d;
+  if (s.cut) {
+    c1 = min(c1, s.w + s.h - s.cut - 2 + d - y);
+    if (round && top) { c0++; c1--; }
+    if (round && bottom) c0++;
+  } else if (round && (top || bottom)) {
+    c0++;
+    c1--;
+  }
+  if (c1 < c0) return false;
+  c0 += s.x;
+  c1 += s.x;
+  return true;
+}
+
+// Fills shape(outer) less shape(inner) in `color`; round: corners cut. (L7's.)
+static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool round = false) {
+  for (int r = s.y - outer; r <= s.y + s.h - 1 + outer; r++) {
+    int a0, a1, b0, b1;
+    if (!rowSpan(s, outer, r, a0, a1, round)) continue;
+    if (!rowSpan(s, inner, r, b0, b1)) {
+      rct(a0 * PX, r * PX, (a1 - a0 + 1) * PX, PX, color);
+      continue;
+    }
+    if (b0 > a0) rct(a0 * PX, r * PX, (b0 - a0) * PX, PX, color);
+    if (a1 > b1) rct((b1 + 1) * PX, r * PX, (a1 - b1) * PX, PX, color);
+  }
+}
+
+static constexpr int M_CARD_W = 21, M_CARD_H = 15, M_CARD_CUT = 3, M_CARD_GAP = 3, M_CARD_VGAP = 3;
+static constexpr int M_CARDS_X = (160 - MENU_COLS * M_CARD_W - (MENU_COLS - 1) * M_CARD_GAP) / 2, M_CARDS_Y = 15;
+static constexpr int M_LIST_PITCH = 12, M_LIST_SPACE = 3, M_LIST_Y = 75;   // (L7's: the last item level with the status row's text)
+static const char *const M_LABELS[MENU_LIST] = {"EXPORT ABLETON SET", "STORAGE MODE", "SETTINGS", "HELP"};
+
+static Shape menuShape(int k) {
+  if (k < MENU_CARDS)
+    return {M_CARDS_X + (k % MENU_COLS) * (M_CARD_W + M_CARD_GAP),
+            M_CARDS_Y + (k / MENU_COLS) * (M_CARD_H + M_CARD_VGAP), M_CARD_W, M_CARD_H, M_CARD_CUT};
+  // A list item: the box fitting the longest label, centred, L7's width.
+  int w = txtW("EXPORT ABLETON PROJECT") / PX;
+  for (const char *l : M_LABELS) w = max(w, txtW(l) / PX);
+  return {(160 - w) / 2, M_LIST_Y + (k - MENU_CARDS) * M_LIST_PITCH, w, 5, 0};
+}
+
 static void drawMenuScr() {
-  rct(0, 0, 320, 240, DARK);
+  rct(0, 0, 320, 240, DARK);                       // the ground: L7's MENU_BG grey
+  for (int k = 0; k < MENU_ITEMS; k++) {
+    Shape s = menuShape(k);
+    bool sel = k == nav.menuSel;
+    if (k < MENU_CARDS) {
+      if (sel) {                                   // the frame, a block out, corners cut,
+        fillRing(s, 2, 1, LIGHT, true);            // the diagonal a row thicker outwards
+        for (int r = s.y + s.h - s.cut; r < s.y + s.h + 2; r++) {
+          int c0, c1;
+          if (rowSpan(s, 2, r, c0, c1, true)) rct((c1 + 1) * PX, r * PX, PX, PX, LIGHT);
+        }
+        fillRing(s, 1, 0, DARK);
+      }
+      fillRing(s, 0, -1, DIM);                     // every slot empty for now: an outline,
+      const char letter[2] = {(char)('A' + k), 0}; // its letter grey
+      txt((s.x + (s.w - txtW(letter) / PX) / 2) * PX, (s.y + (s.h - 5) / 2) * PX, letter, DIM);
+    } else {
+      if (sel) {
+        fillRing(s, M_LIST_SPACE + 1, M_LIST_SPACE, LIGHT, true);
+        fillRing(s, M_LIST_SPACE, 0, DARK);
+      }
+      bool live = k - MENU_CARDS == MENU_STORAGE;  // only STORAGE MODE does anything yet
+      txt(s.x * PX, s.y * PX, M_LABELS[k - MENU_CARDS], !live ? DIM : sel ? INK : LIGHT);
+    }
+  }
+  batteryIcon(DIM, DARK);
   drawN9Logo(PX, 214, LIGHT);
+}
+
+// Storage mode's screen (n9_usb_drive.cpp): L7's (usb_drive.cpp) — a grey
+// ground, STORAGE MODE and the connection's state left-aligned with the
+// menu's list, the exit hint (or a message in its place) on the menu's HELP
+// line, the logo and battery as the menu's. Sent at once (the drive loop
+// calls this only when something changes).
+void uiStorageDraw(uint8_t state, const char *msg) {
+  const uint16_t SCRN = DIM;                       // L7's storage grey (GREY_44)
+  rct(0, 0, 320, 240, SCRN);
+  int lx = menuShape(MENU_CARDS).x * PX;
+  constexpr int LINE = 10 + 3 * PX, STATE_DY = 32;
+  constexpr int TITLE_Y = (240 - (STATE_DY + 56 + LINE + 10)) / 2 / PX * PX + LINE;
+  uint16_t c = state == 2 ? ACCENT : LIGHT;        // connected: the accent (for L7's hue cycle)
+  txt(lx, TITLE_Y, "STORAGE MODE", c);
+  static const char *const TEXT[4] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED", "INSERT AN SD CARD"};
+  txt(lx, TITLE_Y + STATE_DY, TEXT[state & 3], INK);
+  txt(lx, (M_LIST_Y + 3 * M_LIST_PITCH) * PX, msg ? msg : "PRESS ANY KEY TO EXIT", BG);
+  batteryIcon(DARK, SCRN);
+  drawN9Logo(PX, 214, c);
+  board.tft().updateScreen();
 }
 
 // ---- Entry -----------------------------------------------------------------

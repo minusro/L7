@@ -8,6 +8,7 @@
 #include "n9_fx.h"
 #include "n9_song.h"
 #include "n9_apps.h"
+#include "n9_usb_drive.h"
 
 using namespace m8;
 
@@ -156,6 +157,12 @@ bool inputService() {
   if (overlay != nav.scaleShow) { nav.scaleShow = overlay; dirtyNow = true; }
   if (pressed & BTN_PLAY) { synth.seqToggle(); dirtyNow = true; }   // start from 1.1.1 / stop
   bool plainA = (pressed & BTN_EDIT) && !shift && !opt && !nav.menu && !nav.statusFocus;
+  if ((pressed & BTN_EDIT) && !shift && !opt && nav.menu) {
+    // A on a menu item: only STORAGE MODE is live for now (blocks until a
+    // key or the computer ejects, then the menu redraws).
+    if (nav.menuSel == MENU_CARDS + MENU_STORAGE) usbDriveMode();
+    dirtyNow = true;
+  }
   if (plainA && nav.screen == SCR_MIX && nav.mixSel < 9) {
     trackMute[nav.mixSel] = !trackMute[nav.mixSel];
     dirtyNow = true;
@@ -180,11 +187,36 @@ bool inputService() {
       if (nav.menu) continue;
       if (i == A_UP && nav.screen > 0) { nav.screen--; dirty = true; }
       if (i == A_DOWN && nav.screen < SCR_COUNT - 1) { nav.screen++; dirty = true; }
-    } else if (nav.menu) {                         // the menu: RIGHT off its edge leaves
-      if (i == A_RIGHT && !opt && !(edgeDead & bit) && !nav.edgePending) {
-        nav.edgePending = BTN_RIGHT;
-        nav.edgeAt = ms;
-        dirty = true;
+    } else if (nav.menu) {                         // the menu: L7's walk — LEFT/RIGHT
+      if (opt) continue;                           // along a card row, UP/DOWN row to
+      if (i == A_LEFT || i == A_RIGHT) {           // row and on into the list; RIGHT
+        int d = i == A_RIGHT ? 1 : -1;             // off the right edge leaves
+        int col = nav.menuSel % MENU_COLS;
+        if (nav.menuSel < MENU_CARDS && col + d >= 0 && col + d < MENU_COLS) {
+          nav.menuSel += d;
+          nav.menuCardCol = nav.menuSel % MENU_COLS;
+          dirty = true;
+        } else if (d > 0 && !(edgeDead & bit) && !nav.edgePending) {
+          nav.edgePending = BTN_RIGHT;
+          nav.edgeAt = ms;
+          dirty = true;
+        }
+      } else {
+        int d = i == A_DOWN ? 1 : -1;
+        if (nav.menuSel < MENU_CARDS) {
+          int row = nav.menuSel / MENU_COLS;
+          if (row + d >= 0 && row + d < MENU_CARDS / MENU_COLS) {
+            nav.menuSel += d * MENU_COLS;
+            nav.menuCardCol = nav.menuSel % MENU_COLS;
+            dirty = true;
+          } else if (d > 0) { nav.menuSel = MENU_CARDS; dirty = true; }   // into the list
+        } else if (d > 0) {
+          if (nav.menuSel < MENU_ITEMS - 1) { nav.menuSel++; dirty = true; }
+        } else {                                   // back up: to the column it came from
+          if (nav.menuSel > MENU_CARDS) nav.menuSel--;
+          else nav.menuSel = MENU_CARDS - MENU_COLS + nav.menuCardCol;
+          dirty = true;
+        }
       }
     } else if (nav.statusFocus) {                  // the status row has the cursor
       if (opt) {                                   // B + arrows: the stood-on cell

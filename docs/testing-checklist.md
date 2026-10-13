@@ -6,6 +6,17 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **N9: the menu's L7 layout + storage mode.** The menu now has L7's
+  twelve cards (A-L, all empty-looking, grey) and the list (EXPORT ABLETON
+  SET / STORAGE MODE / SETTINGS / HELP); the cursor walks cards and list as
+  L7's (LEFT/RIGHT along a card row, UP/DOWN rows then the list, UP from the
+  list back to the remembered column), RIGHT off the right side arms the
+  exit. Only STORAGE MODE acts: A on it hands the card to the computer
+  (mount, copy both ways, eject or any key to exit, card in/out while in it,
+  the battery icon and the state line as L7's). After leaving, check the
+  menu comes back and the card still works (switch apps, say). Also: N9 now
+  answers USB disk probes from boot (usbDriveBegin) - check normal USB
+  serial/MIDI still behaves on macOS.
 - [ ] **N9: edge navigation + status-row focus + the menu.** A SHIFT tap
   (pressed and let go alone) toggles the cursor between the content and the
   status row (a light frame on the stood-on cell: scene, clock, tempo, action);
