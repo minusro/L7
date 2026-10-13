@@ -351,12 +351,14 @@ void N9Synth::fireStep(uint8_t step) {
     if (--_seqNotes[i].left == 0) { noteOffNow(_seqNotes[i].track, _seqNotes[i].pitch); _seqNotes[i] = _seqNotes[--_seqNoteCount]; }
     else i++;
   }
+  uint32_t abs = (uint32_t)_seqBar * 16 + step;
   for (uint8_t t = 0; t < 9; t++) {
     const Clip &c = clipAt(t, nav.gridS);
+    uint16_t local = abs % (c.bars * 16);        // each clip loops its own bars
     uint8_t n = c.count;
     for (uint8_t i = 0; i < n && i < CLIP_MAX_NOTES; i++) {
       const ClipNote &cn = c.notes[i];
-      if (cn.start == step && _seqNoteCount < 32) {
+      if (cn.start == local && _seqNoteCount < 32) {
         noteOnNow(t, cn.pitch, cn.vel);
         _seqNotes[_seqNoteCount++] = {t, cn.pitch, cn.len};
       }
@@ -396,7 +398,7 @@ void N9Synth::update() {
     while (_seqAcc >= spp) {
       _seqAcc -= spp;
       uint8_t st = _seqStep + 1;
-      if (st >= CLIP_STEPS) { st = 0; _seqBar = _seqBar + 1; }
+      if (st >= 16) { st = 0; _seqBar = _seqBar + 1; }
       _seqStep = st;
       fireStep(st);
     }
@@ -647,8 +649,8 @@ void synthServiceMidi() {
   while (usbMIDI.read()) {
     if (usbMIDI.getChannel() != 1) continue;
     uint8_t type = usbMIDI.getType();
-    if (type == usbMIDI.NoteOn && usbMIDI.getData2() > 0) synth.noteOn(usbMIDI.getData1(), usbMIDI.getData2());
-    else if (type == usbMIDI.NoteOff || type == usbMIDI.NoteOn) synth.noteOff(usbMIDI.getData1());
+    if (type == usbMIDI.NoteOn && usbMIDI.getData2() > 0) synth.noteOn(scaleSnap(usbMIDI.getData1()), usbMIDI.getData2());
+    else if (type == usbMIDI.NoteOff || type == usbMIDI.NoteOn) synth.noteOff(scaleSnap(usbMIDI.getData1()));
     else if (type == usbMIDI.ProgramChange) setPreset(usbMIDI.getData1());
   }
   if (!midiSerial) return;
@@ -660,8 +662,8 @@ void synthServiceMidi() {
     if (status == 0xC0) { setPreset(b); continue; }   // channel 1 program change
     if (status == 0x90 || status == 0x80) {       // channel 1 only
       if (d1 == 255) { d1 = b; continue; }
-      if (status == 0x90 && b > 0) synth.noteOn(d1, b);
-      else synth.noteOff(d1);
+      if (status == 0x90 && b > 0) synth.noteOn(scaleSnap(d1), b);
+      else synth.noteOff(scaleSnap(d1));
       d1 = 255;                                   // (running status kept)
     }
   }

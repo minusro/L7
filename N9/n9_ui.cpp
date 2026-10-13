@@ -37,6 +37,7 @@ static const Glyph GLYPHS[] = {
     {'*', {"...", "#.#", ".#.", "#.#", "..."}},
     {'-', {"...", "...", "###", "...", "..."}},
     {'+', {"...", ".#.", "###", ".#.", "..."}},
+    {'#', {".#.#", "####", ".#.#", "####", "#.#."}},
     {'<', {"...#", "..##", ".###", "..##", "...#"}},
     {'>', {"#...", "##..", "###.", "##..", "#..."}},
     {'0', {"###", "#.#", "#.#", "#.#", "###"}},
@@ -340,6 +341,11 @@ static void drawGrid() {
     if (t == SEL_T) frm(x - 2, 0, 17, 21, LIGHT);
   }
   rct(0, 22, 320, 2, DARK);
+  if (nav.scaleShow) {                           // B held: the project's key and scale
+    char ks[20];
+    snprintf(ks, sizeof ks, "%s %s", KEY_NAMES[projKey], SCALE_NAMES[projScale]);
+    tagI((320 - (txtW(ks) + 8)) / 2, 2, ks);
+  }
   for (int sc = 0; sc < 8; sc++) {
     int y = 28 + sc * 23;
     char num[2] = {(char)('1' + sc), 0};
@@ -366,49 +372,64 @@ static void drawEdit() {
   char ctx[8];
   snprintf(ctx, sizeof ctx, "T%d S%d", nav.gridT + 1, nav.gridS + 1);
   title("EDIT", ctx);
-  // Bar strip: 16 slots (clips are at most 16 bars); this mock clip has 4.
-  // The loop brace (accent) selects whole bars and may wrap: here bars 3-4-1.
-  // The white frame is the bar the roll below shows.
-  const int CLIP_BARS = 1, LOOP_START = 0, LOOP_LEN = 1, PAGE_BAR = 0;   // v1: one-bar clips
+  const Clip &c = clipAt(nav.gridT, nav.gridS);
+  // Bar strip: the clip's bars filled, the shown page framed white, the
+  // playing bar's slot underlined in accent; the brace spans the loop
+  // (the whole clip for now).
+  uint16_t localPlay = 0;
+  bool playingHere = synth.seqOn();
+  if (playingHere) localPlay = (uint16_t)(((uint32_t)synth.seqBarN() * 16 + synth.seqStepN()) % (c.bars * 16));
   for (int b = 0; b < 16; b++) {
     int x = 76 + b * 14;
-    bool in = inLoopRange(b, CLIP_BARS, LOOP_START, LOOP_LEN);
-    if (b < CLIP_BARS) rct(x, 8, 12, 10, in ? LIGHT : DIM);
-    else frm(x, 8, 12, 10, DARK);
-    if (in) rct(x, 4, inLoopRange((b + 1) % CLIP_BARS, CLIP_BARS, LOOP_START, LOOP_LEN) && b + 1 < CLIP_BARS ? 14 : 12, 2, ACCENT);
+    if (b < c.bars) {
+      rct(x, 8, 12, 10, LIGHT);
+      rct(x, 4, b + 1 < c.bars ? 14 : 12, 2, ACCENT);        // the loop brace
+      if (playingHere && localPlay / 16 == b) rct(x, 20, 12, 2, ACCENT);
+    } else frm(x, 8, 12, 10, DARK);
   }
-  frm(76 + PAGE_BAR * 14 - 2, 6, 16, 14, INK);
+  frm(76 + nav.editPage * 14 - 2, 6, 16, 14, INK);
   const int ROWS = 13, rowH = 12, top = 24, left = 14, stepW = 19;
-  // Pitches top to bottom, chromatic: C4 B3 A#3 A3 G#3 G3 F#3 F3 E3 D#3 D3 C#3 C3.
-  static const bool blackRow[ROWS] = {0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0};
+  const int topPitch = EDIT_TOP_PITCH + 12 * nav.editOct;
+  // Pitches top to bottom, chromatic, the window top an octave multiple of
+  // C4. The strip marks the project's scale: in-scale rows wide and dim,
+  // the rest short and dark; a dark line above each C row.
   for (int r = 0; r < ROWS; r++) {
     int y = top + r * rowH;
-    if (!blackRow[r]) rct(0, y + 1, 10, rowH - 2, DIM);    // white keys in the strip
-    else rct(0, y + 1, 6, rowH - 2, DARK);                 // black keys shorter, darker
+    if (scaleHas((uint8_t)(topPitch - r))) rct(0, y + 1, 10, rowH - 2, DIM);
+    else rct(0, y + 1, 6, rowH - 2, DARK);
+    if ((topPitch - r) % 12 == 0) rct(0, y - 1, 320, 2, DARK);
   }
-  rct(0, top - 2, 320, 2, DARK);                            // octave line above C4
   rct(0, top + ROWS * rowH, 320, 2, DARK);
   for (int s = 0; s <= 16; s += 4) rct(left + s * stepW, top, 2, ROWS * rowH, DARK);   // beat lines
-  const Clip &c = clipAt(nav.gridT, nav.gridS);
   // The note under the cursor is the selected one; on an empty cell the
-  // cursor itself shows as a frame. Rows: C4 on top down to C3.
-  int SEL = clipFindAt(c, EDIT_TOP_PITCH - nav.editRow, nav.editStep);
+  // cursor itself shows as a frame. Notes are windowed to the page and the
+  // octave view (a note running past the page edge is drawn to the edge).
+  int curAbs = nav.editPage * 16 + nav.editStep;
+  int SEL = clipFindAt(c, nav.editPitch, (uint8_t)curAbs);
+  int pageStart = nav.editPage * 16;
   for (int i = 0; i < c.count; i++) {
     const ClipNote &n = c.notes[i];
-    int row = EDIT_TOP_PITCH - n.pitch;
+    int row = topPitch - n.pitch;
     if (row < 0 || row >= ROWS) continue;
-    int x = left + n.start * stepW + 2, y = top + row * rowH + 2;
-    rct(x, y, n.len * stepW - 4, rowH - 4, i == SEL ? INK : LIGHT);
-    if (i == SEL) frm(x - 2, y - 2, n.len * stepW, rowH, ACCENT);
+    int s0 = n.start - pageStart, s1 = s0 + n.len;
+    if (s1 <= 0 || s0 >= 16) continue;
+    int d0 = s0 < 0 ? 0 : s0, d1 = s1 > 16 ? 16 : s1;
+    int x = left + d0 * stepW + 2, y = top + row * rowH + 2;
+    rct(x, y, (d1 - d0) * stepW - 4, rowH - 4, i == SEL ? INK : LIGHT);
+    if (i == SEL) frm(x - 2, y - 2, (d1 - d0) * stepW, rowH, ACCENT);
   }
-  if (SEL < 0) frm(left + nav.editStep * stepW, top + nav.editRow * rowH, stepW, rowH, INK);
-  if (synth.seqOn())
-    rct(left + synth.seqStepN() * stepW, top - 2, 2, ROWS * rowH + 4, ACCENT);   // playhead
+  int curRow = topPitch - nav.editPitch;
+  if (SEL < 0 && curRow >= 0 && curRow < ROWS)
+    frm(left + nav.editStep * stepW, top + curRow * rowH, stepW, rowH, INK);
+  if (playingHere && localPlay / 16 == nav.editPage)
+    rct(left + (localPlay % 16) * stepW, top - 2, 2, ROWS * rowH + 4, ACCENT);   // playhead
   int vy = top + ROWS * rowH + 6;                               // velocity lane
   txt(2, vy + 6, "V", DIM);
   for (int i = 0; i < c.count; i++) {
+    int s0 = c.notes[i].start - pageStart;
+    if (s0 < 0 || s0 >= 16) continue;
     int bh = rnd(20.0f * c.notes[i].vel / 127.0f);
-    rct(left + c.notes[i].start * stepW + 2, vy + 22 - bh, 8, bh, i == SEL ? INK : DIM);
+    rct(left + s0 * stepW + 2, vy + 22 - bh, 8, bh, i == SEL ? INK : DIM);
   }
 }
 

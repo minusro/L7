@@ -32,7 +32,12 @@ struct NavState {
 
   uint8_t gridT = 2, gridS = 1;  // clip grid cursor: its track is the selected track
 
-  uint8_t editStep = 8, editRow = 0;   // piano roll cursor (16 steps x 13 rows)
+  // Piano roll cursor: the bar page shown, the step within it, and the
+  // cursor's absolute pitch; the 13-row window slides by octaves (editOct).
+  uint8_t editPage = 0, editStep = 8;
+  uint8_t editPitch = 60;
+  int8_t editOct = 0;                  // window top = 60 + 12 * editOct
+  bool scaleShow = false;              // B held on the grid: the key/scale overlay
 
 };
 

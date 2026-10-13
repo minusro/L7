@@ -23,6 +23,15 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
+- [ ] **N9: key/scale, roll pages and octaves.** B+LEFT/RIGHT on the grid
+  steps the key, B+UP/DOWN the scale (overlay while B held; C chromatic =
+  no restriction). The roll: cursor only lands on in-scale pitches (strip
+  marks them; dark line above each C), UP/DOWN slides the window by octaves
+  at the edges (24-96), LEFT/RIGHT runs across bar pages (16 max; the strip
+  frames the shown page, fills the clip's bars, underlines the playing bar);
+  placing/stretching notes extends the clip's bars, removing shrinks them;
+  clips loop their own length (polymeter). MIDI in snaps to the scale (ties
+  downward); stored out-of-scale notes play untouched.
 - [ ] **N9: all tracks play at once; the decided FX topology.** PLAY now
   fires every track's clip at the current scene through its own engine and
   its own MONO insert (one per track, live simultaneously - light effects

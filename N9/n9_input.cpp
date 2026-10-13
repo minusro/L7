@@ -76,8 +76,21 @@ static bool move(int dx, int dy) {
     }
     case SCR_EDIT: {
       bool c = false;
-      if (dx) c = to(nav.editStep, clamp(nav.editStep + dx, 0, 15));
-      if (dy) c |= to(nav.editRow, clamp(nav.editRow + dy, 0, 12));
+      if (dx) {                                  // steps run across bar pages
+        int pos = clamp(nav.editPage * 16 + nav.editStep + dx, 0, CLIP_MAX_BARS * 16 - 1);
+        c = to(nav.editPage, pos / 16);
+        c |= to(nav.editStep, pos % 16);
+      }
+      if (dy) {                                  // pitches skip out-of-scale notes,
+        int p = nav.editPitch;                   //   the window slides by octaves
+        do p -= dy; while (p >= 24 && p <= 96 && !scaleHas((uint8_t)p));
+        if (p >= 24 && p <= 96) {
+          c |= to(nav.editPitch, p);
+          int top = EDIT_TOP_PITCH + 12 * nav.editOct;
+          while (p > top) { nav.editOct++; top += 12; c = true; }
+          while (p < top - 12) { nav.editOct--; top -= 12; c = true; }
+        }
+      }
       return c;
     }
   }
@@ -92,10 +105,12 @@ bool inputService() {
 
   bool shift = now & BTN_SHIFT, opt = now & BTN_OPT;
   bool dirtyNow = false;
+  bool overlay = opt && !shift && nav.screen == SCR_GRID;
+  if (overlay != nav.scaleShow) { nav.scaleShow = overlay; dirtyNow = true; }
   if (pressed & BTN_PLAY) { synth.seqToggle(); dirtyNow = true; }   // start from 1.1.1 / stop
   if ((pressed & BTN_EDIT) && !shift && !opt && nav.screen == SCR_EDIT) {
     // A on the roll: add a step note at the cursor, or remove the one there.
-    clipToggle(clipAt(nav.gridT, nav.gridS), EDIT_TOP_PITCH - nav.editRow, nav.editStep, 100);
+    clipToggle(clipAt(nav.gridT, nav.gridS), nav.editPitch, nav.editPage * 16 + nav.editStep, 100);
     dirtyNow = true;
   }
   uint32_t ms = millis();
@@ -129,14 +144,19 @@ bool inputService() {
             dirty = true;
           }
         }
+      } else if (nav.screen == SCR_GRID) {       // B + arrows: the project's key and scale
+        if (i == A_LEFT || i == A_RIGHT) projKey = (projKey + (i == A_RIGHT ? 1 : 11)) % 12;
+        else projScale = (projScale + (i == A_UP ? 1 : SCALE_COUNT - 1)) % SCALE_COUNT;
+        nav.editPitch = scaleSnap(nav.editPitch);   // keep the roll cursor legal
+        dirty = true;
       } else if (nav.screen == SCR_EDIT) {       // B + arrows on a note: length / velocity
         Clip &c = clipAt(nav.gridT, nav.gridS);
-        int ni = clipFindAt(c, EDIT_TOP_PITCH - nav.editRow, nav.editStep);
+        int ni = clipFindAt(c, nav.editPitch, nav.editPage * 16 + nav.editStep);
         if (ni >= 0) {
           ClipNote &cn = c.notes[ni];
           if (i == A_LEFT || i == A_RIGHT) {
-            int len = clamp(cn.len + (i == A_RIGHT ? 1 : -1), 1, CLIP_STEPS - cn.start);
-            cn.len = (uint8_t)len;
+            cn.len = (uint8_t)clamp(cn.len + (i == A_RIGHT ? 1 : -1), 1, CLIP_MAX_BARS * 16 - cn.start);
+            clipRefreshBars(c);
           } else {
             cn.vel = (uint8_t)clamp(cn.vel + (i == A_UP ? 10 : -10), 1, 127);
           }

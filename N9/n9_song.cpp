@@ -3,6 +3,39 @@
 
 Clip clips[9][8];
 
+const char *const KEY_NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+const char *const SCALE_NAMES[SCALE_COUNT] = {
+    "CHROM", "MAJOR", "MINOR", "DORIAN", "PHRYGIAN", "LYDIAN",
+    "MIXOLYD", "LOCRIAN", "HARM MIN", "PENT MAJ", "PENT MIN", "BLUES"};
+// Semitone masks from the key's root (bit 0 = the root).
+static const uint16_t SCALE_MASKS[SCALE_COUNT] = {
+    0xFFF,                                    // chromatic
+    (1 << 0) | (1 << 2) | (1 << 4) | (1 << 5) | (1 << 7) | (1 << 9) | (1 << 11),    // major
+    (1 << 0) | (1 << 2) | (1 << 3) | (1 << 5) | (1 << 7) | (1 << 8) | (1 << 10),    // natural minor
+    (1 << 0) | (1 << 2) | (1 << 3) | (1 << 5) | (1 << 7) | (1 << 9) | (1 << 10),    // dorian
+    (1 << 0) | (1 << 1) | (1 << 3) | (1 << 5) | (1 << 7) | (1 << 8) | (1 << 10),    // phrygian
+    (1 << 0) | (1 << 2) | (1 << 4) | (1 << 6) | (1 << 7) | (1 << 9) | (1 << 11),    // lydian
+    (1 << 0) | (1 << 2) | (1 << 4) | (1 << 5) | (1 << 7) | (1 << 9) | (1 << 10),    // mixolydian
+    (1 << 0) | (1 << 1) | (1 << 3) | (1 << 5) | (1 << 6) | (1 << 8) | (1 << 10),    // locrian
+    (1 << 0) | (1 << 2) | (1 << 3) | (1 << 5) | (1 << 7) | (1 << 8) | (1 << 11),    // harmonic minor
+    (1 << 0) | (1 << 2) | (1 << 4) | (1 << 7) | (1 << 9),                           // major pentatonic
+    (1 << 0) | (1 << 3) | (1 << 5) | (1 << 7) | (1 << 10),                          // minor pentatonic
+    (1 << 0) | (1 << 3) | (1 << 5) | (1 << 6) | (1 << 7) | (1 << 10),               // blues
+};
+uint8_t projKey = 0, projScale = 0;
+
+bool scaleHas(uint8_t pitch) {
+  return SCALE_MASKS[projScale] & (1 << ((pitch + 12 - projKey) % 12));
+}
+
+uint8_t scaleSnap(uint8_t pitch) {
+  for (int d = 0; d <= 6; d++) {            // nearest, ties downward
+    if (pitch >= d && scaleHas(pitch - d)) return pitch - d;
+    if (pitch + d < 128 && scaleHas(pitch + d)) return pitch + d;
+  }
+  return pitch;
+}
+
 Clip &clipAt(uint8_t t, uint8_t s) { return clips[t][s]; }
 
 int clipFindAt(const Clip &c, uint8_t pitch, uint8_t step) {
@@ -18,10 +51,22 @@ void clipToggle(Clip &c, uint8_t pitch, uint8_t step, uint8_t vel) {
   if (i >= 0) {                       // remove: the last note fills the hole
     c.notes[i] = c.notes[c.count - 1];
     c.count--;
+    clipRefreshBars(c);
     return;
   }
   if (c.count >= CLIP_MAX_NOTES) return;
   ClipNote &n = c.notes[c.count];     // fields first, the count last
   n.pitch = pitch; n.vel = vel; n.start = step; n.len = 1;
   c.count++;
+  clipRefreshBars(c);
+}
+
+void clipRefreshBars(Clip &c) {
+  int last = 0;
+  for (int i = 0; i < c.count; i++) {
+    int end = c.notes[i].start + c.notes[i].len;
+    if (end > last) last = end;
+  }
+  uint8_t bars = (uint8_t)((last + 15) / 16);
+  c.bars = bars < 1 ? 1 : bars > CLIP_MAX_BARS ? CLIP_MAX_BARS : bars;
 }
