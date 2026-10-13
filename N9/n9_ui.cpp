@@ -443,6 +443,13 @@ static void drawEdit() {
   }
 }
 
+void uiMessage(const char *l1, const char *l2) {
+  rct(0, 0, 320, 240, BG);
+  txt((320 - txtW(l1)) / 2, 100, l1, INK);
+  if (l2) txt((320 - txtW(l2)) / 2, 124, l2, DIM);
+  board.tft().updateScreen();
+}
+
 // ---- Entry -----------------------------------------------------------------
 
 void drawScreen(uint8_t ix) {

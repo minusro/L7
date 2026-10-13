@@ -14,3 +14,4 @@ extern m8::Board board;
 enum Screen : uint8_t { SCR_MFX, SCR_FX, SCR_MIX, SCR_MOD, SCR_TFX, SCR_INST, SCR_GRID, SCR_EDIT, SCR_COUNT };
 
 void drawScreen(uint8_t ix);   // clears, draws screen ix, sends the frame
+void uiMessage(const char *l1, const char *l2);   // two centred lines, sent at once

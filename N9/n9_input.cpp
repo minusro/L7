@@ -7,6 +7,7 @@
 #include "n9_mi.h"
 #include "n9_fx.h"
 #include "n9_song.h"
+#include "n9_apps.h"
 
 using namespace m8;
 
@@ -108,6 +109,10 @@ bool inputService() {
 
   bool shift = now & BTN_SHIFT, opt = now & BTN_OPT;
   bool dirtyNow = false;
+  if ((pressed & BTN_EDIT) && shift && opt) {    // SHIFT+B+A: switch to L7
+    appSwitchToL7();                             // (returns only on failure)
+    dirtyNow = true;
+  }
   bool overlay = opt && !shift && nav.screen == SCR_GRID;
   if (overlay != nav.scaleShow) { nav.scaleShow = overlay; dirtyNow = true; }
   if (pressed & BTN_PLAY) { synth.seqToggle(); dirtyNow = true; }   // start from 1.1.1 / stop

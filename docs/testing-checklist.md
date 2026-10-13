@@ -23,6 +23,16 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
+- [ ] **App switcher (both apps) + N9's SD folders.** Copy apps_sd/L7.HEX
+  and N9.HEX to the card as /APPS/L7.HEX and /APPS/N9.HEX (card reader or
+  L7 storage mode; tools/make_apps.sh rebuilds both). N9: SHIFT+B+A
+  switches to L7; L7: SHIFT+B+PLAY switches to N9 (saves its session
+  first). ~10-20 s with a progress count; "DON'T POWER OFF" marks the few
+  unsafe seconds (power loss there = USB reflash). N9 also makes /N9,
+  /N9/PROJECTS and /APPS on the card at boot. Check both directions, a
+  missing-file failure message, and that L7 still boots its project after
+  a round trip. L7's switcher is BUILD-VERIFIED only until L7.HEX is
+  flashed via the switch itself.
 - [ ] **N9: the send/insert FX chains, 8 params, and the working mixer.**
   Effects have 8 cells, the last always DRY/WET. Each track: FX1+FX2 in
   series, each an insert (FLANGER/PHASER/TREM/DRIVE/CRUSH/FILTER/COMP/WOW,

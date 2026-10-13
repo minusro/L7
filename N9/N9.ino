@@ -24,6 +24,7 @@
 #include "M8Board.h"
 #include "n9_input.h"
 #include "n9_state.h"
+#include "n9_apps.h"
 #include "n9_synth.h"
 #include "n9_ui.h"
 
@@ -47,6 +48,7 @@ void setup() {
   for (int i = 0; i < 6 && !codec.enable(); i++) delay(10);
   codec.volume(0.6f);
   synthMidiBegin();
+  appsInit();                                      // the card's /N9 and /APPS folders
   // The frame buffer is STATIC: left to malloc it silently fails once
   // RAM2's heap runs low, and the library falls back to direct drawing -
   // which is exactly a full-screen flicker on every sequencer step.

@@ -123,6 +123,17 @@ L7 itself; this is the extract you need to start fresh.
 * Timing that feels right: key repeat 200 ms then every 50 ms; double tap
   200 ms; hold-to-switch 300–600 ms.
 
+## Switching apps on the device
+
+`app_loader.h/.cpp` + `FlashTxx.c/.h` (FlasherX, public domain) are kept as
+identical copies in each app, like M8Board. Each app carries a key chord
+that flashes the OTHER app's Intel-hex from the card (`/APPS/<APP>.HEX`,
+staged by `tools/make_apps.sh`) into upper flash, verifies it, copies it
+over the running program and reboots — ~15 s, computer-free. Every app must
+contain the `FLASH_ID` string (app_loader.cpp does this) or images of it
+will be refused. The final copy is the only brick window (a few seconds);
+recovery is a USB reflash.
+
 ## Debugging
 
 * Serial 115200. L7's freeze detector pattern is worth copying early: a
