@@ -490,13 +490,13 @@ void uiMessage(const char *l1, const char *l2) {
 static void drawN9Logo(int x, int y, uint16_t c) {
   for (int p = 0; p < 26; p++) {
     if ((p >= 18 && p < 20) || (p >= 22 && p < 24)) continue;   // the cuts
-    int off = (25 - p) / 3;                                     // italic
+    int off = (25 - p) / 2;                                     // italic: every diagonal 1:2
     rct(x + off, y + p, 6, 1, c);                               // N: left stem,
-    rct(x + 14, y + p, 6, 1, c);                                //   middle dead vertical (meets
-    rct(x + off + 20, y + p, 6, 1, c);                          //   the stems top and bottom), right stem
-    rct(x + off + 40, y + p, 7, 1, c);                          // 9: its stem,
-    if (p < 3 || (p >= 10 && p < 13)) rct(x + off + 28, y + p, 12, 1, c);   // bowl top/bottom,
-    else if (p < 10) rct(x + off + 28, y + p, 7, 1, c);                     // bowl wall
+    rct(x + 15, y + p, 6, 1, c);                                //   middle dead vertical (meets
+    rct(x + off + 16, y + p, 6, 1, c);                          //   the stems top and bottom), right stem
+    rct(x + off + 36, y + p, 7, 1, c);                          // 9: its stem,
+    if (p < 3 || (p >= 10 && p < 13)) rct(x + off + 24, y + p, 12, 1, c);   // bowl top/bottom,
+    else if (p < 10) rct(x + off + 24, y + p, 7, 1, c);                     // bowl wall
   }
 }
 
