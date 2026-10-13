@@ -484,7 +484,7 @@ void uiMessage(const char *l1, const char *l2) {
 
 // ---- Menu (past the left edge; RIGHT off its edge leaves) -------------------
 
-// The N9 logo, L7's corner-logo place and size (55 x 26 px at (PX, 214)) and
+// The N9 logo, L7's corner-logo place and size (57 x 26 px at (0, 214), a block left of L7's) and
 // style (ui_splash.cpp: italic, a pixel right every three rows up, the 9's
 // right edge slanting with it, two cuts near the bottom).
 static void drawN9Logo(int x, int y, uint16_t c) {
@@ -626,7 +626,7 @@ static void drawMenuScr() {
     }
   }
   batteryIcon(DIM, DARK);
-  drawN9Logo(PX, 214, LIGHT);
+  drawN9Logo(0, 214, LIGHT);
 }
 
 // Storage mode's screen (n9_usb_drive.cpp): L7's (usb_drive.cpp) — a grey
@@ -646,7 +646,7 @@ void uiStorageDraw(uint8_t state, const char *msg) {
   txt(lx, TITLE_Y + STATE_DY, TEXT[state & 3], INK);
   txt(lx, (M_LIST_Y + 3 * M_LIST_PITCH) * PX, msg ? msg : "PRESS ANY KEY TO EXIT", BG);
   batteryIcon(DARK, SCRN);
-  drawN9Logo(PX, 214, c);
+  drawN9Logo(0, 214, c);
   board.tft().updateScreen();
 }
 
