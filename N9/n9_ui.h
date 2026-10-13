@@ -21,3 +21,11 @@ constexpr int MENU_STORAGE = 1;   // the list's live item (12 + this in menuSel)
 void drawScreen(uint8_t ix);   // clears, draws screen ix, sends the frame
 void uiMessage(const char *l1, const char *l2);   // two centred lines, sent at once
 void uiStorageDraw(uint8_t state, const char *msg);   // storage mode's screen (state 0-3; msg replaces the exit hint)
+
+// The splash (L7's, with the N9 mark): show it, play the intro through
+// (blocking, skippable with any key), tick it between start-up steps, then
+// hide it (waits out its minimum, fades).
+void splashShow();
+void splashIntro();
+void splashTick();
+void splashHide();

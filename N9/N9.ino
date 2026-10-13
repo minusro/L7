@@ -47,18 +47,22 @@ void setup() {
   AudioMemory(8);
   board.begin();
   board.powerButtonPressed();                      // the press that switched us on
-  for (int i = 0; i < 6 && !codec.enable(); i++) delay(10);
-  codec.volume(0.6f);
-  synthMidiBegin();
-  appsInit();                                      // the card's /N9 and /APPS folders
-  usbDriveBegin();                                 // the computer's disk probing answered from now on
-  projectsBegin();                                 // the last project back in
   // The frame buffer is STATIC: left to malloc it silently fails once
   // RAM2's heap runs low, and the library falls back to direct drawing -
   // which is exactly a full-screen flicker on every sequencer step.
   static DMAMEM uint16_t framebuffer[320 * 240];
   board.tft().setFrameBuffer(framebuffer);
   if (!board.tft().useFrameBuffer(true)) Serial.println("n9: NO FRAMEBUFFER");
+  splashShow();                                    // the logo in, the hue cycle (L7's splash)
+  splashIntro();                                   // (blocking; any key skips)
+  for (int i = 0; i < 6 && !codec.enable(); i++) delay(10);
+  codec.volume(0.6f);
+  synthMidiBegin();
+  splashTick();
+  appsInit();                                      // the card's /N9 and /APPS folders
+  usbDriveBegin();                                 // the computer's disk probing answered from now on
+  projectsBegin();                                 // the last project back in
+  splashHide();                                    // waits out its minimum, fades
   drawScreen(nav.screen);
 }
 

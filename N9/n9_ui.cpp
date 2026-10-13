@@ -39,6 +39,7 @@ static const Glyph GLYPHS[] = {
     {'-', {"...", "...", "###", "...", "..."}},
     {'+', {"...", ".#.", "###", ".#.", "..."}},
     {'#', {".#.#", "####", ".#.#", "####", "#.#."}},
+    {'\xA9', {".#####.", "#.###.#", "#.#...#", "#.###.#", ".#####."}},
     {'<', {"...#", "..##", ".###", "..##", "...#"}},
     {'>', {"#...", "##..", "###.", "##..", "#..."}},
     {'0', {"###", "#.#", "#.#", "#.#", "###"}},
@@ -484,21 +485,30 @@ void uiMessage(const char *l1, const char *l2) {
 
 // ---- Menu (past the left edge; RIGHT off its edge leaves) -------------------
 
-// The N9 logo, L7's corner-logo place and size (57 x 26 px at (0, 214), a block left of L7's) and
-// style (ui_splash.cpp: italic, a pixel right every three rows up, the 9's
-// right edge slanting with it, two cuts near the bottom).
-static void drawN9Logo(int x, int y, uint16_t c) {
-  for (int p = 0; p < 26; p++) {
-    if ((p >= 18 && p < 20) || (p >= 22 && p < 24)) continue;   // the cuts
-    int off = (25 - p) / 2;                                     // italic: every diagonal 1:2
-    rct(x + off, y + p, 6, 1, c);                               // N: left stem,
-    rct(x + 15, y + p, 6, 1, c);                                //   middle dead vertical (meets
-    rct(x + off + 16, y + p, 6, 1, c);                          //   the stems top and bottom), right stem
-    rct(x + off + 38, y + p, 7, 1, c);                          // 9: its stem,
-    if (p < 3 || (p >= 10 && p < 13)) rct(x + off + 26, y + p, 12, 1, c);   // bowl top/bottom,
-    else if (p < 10) rct(x + off + 26, y + p, 7, 1, c);                     // bowl wall
+// The N9 mark at any scale (the menu corner at 1, the splash at 2.5): italic
+// at a 1:2 step per pixel row whatever the size, the N's middle dead vertical,
+// a block of extra air before the 9, the two 80s cuts. 57 x 26 units; shiftN
+// and shift9 slide the glyphs apart (the splash's entrance).
+static int lu(float units, float s) { return (int)lroundf(units * s); }
+static void drawN9Mark(int x, int y, float s, uint16_t c, int shiftN = 0, int shift9 = 0) {
+  int h = lu(26, s);
+  for (int p = 0; p < h; p++) {
+    if ((p >= lu(18, s) && p < lu(20, s)) || (p >= lu(22, s) && p < lu(24, s))) continue;
+    int off = (h - 1 - p) / 2;                                  // italic: every diagonal 1:2
+    int xn = x + shiftN, x9 = x + shift9;
+    rct(xn + off, y + p, lu(6, s), 1, c);                       // N: left stem,
+    rct(xn + lu(15, s), y + p, lu(6, s), 1, c);                 //   middle dead vertical,
+    rct(xn + off + lu(16, s), y + p, lu(6, s), 1, c);           //   right stem
+    rct(x9 + off + lu(38, s), y + p, lu(7, s), 1, c);           // 9: its stem,
+    if (p < lu(3, s) || (p >= lu(10, s) && p < lu(13, s)))
+      rct(x9 + off + lu(26, s), y + p, lu(12, s), 1, c);        // bowl top/bottom,
+    else if (p < lu(10, s))
+      rct(x9 + off + lu(26, s), y + p, lu(7, s), 1, c);         // bowl wall
   }
 }
+
+// The corner logo, L7's place and size (at (0, 214), a block left of L7's).
+static void drawN9Logo(int x, int y, uint16_t c) { drawN9Mark(x, y, 1, c); }
 
 // The battery, top right, L7's (ui_menu.cpp drawBatteryIcon): 11 x 7 blocks,
 // outline + fill in sevenths (90 % and up: full); charging: filled whole with
@@ -648,6 +658,92 @@ void uiStorageDraw(uint8_t state, const char *msg) {
   batteryIcon(DARK, SCRN);
   drawN9Logo(0, 214, c);
   board.tft().updateScreen();
+}
+
+// ---- Splash (L7's ui_splash.cpp, the N9 mark) --------------------------------
+// The logo fades in from black (0-0.5 s) while the N slides in from the left
+// and the 9 from the right (cubic ease-out, in place at 1 s); its colour then
+// goes once round the hues (OKLCH, 0.5-2.5 s, eased in and out); the
+// copyright line fades in and rises 8 px (1.5-2.5 s). The fade out (1 s)
+// starts once the start-up is done and not before 3.5 s; a key pressed during
+// the intro skips to the end. Every frame is drawn whole into the frame
+// buffer and sent (~25 fps), so none of L7's partial-redraw bookkeeping.
+
+// OKLCH to RGB565 (L7's): a chroma out of sRGB's reach comes down to fit.
+FLASHMEM static uint16_t oklch565(float L, float C, float hDeg) {
+  float h = hDeg * (float)M_PI / 180, r = 0, g = 0, b = 0;
+  for (int i = 0; i < 12; i++, C *= 0.9f) {
+    float a = C * cosf(h), bb = C * sinf(h);
+    float l = L + 0.3963377774f * a + 0.2158037573f * bb, m = L - 0.1055613458f * a - 0.0638541728f * bb,
+          s = L - 0.0894841775f * a - 1.2914855480f * bb;
+    l = l * l * l; m = m * m * m; s = s * s * s;
+    r = 4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s;
+    g = -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s;
+    b = -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s;
+    if (r >= -0.001f && r <= 1.001f && g >= -0.001f && g <= 1.001f && b >= -0.001f && b <= 1.001f) break;
+  }
+  auto gamma = [](float c) {
+    c = constrain(c, 0.0f, 1.0f);
+    return (uint8_t)lroundf(255 * (c <= 0.0031308f ? 12.92f * c : 1.055f * powf(c, 1 / 2.4f) - 0.055f));
+  };
+  return rgb565(gamma(r), gamma(g), gamma(b));
+}
+static uint16_t hueCycle(float phase) { return oklch565(0.8238f, 0.1641f, 164.76f + 360 * phase); }
+
+static constexpr float SPL_SCALE = 2.5f;
+static constexpr int SPL_W = 145, SPL_H = 65;    // 45 units at 2.5 plus the slant's 32
+static constexpr int SPL_X = (320 - SPL_W) / 2 + 12, SPL_Y = (240 - (SPL_H + 22 + 10)) / 2 + 16;
+static const char SPL_LINE[] = "\xA9 2026 DANIEL STANCIU";
+
+static uint32_t splAt = 0, splOutAt = 0;
+static bool splSkipped = false;
+
+void splashTick() {
+  uint32_t ms = millis() - splAt;
+  uint16_t logo;
+  if (ms < 500) {
+    logo = blend565(LOGO_COLOR, BG, (uint8_t)(255 * ms / 500));
+  } else {
+    float t = min(1.0f, (ms - 500) / 2000.0f), e = t * t * (3 - 2 * t);
+    logo = t >= 1 ? LOGO_COLOR : hueCycle(e);
+  }
+  uint8_t out = !splOutAt ? 255 : (uint8_t)(255 - 255 * min(millis() - splOutAt, 1000ul) / 1000);
+  logo = blend565(logo, BG, out);
+  float left = 1 - min(1.0f, ms / 1000.0f);       // of the slide
+  int shift = (int)lroundf(600 * left * left * left);
+  uint32_t into = ms < 1500 ? 0 : min(ms - 1500, 500ul);
+  uint8_t textOut = !splOutAt ? 255 : (uint8_t)(255 - 255 * min(millis() - splOutAt, 250ul) / 250);
+  uint16_t text = blend565(blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / 500)), BG, textOut);
+  float rise = 1 - min(1.0f, (ms < 1500 ? 0 : ms - 1500) / 1000.0f);
+  int ty = 214 + (int)lroundf(8 * rise * rise * rise);
+  rct(0, 0, 320, 240, BG);
+  drawN9Mark(SPL_X, SPL_Y, SPL_SCALE, logo, -shift, shift);
+  txt((320 - txtW(SPL_LINE)) / 2, ty, SPL_LINE, text);
+  board.tft().updateScreen();
+}
+
+void splashShow() {
+  splAt = millis();
+  splOutAt = 0;
+  splSkipped = false;
+  splashTick();
+}
+
+void splashIntro() {                              // the intro played through (2.5 s)
+  while (millis() - splAt < 2500) {
+    if (board.keys()) { splSkipped = true; splAt = millis() - 2500; break; }
+    splashTick();
+    board.chargeGuard();
+  }
+  splashTick();
+}
+
+void splashHide() {                               // waits out 3.5 s (unless skipped), fades
+  while (!splSkipped && millis() - splAt < 3500) { splashTick(); board.chargeGuard(); }
+  splOutAt = millis();
+  while (millis() - splOutAt < 1000) splashTick();
+  splashTick();
+  while (board.keys()) {}                         // a skip's press: not the app's
 }
 
 // ---- Entry -----------------------------------------------------------------
