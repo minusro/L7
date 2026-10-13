@@ -28,6 +28,12 @@ extern uint8_t projKey, projScale;        // default C chromatic (no restriction
 bool scaleHas(uint8_t pitch);
 uint8_t scaleSnap(uint8_t pitch);         // nearest in-scale pitch, ties downward
 
+// The mixer: per-track volume (80 = unity), pan (50 = centre) and mute,
+// and the master volume (80 = unity), ahead of the soft clipper.
+extern uint8_t trackVol[9], trackPan[9];
+extern bool trackMute[9];
+extern uint8_t masterVol;
+
 Clip &clipAt(uint8_t t, uint8_t s);
 // The note covering (pitch, step), or -1.
 int clipFindAt(const Clip &c, uint8_t pitch, uint8_t step);

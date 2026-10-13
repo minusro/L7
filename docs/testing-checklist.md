@@ -23,6 +23,19 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
+- [ ] **N9: the send/insert FX chains, 8 params, and the working mixer.**
+  Effects have 8 cells, the last always DRY/WET. Each track: FX1+FX2 in
+  series, each an insert (FLANGER/PHASER/TREM/DRIVE/CRUSH/FILTER/COMP/WOW,
+  per-track) or a send (DELAY/REVERB/CHORUS, global stereo post-fader;
+  cells 1-7 edit the SHARED effect, cell 8 is this track's send: to midway
+  send rises to 100%, past midway the dry path to the mixer fades). Series
+  rules per the spec (send+send taps full output; insert+send sends FX1's
+  result). Master: one stereo effect (PINGPONG lives only there), then
+  master volume, then the clipper. MIXER: 10 strips (9 + master), B+UP/DOWN
+  volume, B+LEFT/RIGHT pan, A mutes (kills its post-fader sends too), live
+  VU per track and stereo master pair (refresh every 80 ms on that screen).
+  Listen hard to: send ramp behaviour around midway, two sends on one
+  track, reverb/delay tails when muting, pan law at extremes.
 - [ ] **N9: key/scale, roll pages and octaves.** B+LEFT/RIGHT on the grid
   steps the key, B+UP/DOWN the scale (overlay while B held; C chromatic =
   no restriction). The roll: cursor only lands on in-scale pitches (strip

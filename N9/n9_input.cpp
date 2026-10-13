@@ -37,7 +37,7 @@ static bool move(int dx, int dy) {
       return c;
     }
     case SCR_MIX:
-      return dx ? to(nav.mixSel, clamp(nav.mixSel + dx, 0, 8)) : false;
+      return dx ? to(nav.mixSel, clamp(nav.mixSel + dx, 0, 9)) : false;   // 9 = master
     case SCR_MOD: {
       bool c = false;
       if (dy) {
@@ -58,14 +58,17 @@ static bool move(int dx, int dy) {
     }
     case SCR_TFX: {
       bool c = false;
-      if (dy) c = to(nav.tfxRow, clamp(nav.tfxRow + dy, 0, 1));
-      if (dx && nav.tfxRow == 1) c |= to(nav.tfxCol, clamp(nav.tfxCol + dx, 0, 3));
+      if (dy) {
+        c = to(nav.tfxRow, clamp(nav.tfxRow + dy, 0, 3));
+        if (nav.tfxRow < 2) c |= to(nav.tfxSlot, nav.tfxRow);   // the cells follow this slot
+      }
+      if (dx && nav.tfxRow >= 2) c |= to(nav.tfxCol, clamp(nav.tfxCol + dx, 0, 3));
       return c;
     }
     case SCR_MFX: {
       bool c = false;
-      if (dy) c = to(nav.mfxRow, clamp(nav.mfxRow + dy, 0, 1));
-      if (dx && nav.mfxRow == 1) c |= to(nav.mfxCol, clamp(nav.mfxCol + dx, 0, 3));
+      if (dy) c = to(nav.mfxRow, clamp(nav.mfxRow + dy, 0, 2));
+      if (dx && nav.mfxRow >= 1) c |= to(nav.mfxCol, clamp(nav.mfxCol + dx, 0, 3));
       return c;
     }
     case SCR_GRID: {
@@ -108,6 +111,10 @@ bool inputService() {
   bool overlay = opt && !shift && nav.screen == SCR_GRID;
   if (overlay != nav.scaleShow) { nav.scaleShow = overlay; dirtyNow = true; }
   if (pressed & BTN_PLAY) { synth.seqToggle(); dirtyNow = true; }   // start from 1.1.1 / stop
+  if ((pressed & BTN_EDIT) && !shift && !opt && nav.screen == SCR_MIX && nav.mixSel < 9) {
+    trackMute[nav.mixSel] = !trackMute[nav.mixSel];
+    dirtyNow = true;
+  }
   if ((pressed & BTN_EDIT) && !shift && !opt && nav.screen == SCR_EDIT) {
     // A on the roll: add a step note at the cursor, or remove the one there.
     clipToggle(clipAt(nav.gridT, nav.gridS), nav.editPitch, nav.editPage * 16 + nav.editStep, 100);
@@ -162,23 +169,43 @@ bool inputService() {
           }
           dirty = true;
         }
-      } else if (nav.screen == SCR_TFX || nav.screen == SCR_MFX) {
-        bool master = nav.screen == SCR_MFX;
-        uint8_t row = master ? nav.mfxRow : nav.tfxRow;
-        uint8_t col = master ? nav.mfxCol : nav.tfxCol;
-        FxSlot &sl = master ? masterFx : trackFx[nav.gridT];
-        if (row == 0) {                          // the type selector
-          if (i == A_LEFT || i == A_RIGHT) {
-            uint8_t ty = sl.type;
-            do ty = (ty + (i == A_RIGHT ? 1 : FX_TYPES - 1)) % FX_TYPES;
-            while (!master && !fxTrackAllowed(ty));   // the big types are master-only
-            if (master) fxSetMasterType(ty); else fxSetTrackType(nav.gridT, ty);
+      } else if (nav.screen == SCR_MIX) {        // the strip: volume / pan
+        int t = nav.mixSel;
+        if (i == A_UP || i == A_DOWN) {
+          uint8_t &v = t == 9 ? masterVol : trackVol[t];
+          v = (uint8_t)clamp(v + (i == A_UP ? 2 : -2), 0, 99);
+          dirty = true;
+        } else if (t < 9) {
+          trackPan[t] = (uint8_t)clamp(trackPan[t] + (i == A_RIGHT ? 2 : -2), 0, 99);
+          dirty = true;
+        }
+      } else if (nav.screen == SCR_TFX) {
+        uint8_t slot = nav.tfxRow < 2 ? nav.tfxRow : nav.tfxSlot;
+        FxSlot &sl = trackFx[nav.gridT][slot];
+        if (nav.tfxRow < 2) {                    // a slot's type selector
+          if (i == A_LEFT || i == A_RIGHT)
+            { fxSetTrackType(nav.gridT, slot, fxStepTrackType(sl.type, i == A_RIGHT ? 1 : -1)); dirty = true; }
+        } else {
+          int idx = (nav.tfxRow - 2) * 4 + nav.tfxCol;
+          bool send = fxIsSend(sl.type);
+          if (fxParams(sl.type, send)[idx].name[0] != '-') {
+            int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
+            uint8_t &p = (send && idx < 7) ? sendFx[fxSendIndex(sl.type)].p[idx] : sl.p[idx];
+            p = (uint8_t)clamp(p + d, 0, 99);
             dirty = true;
           }
-        } else if (fxParams(sl.type)[col].name[0] != '-') {
-          int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
-          sl.p[col] = (uint8_t)clamp(sl.p[col] + d, 0, 99);
-          dirty = true;
+        }
+      } else if (nav.screen == SCR_MFX) {
+        if (nav.mfxRow == 0) {
+          if (i == A_LEFT || i == A_RIGHT)
+            { fxSetMasterType(fxStepMasterType(masterFx.type, i == A_RIGHT ? 1 : -1)); dirty = true; }
+        } else {
+          int idx = (nav.mfxRow - 1) * 4 + nav.mfxCol;
+          if (fxParams(masterFx.type, false)[idx].name[0] != '-') {
+            int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
+            masterFx.p[idx] = (uint8_t)clamp(masterFx.p[idx] + d, 0, 99);
+            dirty = true;
+          }
         }
       }
     } else {

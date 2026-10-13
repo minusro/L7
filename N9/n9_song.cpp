@@ -24,6 +24,11 @@ static const uint16_t SCALE_MASKS[SCALE_COUNT] = {
 };
 uint8_t projKey = 0, projScale = 0;
 
+uint8_t trackVol[9] = {80, 80, 80, 80, 80, 80, 80, 80, 80};
+uint8_t trackPan[9] = {50, 50, 50, 50, 50, 50, 50, 50, 50};
+bool trackMute[9];
+uint8_t masterVol = 80;
+
 bool scaleHas(uint8_t pitch) {
   return SCALE_MASKS[projScale] & (1 << ((pitch + 12 - projKey) % 12));
 }

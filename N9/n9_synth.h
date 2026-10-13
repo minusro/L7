@@ -21,6 +21,11 @@ public:
 
   uint8_t active() const { return _active; }       // voices sounding
 
+  // Meters (0-255, post-fader; the master pair post everything).
+  uint8_t trackPeak(uint8_t t) const { return _tpk[t]; }
+  uint8_t masterPeakL() const { return _pkL; }
+  uint8_t masterPeakR() const { return _pkR; }
+
   // The transport: a sixteenth-step clock in the audio interrupt, playing
   // the grid cursor's clip through the current engine.
   void seqToggle();                                // start from 1.1.1 / stop
@@ -84,6 +89,7 @@ private:
   uint32_t _ageCounter = 0;
   volatile uint8_t _active = 0;
   volatile uint32_t _maxCycles = 0;
+  volatile uint8_t _tpk[9] = {0}, _pkL = 0, _pkR = 0;
 };
 
 extern N9Synth synth;

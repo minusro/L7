@@ -56,6 +56,8 @@ void loop() {
   synthServiceMidi();
   static uint8_t lastStep = 255;                 // the playhead and clock follow the transport
   if (synth.seqOn() && synth.seqStepN() != lastStep) { lastStep = synth.seqStepN(); dirty = true; }
+  static uint32_t meterAt = 0;                   // the mixer's meters tick on their own
+  if (nav.screen == SCR_MIX && millis() - meterAt >= 80) { meterAt = millis(); dirty = true; }
   if (dirty) { drawScreen(nav.screen); dirty = false; }
 
   bool hp;

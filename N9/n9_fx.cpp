@@ -1,54 +1,65 @@
-// n9_fx.cpp — see n9_fx.h. Each slot owns a 54 KB state block in RAM2; a
-// type change loads the type's defaults and clears the state.
+// n9_fx.cpp — see n9_fx.h.
 #include "n9_fx.h"
 
 #include <Arduino.h>
 #include <math.h>
 
 const char *const FX_TYPE_NAMES[FX_TYPES] = {
-    "-", "CHORUS", "FLANGER", "PHASER", "TREM", "DELAY",
-    "PINGPONG", "REVERB", "DRIVE", "CRUSH", "FILTER", "COMP", "WOW"};
+    "-", "FLANGER", "PHASER", "TREM", "DRIVE", "CRUSH", "FILTER", "COMP",
+    "WOW", "DELAY", "REVERB", "CHORUS", "PINGPONG"};
 
-static const ParamInfo FX_PARAMS[FX_TYPES][4] = {
-    {{"-", 0}, {"-", 0}, {"-", 0}, {"-", 0}},
-    {{"RATE", 30}, {"DEPTH", 50}, {"SPREAD", 70}, {"MIX", 40}},       // CHORUS (I/II-ish at the defaults)
-    {{"RATE", 25}, {"DEPTH", 60}, {"FEEDB", 55}, {"MIX", 45}},        // FLANGER
-    {{"RATE", 30}, {"DEPTH", 60}, {"FEEDB", 50}, {"MIX", 45}},        // PHASER
-    {{"RATE", 45}, {"DEPTH", 60}, {"SPREAD", 50}, {"SHAPE", 0}},      // TREM
-    {{"TIME", 45}, {"FEEDB", 40}, {"TONE", 60}, {"MIX", 35}},         // DELAY
-    {{"TIME", 45}, {"FEEDB", 45}, {"WIDTH", 80}, {"MIX", 35}},        // PINGPONG
-    {{"SIZE", 55}, {"DAMP", 45}, {"TONE", 70}, {"MIX", 35}},          // REVERB
-    {{"GAIN", 40}, {"TONE", 55}, {"LEVEL", 70}, {"MIX", 99}},         // DRIVE
-    {{"BITS", 60}, {"RATE", 50}, {"TONE", 60}, {"MIX", 99}},          // CRUSH
-    {{"CUTOFF", 60}, {"RES", 30}, {"MODE", 0}, {"LEVEL", 80}},        // FILTER
-    {{"THRESH", 45}, {"RATIO", 50}, {"REL", 40}, {"GAIN", 55}},       // COMP
-    {{"DEPTH", 35}, {"RATE", 40}, {"SAT", 45}, {"MIX", 99}},          // WOW
+bool fxIsSend(uint8_t type) { return type == FXT_DELAY || type == FXT_REVERB || type == FXT_CHORUS; }
+int fxSendIndex(uint8_t type) {
+  return type == FXT_DELAY ? 0 : type == FXT_REVERB ? 1 : type == FXT_CHORUS ? 2 : -1;
+}
+
+// The eight cells per type; index 7 is always DRY/WET (SEND on a send slot).
+static const ParamInfo FX_PARAMS[FX_TYPES][8] = {
+    {{"-", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"-", 0}},
+    {{"RATE", 30}, {"DEPTH", 60}, {"FEEDB", 55}, {"MANUAL", 35}, {"-", 0}, {"-", 0}, {"-", 0}, {"WET", 45}},
+    {{"RATE", 30}, {"DEPTH", 60}, {"FEEDB", 50}, {"STAGES", 50}, {"CENTER", 40}, {"-", 0}, {"-", 0}, {"WET", 45}},
+    {{"RATE", 45}, {"DEPTH", 60}, {"SPREAD", 50}, {"SHAPE", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"WET", 99}},
+    {{"GAIN", 40}, {"TONE", 55}, {"LEVEL", 70}, {"BIAS", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"WET", 99}},
+    {{"BITS", 60}, {"RATE", 50}, {"TONE", 60}, {"-", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"WET", 99}},
+    {{"CUTOFF", 60}, {"RES", 30}, {"MODE", 0}, {"DRIVE", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"WET", 99}},
+    {{"THRESH", 45}, {"RATIO", 50}, {"ATK", 20}, {"REL", 40}, {"GAIN", 55}, {"-", 0}, {"-", 0}, {"WET", 99}},
+    {{"DEPTH", 35}, {"RATE", 40}, {"SAT", 45}, {"FLUTTER", 20}, {"-", 0}, {"-", 0}, {"-", 0}, {"WET", 99}},
+    {{"TIME", 45}, {"FEEDB", 40}, {"TONE", 60}, {"-", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"WET", 35}},
+    {{"SIZE", 55}, {"DAMP", 45}, {"TONE", 70}, {"-", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"WET", 35}},
+    {{"RATE", 30}, {"DEPTH", 50}, {"SPREAD", 70}, {"-", 0}, {"-", 0}, {"-", 0}, {"-", 0}, {"WET", 40}},
+    {{"TIME", 45}, {"FEEDB", 45}, {"WIDTH", 80}, {"TONE", 60}, {"-", 0}, {"-", 0}, {"-", 0}, {"WET", 35}},
 };
 
-const ParamInfo *fxParams(uint8_t type) { return FX_PARAMS[type < FX_TYPES ? type : 0]; }
+static ParamInfo sendParamBuf[8];
+const ParamInfo *fxParams(uint8_t type, bool asSend) {
+  if (type >= FX_TYPES) type = 0;
+  if (!asSend || !fxIsSend(type)) return FX_PARAMS[type];
+  for (int i = 0; i < 7; i++) sendParamBuf[i] = FX_PARAMS[type][i];
+  sendParamBuf[7] = {"SEND", 0};
+  return sendParamBuf;
+}
 
-FxSlot trackFx[9];
+FxSlot trackFx[9][2];
+FxSlot sendFx[3];
 FxSlot masterFx;
 
-// Per-slot DSP state. `line` holds the type's delay memory:
-//   CHORUS/FLANGER/WOW: L at 0, R at 4096 (2048 samples each is plenty)
-//   DELAY: one mono line, 26460 samples (600 ms)
-//   PINGPONG: L at 0, R at 13824 (300 ms each)
-//   REVERB: combs at c*2700, allpasses at 16400 / 17200 / 17700
 struct FxState {
-  int16_t *line;   // the type's delay memory (the master's is large enough
-  int lineLen;     //   for the time-based types; a track's is 4096 samples)
-  float sp[4];     // the four params, eased per block against zipper
+  int16_t *line;
+  int lineLen;
+  float sp[8];
   float ph = 0;
-  float envL = 0, envR = 0, gain = 1;
+  float envL = 0, gain = 1;
   float lpL = 0, lpR = 0, s1L = 0, s2L = 0, s1R = 0, s2R = 0;
-  float apL[4], apR[4], cf[6];
+  float apL[6], apR[6], cf[6];
   float heldL = 0, heldR = 0;
   int hold = 0, pos = 0, idx[10];
 };
 DMAMEM static int16_t masterLine[27648];
-DMAMEM static int16_t trackLine[9][4096];
-static FxState stTrack[9], stMaster;
+DMAMEM static int16_t trackLine[9][2][4096];
+DMAMEM static int16_t sendDelayLine[27648];
+DMAMEM static int16_t sendReverbLine[27648];
+DMAMEM static int16_t sendChorusLine[4096];
+static FxState stTrack[9][2], stSend[3], stMaster;
 
 static inline float i16f(int16_t v) { return v * (1.0f / 32768.0f); }
 static inline int16_t fi16(float v) {
@@ -66,67 +77,83 @@ static inline float softsat(float x) {
   if (x > 1.5f) x = 1.5f; else if (x < -1.5f) x = -1.5f;
   return x - x * x * x * (4.0f / 27.0f);
 }
+float fxSoftClip(float x) { return softsat(x); }
 
 static void resetState(FxState &t, int16_t *line, int lineLen, const FxSlot &sl) {
   memset(&t, 0, sizeof(FxState));
   t.gain = 1;
   t.line = line; t.lineLen = lineLen;
-  memset(line, 0, lineLen * 2);
-  for (int i = 0; i < 4; i++) t.sp[i] = sl.p[i] / 99.0f;
+  if (line) memset(line, 0, lineLen * 2);
+  for (int i = 0; i < 8; i++) t.sp[i] = sl.p[i] / 99.0f;
 }
 
-bool fxTrackAllowed(uint8_t type) {
-  return type != FXT_DELAY && type != FXT_PINGPONG && type != FXT_REVERB;
+static void loadDefaults(FxSlot &sl, uint8_t type) {
+  sl.type = type;
+  for (int i = 0; i < 8; i++) sl.p[i] = FX_PARAMS[type][i].def;
 }
 
-void fxSetTrackType(uint8_t t, uint8_t type) {
-  if (t >= 9 || type >= FX_TYPES || !fxTrackAllowed(type)) return;
-  trackFx[t].type = type;
-  for (int i = 0; i < 4; i++) trackFx[t].p[i] = FX_PARAMS[type][i].def;
-  resetState(stTrack[t], trackLine[t], 4096, trackFx[t]);
-  Serial.printf("fx: track %u %s\n", t + 1, FX_TYPE_NAMES[type]);
+void fxSetTrackType(uint8_t t, uint8_t slot, uint8_t type) {
+  if (t >= 9 || slot >= 2 || type >= FX_TYPES || type == FXT_PINGPONG) return;
+  loadDefaults(trackFx[t][slot], type);
+  if (fxIsSend(type)) trackFx[t][slot].p[7] = 0;        // send starts silent
+  resetState(stTrack[t][slot], trackLine[t][slot], 4096, trackFx[t][slot]);
+  Serial.printf("fx: track %u.%u %s%s\n", t + 1, slot + 1, FX_TYPE_NAMES[type], fxIsSend(type) ? " (send)" : "");
 }
 
 void fxSetMasterType(uint8_t type) {
   if (type >= FX_TYPES) return;
-  masterFx.type = type;
-  for (int i = 0; i < 4; i++) masterFx.p[i] = FX_PARAMS[type][i].def;
+  loadDefaults(masterFx, type);
   resetState(stMaster, masterLine, 27648, masterFx);
   Serial.printf("fx: master %s\n", FX_TYPE_NAMES[type]);
 }
 
+uint8_t fxStepTrackType(uint8_t type, int dir) {
+  do type = (type + FX_TYPES + dir) % FX_TYPES; while (type == FXT_PINGPONG);
+  return type;
+}
+uint8_t fxStepMasterType(uint8_t type, int dir) { return (type + FX_TYPES + dir) % FX_TYPES; }
+
 void fxSlotsInit() {
-  for (int t = 0; t < 9; t++) { trackFx[t] = {FXT_NONE, {0, 0, 0, 0}}; resetState(stTrack[t], trackLine[t], 4096, trackFx[t]); }
-  masterFx = {FXT_NONE, {0, 0, 0, 0}};
+  for (int t = 0; t < 9; t++)
+    for (int k = 0; k < 2; k++) { loadDefaults(trackFx[t][k], FXT_NONE); resetState(stTrack[t][k], trackLine[t][k], 4096, trackFx[t][k]); }
+  loadDefaults(sendFx[0], FXT_DELAY);
+  loadDefaults(sendFx[1], FXT_REVERB);
+  loadDefaults(sendFx[2], FXT_CHORUS);
+  resetState(stSend[0], sendDelayLine, 27648, sendFx[0]);
+  resetState(stSend[1], sendReverbLine, 27648, sendFx[1]);
+  resetState(stSend[2], sendChorusLine, 4096, sendFx[2]);
+  loadDefaults(masterFx, FXT_NONE);
   resetState(stMaster, masterLine, 27648, masterFx);
 }
 
-static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
-  for (int i = 0; i < 4; i++) t.sp[i] += 0.12f * (sl.p[i] / 99.0f - t.sp[i]);   // eased, no zipper
-  float p0 = t.sp[0], p1 = t.sp[1], p2 = t.sp[2], p3 = t.sp[3];
+// ---- The processor: every type, eight smoothed params, wet at 7 ----------
+static void processSlot(const FxSlot &sl, FxState &t, float *l, float *r, int n, bool pureWet) {
+  for (int i = 0; i < 8; i++) t.sp[i] += 0.12f * (sl.p[i] / 99.0f - t.sp[i]);
+  float p0 = t.sp[0], p1 = t.sp[1], p2 = t.sp[2], p3 = t.sp[3], p4 = t.sp[4];
+  float wet = pureWet ? 1.0f : t.sp[7];
+  float dry = pureWet ? 0.0f : 1.0f - wet;
   switch (sl.type) {
     case FXT_CHORUS: case FXT_FLANGER: case FXT_WOW: {
-      // One modulated line, two taps; the flanger adds feedback, WOW is a
-      // slow wobble with saturation and full wet.
       bool fl = sl.type == FXT_FLANGER, wow = sl.type == FXT_WOW;
       float hz = wow ? 0.3f + 2.2f * p1 : 0.08f * expf(0.042f * p0 * 99.0f);
-      float base = fl ? 60.0f : wow ? 320.0f : 480.0f;
+      float base = fl ? 40.0f + 300.0f * p3 : wow ? 320.0f : 480.0f;
       float depth = (fl ? 160.0f : wow ? 140.0f : 330.0f) * (wow ? p0 : p1);
       float fb = fl ? 0.85f * p2 : 0;
-      float mix = wow ? p3 : (fl ? p3 : p3);
+      float spread = wow ? 0.13f : fl ? 0.1f : 0.25f * p2;
       float sat = wow ? p2 : 0;
+      float flut = wow ? 24.0f * p3 : 0;
       for (int i = 0; i < n; i++) {
         float x = (l[i] + r[i]) * 0.5f;
-        float m1 = sinf(t.ph * 6.2832f);
-        float m2 = sinf((t.ph + (wow ? 0.13f : 0.25f * p2)) * 6.2832f);
-        float d1 = base + depth * (1.0f + m1) * 0.5f + 2.0f;
-        float d2 = base + depth * (1.0f + m2) * 0.5f + 2.0f;
+        float wob = flut > 0 ? flut * sinf(t.ph * 43.7f) : 0;
+        float m1 = sinf(t.ph * 6.2832f), m2 = sinf((t.ph + spread) * 6.2832f);
+        float d1 = base + depth * (1.0f + m1) * 0.5f + wob + 2.0f;
+        float d2 = base + depth * (1.0f + m2) * 0.5f + wob + 2.0f;
         float w1 = readLine(t.line, 4096, t.pos, d1);
         float w2 = readLine(t.line, 4096, t.pos, d2);
         t.line[t.pos] = fi16(x + w1 * fb);
         t.pos = (t.pos + 1) & 4095;
         t.ph += hz / 44100.0f; if (t.ph >= 1.0f) t.ph -= 1.0f;
-        float ol = l[i] * (1 - mix) + w1 * mix, orr = r[i] * (1 - mix) + w2 * mix;
+        float ol = l[i] * dry + w1 * wet, orr = r[i] * dry + w2 * wet;
         if (sat > 0.01f) { float g = 1.0f + 4.0f * sat; ol = softsat(ol * g) / (1 + sat); orr = softsat(orr * g) / (1 + sat); }
         l[i] = ol; r[i] = orr;
       }
@@ -134,52 +161,117 @@ static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
     }
     case FXT_PHASER: {
       float hz = 0.06f * expf(0.042f * p0 * 99.0f);
-      float fb = 0.7f * p2, mix = p3;
+      float fb = 0.7f * p2;
+      int stages = 2 + 2 * (int)(p3 * 2.99f);
       for (int i = 0; i < n; i++) {
         t.ph += hz / 44100.0f; if (t.ph >= 1.0f) t.ph -= 1.0f;
-        float a = 0.2f + 0.75f * p1 * (0.5f + 0.5f * sinf(t.ph * 6.2832f));
+        float a = 0.1f + 0.5f * p4 + 0.45f * p1 * (0.5f + 0.5f * sinf(t.ph * 6.2832f));
+        if (a > 0.93f) a = 0.93f;
         float xl = l[i] + t.lpL * fb, xr = r[i] + t.lpR * fb;
-        for (int k = 0; k < 4; k++) {
+        for (int k = 0; k < stages; k++) {
           float yl = -a * xl + t.apL[k]; t.apL[k] = xl + a * yl; xl = yl;
           float yr = -a * xr + t.apR[k]; t.apR[k] = xr + a * yr; xr = yr;
         }
         t.lpL = xl; t.lpR = xr;
-        l[i] = l[i] * (1 - mix) + xl * mix;
-        r[i] = r[i] * (1 - mix) + xr * mix;
+        l[i] = l[i] * dry + xl * wet;
+        r[i] = r[i] * dry + xr * wet;
       }
       break;
     }
     case FXT_TREM: {
-      float hz = 0.4f + 11.0f * p0 * p0 * 2.0f;
+      float hz = 0.4f + 22.0f * p0 * p0;
       bool square = p3 >= 0.5f;
       for (int i = 0; i < n; i++) {
         t.ph += hz / 44100.0f; if (t.ph >= 1.0f) t.ph -= 1.0f;
         float phR = t.ph + 0.5f * p2; if (phR >= 1.0f) phR -= 1.0f;
         float mL = square ? (t.ph < 0.5f ? 1.0f : 0.0f) : 0.5f + 0.5f * sinf(t.ph * 6.2832f);
         float mR = square ? (phR < 0.5f ? 1.0f : 0.0f) : 0.5f + 0.5f * sinf(phR * 6.2832f);
-        l[i] *= 1.0f - p1 * (1.0f - mL);
-        r[i] *= 1.0f - p1 * (1.0f - mR);
+        l[i] = l[i] * dry + l[i] * (1.0f - p1 * (1.0f - mL)) * wet;
+        r[i] = r[i] * dry + r[i] * (1.0f - p1 * (1.0f - mR)) * wet;
+      }
+      break;
+    }
+    case FXT_DRIVE: {
+      float g = 1.0f + 14.0f * p0 * p0, lvl = 0.15f + 0.85f * p2;
+      float tone = 0.06f + 0.7f * p1, bias = 0.4f * p3;
+      float bc = softsat(bias);
+      for (int i = 0; i < n; i++) {
+        float dl = (softsat(l[i] * g + bias) - bc) * lvl, dr = (softsat(r[i] * g + bias) - bc) * lvl;
+        t.lpL += tone * (dl - t.lpL); t.lpR += tone * (dr - t.lpR);
+        l[i] = l[i] * dry + t.lpL * wet;
+        r[i] = r[i] * dry + t.lpR * wet;
+      }
+      break;
+    }
+    case FXT_CRUSH: {
+      float steps = powf(2.0f, 2.0f + 12.0f * p0);
+      int holdN = 1 + (int)((1.0f - p1) * 30.0f);
+      float tone = 0.1f + 0.7f * p2;
+      for (int i = 0; i < n; i++) {
+        if (--t.hold <= 0) {
+          t.heldL = floorf(l[i] * steps + 0.5f) / steps;
+          t.heldR = floorf(r[i] * steps + 0.5f) / steps;
+          t.hold = holdN;
+        }
+        t.lpL += tone * (t.heldL - t.lpL); t.lpR += tone * (t.heldR - t.lpR);
+        l[i] = l[i] * dry + t.lpL * wet;
+        r[i] = r[i] * dry + t.lpR * wet;
+      }
+      break;
+    }
+    case FXT_FILTER: {
+      float fc = 0.002f + 0.26f * p0 * p0;
+      float g = fc * 6.2832f; if (g > 1.2f) g = 1.2f;
+      float q = 1.0f - 0.85f * p1;
+      float drv = 1.0f + 3.0f * p3;
+      bool hp = p2 >= 0.5f;
+      for (int i = 0; i < n; i++) {
+        float xl = softsat(l[i] * drv), xr = softsat(r[i] * drv);
+        float hlL = xl - t.s1L * 2.0f * q - t.s2L;
+        t.s1L += g * hlL; t.s2L += g * t.s1L;
+        float hlR = xr - t.s1R * 2.0f * q - t.s2R;
+        t.s1R += g * hlR; t.s2R += g * t.s1R;
+        l[i] = l[i] * dry + (hp ? hlL : t.s2L) * wet;
+        r[i] = r[i] * dry + (hp ? hlR : t.s2R) * wet;
+      }
+      break;
+    }
+    case FXT_COMP: {
+      float thr = powf(10.0f, (-36.0f + 32.0f * p0) / 20.0f);
+      float ratio = 1.5f + 8.0f * p1;
+      float atk = 1.0f - expf(-1.0f / ((1.0f + 60.0f * p2) * 44.1f));
+      float rel = 1.0f - expf(-1.0f / ((30.0f + 500.0f * p3) * 44.1f));
+      float makeup = 0.7f + 1.5f * p4;
+      for (int i = 0; i < n; i++) {
+        float a = fabsf(l[i]) > fabsf(r[i]) ? fabsf(l[i]) : fabsf(r[i]);
+        if (a > t.envL) t.envL += atk * (a - t.envL); else t.envL += rel * (a - t.envL);
+        float want = 1.0f;
+        if (t.envL > thr) want = (thr + (t.envL - thr) / ratio) / t.envL;
+        t.gain += 0.05f * (want - t.gain);
+        l[i] = l[i] * dry + l[i] * t.gain * makeup * wet;
+        r[i] = r[i] * dry + r[i] * t.gain * makeup * wet;
       }
       break;
     }
     case FXT_DELAY: {
-      if (t.lineLen < 26460) break;              // master only
+      if (t.lineLen < 26460) break;
       int d = (int)((40.0f + 560.0f * p0) * 44.1f);
-      float fb = 0.75f * p1, mix = p3;
+      float fb = 0.75f * p1;
       float tone = 0.08f + 0.6f * p2;
       for (int i = 0; i < n; i++) {
         float w = readLine(t.line, 26460, t.pos, (float)d);
         t.lpL += tone * (w - t.lpL);
         t.line[t.pos] = fi16((l[i] + r[i]) * 0.5f + t.lpL * fb);
         t.pos++; if (t.pos >= 26460) t.pos = 0;
-        l[i] += t.lpL * mix; r[i] += t.lpL * mix;
+        l[i] = l[i] * dry + t.lpL * wet;
+        r[i] = r[i] * dry + t.lpL * wet;
       }
       break;
     }
     case FXT_PINGPONG: {
       if (t.lineLen < 26460) break;
       int d = (int)((30.0f + 270.0f * p0) * 44.1f);
-      float fb = 0.8f * p1, mix = p3, width = p2;
+      float fb = 0.8f * p1, width = p2;
       int16_t *L = t.line, *R = t.line + 13824;
       for (int i = 0; i < n; i++) {
         float wl = readLine(L, 13230, t.pos, (float)d);
@@ -189,7 +281,7 @@ static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
         R[t.pos] = fi16(wl * fb);
         t.pos++; if (t.pos >= 13230) t.pos = 0;
         float cl = wl * width + wr * (1 - width), cr = wr * width + wl * (1 - width);
-        l[i] += cl * mix; r[i] += cr * mix;
+        l[i] = l[i] * dry + cl * wet; r[i] = r[i] * dry + cr * wet;
       }
       break;
     }
@@ -198,7 +290,7 @@ static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
       static const int BASE[6] = {1116, 1188, 1277, 1356, 1422, 1491};
       float scale = 0.55f + 1.15f * p0;
       float fbk = 0.72f + 0.25f * p0;
-      float damp = 0.15f + 0.7f * p1, tone = 0.1f + 0.75f * p2, mix = p3;
+      float damp = 0.15f + 0.7f * p1, tone = 0.1f + 0.75f * p2;
       int len[6];
       for (int c = 0; c < 6; c++) { len[c] = (int)(BASE[c] * scale); if (len[c] > 2690) len[c] = 2690; }
       for (int i = 0; i < n; i++) {
@@ -211,72 +303,14 @@ static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
           if (++t.idx[c] >= len[c]) t.idx[c] = 0;
           sum += y;
         }
-        sum *= 0.45f;
+        sum *= (1.0f / 6.0f) * 2.4f;
         t.lpL += tone * (sum - t.lpL);
         int16_t *a1 = t.line + 16400, *a2 = t.line + 17200, *a3 = t.line + 17700;
         float b = i16f(a1[t.idx[6]]); float y1 = -t.lpL + b; a1[t.idx[6]] = fi16(t.lpL + b * 0.5f); if (++t.idx[6] >= 556) t.idx[6] = 0;
         b = i16f(a2[t.idx[7]]); float yl = -y1 + b; a2[t.idx[7]] = fi16(y1 + b * 0.5f); if (++t.idx[7] >= 225) t.idx[7] = 0;
         b = i16f(a3[t.idx[8]]); float yr = -y1 + b; a3[t.idx[8]] = fi16(y1 + b * 0.5f); if (++t.idx[8] >= 341) t.idx[8] = 0;
-        l[i] = l[i] * (1 - mix) + yl * mix;
-        r[i] = r[i] * (1 - mix) + yr * mix;
-      }
-      break;
-    }
-    case FXT_DRIVE: {
-      float g = 1.0f + 14.0f * p0 * p0, lvl = 0.15f + 0.85f * p2, mix = p3;
-      float tone = 0.06f + 0.7f * p1;
-      for (int i = 0; i < n; i++) {
-        float dl = softsat(l[i] * g) * lvl, dr = softsat(r[i] * g) * lvl;
-        t.lpL += tone * (dl - t.lpL); t.lpR += tone * (dr - t.lpR);
-        l[i] = l[i] * (1 - mix) + t.lpL * mix;
-        r[i] = r[i] * (1 - mix) + t.lpR * mix;
-      }
-      break;
-    }
-    case FXT_CRUSH: {
-      float bits = 2.0f + 12.0f * p0;
-      float steps = powf(2.0f, bits);
-      int holdN = 1 + (int)((1.0f - p1) * 30.0f);
-      float tone = 0.1f + 0.7f * p2, mix = p3;
-      for (int i = 0; i < n; i++) {
-        if (--t.hold <= 0) {
-          t.heldL = floorf(l[i] * steps + 0.5f) / steps;
-          t.heldR = floorf(r[i] * steps + 0.5f) / steps;
-          t.hold = holdN;
-        }
-        t.lpL += tone * (t.heldL - t.lpL); t.lpR += tone * (t.heldR - t.lpR);
-        l[i] = l[i] * (1 - mix) + t.lpL * mix;
-        r[i] = r[i] * (1 - mix) + t.lpR * mix;
-      }
-      break;
-    }
-    case FXT_FILTER: {
-      float fc = 0.002f + 0.26f * p0 * p0;
-      float g = fc * 6.2832f; if (g > 1.2f) g = 1.2f;
-      float q = 1.0f - 0.85f * p1, lvl = 0.2f + 1.0f * p3;
-      bool hp = p2 >= 0.5f;
-      for (int i = 0; i < n; i++) {
-        float hlL = l[i] - t.s1L * 2.0f * q - t.s2L;
-        t.s1L += g * hlL; t.s2L += g * t.s1L;
-        float hlR = r[i] - t.s1R * 2.0f * q - t.s2R;
-        t.s1R += g * hlR; t.s2R += g * t.s1R;
-        l[i] = (hp ? hlL : t.s2L) * lvl;
-        r[i] = (hp ? hlR : t.s2R) * lvl;
-      }
-      break;
-    }
-    case FXT_COMP: {
-      float thr = powf(10.0f, (-36.0f + 32.0f * p0) / 20.0f);
-      float ratio = 1.5f + 8.0f * p1;
-      float rel = 1.0f - expf(-1.0f / ((30.0f + 500.0f * p2) * 44.1f));
-      float makeup = 0.7f + 1.5f * p3;
-      for (int i = 0; i < n; i++) {
-        float a = fabsf(l[i]) > fabsf(r[i]) ? fabsf(l[i]) : fabsf(r[i]);
-        if (a > t.envL) t.envL += 0.3f * (a - t.envL); else t.envL += rel * (a - t.envL);
-        float want = 1.0f;
-        if (t.envL > thr) want = (thr + (t.envL - thr) / ratio) / t.envL;
-        t.gain += 0.05f * (want - t.gain);
-        l[i] *= t.gain * makeup; r[i] *= t.gain * makeup;
+        l[i] = l[i] * dry + yl * wet;
+        r[i] = r[i] * dry + yr * wet;
       }
       break;
     }
@@ -284,19 +318,56 @@ static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
   }
 }
 
-// A track insert is mono: the effect runs as stereo and the result is
-// summed back down, so every allowed type behaves.
-void fxProcessTrack(uint8_t tr, float *mono, int n) {
-  if (tr >= 9 || trackFx[tr].type == FXT_NONE) return;
+// ---- The track chains and the send buses ----------------------------------
+static float sbus[3][128];
+
+void fxBeginBlock(int n) { memset(sbus, 0, sizeof sbus); }
+
+static inline float sendLevel(float w) { return w <= 0.5f ? w * 2.0f : 1.0f; }
+static inline float dryKeep(float w) { return w <= 0.5f ? 1.0f : 1.0f - (w - 0.5f) * 2.0f; }
+
+static void runInsert(uint8_t t, uint8_t k, float *x, int n) {
+  // mono: the stereo processor runs on a pair and the result folds down
   static float tmp[128];
-  for (int i = 0; i < n; i++) tmp[i] = mono[i];
-  processSlot(trackFx[tr], stTrack[tr], tmp, mono, n);
-  for (int i = 0; i < n; i++) mono[i] = (tmp[i] + mono[i]) * 0.5f;
+  for (int i = 0; i < n; i++) tmp[i] = x[i];
+  processSlot(trackFx[t][k], stTrack[t][k], tmp, x, n, false);
+  for (int i = 0; i < n; i++) x[i] = (tmp[i] + x[i]) * 0.5f;
+}
+
+void fxTrackChain(uint8_t t, float *x, int n, float postVol) {
+  const FxSlot &f1 = trackFx[t][0], &f2 = trackFx[t][1];
+  bool s1 = fxIsSend(f1.type), s2 = fxIsSend(f2.type);
+  static float orig[128];
+  if (s1 && s2) for (int i = 0; i < n; i++) orig[i] = x[i];
+
+  float w1 = f1.p[7] / 99.0f, w2 = f2.p[7] / 99.0f;
+  if (f1.type != FXT_NONE) {
+    if (s1) {
+      float lv = sendLevel(w1) * postVol, dk = dryKeep(w1);
+      float *tap = sbus[fxSendIndex(f1.type)];
+      for (int i = 0; i < n; i++) { tap[i] += x[i] * lv; x[i] *= dk; }
+    } else runInsert(t, 0, x, n);
+  }
+  if (f2.type != FXT_NONE) {
+    if (s2) {
+      float lv = sendLevel(w2) * postVol, dk = dryKeep(w2);
+      float *tap = sbus[fxSendIndex(f2.type)];
+      const float *src = s1 ? orig : x;        // a second send taps the full output
+      for (int i = 0; i < n; i++) { tap[i] += src[i] * lv; x[i] *= dk; }
+    } else runInsert(t, 1, x, n);
+  }
+}
+
+void fxRenderSends(float *addL, float *addR, int n) {
+  static float wl[128], wr[128];
+  for (int s = 0; s < 3; s++) {
+    for (int i = 0; i < n; i++) wl[i] = wr[i] = sbus[s][i];
+    processSlot(sendFx[s], stSend[s], wl, wr, n, true);
+    for (int i = 0; i < n; i++) { addL[i] += wl[i]; addR[i] += wr[i]; }
+  }
 }
 
 void fxProcessMaster(float *l, float *r, int n) {
   if (masterFx.type == FXT_NONE) return;
-  processSlot(masterFx, stMaster, l, r, n);
+  processSlot(masterFx, stMaster, l, r, n, false);
 }
-
-float fxSoftClip(float x) { return softsat(x); }

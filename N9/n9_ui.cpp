@@ -183,28 +183,33 @@ static void drawFx() {
 // ---- 3 · Mixer -------------------------------------------------------------
 
 static void drawMix() {
-  title("MIX", "N9 A02");
-  const float vols[9] = {0.8f, 0.6f, 0.7f, 0.5f, 0.65f, 0.55f, 0.4f, 0.75f, 0},
-              mets[9] = {0.6f, 0.4f, 0.68f, 0.3f, 0.5f, 0, 0.2f, 0.6f, 0},
-              pans[9] = {0, -0.4f, 0, 0.3f, 0, 0, -0.2f, 0.5f, 0};
-  const bool muted[9] = {0, 0, 0, 0, 0, 1, 0, 0, 0}, empty[9] = {0, 0, 0, 0, 0, 0, 0, 0, 1};
-  const int SEL = nav.mixSel;
-  for (int t = 0; t < 9; t++) {
-    int x = 2 + t * 35;
-    if (t == SEL) { rct(x, 24, 33, 186, DARK); frm(x, 24, 33, 186, LIGHT); }
-    uint16_t ground = t == SEL ? BG : DARK;
-    rct(x + 4, 32, 25, 2, ground);                                        // pan line
-    if (!empty[t]) rct(x + 13 + rnd(pans[t] * 9), 30, 4, 6, muted[t] ? DIM : LIGHT);
+  title("MIX", "A = MUTE");
+  for (int t = 0; t < 10; t++) {
+    bool master = t == 9;
+    int x = t * 32;
+    bool sel = nav.mixSel == t;
+    if (sel) { rct(x, 24, 30, 186, DARK); frm(x, 24, 30, 186, LIGHT); }
+    uint16_t ground = sel ? BG : DARK;
+    rct(x + 3, 32, 24, 2, ground);                 // pan line (the master has none)
+    if (!master) rct(x + 13 + ((trackPan[t] - 50) * 9) / 50, 30, 4, 6, trackMute[t] ? DIM : LIGHT);
     const int fy = 44, fh = 136;
-    rct(x + 8, fy, 8, fh, ground);                                        // volume level
-    if (!empty[t]) { int lh = rnd(fh * vols[t]); rct(x + 8, fy + fh - lh, 8, lh, muted[t] ? DIM : LIGHT); }
-    rct(x + 20, fy, 2, fh, ground);                                       // meter beside it
-    if (!empty[t] && !muted[t] && mets[t] > 0) { int mh = rnd(fh * mets[t]); rct(x + 20, fy + fh - mh, 2, mh, INK); }
-    // Track badge, L7 rules: accent square playing, outlined muted, dark empty.
-    int bx = x + 11, by = 188;
-    char num[2] = {(char)('1' + t), 0};
-    if (empty[t]) txt(bx + 4, by + 4, num, DARK);
-    else if (muted[t]) { frm(bx, by, 13, 17, DIM); txt(bx + 4, by + 4, num, DIM); }
+    rct(x + 5, fy, 8, fh, ground);                 // volume
+    uint8_t vol = master ? masterVol : trackVol[t];
+    int lh = fh * vol / 99;
+    rct(x + 5, fy + fh - lh, 8, lh, (!master && trackMute[t]) ? DIM : LIGHT);
+    if (master) {                                  // stereo meter pair
+      rct(x + 17, fy, 4, fh, ground); rct(x + 23, fy, 4, fh, ground);
+      int mhL = fh * synth.masterPeakL() / 255, mhR = fh * synth.masterPeakR() / 255;
+      if (mhL) rct(x + 17, fy + fh - mhL, 4, mhL, INK);
+      if (mhR) rct(x + 23, fy + fh - mhR, 4, mhR, INK);
+    } else {
+      rct(x + 19, fy, 4, fh, ground);
+      int mh = fh * synth.trackPeak(t) / 255;
+      if (mh) rct(x + 19, fy + fh - mh, 4, mh, INK);
+    }
+    int bx = x + 9, by = 188;                      // badge
+    char num[2] = {master ? 'M' : (char)('1' + t), 0};
+    if (!master && trackMute[t]) { frm(bx, by, 13, 17, DIM); txt(bx + 4, by + 4, num, DIM); }
     else { rct(bx, by, 13, 17, ACCENT); txt(bx + 4, by + 4, num, BG); }
   }
 }
@@ -251,39 +256,44 @@ static void drawMod() {
 // ---- 5 · Track FX -----------------------------------------------------------
 // Two selectable FX slots per track; the types and values are mock.
 
-static void fxSlotScreen(const char *tag, const char *ctx, const FxSlot &sl, const char *note,
-                         uint8_t row, uint8_t col) {
-  title(tag, ctx);
-  txt(6, 26, "EFFECT", LIGHT);
-  txt(6 + txtW("EFFECT") + 10, 26, note, DIM);
-  int y = 38;
-  if (row == 0) frm(4, y, 312, 22, LIGHT);
-  txt(8, y + 6, "<", DIM);
-  txt(24, y + 6, FX_TYPE_NAMES[sl.type], sl.type ? INK : DIM);
-  txt(24 + txtW(FX_TYPE_NAMES[sl.type]) + 10, y + 6, ">", DIM);
-  if (sl.type) {
-    char cnt[8];
-    snprintf(cnt, sizeof cnt, "%d/12", sl.type);
-    txt(282, y + 6, cnt, DIM);
-  }
-  const ParamInfo *fp = fxParams(sl.type);
-  for (int i = 0; i < 4; i++) {
+static void fxSelectorRow(int y, char label, const FxSlot &sl, bool selFrame, bool marker) {
+  if (marker) rct(0, y + 8, 2, 6, ACCENT);         // whose cells are shown below
+  if (selFrame) frm(4, y, 312, 22, LIGHT);
+  char lb[2] = {label, 0};
+  txt(8, y + 6, lb, DIM);
+  txt(20, y + 6, "<", DIM);
+  txt(32, y + 6, FX_TYPE_NAMES[sl.type], sl.type ? INK : DIM);
+  txt(32 + txtW(FX_TYPE_NAMES[sl.type]) + 10, y + 6, ">", DIM);
+  if (fxIsSend(sl.type)) txt(272, y + 6, "SEND", DIM);
+}
+
+static void fxCells(int y0, const FxSlot &sl, bool asSend, int rowBase, uint8_t row, uint8_t col) {
+  const ParamInfo *fp = fxParams(sl.type, asSend);
+  for (int i = 0; i < 8; i++) {
+    int rr = i / 4, cc = i % 4;
     char val[8];
     bool empty = fp[i].name[0] == '-';
-    if (!empty) snprintf(val, sizeof val, "%d", sl.p[i]);
-    paramCell(4 + i * 79, y + 26, 76, 42, fp[i].name, empty ? "" : val,
-              empty ? -1.0f : sl.p[i] / 99.0f, row == 1 && col == i);
+    uint8_t v = (asSend && i < 7) ? sendFx[fxSendIndex(sl.type)].p[i] : sl.p[i];
+    if (!empty) snprintf(val, sizeof val, "%d", v);
+    paramCell(4 + cc * 79, y0 + rr * 46, 76, 42, fp[i].name, empty ? "" : val,
+              empty ? -1.0f : v / 99.0f, (int)row == rowBase + rr && col == cc);
   }
 }
 
 static void drawTfx() {
   char ctx[12];
   snprintf(ctx, sizeof ctx, "TRACK %d", nav.gridT + 1);
-  fxSlotScreen("TFX", ctx, trackFx[nav.gridT], "MONO, BEFORE THE MIXER", nav.tfxRow, nav.tfxCol);
+  title("TFX", ctx);
+  fxSelectorRow(26, '1', trackFx[nav.gridT][0], nav.tfxRow == 0, nav.tfxSlot == 0);
+  fxSelectorRow(52, '2', trackFx[nav.gridT][1], nav.tfxRow == 1, nav.tfxSlot == 1);
+  const FxSlot &sl = trackFx[nav.gridT][nav.tfxSlot];
+  fxCells(80, sl, fxIsSend(sl.type), 2, nav.tfxRow, nav.tfxCol);
 }
 
 static void drawMfx() {
-  fxSlotScreen("MFX", "MASTER", masterFx, "STEREO, THEN SOFT CLIP", nav.mfxRow, nav.mfxCol);
+  title("MFX", "MASTER, THEN VOLUME + CLIP");
+  fxSelectorRow(26, 'M', masterFx, nav.mfxRow == 0, false);
+  fxCells(54, masterFx, false, 1, nav.mfxRow, nav.mfxCol);
 }
 
 // ---- 6 · Track instrument ---------------------------------------------------

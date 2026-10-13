@@ -23,11 +23,9 @@ struct NavState {
   // rows 1..2 the parameter cells (col 0..3).
   uint8_t instRow = 0, instCol = 0, instTop = 0;
 
-  // TFX (the track's two FX slots): rows 0/2 the slots' selectors, 1/3 their
-  // parameter cells (col 0..3).
-  uint8_t tfxRow = 0, tfxCol = 0;
-
-  // MFX (the master's two FX slots, above the sends): the same shape.
+  // TFX: rows 0/1 the two slot selectors, rows 2/3 the eight cells of the
+  // slot last stood on (tfxSlot); MFX: row 0 the selector, 1/2 its cells.
+  uint8_t tfxRow = 0, tfxCol = 0, tfxSlot = 0;
   uint8_t mfxRow = 0, mfxCol = 0;
 
   uint8_t gridT = 2, gridS = 1;  // clip grid cursor: its track is the selected track

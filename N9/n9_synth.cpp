@@ -598,15 +598,36 @@ void N9Synth::update() {
 
   static float outL[AUDIO_BLOCK_SAMPLES], outR[AUDIO_BLOCK_SAMPLES];
   memset(outL, 0, sizeof outL); memset(outR, 0, sizeof outR);
-  for (uint8_t t = 0; t < 9; t++) {                // each track: its mono insert, into the mix
-    fxProcessTrack(t, tbus[t], AUDIO_BLOCK_SAMPLES);
-    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) { outL[i] += tbus[t][i]; outR[i] += tbus[t][i]; }
+  fxBeginBlock(AUDIO_BLOCK_SAMPLES);
+  for (uint8_t t = 0; t < 9; t++) {
+    float g = trackMute[t] ? 0.0f : (trackVol[t] / 80.0f) * (trackVol[t] / 80.0f);
+    fxTrackChain(t, tbus[t], AUDIO_BLOCK_SAMPLES, g);   // inserts + post-fader send taps
+    float pn = (trackPan[t] - 50) / 50.0f;              // the strip: volume, pan, meter
+    float gl = g * sqrtf(0.5f * (1.0f - pn)), gr = g * sqrtf(0.5f * (1.0f + pn));
+    float pk = 0;
+    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+      float x = tbus[t][i];
+      outL[i] += x * gl; outR[i] += x * gr;
+      float a = fabsf(x) * g; if (a > pk) pk = a;
+    }
+    int m = (int)(pk * 255.0f); if (m > 255) m = 255;
+    _tpk[t] = m > _tpk[t] ? m : (uint8_t)(_tpk[t] * 0.88f);
   }
-  fxProcessMaster(outL, outR, AUDIO_BLOCK_SAMPLES);   // the master's stereo effect
-  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {     // (master volume is unity for now,)
-    l->data[i] = (int16_t)(fxSoftClip(outL[i]) * 32767.0f);   // (then the soft clipper)
-    r->data[i] = (int16_t)(fxSoftClip(outR[i]) * 32767.0f);
+  fxRenderSends(outL, outR, AUDIO_BLOCK_SAMPLES);       // the three send effects return here
+  fxProcessMaster(outL, outR, AUDIO_BLOCK_SAMPLES);     // the master's stereo effect
+  float gm = (masterVol / 80.0f) * (masterVol / 80.0f); // master volume, then the clipper
+  float pkl = 0, pkr = 0;
+  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+    float sl = fxSoftClip(outL[i] * gm), sr = fxSoftClip(outR[i] * gm);
+    if (fabsf(sl) > pkl) pkl = fabsf(sl);
+    if (fabsf(sr) > pkr) pkr = fabsf(sr);
+    l->data[i] = (int16_t)(sl * 32767.0f);
+    r->data[i] = (int16_t)(sr * 32767.0f);
   }
+  int ml = (int)(pkl * 255.0f); if (ml > 255) ml = 255;
+  int mr = (int)(pkr * 255.0f); if (mr > 255) mr = 255;
+  _pkL = ml > _pkL ? ml : (uint8_t)(_pkL * 0.88f);
+  _pkR = mr > _pkR ? mr : (uint8_t)(_pkR * 0.88f);
   transmit(l, 0); transmit(r, 1);
   release(l); release(r);
 
