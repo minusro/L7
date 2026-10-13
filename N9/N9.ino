@@ -60,6 +60,7 @@ void loop() {
 
   bool hp;
   if (board.headphonesChanged(hp)) board.setSpeaker(!hp);
+  board.chargeGuard();
   if (board.powerButtonPressed()) { codec.volume(0.0f); board.powerOff(); }
 
   // One line once USB serial is likely up, so a host sees the app is alive.

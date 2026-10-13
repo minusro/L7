@@ -23,6 +23,14 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
+- [ ] **Charge guard (L7 + N9, M8Board::chargeGuard).** Every 5 s on variant
+  B: pauses charging (CHG_CONFIG off) on a charger fault, thermal regulation,
+  battery over 4.25 V, or measured charge current over 900 mA; retries after
+  5 min, three strikes latch off until the next boot; serial logs each
+  transition. N9 is on the device; L7 is build-verified only (flashing it
+  would replace N9) - upload L7 whenever the device goes back to looping.
+  Hard to provoke safely: at least confirm no spurious pauses while charging
+  normally (no "charge guard:" lines on serial).
 - [ ] **N9: the 12 effects.** TFX (track bus) and MFX (master) slots are
   live: the selector steps -, CHORUS, FLANGER, PHASER, TREM, DELAY, PINGPONG,
   REVERB, DRIVE, CRUSH, FILTER, COMP, WOW; a type change loads its defaults;

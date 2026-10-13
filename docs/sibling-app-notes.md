@@ -32,6 +32,10 @@ L7 itself; this is the extract you need to start fresh.
 * Headphones/speaker: `headphonesChanged(in)` debounces the sense pin;
   `setSpeaker(!in)` mirrors it. The speaker amp is ON at boot (stock
   behaviour).
+* Battery/charging: `initChargerB()` configures the BQ2589x as stock (512 mA,
+  termination, 12 h safety timer; the chip's own protections are autonomous).
+  Call `chargeGuard()` from `loop()` for the belt-and-braces layer: it pauses
+  charging on abnormal readings and latches off after three strikes.
 * MIDI serial: use `midiOutBegin()` / `midiInBegin()`, never the ports'
   `begin()` directly — variant B shares pins between the ports, the key INT
   and the SD card (details in M8Board.h and HARDWARE.md).

@@ -98,6 +98,15 @@ public:
   bool batteryCharging() const { return _batCharging; }
   void batteryLog();                 // the last read, raw, on the serial log (the gauge's mode and charge, the charger's status and voltage)
 
+  // Charge guard (variant B; call it from loop()). Every 5 s it reads the
+  // charger's fault register, thermal-regulation status, battery voltage and
+  // measured charge current, and clears CHG_CONFIG when anything looks wrong
+  // (a latched fault, the die in thermal regulation, battery over 4.25 V, or
+  // charge current far above the configured 512 mA). It retries after 5
+  // minutes; three strikes latch charging off until the next boot. The
+  // BQ2589x has its own autonomous protections - this is belt and braces.
+  void chargeGuard();
+
   // Starts the MIDI out port at 31250 baud and returns it. On variant B this
   // also gives pin 15 back to the key expander's INT (Serial3 claims it as RX).
   HardwareSerial *midiOutBegin();
@@ -148,6 +157,9 @@ private:
   int16_t _batCurrent = 0, _batGaugeMv = -1;   // (the gauge's: REG_CURRENT raw, signed; REG_VOLTAGE, mV)
   bool _batPolled = false;
   uint32_t _batPolledMs = 0;
+  uint32_t _cgCheckedMs = 0, _cgPausedMs = 0;   // charge guard
+  uint8_t _cgStrikes = 0;
+  bool _cgPaused = false, _cgLatched = false;
 };
 
 } // namespace m8

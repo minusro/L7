@@ -278,6 +278,7 @@ static void passReport() {
 }
 
 void loop() {
+  board.chargeGuard();
   loopCount++;
   passMark("power");
   debugStage = "power button";

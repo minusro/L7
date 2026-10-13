@@ -256,6 +256,42 @@ bool Board::initChargerB() {
   return true;
 }
 
+void Board::chargeGuard() {
+  if (_variant != VARIANT_B || _cgLatched) return;
+  uint32_t ms = millis();
+  if (ms - _cgCheckedMs < (_cgPaused ? 300000u : 5000u)) return;
+  _cgCheckedMs = ms;
+
+  bqRead(0x0C);                          // faults latch: the first read is history,
+  int fault = bqRead(0x0C);              //   the second the current state
+  int vb = bqRead(0x0E);                 // bit7 THERM_STAT, bits6-0 BATV (2.304 V + 20 mV a step)
+  int ic = bqRead(0x12);                 // measured charge current, 50 mA a step
+  if (fault < 0 || vb < 0) return;       // the charger not answering: nothing to decide on
+
+  int mv = 2304 + (vb & 0x7F) * 20;
+  int ima = ic < 0 ? 0 : (ic & 0x7F) * 50;
+  const char *why = nullptr;
+  if (fault & 0xFF) why = "charger fault";
+  else if (vb & 0x80) why = "thermal regulation";
+  else if (mv > 4250) why = "battery over 4.25 V";
+  else if (ima > 900) why = "charge current high";
+
+  if (why) {
+    if (!_cgPaused) {
+      bqWrite(0x03, 0x26);               // CHG_CONFIG off (OTG and SYS_MIN as stock)
+      _cgPaused = true;
+      _cgPausedMs = ms;
+      if (++_cgStrikes >= 3) _cgLatched = true;
+      Serial.printf("charge guard: charging paused (%s; fault 0x%02X, %d mV, %d mA)%s\n",
+                    why, fault, mv, ima, _cgLatched ? " - latched off until the next boot" : "");
+    }
+  } else if (_cgPaused) {
+    bqWrite(0x03, 0x36);                 // all clear: charging back on
+    _cgPaused = false;
+    Serial.printf("charge guard: charging resumed (%d mV, %d mA)\n", mv, ima);
+  }
+}
+
 // ---------------- I2C expander helpers ----------------
 bool Board::writeReg(uint8_t reg, uint8_t val) {
   TwoWire &w = *_pins->keyBus;
