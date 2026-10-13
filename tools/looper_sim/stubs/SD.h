@@ -16,6 +16,7 @@
 #define O_CREAT  0x10
 #define O_TRUNC  0x20
 #define BUILTIN_SDCARD 254
+#define FAT_TYPE_EXFAT 64
 
 extern std::string simRoot;
 extern bool simNoRun;   // preAllocate fails: no free run long enough
@@ -120,6 +121,7 @@ public:
   bool begin(SdioConfig) { simReinits++; return true; }
   SdCard *card() { static SdCard c; return &c; }
   FsFile open(const char *path, int flags) { FsFile f; f.open(path, flags); return f; }
+  uint8_t fatType() { return 64; }   // (FAT_TYPE_EXFAT)
   bool mkdir(const char *path) { return ::mkdir((simRoot + path).c_str(), 0755) == 0; }
   bool exists(const char *path) { struct stat st; return ::stat((simRoot + path).c_str(), &st) == 0; }
   uint32_t freeClusterCount() { return 1u << 20; }

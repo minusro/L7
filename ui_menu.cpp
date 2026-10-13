@@ -475,6 +475,7 @@ FLASHMEM static void drawSettings(bool whole) {
         const char *verb = resultDefrag ? "DEFRAGGED" : "DELETED";
         if (resultDefrag && defragNoRoom) snprintf(done, sizeof done, "DEFRAGGED %d, %d NO ROOM", removedCount, defragNoRoom);
         else if (removedCount) snprintf(done, sizeof done, "%s %d SAMPLE%s", verb, removedCount, removedCount == 1 ? "" : "S");
+        else if (resultDefrag) snprintf(done, sizeof done, "ALL IN ONE PIECE");   // (nothing to do: none in pieces)
         else snprintf(done, sizeof done, "%s NO SAMPLES", verb);
         t.fillRect((s.x - 1) * PX, (s.y - 1) * PX, (s.w + 2) * PX, FONT_H + 2 * PX, LIGHT);
         drawText(s.x * PX, s.y * PX, done, DIM, LIGHT);

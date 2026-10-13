@@ -1435,9 +1435,12 @@ FLASHMEM int defragSamples(int &noRoom) {
   if (transport.running || recording.mode != Recording::Idle) return 0;
   while (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);   // (cut down to size first)
   uint64_t total = 0, done = 0, bytes;
+  int pieces = 0;
   for (int i = 0; i < sampleTotal; i++)
-    if (fragmented(sampleIds[i], bytes)) total += bytes;
+    if (fragmented(sampleIds[i], bytes)) { total += bytes; pieces++; }
   const int kb = (int)(total >> 10);
+  Serial.printf("defrag: %d recordings, %d in pieces (%d KB), the card %s\n", sampleTotal, pieces, kb,
+                SD.sdfs.fatType() == FAT_TYPE_EXFAT ? "exFAT" : "FAT");
   int moved = 0;
   for (int i = 0; i < sampleTotal; i++) {
     const uint32_t id = sampleIds[i];
@@ -1449,7 +1452,10 @@ FLASHMEM int defragSamples(int &noRoom) {
     SD.sdfs.remove(fresh);
     FsFile dst = SD.sdfs.open(fresh, O_RDWR | O_CREAT | O_TRUNC);
     bool ok = src && dst && dst.preAllocate(bytes);
-    if (!ok) noRoom++;                             // (no run of free space that long)
+    if (!ok) {                                     // (no run of free space that long)
+      noRoom++;
+      Serial.printf("defrag: %s: no free run of %lu KB\n", path, (unsigned long)(bytes >> 10));
+    }
     for (uint64_t at = 0; ok && at < bytes;) {
       const uint32_t n = (uint32_t)min<uint64_t>(sizeof chunk, bytes - at);
       ok = src.read(chunk, n) == (int)n && dst.write(chunk, n) == (int)n;
@@ -1473,7 +1479,9 @@ FLASHMEM int defragSamples(int &noRoom) {
     reopenSample(id);                              // (the handles on it: the copy now)
     SD.sdfs.remove(old);
     moved++;
+    Serial.printf("defrag: %s in one piece now\n", path);
   }
+  Serial.printf("defrag: %d moved, %d no room\n", moved, noRoom);
   return moved;
 }
 
