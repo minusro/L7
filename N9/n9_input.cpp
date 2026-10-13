@@ -6,6 +6,7 @@
 #include "n9_synth.h"
 #include "n9_mi.h"
 #include "n9_fx.h"
+#include "n9_song.h"
 
 using namespace m8;
 
@@ -90,6 +91,13 @@ bool inputService() {
   prev = now;
 
   bool shift = now & BTN_SHIFT, opt = now & BTN_OPT;
+  bool dirtyNow = false;
+  if (pressed & BTN_PLAY) { synth.seqToggle(); dirtyNow = true; }   // start from 1.1.1 / stop
+  if ((pressed & BTN_EDIT) && !shift && !opt && nav.screen == SCR_EDIT) {
+    // A on the roll: add a step note at the cursor, or remove the one there.
+    clipToggle(clipAt(nav.gridT, nav.gridS), EDIT_TOP_PITCH - nav.editRow, nav.editStep, 100);
+    dirtyNow = true;
+  }
   uint32_t ms = millis();
   static uint32_t pressedAt[4], lastRep[4];
   bool dirty = false;
@@ -121,6 +129,19 @@ bool inputService() {
             dirty = true;
           }
         }
+      } else if (nav.screen == SCR_EDIT) {       // B + arrows on a note: length / velocity
+        Clip &c = clipAt(nav.gridT, nav.gridS);
+        int ni = clipFindAt(c, EDIT_TOP_PITCH - nav.editRow, nav.editStep);
+        if (ni >= 0) {
+          ClipNote &cn = c.notes[ni];
+          if (i == A_LEFT || i == A_RIGHT) {
+            int len = clamp(cn.len + (i == A_RIGHT ? 1 : -1), 1, CLIP_STEPS - cn.start);
+            cn.len = (uint8_t)len;
+          } else {
+            cn.vel = (uint8_t)clamp(cn.vel + (i == A_UP ? 10 : -10), 1, 127);
+          }
+          dirty = true;
+        }
       } else if (nav.screen == SCR_TFX || nav.screen == SCR_MFX) {
         uint8_t row = nav.screen == SCR_TFX ? nav.tfxRow : nav.mfxRow;
         uint8_t col = nav.screen == SCR_TFX ? nav.tfxCol : nav.mfxCol;
@@ -139,5 +160,5 @@ bool inputService() {
       dirty |= move(i == A_LEFT ? -1 : i == A_RIGHT ? 1 : 0, i == A_UP ? -1 : i == A_DOWN ? 1 : 0);
     }
   }
-  return dirty;
+  return dirty || dirtyNow;
 }

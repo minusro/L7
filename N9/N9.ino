@@ -54,6 +54,8 @@ void setup() {
 void loop() {
   if (inputService()) dirty = true;
   synthServiceMidi();
+  static uint8_t lastStep = 255;                 // the playhead and clock follow the transport
+  if (synth.seqOn() && synth.seqStepN() != lastStep) { lastStep = synth.seqStepN(); dirty = true; }
   if (dirty) { drawScreen(nav.screen); dirty = false; }
 
   bool hp;

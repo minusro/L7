@@ -7,6 +7,7 @@
 #include "n9_mw_bank.h"
 #include "n9_mi.h"
 #include "n9_fx.h"
+#include "n9_song.h"
 #include "n9_state.h"
 #include "n9_synth.h"
 
@@ -119,13 +120,17 @@ static void title(const char *name, const char *context) {
 
 // Status row (y 214-239): screen-stack dots, scene, clock, tempo, action button.
 static void statusRow(uint8_t screenIx) {
-  const char *scene = "2", *clock = "2.3.1", *bpm = "132.0";
+  char scene[4], clock[16];
+  snprintf(scene, sizeof scene, "%d", nav.gridS + 1);
+  uint8_t stp = synth.seqStepN();
+  snprintf(clock, sizeof clock, "%u.%u.%u", synth.seqBarN() + 1, stp / 4 + 1, stp % 4 + 1);
+  const char *bpm = "132.0";
   for (int k = 0; k < SCR_COUNT; k++) rct(4, 215 + k * 3, 2, 2, k == screenIx ? ACCENT : DARK);
   int w = tagI(12, 218, "SCN");
   txt(12 + w + 4, 222, scene, LIGHT);
   // Play icon + clock, roughly centred as L7's clock cell.
   const int px0 = 128, py0 = 218, hh[5] = {10, 8, 6, 4, 2};
-  for (int i = 0; i < 5; i++) rct(px0 + i * 2, py0 + (10 - hh[i]) / 2, 2, hh[i], ACCENT);
+  for (int i = 0; i < 5; i++) rct(px0 + i * 2, py0 + (10 - hh[i]) / 2, 2, hh[i], synth.seqOn() ? ACCENT : DIM);
   txt(px0 + 14, 218, clock, LIGHT);
   txt(292 - txtW(bpm) - txtW("BPM") - 12, 222, bpm, DIM);
   tagI(292 - txtW("BPM") - 8, 218, "BPM");
@@ -324,40 +329,29 @@ static void drawInst() {
 
 static void drawGrid() {
   // No title tag: the header row is the tracks; the dot column places the screen.
-  const int SEL_T = nav.gridT, PLAY_S = 1, CUR_T = nav.gridT, CUR_S = nav.gridS, QUEUED_T = 4, QUEUED_S = 3;
-  // 0 none, 1 clip, 2 playing
-  static const uint8_t cells[8][9] = {
-      {1, 0, 1, 0, 0, 1, 0, 0, 0},
-      {2, 0, 2, 1, 0, 2, 0, 2, 0},
-      {1, 1, 0, 1, 0, 0, 0, 1, 0},
-      {0, 1, 0, 1, 1, 0, 0, 0, 0},
-      {1, 0, 1, 0, 1, 0, 1, 0, 0},
-      {0, 0, 0, 0, 0, 0, 0, 0, 0},
-      {1, 1, 1, 0, 0, 0, 0, 0, 0},
-      {0, 0, 0, 0, 0, 0, 0, 0, 0},
-  };
+  const int SEL_T = nav.gridT;
+  bool playing = synth.seqOn();
   for (int t = 0; t < 9; t++) {
     int x = 16 + t * 33 + 9;
     char num[2] = {(char)('1' + t), 0};
     bool any = false;
-    for (int s = 0; s < 8; s++) any |= cells[s][t] != 0;
-    if (cells[PLAY_S][t] == 2) { rct(x, 2, 13, 17, ACCENT); txt(x + 4, 6, num, BG); }
+    for (int s2 = 0; s2 < 8; s2++) any |= clips[t][s2].count != 0;
+    if (playing && t == SEL_T) { rct(x, 2, 13, 17, ACCENT); txt(x + 4, 6, num, BG); }
     else txt(x + 4, 6, num, any ? DIM : DARK);
     if (t == SEL_T) frm(x - 2, 0, 17, 21, LIGHT);
   }
   rct(0, 22, 320, 2, DARK);
-  for (int s = 0; s < 8; s++) {
-    int y = 28 + s * 23;
-    char num[2] = {(char)('1' + s), 0};
-    txt(4, y + 6, num, s == PLAY_S ? ACCENT : DIM);
+  for (int sc = 0; sc < 8; sc++) {
+    int y = 28 + sc * 23;
+    char num[2] = {(char)('1' + sc), 0};
+    txt(4, y + 6, num, playing && sc == nav.gridS ? ACCENT : DIM);
     for (int t = 0; t < 9; t++) {
       int x = 16 + t * 33;
-      uint8_t st = cells[s][t];
-      if (st == 0) frm(x + 2, y, 29, 19, DARK);
-      else if (st == 2) rct(x + 2, y, 29, 19, ACCENT);
-      else rct(x + 2, y, 29, 19, LIGHT);
-      if (t == QUEUED_T && s == QUEUED_S) { rct(x + 2, y, 29, 19, BG); frm(x + 2, y, 29, 19, ACCENT); }
-      if (t == CUR_T && s == CUR_S) frm(x, y - 2, 33, 23, INK);
+      bool has = clips[t][sc].count != 0;
+      if (playing && t == nav.gridT && sc == nav.gridS) rct(x + 2, y, 29, 19, ACCENT);
+      else if (has) rct(x + 2, y, 29, 19, LIGHT);
+      else frm(x + 2, y, 29, 19, DARK);
+      if (t == nav.gridT && sc == nav.gridS) frm(x, y - 2, 33, 23, INK);
     }
   }
 }
@@ -371,12 +365,12 @@ static bool inLoopRange(int b, int clipBars, int loopStart, int loopLen) {
 
 static void drawEdit() {
   char ctx[8];
-  snprintf(ctx, sizeof ctx, "T%d", nav.gridT + 1);
+  snprintf(ctx, sizeof ctx, "T%d S%d", nav.gridT + 1, nav.gridS + 1);
   title("EDIT", ctx);
   // Bar strip: 16 slots (clips are at most 16 bars); this mock clip has 4.
   // The loop brace (accent) selects whole bars and may wrap: here bars 3-4-1.
   // The white frame is the bar the roll below shows.
-  const int CLIP_BARS = 4, LOOP_START = 2, LOOP_LEN = 3, PAGE_BAR = 0;
+  const int CLIP_BARS = 1, LOOP_START = 0, LOOP_LEN = 1, PAGE_BAR = 0;   // v1: one-bar clips
   for (int b = 0; b < 16; b++) {
     int x = 76 + b * 14;
     bool in = inLoopRange(b, CLIP_BARS, LOOP_START, LOOP_LEN);
@@ -396,25 +390,26 @@ static void drawEdit() {
   rct(0, top - 2, 320, 2, DARK);                            // octave line above C4
   rct(0, top + ROWS * rowH, 320, 2, DARK);
   for (int s = 0; s <= 16; s += 4) rct(left + s * stepW, top, 2, ROWS * rowH, DARK);   // beat lines
-  struct { int r, s, l; float v; } notes[] = {
-      {12, 0, 2, 0.8f}, {8, 2, 2, 0.6f}, {5, 4, 4, 0.9f}, {0, 8, 2, 0.7f}, {3, 10, 2, 0.5f}, {5, 12, 3, 0.75f}};
+  const Clip &c = clipAt(nav.gridT, nav.gridS);
   // The note under the cursor is the selected one; on an empty cell the
-  // cursor itself shows as a frame.
-  int SEL = -1;
-  for (int i = 0; i < 6; i++)
-    if (notes[i].r == nav.editRow && nav.editStep >= notes[i].s && nav.editStep < notes[i].s + notes[i].l) SEL = i;
-  for (int i = 0; i < 6; i++) {
-    int x = left + notes[i].s * stepW + 2, y = top + notes[i].r * rowH + 2;
-    rct(x, y, notes[i].l * stepW - 4, rowH - 4, i == SEL ? INK : LIGHT);
-    if (i == SEL) frm(x - 2, y - 2, notes[i].l * stepW, rowH, ACCENT);
+  // cursor itself shows as a frame. Rows: C4 on top down to C3.
+  int SEL = clipFindAt(c, EDIT_TOP_PITCH - nav.editRow, nav.editStep);
+  for (int i = 0; i < c.count; i++) {
+    const ClipNote &n = c.notes[i];
+    int row = EDIT_TOP_PITCH - n.pitch;
+    if (row < 0 || row >= ROWS) continue;
+    int x = left + n.start * stepW + 2, y = top + row * rowH + 2;
+    rct(x, y, n.len * stepW - 4, rowH - 4, i == SEL ? INK : LIGHT);
+    if (i == SEL) frm(x - 2, y - 2, n.len * stepW, rowH, ACCENT);
   }
   if (SEL < 0) frm(left + nav.editStep * stepW, top + nav.editRow * rowH, stepW, rowH, INK);
-  rct(left + 9 * stepW, top - 2, 2, ROWS * rowH + 4, ACCENT);   // playhead
+  if (synth.seqOn())
+    rct(left + synth.seqStepN() * stepW, top - 2, 2, ROWS * rowH + 4, ACCENT);   // playhead
   int vy = top + ROWS * rowH + 6;                               // velocity lane
   txt(2, vy + 6, "V", DIM);
-  for (int i = 0; i < 6; i++) {
-    int bh = rnd(20 * notes[i].v);
-    rct(left + notes[i].s * stepW + 2, vy + 22 - bh, 8, bh, i == SEL ? INK : DIM);
+  for (int i = 0; i < c.count; i++) {
+    int bh = rnd(20.0f * c.notes[i].vel / 127.0f);
+    rct(left + c.notes[i].start * stepW + 2, vy + 22 - bh, 8, bh, i == SEL ? INK : DIM);
   }
 }
 

@@ -6,6 +6,7 @@
 #include "n9_mw_bank.h"
 #include "n9_fx.h"
 #include "n9_mi.h"
+#include "n9_song.h"
 #include "n9_state.h"
 
 // The M1 engine's current program (0-99), set by MIDI program change.
@@ -224,6 +225,137 @@ static inline float m1oscS(uint8_t cat, float ph, float dt, float fmPhase, float
   }
 }
 
+void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
+  if (nav.engine >= E_MI_FIRST) {            // the plaits pool plays the Mutable models
+    miNoteOn(note, vel, nav.engine - E_MI_FIRST);
+    return;
+  }
+  const EngineDef &d = ENGINES[nav.engine];
+  float hz = 440.0f * exp2f((note - 69) / 12.0f);
+  float inc = hz / 44100.0f;
+  Voice *v = nullptr;
+  if (nav.engine == E_303) {                   // mono: one 303 voice, reused
+    for (auto &c : _v) if (c.state != IDLE && c.engine == E_303) { v = &c; break; }
+    if (v && v->state != RELEASE) {            // legato: slide there, envelopes kept running
+      v->tinc = inc;
+      v->note = note;
+      v->accent = vel >= 100;
+      return;
+    }
+  }
+  if (!v) {
+    for (auto &c : _v) if (c.state == IDLE) { v = &c; break; }
+    if (!v) {                                  // steal: the quietest releasing, else the oldest
+      float quiet = 2.0f;
+      for (auto &c : _v) if (c.state == RELEASE && c.env < quiet) { quiet = c.env; v = &c; }
+      if (!v) { uint32_t old = UINT32_MAX; for (auto &c : _v) if (c.age < old) { old = c.age; v = &c; } }
+    }
+  }
+  v->note = note; v->engine = nav.engine;
+  v->accent = vel >= 100;
+  v->inc = v->tinc = inc;
+  v->minc = d.osc == O_SUPER ? inc * 1.0045f : inc * d.ratio;
+  v->inc3 = inc * 0.9955f;
+  v->phase = v->mphase = v->p3 = 0;
+  v->mindex = d.index0;
+  v->f1 = v->f2 = v->f3 = v->f4 = 0;
+  v->fenv = v->accent ? 1.25f : 0.85f;
+  v->env = 0; v->lp = 0;
+  v->vel = vel / 127.0f;
+  if (nav.engine == E_303 && v->accent) v->vel = 1.2f;   // the accent's kick
+  v->rng = _ageCounter * 2654435761u + note * 7919u + 1;
+  if (nav.engine == E_M1) {                  // cache the program into the voice
+    const M1Program &pr = M1_BANK[m1Prog];
+    float velN = vel / 127.0f;
+    v->dual = pr.oscMode == 1;               // (drum programs play as single)
+    v->cat1 = pr.ms1 < 100 ? M1_MS_CAT[pr.ms1] : M1C_SINE;
+    v->cat2 = pr.ms2 < 100 ? M1_MS_CAT[pr.ms2] : M1C_SINE;
+    v->inc = inc * exp2f(pr.oct1);
+    v->minc = inc * exp2f(pr.oct2 + pr.interval / 12.0f + pr.detune / 1200.0f);
+    v->eAc = m1coef(pr.aA); v->eDc = m1coef(pr.aD);              // VDA1 EG
+    v->eSc = m1coef(pr.aSl); v->eRc = m1coef(pr.aR);
+    v->lAtk = pr.aAl / 99.0f; v->lBreak = pr.aB / 99.0f; v->lSus = pr.aS / 99.0f;
+    v->mseg = 0;
+    v->e2Ac = m1coef(pr.bA); v->e2Dc = m1coef(pr.bD);            // VDA2 EG (osc2's own)
+    v->e2Sc = m1coef(pr.bSl); v->e2Rc = m1coef(pr.bR);
+    v->l2Atk = pr.bAl / 99.0f; v->l2Break = pr.bB / 99.0f; v->l2Sus = pr.bS / 99.0f;
+    v->mseg2 = 0; v->env2 = 0;
+    v->lvl2 = (pr.vda2Level / 99.0f) * velF(pr.amp2Vel, velN);
+    float c = pr.vdfCutoff / 99.0f;                              // VDF + its EG
+    v->cutB = 0.003f + 0.22f * c * c;
+    v->cutE = 0.17f * (pr.vdfEgInt / 99.0f) * velF(pr.egIntVel, velN);
+    v->fAc = m1coef(pr.fA); v->fDc = m1coef(pr.fD);
+    v->fSc = m1coef(pr.fSl); v->fRc = m1coef(pr.fR);
+    v->lfAl = pr.fAl / 99.0f; v->lfB = pr.fB / 99.0f;
+    v->lfS = pr.fS / 99.0f; v->lfRl = pr.fRl / 99.0f;
+    v->fenv = 0; v->fseg = 0;
+    v->kbdCut = ((int)note - pr.kbdCenter) / 12.0f * (pr.cutKbd / 99.0f) * 0.05f;
+    v->penv = pr.pStartL / 99.0f;                                // pitch EG (block rate)
+    v->pAtkL = pr.pAtkL / 99.0f; v->pRelL = pr.pRelL / 99.0f;
+    v->pAc = m1coefB(pr.pAtkT); v->pDc = m1coefB(pr.pDecT); v->pRc = m1coefB(pr.pRelT);
+    v->pseg = 0;
+    v->mgWave = pr.mgWave & 3; v->fmgWave = pr.fmgWave & 3;      // the MGs
+    v->lfoPh = 0; v->lfoInc = mgHz(pr.mgFreq) * (128.0f / 44100.0f);
+    v->vibAmt = (pr.mgWave & 0x60) ? (pr.mgInt / 99.0f) * (pr.mgInt / 99.0f) * 0.8f : 0;
+    v->fmgPh = 0.25f; v->fmgInc = mgHz(pr.fmgFreq) * (128.0f / 44100.0f);
+    v->fmgAmt = (pr.fmgWave & 0x60) ? (pr.fmgInt / 99.0f) * (pr.fmgInt / 99.0f) * 0.05f : 0;
+    v->vel = (pr.vdaLevel / 99.0f) * velF(pr.ampVel, velN);
+    v->mindex = v->cat1 == M1C_BELL ? 2.5f : v->cat1 == M1C_PLUCK ? 3.0f : 1.2f;
+    v->midxC = v->cat1 == M1C_BELL ? decay(400) : v->cat1 == M1C_PLUCK ? decay(100) : decay(600);
+    v->inc3 = v->inc * (v->cat1 == M1C_BELL ? 3.5f : 1.0f);      // the FM stand-ins' modulator
+  } else if (nav.engine == E_MWAVE) {        // cache the sound into the voice
+    const MWSound &sn = MW_BANK[mwProg];
+    v->eAc = mwcoef(sn.a); v->eDc = mwcoef(sn.dec);
+    v->eSc = v->eDc; v->eRc = mwcoef(sn.r);
+    v->lAtk = 1.0f; v->lBreak = v->lSus = sn.s / 127.0f;
+    v->mseg = 0;
+    float c = sn.cutoff / 127.0f;
+    v->cutB = 0.004f + 0.26f * c * c;
+    v->cutE = 0.2f * sn.fenvAmt / 127.0f;
+    v->fSus = 0; v->fdC = mwcoef(sn.fdec);
+    v->fenv = 1.0f;
+    v->resK = 3.2f * sn.reso / 127.0f;
+    v->wStart = sn.startWave / 63.0f;
+    v->mindex = 0;                           // the wave env, rising
+    v->midxC = 1.0f - expf(-1.0f / (900.0f * 44.1f));
+  } else {                                   // the analog engines read the INST cells
+    v->velN = vel / 127.0f;
+    if (nav.engine == E_PRO5 || nav.engine == E_JUNO) { v->mseg = 0; v->fenv = 1.0f; }
+    if (nav.engine == E_303) v->fenv = 1.0f;
+    applyLiveParams(*v, true);
+  }
+  v->age = ++_ageCounter;
+  v->state = ATTACK;
+}
+
+void N9Synth::noteOffNow(uint8_t note) {
+  miNoteOff(note);
+  for (auto &c : _v)
+    if (c.state != IDLE && c.state != RELEASE && c.note == note) c.state = RELEASE;
+}
+
+void N9Synth::seqToggle() {
+  if (_seqOn) _seqStopReq = true;
+  else _seqStartReq = true;
+}
+
+// Offs due this step first, then the clip's notes that start on it.
+void N9Synth::fireStep(uint8_t step) {
+  for (int i = 0; i < _seqNoteCount;) {
+    if (--_seqNotes[i].left == 0) { noteOffNow(_seqNotes[i].pitch); _seqNotes[i] = _seqNotes[--_seqNoteCount]; }
+    else i++;
+  }
+  const Clip &c = clipAt(nav.gridT, nav.gridS);
+  uint8_t n = c.count;
+  for (uint8_t i = 0; i < n && i < CLIP_MAX_NOTES; i++) {
+    const ClipNote &cn = c.notes[i];
+    if (cn.start == step && _seqNoteCount < 32) {
+      noteOnNow(cn.pitch, cn.vel);
+      _seqNotes[_seqNoteCount++] = {cn.pitch, cn.len};
+    }
+  }
+}
+
 void N9Synth::update() {
   uint32_t t0 = ARM_DWT_CYCCNT;
   if (!sineReady) {
@@ -235,111 +367,30 @@ void N9Synth::update() {
   while (evr != evw) {
     Ev e = evq[evr];
     evr = (evr + 1) & 31;
-    if (e.on) {
-      if (nav.engine >= E_MI_FIRST) {            // the plaits pool plays the Mutable models
-        miNoteOn(e.note, e.vel, nav.engine - E_MI_FIRST);
-        continue;
-      }
-      const EngineDef &d = ENGINES[nav.engine];
-      float hz = 440.0f * exp2f((e.note - 69) / 12.0f);
-      float inc = hz / 44100.0f;
-      Voice *v = nullptr;
-      if (nav.engine == E_303) {                   // mono: one 303 voice, reused
-        for (auto &c : _v) if (c.state != IDLE && c.engine == E_303) { v = &c; break; }
-        if (v && v->state != RELEASE) {            // legato: slide there, envelopes kept running
-          v->tinc = inc;
-          v->note = e.note;
-          v->accent = e.vel >= 100;
-          continue;
-        }
-      }
-      if (!v) {
-        for (auto &c : _v) if (c.state == IDLE) { v = &c; break; }
-        if (!v) {                                  // steal: the quietest releasing, else the oldest
-          float quiet = 2.0f;
-          for (auto &c : _v) if (c.state == RELEASE && c.env < quiet) { quiet = c.env; v = &c; }
-          if (!v) { uint32_t old = UINT32_MAX; for (auto &c : _v) if (c.age < old) { old = c.age; v = &c; } }
-        }
-      }
-      v->note = e.note; v->engine = nav.engine;
-      v->accent = e.vel >= 100;
-      v->inc = v->tinc = inc;
-      v->minc = d.osc == O_SUPER ? inc * 1.0045f : inc * d.ratio;
-      v->inc3 = inc * 0.9955f;
-      v->phase = v->mphase = v->p3 = 0;
-      v->mindex = d.index0;
-      v->f1 = v->f2 = v->f3 = v->f4 = 0;
-      v->fenv = v->accent ? 1.25f : 0.85f;
-      v->env = 0; v->lp = 0;
-      v->vel = e.vel / 127.0f;
-      if (nav.engine == E_303 && v->accent) v->vel = 1.2f;   // the accent's kick
-      v->rng = _ageCounter * 2654435761u + e.note * 7919u + 1;
-      if (nav.engine == E_M1) {                  // cache the program into the voice
-        const M1Program &pr = M1_BANK[m1Prog];
-        float velN = e.vel / 127.0f;
-        v->dual = pr.oscMode == 1;               // (drum programs play as single)
-        v->cat1 = pr.ms1 < 100 ? M1_MS_CAT[pr.ms1] : M1C_SINE;
-        v->cat2 = pr.ms2 < 100 ? M1_MS_CAT[pr.ms2] : M1C_SINE;
-        v->inc = inc * exp2f(pr.oct1);
-        v->minc = inc * exp2f(pr.oct2 + pr.interval / 12.0f + pr.detune / 1200.0f);
-        v->eAc = m1coef(pr.aA); v->eDc = m1coef(pr.aD);              // VDA1 EG
-        v->eSc = m1coef(pr.aSl); v->eRc = m1coef(pr.aR);
-        v->lAtk = pr.aAl / 99.0f; v->lBreak = pr.aB / 99.0f; v->lSus = pr.aS / 99.0f;
-        v->mseg = 0;
-        v->e2Ac = m1coef(pr.bA); v->e2Dc = m1coef(pr.bD);            // VDA2 EG (osc2's own)
-        v->e2Sc = m1coef(pr.bSl); v->e2Rc = m1coef(pr.bR);
-        v->l2Atk = pr.bAl / 99.0f; v->l2Break = pr.bB / 99.0f; v->l2Sus = pr.bS / 99.0f;
-        v->mseg2 = 0; v->env2 = 0;
-        v->lvl2 = (pr.vda2Level / 99.0f) * velF(pr.amp2Vel, velN);
-        float c = pr.vdfCutoff / 99.0f;                              // VDF + its EG
-        v->cutB = 0.003f + 0.22f * c * c;
-        v->cutE = 0.17f * (pr.vdfEgInt / 99.0f) * velF(pr.egIntVel, velN);
-        v->fAc = m1coef(pr.fA); v->fDc = m1coef(pr.fD);
-        v->fSc = m1coef(pr.fSl); v->fRc = m1coef(pr.fR);
-        v->lfAl = pr.fAl / 99.0f; v->lfB = pr.fB / 99.0f;
-        v->lfS = pr.fS / 99.0f; v->lfRl = pr.fRl / 99.0f;
-        v->fenv = 0; v->fseg = 0;
-        v->kbdCut = ((int)e.note - pr.kbdCenter) / 12.0f * (pr.cutKbd / 99.0f) * 0.05f;
-        v->penv = pr.pStartL / 99.0f;                                // pitch EG (block rate)
-        v->pAtkL = pr.pAtkL / 99.0f; v->pRelL = pr.pRelL / 99.0f;
-        v->pAc = m1coefB(pr.pAtkT); v->pDc = m1coefB(pr.pDecT); v->pRc = m1coefB(pr.pRelT);
-        v->pseg = 0;
-        v->mgWave = pr.mgWave & 3; v->fmgWave = pr.fmgWave & 3;      // the MGs
-        v->lfoPh = 0; v->lfoInc = mgHz(pr.mgFreq) * (128.0f / 44100.0f);
-        v->vibAmt = (pr.mgWave & 0x60) ? (pr.mgInt / 99.0f) * (pr.mgInt / 99.0f) * 0.8f : 0;
-        v->fmgPh = 0.25f; v->fmgInc = mgHz(pr.fmgFreq) * (128.0f / 44100.0f);
-        v->fmgAmt = (pr.fmgWave & 0x60) ? (pr.fmgInt / 99.0f) * (pr.fmgInt / 99.0f) * 0.05f : 0;
-        v->vel = (pr.vdaLevel / 99.0f) * velF(pr.ampVel, velN);
-        v->mindex = v->cat1 == M1C_BELL ? 2.5f : v->cat1 == M1C_PLUCK ? 3.0f : 1.2f;
-        v->midxC = v->cat1 == M1C_BELL ? decay(400) : v->cat1 == M1C_PLUCK ? decay(100) : decay(600);
-        v->inc3 = v->inc * (v->cat1 == M1C_BELL ? 3.5f : 1.0f);      // the FM stand-ins' modulator
-      } else if (nav.engine == E_MWAVE) {        // cache the sound into the voice
-        const MWSound &sn = MW_BANK[mwProg];
-        v->eAc = mwcoef(sn.a); v->eDc = mwcoef(sn.dec);
-        v->eSc = v->eDc; v->eRc = mwcoef(sn.r);
-        v->lAtk = 1.0f; v->lBreak = v->lSus = sn.s / 127.0f;
-        v->mseg = 0;
-        float c = sn.cutoff / 127.0f;
-        v->cutB = 0.004f + 0.26f * c * c;
-        v->cutE = 0.2f * sn.fenvAmt / 127.0f;
-        v->fSus = 0; v->fdC = mwcoef(sn.fdec);
-        v->fenv = 1.0f;
-        v->resK = 3.2f * sn.reso / 127.0f;
-        v->wStart = sn.startWave / 63.0f;
-        v->mindex = 0;                           // the wave env, rising
-        v->midxC = 1.0f - expf(-1.0f / (900.0f * 44.1f));
-      } else {                                   // the analog engines read the INST cells
-        v->velN = e.vel / 127.0f;
-        if (nav.engine == E_PRO5 || nav.engine == E_JUNO) { v->mseg = 0; v->fenv = 1.0f; }
-        if (nav.engine == E_303) v->fenv = 1.0f;
-        applyLiveParams(*v, true);
-      }
-      v->age = ++_ageCounter;
-      v->state = ATTACK;
-    } else {
-      miNoteOff(e.note);
-      for (auto &c : _v)
-        if (c.state != IDLE && c.state != RELEASE && c.note == e.note) c.state = RELEASE;
+    if (e.on) noteOnNow(e.note, e.vel);
+    else noteOffNow(e.note);
+  }
+
+  // The transport.
+  if (_seqStopReq) {
+    _seqStopReq = false; _seqOn = false;
+    for (int i = 0; i < _seqNoteCount; i++) noteOffNow(_seqNotes[i].pitch);
+    _seqNoteCount = 0;
+  }
+  if (_seqStartReq) {
+    _seqStartReq = false; _seqOn = true;
+    _seqStep = 0; _seqBar = 0; _seqAcc = 0;
+    fireStep(0);
+  }
+  if (_seqOn) {
+    float spp = 44100.0f * 60.0f / (_seqBpm * 4.0f);
+    _seqAcc += AUDIO_BLOCK_SAMPLES;
+    while (_seqAcc >= spp) {
+      _seqAcc -= spp;
+      uint8_t st = _seqStep + 1;
+      if (st >= CLIP_STEPS) { st = 0; _seqBar = _seqBar + 1; }
+      _seqStep = st;
+      fireStep(st);
     }
   }
 

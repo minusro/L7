@@ -20,6 +20,14 @@ public:
   void noteOff(uint8_t note);
 
   uint8_t active() const { return _active; }       // voices sounding
+
+  // The transport: a sixteenth-step clock in the audio interrupt, playing
+  // the grid cursor's clip through the current engine.
+  void seqToggle();                                // start from 1.1.1 / stop
+  bool seqOn() const { return _seqOn; }
+  uint8_t seqStepN() const { return _seqStep; }
+  uint16_t seqBarN() const { return _seqBar; }
+  float seqBpm() const { return _seqBpm; }
   // The last audio block's cost in CPU cycles (max since last asked).
   uint32_t takeMaxCycles() { uint32_t c = _maxCycles; _maxCycles = 0; return c; }
 
@@ -60,6 +68,18 @@ public:
     uint32_t age = 0;                // for stealing: noteOn order
   };
 private:
+  void noteOnNow(uint8_t note, uint8_t vel);       // audio side
+  void noteOffNow(uint8_t note);
+  void fireStep(uint8_t step);
+
+  volatile bool _seqOn = false, _seqStartReq = false, _seqStopReq = false;
+  volatile uint8_t _seqStep = 0;
+  volatile uint16_t _seqBar = 0;
+  float _seqAcc = 0, _seqBpm = 132.0f;
+  struct SeqNote { uint8_t pitch, left; };
+  SeqNote _seqNotes[32];
+  uint8_t _seqNoteCount = 0;
+
   Voice _v[32];
   uint32_t _ageCounter = 0;
   volatile uint8_t _active = 0;
