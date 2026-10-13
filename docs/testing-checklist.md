@@ -32,7 +32,11 @@ checked, or turn it into a fix.
   /N9/PROJECTS and /APPS on the card at boot. Check both directions, a
   missing-file failure message, and that L7 still boots its project after
   a round trip. L7's switcher is BUILD-VERIFIED only until L7.HEX is
-  flashed via the switch itself.
+  flashed via the switch itself. CAUTION (seen 2026-10-13): a stale
+  /APPS/N9.HEX from before the boot-loop fix flashed a crash-looping N9
+  (black screen, continuous resets; rescued over USB) — the switch
+  mechanism itself worked. Always restage apps_sd/ via tools/make_apps.sh
+  after any code change and re-copy BOTH hexes before testing a switch.
 - [ ] **N9: the send/insert FX chains, 8 params, and the working mixer.**
   Effects have 8 cells, the last always DRY/WET. Each track: FX1+FX2 in
   series, each an insert (FLANGER/PHASER/TREM/DRIVE/CRUSH/FILTER/COMP/WOW,
