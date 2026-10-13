@@ -22,9 +22,38 @@ static volatile uint8_t mwProg = 0;
 // emulations — TB-303, Juno-60 (with chorus I + II), Prophet-5, Waldorf
 // Microwave, Korg M1. The emulations (and FM4/WT) are placeholder voices
 // for now: the selector and voice pool are real, the sound isn't yet.
-const char *const ENGINE_NAMES[ENGINE_COUNT] = {
-    "SAW", "PULSE", "SUPER", "FM2", "FM4", "PLUCK", "WT", "NOISE",
-    "303", "JUNO", "PRO5", "MWAVE", "M1", "PLAITS", "SPELL"};
+static const char *const BASE_NAMES[E_MI_FIRST] = {"PROPHET", "303", "JUNO"};
+const char *engineName(uint8_t e) {
+  return e < E_MI_FIRST ? BASE_NAMES[e] : MI_MODEL_NAMES[e - E_MI_FIRST];
+}
+
+// The INST cells per engine kind.
+static const ParamInfo PROPHET_P[8] = {{"DETUNE", 20}, {"CUTOFF", 60}, {"RES", 25}, {"ENV", 50},
+                                       {"ATK", 5}, {"DEC", 45}, {"SUS", 60}, {"REL", 35}};
+static const ParamInfo P303_P[8] = {{"CUTOFF", 40}, {"RES", 85}, {"ENVMOD", 80}, {"DECAY", 40},
+                                    {"SLIDE", 30}, {"ACCENT", 70}, {"WAVE", 0}, {"LEVEL", 80}};
+static const ParamInfo JUNO_P[8] = {{"DETUNE", 25}, {"SUB", 60}, {"CUTOFF", 65}, {"RES", 15},
+                                    {"ATK", 3}, {"DEC", 50}, {"SUS", 70}, {"REL", 40}};
+static const ParamInfo MI_P[8] = {{"HARMON", 50}, {"TIMBRE", 50}, {"MORPH", 50}, {"DECAY", 55},
+                                  {"LPG", 30}, {"LEVEL", 80}, {"-", 0}, {"-", 0}};
+
+const ParamInfo *engineParams(uint8_t e) {
+  return e == E_PRO5 ? PROPHET_P : e == E_303 ? P303_P : e == E_JUNO ? JUNO_P : MI_P;
+}
+
+uint8_t engParams[ENGINE_COUNT][8];
+
+static void paramsInit() {
+  for (uint8_t e = 0; e < ENGINE_COUNT; e++) {
+    const ParamInfo *pi = engineParams(e);
+    for (int i = 0; i < 8; i++) engParams[e][i] = pi[i].def;
+  }
+  engParams[E_MI_FIRST + 15][0] = 80;            // SPEECH starts in the word banks
+}
+
+// 0-99 as an easing time constant (ms) for the analog engines' envelopes.
+static inline float pms(uint8_t v) { return 1.5f * expf(0.069f * v); }
+static inline float pcoef(uint8_t v) { return 1.0f - expf(-1.0f / (pms(v) * 44.1f)); }
 
 enum OscType : uint8_t {
   O_SAW,     // naive saw through the one-pole lowpass
@@ -38,6 +67,8 @@ enum OscType : uint8_t {
   O_PRO5,    // poly: two detuned polyBLEP saws into the ladder, mild
              // resonance, the filter easing to a sustain level (velocity
              // opens it: fenv starts from the velocity)
+  O_JUNO,    // poly DCO: saw + detuned saw + square sub into the ladder,
+             // one ADSR for amp with a touch of it on the cutoff
   O_M1,      // the factory bank's parameters (n9_m1_bank.h: osc pair, VDA
              // EG segments, VDF sweep) over stand-in oscillators by
              // multisound category; MIDI program change picks the program
@@ -57,22 +88,12 @@ struct EngineDef {
   float decMs;     // the pluck's decay
   float ratio, index0, idxDecMs;   // FM: modulator ratio, index and its decay
 };
-static const EngineDef ENGINES[ENGINE_COUNT] = {
-    {O_SAW, 2, 150, false, 0, 0, 0, 0},                // SAW
-    {O_PULSE, 2, 150, false, 0, 0, 0, 0},              // PULSE
-    {O_SUPER, 4, 200, false, 0, 0, 0, 0},              // SUPER
-    {O_FM, 1, 200, false, 0, 2.0f, 2.5f, 300},         // FM2
-    {O_FM, 1, 250, false, 0, 3.0f, 3.5f, 400},         // FM4    (placeholder: brighter 2-op)
-    {O_FM, 0.5f, 60, true, 500, 1.0f, 4.0f, 80},       // PLUCK  (Karplus-Strong later)
-    {O_FM, 2, 200, false, 0, 0.5f, 1.5f, 1000},        // WT     (placeholder)
-    {O_NOISE, 1, 120, true, 250, 0, 0, 0},             // NOISE
+// Only the first three engines use the pool voices; the Mutable models have
+// their own pool (n9_mi).
+static const EngineDef ENGINES[E_MI_FIRST] = {
+    {O_PRO5, 5, 350, false, 0, 1.004f, 0, 0},          // PROPHET (ratio = osc B's detune)
     {O_303, 3, 12, true, 3500, 0, 0, 0},               // 303 (the VCA decays while gated, off fast)
-    {O_SUPER, 3, 300, false, 0, 0, 0, 0},              // JUNO   (placeholder)
-    {O_PRO5, 5, 350, false, 0, 1.004f, 0, 0},          // PRO5 (ratio = osc B's detune)
-    {O_MWAVE, 2, 220, false, 0, 0, 0, 0},              // MWAVE (envelopes come from the sound)
-    {O_M1, 1, 300, false, 0, 0, 0, 0},                 // M1 (envelopes come from the program)
-    {O_SAW, 1, 100, false, 0, 0, 0, 0},                // PLAITS (never in the pool: n9_mi)
-    {O_SAW, 1, 100, false, 0, 0, 0, 0},                // SPELL  (likewise)
+    {O_JUNO, 3, 300, false, 0, 0, 0, 0},               // JUNO (ADSR comes from the cells)
 };
 
 // M1 helpers: a time value 0-99 as an easing time constant in ms (the M1's
@@ -174,8 +195,8 @@ void N9Synth::update() {
     Ev e = evq[evr];
     evr = (evr + 1) & 31;
     if (e.on) {
-      if (nav.engine == E_PLAITS || nav.engine == E_SPELL) {   // the plaits pool plays these
-        miNoteOn(e.note, e.vel, nav.engine == E_SPELL);
+      if (nav.engine >= E_MI_FIRST) {            // the plaits pool plays the Mutable models
+        miNoteOn(e.note, e.vel, nav.engine - E_MI_FIRST);
         continue;
       }
       const EngineDef &d = ENGINES[nav.engine];
@@ -266,6 +287,37 @@ void N9Synth::update() {
         v->wStart = sn.startWave / 63.0f;
         v->mindex = 0;                           // the wave env, rising
         v->midxC = 1.0f - expf(-1.0f / (900.0f * 44.1f));
+      } else {                                   // the analog engines read the INST cells
+        const uint8_t *p = engParams[nav.engine];
+        if (nav.engine == E_PRO5) {
+          v->minc = inc * (1.0f + 0.012f * p[0] / 99.0f);
+          float c = p[1] / 99.0f; v->cutB = 0.004f + 0.20f * c * c;
+          v->resK = 3.0f * p[2] / 99.0f;
+          v->cutE = 0.16f * (p[3] / 99.0f) * (0.6f + 0.4f * v->vel);
+          v->eAc = pcoef(p[4]); v->eDc = pcoef(p[5]);
+          v->lSus = p[6] / 99.0f; v->eRc = pcoef(p[7]);
+          v->mseg = 0; v->fenv = 1.0f;
+          v->fdC = decay(60.0f + 8.0f * pms(p[5]));
+        } else if (nav.engine == E_303) {
+          v->cat1 = p[6] < 50 ? 0 : 1;           // saw / square
+          v->cutB = 0.003f + 0.02f * p[0] / 99.0f;
+          v->resK = 3.6f * p[1] / 99.0f;
+          v->cutE = (0.13f + (v->accent ? 0.05f * p[5] / 99.0f : 0)) * p[2] / 99.0f;
+          v->fdC = decay(v->accent ? 110 : 60 + 500.0f * p[3] / 99.0f);
+          v->midxC = 1.0f - expf(-1.0f / ((5.0f + 120.0f * p[4] / 99.0f) * 44.1f));   // the slide
+          v->vel *= (p[7] / 99.0f) * (v->accent ? 1.0f + 0.5f * p[5] / 99.0f : 1.0f);
+          v->fenv = 1.0f;
+        } else if (nav.engine == E_JUNO) {
+          v->inc3 = inc * (1.0f + 0.010f * p[0] / 99.0f);
+          v->lfAl = 0.5f * p[0] / 99.0f;         // the detuned saw's level
+          v->lfB = 0.8f * p[1] / 99.0f;          // the sub's
+          v->minc = inc * 0.5f;
+          float c = p[2] / 99.0f; v->cutB = 0.005f + 0.19f * c * c;
+          v->resK = 3.0f * p[3] / 99.0f;
+          v->eAc = pcoef(p[4]); v->eDc = pcoef(p[5]);
+          v->lSus = p[6] / 99.0f; v->eRc = pcoef(p[7]);
+          v->mseg = 0;
+        }
       }
       v->age = ++_ageCounter;
       v->state = ATTACK;
@@ -292,8 +344,7 @@ void N9Synth::update() {
     float decC = d.pluck ? decay(d.decMs) : 1.0f;
     float relC = decay(d.relMs);
     float idxC = d.osc == O_FM ? decay(d.idxDecMs) : 1.0f;
-    float fdecC = d.osc == O_303 ? decay(v.accent ? 130 : 300)           // the filter env's decay; accent: the "wow"
-                : d.osc == O_PRO5 ? decay(600) : 1.0f;
+    // (the 303's and PROPHET's filter decays are per-voice now: v.fdC)
     float amp = v.vel * 0.12f;
     float i1 = v.inc, i2 = v.minc, fmgVal = 0;
     if (d.osc == O_M1) {                         // pitch EG and the MGs, at block rate
@@ -307,7 +358,8 @@ void N9Synth::update() {
       fmgVal = mgShape(v.fmgWave, v.fmgPh) * v.fmgAmt;
     }
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-      if (d.osc != O_M1 && d.osc != O_MWAVE) switch (v.state) {   // (the banks run their own EGs)
+      if (d.osc != O_M1 && d.osc != O_MWAVE && d.osc != O_PRO5 && d.osc != O_JUNO)
+      switch (v.state) {                         // (those engines run their own EGs)
         case ATTACK:  v.env += atkC * (1.0f - v.env); if (v.env > 0.999f) v.state = HOLD; break;
         case HOLD:    v.env *= decC; break;
         default:      v.env *= relC; break;    // RELEASE
@@ -333,33 +385,59 @@ void N9Synth::update() {
           v.lp += 0.5f * (s - v.lp); s = v.lp;
           break;
         case O_303: {
-          v.inc += (v.tinc - v.inc) * 0.0008f;             // slide, ~35 ms
-          v.fenv *= fdecC;
-          float saw = 2.0f * v.phase - 1.0f - polyblep(v.phase, v.inc);
-          float fc = 0.006f + 0.11f * v.fenv;              // cutoff, cycles/sample: ~265 Hz up to ~5 kHz
+          v.inc += (v.tinc - v.inc) * v.midxC;             // slide (SLIDE cell)
+          v.fenv *= v.fdC;
+          float o = 2.0f * v.phase - 1.0f - polyblep(v.phase, v.inc);
+          if (v.cat1) {                                    // WAVE: square (two bleps)
+            float ph2 = v.phase + 0.5f; if (ph2 >= 1.0f) ph2 -= 1.0f;
+            o = (o - (2.0f * ph2 - 1.0f - polyblep(ph2, v.inc))) * 0.7f;
+          }
+          float fc = v.cutB + v.cutE * v.fenv;
           float w = 6.2832f * fc, g = w / (1.0f + w);
-          float in = saw - 3.3f * v.f4;                    // resonance feedback
+          float in = o - v.resK * v.f4;                    // resonance feedback
           if (in > 1.4f) in = 1.4f; else if (in < -1.4f) in = -1.4f;
           in -= in * in * in * (1.0f / 6.0f);              // the ladder's soft squash
           v.f1 += g * (in - v.f1); v.f2 += g * (v.f1 - v.f2);
           v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
-          s = v.f4 * 2.4f;                                 // makeup for what the ladder takes
+          s = v.f4 * (2.0f + 0.3f * v.resK);
           break;
         }
         case O_PRO5: {
-          v.fenv *= fdecC;
+          if (v.state == RELEASE) v.env += v.eRc * (0.0f - v.env);
+          else if (v.mseg == 0) { v.env += v.eAc * (1.0f - v.env + 0.001f); if (v.env >= 1.0f) { v.env = 1.0f; v.mseg = 1; } }
+          else v.env += v.eDc * (v.lSus - v.env);
+          v.fenv *= v.fdC;
           float sawA = 2.0f * v.phase - 1.0f - polyblep(v.phase, v.inc);
           float sawB = 2.0f * v.mphase - 1.0f - polyblep(v.mphase, v.minc);
           float s0 = (sawA + sawB) * 0.5f;
-          float sweep = 0.35f + 0.65f * v.fenv;            // eases to a sustain level, never closed
-          float fc = 0.012f + 0.085f * sweep;
+          float fc = v.cutB + v.cutE * (0.3f + 0.7f * v.fenv);
           float w = 6.2832f * fc, g = w / (1.0f + w);
-          float in = s0 - 1.3f * v.f4;                     // mild resonance
+          float in = s0 - v.resK * v.f4;
           if (in > 1.4f) in = 1.4f; else if (in < -1.4f) in = -1.4f;
           in -= in * in * in * (1.0f / 6.0f);
           v.f1 += g * (in - v.f1); v.f2 += g * (v.f1 - v.f2);
           v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
-          s = v.f4 * 1.6f;
+          s = v.f4 * (1.5f + 0.4f * v.resK);
+          v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
+          break;
+        }
+        case O_JUNO: {
+          if (v.state == RELEASE) v.env += v.eRc * (0.0f - v.env);
+          else if (v.mseg == 0) { v.env += v.eAc * (1.0f - v.env + 0.001f); if (v.env >= 1.0f) { v.env = 1.0f; v.mseg = 1; } }
+          else v.env += v.eDc * (v.lSus - v.env);
+          float saw = 2.0f * v.phase - 1.0f - polyblep(v.phase, v.inc);
+          float saw2 = 2.0f * v.p3 - 1.0f - polyblep(v.p3, v.inc3);
+          float sub = v.mphase < 0.5f ? 1.0f : -1.0f;
+          float s0 = saw * 0.7f + saw2 * v.lfAl + sub * v.lfB;
+          float fc = v.cutB + 0.08f * v.env;               // a touch of the ADSR on the cutoff
+          float w = 6.2832f * fc, g = w / (1.0f + w);
+          float in = s0 - v.resK * v.f4;
+          if (in > 1.4f) in = 1.4f; else if (in < -1.4f) in = -1.4f;
+          in -= in * in * in * (1.0f / 6.0f);
+          v.f1 += g * (in - v.f1); v.f2 += g * (v.f1 - v.f2);
+          v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
+          s = v.f4 * 1.5f;
+          v.p3 += v.inc3; if (v.p3 >= 1.0f) v.p3 -= 1.0f;
           v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
           break;
         }
@@ -466,7 +544,10 @@ void N9Synth::update() {
 
 static HardwareSerial *midiSerial = nullptr;
 
-void synthMidiBegin() { midiSerial = board.midiInBegin(); }
+void synthMidiBegin() {
+  paramsInit();
+  midiSerial = board.midiInBegin();
+}
 
 uint8_t m1Program() { return m1Prog; }
 

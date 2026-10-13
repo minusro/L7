@@ -39,11 +39,18 @@ struct NavState {
 
 extern NavState nav;
 
-// The agreed engine lineup (2026-10-13; docs/design/n9_mockup.html). The
-// synth implements SAW, PULSE, SUPER, FM2, PLUCK and NOISE; the rest play
-// placeholder voices until their emulations exist (n9_synth.cpp).
-constexpr uint8_t ENGINE_COUNT = 15;
-extern const char *const ENGINE_NAMES[ENGINE_COUNT];
-// Engines the code treats specially. E_M1 is hidden from the selector for
-// now (the stand-ins disappoint until the real PCM is in).
-constexpr uint8_t E_303 = 8, E_MWAVE = 11, E_M1 = 12, E_PLAITS = 13, E_SPELL = 14;
+// The engine lineup (user-trimmed 2026-10-13): Prophet-5, 303, Juno, then
+// every Mutable Instruments model as its own engine (n9_mi.h). The M1 and
+// Microwave emulations are parked (code kept, selector entries gone) until
+// their real sample/wavetable data is in.
+constexpr uint8_t E_PRO5 = 0, E_303 = 1, E_JUNO = 2, E_MI_FIRST = 3;
+constexpr uint8_t ENGINE_COUNT = 3 + 24;
+const char *engineName(uint8_t e);   // n9_synth.cpp
+
+// The INST screen's eight parameter cells, live per engine (0-99); names and
+// defaults per engine kind (n9_synth.cpp). A "-" name is an empty cell.
+struct ParamInfo { const char *name; uint8_t def; };
+const ParamInfo *engineParams(uint8_t e);
+extern uint8_t engParams[ENGINE_COUNT][8];
+// Parked engines: sentinel ids no selector position reaches.
+constexpr uint8_t E_MWAVE = 254, E_M1 = 253;

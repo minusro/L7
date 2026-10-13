@@ -97,23 +97,28 @@ bool inputService() {
     uint8_t bit = ARROW_BIT[i];
     bool fire = false;
     if (pressed & bit) { pressedAt[i] = ms; lastRep[i] = 0; fire = true; }
-    else if ((now & bit) && !shift && !opt && ms - pressedAt[i] >= REPEAT_DELAY_MS &&
+    else if ((now & bit) && !shift && ms - pressedAt[i] >= REPEAT_DELAY_MS &&
              (lastRep[i] == 0 || ms - lastRep[i] >= REPEAT_PERIOD_MS)) { lastRep[i] = ms; fire = true; }
     if (!fire) continue;
 
     if (shift) {                                   // the screen stack (fresh presses only)
       if (i == A_UP && nav.screen > 0) { nav.screen--; dirty = true; }
       if (i == A_DOWN && nav.screen < SCR_COUNT - 1) { nav.screen++; dirty = true; }
-    } else if (opt) {                              // B + LEFT/RIGHT on INST: step the engine,
-      if (nav.screen == SCR_INST && (i == A_LEFT || i == A_RIGHT)) {   // or, on the preset cell, the preset
-        if (nav.instRow == 0 && nav.instTop == 1) {   // the preset cell (right)
-          if (nav.engine == E_M1) { m1SetProgram((m1Program() + (i == A_RIGHT ? 1 : 99)) % 100); dirty = true; }
-          else if (nav.engine == E_MWAVE) { mwSetProgram((uint8_t)(mwProgram() + (i == A_RIGHT ? 1 : 255))); dirty = true; }
-          else if (nav.engine == E_PLAITS) { miSetModel((miModel() + (i == A_RIGHT ? 1 : MI_MODELS - 1)) % MI_MODELS); dirty = true; }
+    } else if (opt) {                              // B + arrows on INST: step the engine,
+      if (nav.screen == SCR_INST) {                // the preset, or a parameter cell
+        if (nav.instRow == 0) {
+          if (nav.instTop == 0 && (i == A_LEFT || i == A_RIGHT)) {
+            nav.engine = (nav.engine + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
+            dirty = true;
+          }                                        // (the preset cell: no banked engine right now)
         } else {
-          do nav.engine = (nav.engine + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
-          while (nav.engine == E_M1);            // hidden for now
-          dirty = true;
+          int idx = (nav.instRow - 1) * 4 + nav.instCol;
+          if (engineParams(nav.engine)[idx].name[0] != '-') {
+            int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
+            uint8_t &p = engParams[nav.engine][idx];
+            p = (uint8_t)clamp(p + d, 0, 99);
+            dirty = true;
+          }
         }
       }
     } else {

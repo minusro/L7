@@ -192,11 +192,11 @@
       <li><strong>Piano roll</strong> for the clip editor.</li>
       <li><strong>Modulation</strong> — four selectable sources per track, each with two destination slots.</li>
       <li><strong>Voices</strong> — 32, a shared pool across the nine tracks.</li>
-      <li><strong>Engines (15)</strong> — SAW, PULSE, SUPER (detuned saw stack), FM2, FM4, PLUCK
-      (Karplus-Strong), WT (wavetable), NOISE, five emulations — 303, Juno-60 (with chorus
-      I + II), Prophet-5, Waldorf Microwave, Korg M1 (hidden until its real PCM is in) — plus
-      PLAITS (the open-source Mutable Instruments engines, all 24 models) and SPELL (a Speak
-      &amp; Spell flavoured LPC speech voice via the plaits speech model).</li>
+      <li><strong>Engines (27, user-trimmed)</strong> — PROPHET, 303, JUNO, then every Mutable
+      Instruments plaits model as its own engine (virtual analog, 6-op FM, wavetable, chords,
+      speech, drums ...). The M1 and Microwave emulations are parked until their real
+      sample/wavetable data is in. The INST cells are live per engine (B + arrows edit:
+      LEFT/RIGHT 1, UP/DOWN 10).</li>
       <li><strong>FX slots</strong> — two selectable FX slots on each track (a screen between
       modulation and instrument) and two more selectable master FX slots on a topmost screen,
       above the send effects.</li>
@@ -479,11 +479,11 @@
     // Engine selector (left, a quarter of the row; framed when selected,
     // two blocks below the row) and the preset cell (engines with banks:
     // number + name; others a dash). B + LEFT/RIGHT steps the selected one.
-    frame(4, 26, 76, 22, C.LIGHT);
+    frame(4, 26, 104, 22, C.LIGHT);
     text(8, 32, '<', C.DIM);
-    text(20, 32, 'PLUCK', C.INK);
-    text(20 + textW('PLUCK') + 6, 32, '>', C.DIM);
-    text(90, 32, '-', C.DIM);
+    text(20, 32, 'PROPHET', C.INK);
+    text(20 + textW('PROPHET') + 6, 32, '>', C.DIM);
+    text(118, 32, '-', C.DIM);
     rect(4, 50, 312, 2, C.DARK);
     const r1 = [['TUNE', '+0', 0.5], ['SHAPE', '38', 0.38], ['CUTOFF', '86', 0.86], ['RES', '22', 0.22]];
     const r2 = [['ATK', '2', 0.05], ['DEC', '340', 0.45], ['SUS', '60', 0.6], ['REL', '180', 0.3]];

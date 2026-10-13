@@ -4,6 +4,7 @@
 #include <Arduino.h>
 
 #include "mi.h"
+#include "n9_state.h"
 #include "plaits/dsp/voice.h"
 #include "stmlib/utils/buffer_allocator.h"
 
@@ -59,18 +60,24 @@ void miSetModel(uint8_t m) {
   Serial.printf("mi: model %02u %s\n", model, MI_MODEL_NAMES[model]);
 }
 
-void miNoteOn(uint8_t note, uint8_t vel, bool spell) {
+void miNoteOn(uint8_t note, uint8_t vel, uint8_t m) {
   if (!inited) init();
+  if (m >= MI_MODELS) m = 0;
   int pick = -1;
   for (int v = 0; v < NV; v++) if (!vGate[v] && vLevel[v] < 0.01f) { pick = v; break; }
   if (pick < 0) { uint32_t old = UINT32_MAX; for (int v = 0; v < NV; v++) if (vAge[v] < old) { old = vAge[v]; pick = v; } }
   vNote[pick] = note;
-  patches[pick].engine = spell ? SPEECH_MODEL : model;
-  patches[pick].harmonics = spell ? 0.8f : 0.5f;   // speech: into the word banks
+  const uint8_t *p = engParams[E_MI_FIRST + m];   // the INST cells
+  patches[pick].engine = m;
+  patches[pick].harmonics = p[0] / 99.0f;
+  patches[pick].timbre = p[1] / 99.0f;
+  patches[pick].morph = p[2] / 99.0f;
+  patches[pick].decay = p[3] / 99.0f;
+  patches[pick].lpg_colour = p[4] / 99.0f;
   // 44.1 kHz playback of a 48 kHz model: +1.47 semitones keeps the pitch true.
   patches[pick].note = note + 1.47f;
   vGate[pick] = true;
-  vTarget[pick] = 0.1f + 0.9f * (vel / 127.0f);
+  vTarget[pick] = (0.1f + 0.9f * (vel / 127.0f)) * (0.25f + 0.75f * p[5] / 99.0f);
   trigChunks[pick] = 2;
   vAge[pick] = ++ageCtr;
 }

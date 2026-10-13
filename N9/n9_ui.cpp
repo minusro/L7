@@ -207,7 +207,7 @@ static void drawMix() {
 
 static void drawMod() {
   char ctx[24];
-  snprintf(ctx, sizeof ctx, "TRACK %d  %s", nav.gridT + 1, ENGINE_NAMES[nav.engine]);
+  snprintf(ctx, sizeof ctx, "TRACK %d  %s", nav.gridT + 1, engineName(nav.engine));
   title("MOD", ctx);
   static const char *const SRC_NAMES[4] = {"LFO1", "LFO2", "ENV", "VEL"};
   struct { const char *src, *d1, *a1, *d2, *a2; } rows[] = {
@@ -288,28 +288,27 @@ static void drawInst() {
   char ctx[12], cnt[8];
   snprintf(ctx, sizeof ctx, "TRACK %d", nav.gridT + 1);
   title("INST", ctx);
-  const char *name = ENGINE_NAMES[nav.engine];
+  const char *name = engineName(nav.engine);
   (void)cnt;
   // The engine selector (left, a quarter of the row) and the preset cell
   // (engines with banks; the rest of the row). B + LEFT/RIGHT steps
   // whichever is selected; the frames reach two blocks below the row.
-  if (nav.instRow == 0) frm(nav.instTop == 0 ? 4 : 84, 26, nav.instTop == 0 ? 76 : 232, 22, LIGHT);
+  if (nav.instRow == 0) frm(nav.instTop == 0 ? 4 : 112, 26, nav.instTop == 0 ? 104 : 204, 22, LIGHT);
   txt(8, 32, "<", DIM);
   txt(20, 32, name, INK);
   txt(20 + txtW(name) + 6, 32, ">", DIM);
-  if (nav.engine == E_M1 || nav.engine == E_MWAVE || nav.engine == E_PLAITS) {
-    char pn[18];
-    if (nav.engine == E_M1) snprintf(pn, sizeof pn, "%02u %.10s", m1Program(), M1_BANK[m1Program()].name);
-    else if (nav.engine == E_MWAVE) snprintf(pn, sizeof pn, "%03u %.10s", mwProgram(), MW_BANK[mwProgram()].name);
-    else snprintf(pn, sizeof pn, "%02u %.10s", miModel(), MI_MODEL_NAMES[miModel()]);
-    for (char *q = pn; *q; q++) *q = toupper(*q);
-    txt(90, 32, pn, INK);
-  } else txt(90, 32, "-", DIM);
+  txt(118, 32, "-", DIM);                        // the preset cell: no banked engine right now
   rct(4, 50, 312, 2, DARK);
-  struct { const char *n, *v; float a; } r1[] = {{"TUNE", "+0", 0.5f}, {"SHAPE", "38", 0.38f}, {"CUTOFF", "86", 0.86f}, {"RES", "22", 0.22f}},
-                                         r2[] = {{"ATK", "2", 0.05f}, {"DEC", "340", 0.45f}, {"SUS", "60", 0.6f}, {"REL", "180", 0.3f}};
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 54, 76, 44, r1[i].n, r1[i].v, r1[i].a, nav.instRow == 1 && nav.instCol == i);
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 102, 76, 44, r2[i].n, r2[i].v, r2[i].a, nav.instRow == 2 && nav.instCol == i);
+  const ParamInfo *pi = engineParams(nav.engine);
+  for (int i = 0; i < 8; i++) {
+    int row = i / 4, col = i % 4;
+    char val[8];
+    bool empty = pi[i].name[0] == '-';
+    if (!empty) snprintf(val, sizeof val, "%d", engParams[nav.engine][i]);
+    paramCell(4 + col * 79, 54 + row * 48, 76, 44, pi[i].name, empty ? "" : val,
+              empty ? -1.0f : engParams[nav.engine][i] / 99.0f,
+              nav.instRow == row + 1 && nav.instCol == col);
+  }
   // ADSR preview in the accent colour.
   frm(4, 152, 180, 54, DARK);
   const int base = 198, top = 160;
