@@ -37,6 +37,17 @@ private:
     float cutB = 0, cutE = 0, fSus = 0, fdC = 1;    // VDF: base, env amount, sustain, decay
     float midxC = 1;                                // FM stand-ins: index decay; MWAVE: wave-env rise
     float wStart = 0, resK = 0;                     // MWAVE: wave start position, filter resonance
+    // M1 extended: VDF EG, osc2's own VDA EG, pitch EG, the two MGs
+    uint8_t fseg = 0, mseg2 = 0, pseg = 0, mgWave = 0, fmgWave = 0;
+    float fAc = 0, fDc = 0, fSc = 0, fRc = 0;       // VDF EG coefficients
+    float lfAl = 0, lfB = 0, lfS = 0, lfRl = 0;     // and its levels (signed)
+    float env2 = 0, e2Ac = 0, e2Dc = 0, e2Sc = 0, e2Rc = 0;   // VDA2 EG
+    float l2Atk = 1, l2Break = 0, l2Sus = 0, lvl2 = 0;
+    float pAc = 0, pDc = 0, pRc = 0;                // pitch EG (block rate)
+    float pAtkL = 0, pRelL = 0, penv = 0;
+    float lfoPh = 0, lfoInc = 0, vibAmt = 0;        // pitch MG
+    float fmgPh = 0, fmgInc = 0, fmgAmt = 0;        // VDF MG
+    float kbdCut = 0;                               // cutoff offset from the keyboard
     float phase = 0, inc = 0;        // carrier, 0..1 per sample
     float tinc = 0;                  // 303: the slide's target increment
     float mphase = 0, minc = 0;      // FM modulator / SUPER's second saw

@@ -4,6 +4,7 @@
 #include "M8Board.h"
 #include "n9_m1_bank.h"
 #include "n9_mw_bank.h"
+#include "n9_fx.h"
 #include "n9_state.h"
 
 // The M1 engine's current program (0-99), set by MIDI program change.
@@ -81,6 +82,24 @@ static inline float mwcoef(uint8_t v) {
   float ms = 4.0f * expf(0.0677f * v);
   if (ms > 8000.0f) ms = 8000.0f;
   return 1.0f - expf(-1.0f / (ms * 44.1f));
+}
+
+// Signed velocity sensitivity (-99..99) as a gain factor.
+static inline float velF(int8_t sens, float velN) {
+  float f = sens / 99.0f;
+  return f >= 0 ? (1.0f - f) + f * velN : (1.0f + f) - f * (1.0f - velN);
+}
+// An MG's frequency value as Hz, and a block-rate easing coefficient.
+static inline float mgHz(uint8_t v) { return 0.1f * expf(0.0537f * v); }
+static inline float m1coefB(uint8_t t) { return 1.0f - expf(-2.902f / m1ms(t)); }
+// MG waveforms: 0 triangle, 1 saw up, 2 saw down, 3 square.
+static inline float mgShape(uint8_t wave, float ph) {
+  switch (wave) {
+    case 1: return 2.0f * ph - 1.0f;
+    case 2: return 1.0f - 2.0f * ph;
+    case 3: return ph < 0.5f ? 1.0f : -1.0f;
+    default: return ph < 0.5f ? 4.0f * ph - 1.0f : 3.0f - 4.0f * ph;
+  }
 }
 
 // Note/velocity events cross from loop() to the audio interrupt through this
@@ -187,26 +206,43 @@ void N9Synth::update() {
       v->rng = _ageCounter * 2654435761u + e.note * 7919u + 1;
       if (nav.engine == E_M1) {                  // cache the program into the voice
         const M1Program &pr = M1_BANK[m1Prog];
+        float velN = e.vel / 127.0f;
         v->dual = pr.oscMode == 1;               // (drum programs play as single)
         v->cat1 = pr.ms1 < 100 ? M1_MS_CAT[pr.ms1] : M1C_SINE;
         v->cat2 = pr.ms2 < 100 ? M1_MS_CAT[pr.ms2] : M1C_SINE;
         v->inc = inc * exp2f(pr.oct1);
         v->minc = inc * exp2f(pr.oct2 + pr.interval / 12.0f + pr.detune / 1200.0f);
-        v->eAc = m1coef(pr.aA); v->eDc = m1coef(pr.aD);
+        v->eAc = m1coef(pr.aA); v->eDc = m1coef(pr.aD);              // VDA1 EG
         v->eSc = m1coef(pr.aSl); v->eRc = m1coef(pr.aR);
         v->lAtk = pr.aAl / 99.0f; v->lBreak = pr.aB / 99.0f; v->lSus = pr.aS / 99.0f;
         v->mseg = 0;
-        float c = pr.vdfCutoff / 99.0f;
+        v->e2Ac = m1coef(pr.bA); v->e2Dc = m1coef(pr.bD);            // VDA2 EG (osc2's own)
+        v->e2Sc = m1coef(pr.bSl); v->e2Rc = m1coef(pr.bR);
+        v->l2Atk = pr.bAl / 99.0f; v->l2Break = pr.bB / 99.0f; v->l2Sus = pr.bS / 99.0f;
+        v->mseg2 = 0; v->env2 = 0;
+        v->lvl2 = (pr.vda2Level / 99.0f) * velF(pr.amp2Vel, velN);
+        float c = pr.vdfCutoff / 99.0f;                              // VDF + its EG
         v->cutB = 0.003f + 0.22f * c * c;
-        v->cutE = 0.15f * pr.vdfEgInt / 99.0f;
-        v->fSus = pr.vdfSus / 99.0f;
-        v->fdC = m1coef(pr.vdfDecay);
-        v->fenv = 1.0f;
-        float s = pr.ampVel > 0 ? pr.ampVel / 99.0f : 0;
-        v->vel = (pr.vdaLevel / 99.0f) * ((1.0f - s) + s * v->vel);
+        v->cutE = 0.17f * (pr.vdfEgInt / 99.0f) * velF(pr.egIntVel, velN);
+        v->fAc = m1coef(pr.fA); v->fDc = m1coef(pr.fD);
+        v->fSc = m1coef(pr.fSl); v->fRc = m1coef(pr.fR);
+        v->lfAl = pr.fAl / 99.0f; v->lfB = pr.fB / 99.0f;
+        v->lfS = pr.fS / 99.0f; v->lfRl = pr.fRl / 99.0f;
+        v->fenv = 0; v->fseg = 0;
+        v->kbdCut = ((int)e.note - pr.kbdCenter) / 12.0f * (pr.cutKbd / 99.0f) * 0.05f;
+        v->penv = pr.pStartL / 99.0f;                                // pitch EG (block rate)
+        v->pAtkL = pr.pAtkL / 99.0f; v->pRelL = pr.pRelL / 99.0f;
+        v->pAc = m1coefB(pr.pAtkT); v->pDc = m1coefB(pr.pDecT); v->pRc = m1coefB(pr.pRelT);
+        v->pseg = 0;
+        v->mgWave = pr.mgWave & 3; v->fmgWave = pr.fmgWave & 3;      // the MGs
+        v->lfoPh = 0; v->lfoInc = mgHz(pr.mgFreq) * (128.0f / 44100.0f);
+        v->vibAmt = (pr.mgWave & 0x60) ? (pr.mgInt / 99.0f) * (pr.mgInt / 99.0f) * 0.8f : 0;
+        v->fmgPh = 0.25f; v->fmgInc = mgHz(pr.fmgFreq) * (128.0f / 44100.0f);
+        v->fmgAmt = (pr.fmgWave & 0x60) ? (pr.fmgInt / 99.0f) * (pr.fmgInt / 99.0f) * 0.05f : 0;
+        v->vel = (pr.vdaLevel / 99.0f) * velF(pr.ampVel, velN);
         v->mindex = v->cat1 == M1C_BELL ? 2.5f : v->cat1 == M1C_PLUCK ? 3.0f : 1.2f;
         v->midxC = v->cat1 == M1C_BELL ? decay(400) : v->cat1 == M1C_PLUCK ? decay(100) : decay(600);
-        v->inc3 = v->inc * (v->cat1 == M1C_BELL ? 3.5f : 1.0f);   // the FM stand-ins' modulator
+        v->inc3 = v->inc * (v->cat1 == M1C_BELL ? 3.5f : 1.0f);      // the FM stand-ins' modulator
       } else if (nav.engine == E_MWAVE) {        // cache the sound into the voice
         const MWSound &sn = MW_BANK[mwProg];
         v->eAc = mwcoef(sn.a); v->eDc = mwcoef(sn.dec);
@@ -235,8 +271,8 @@ void N9Synth::update() {
   audio_block_t *r = allocate();
   if (!l || !r) { if (l) release(l); if (r) release(r); return; }
 
-  static float mix[AUDIO_BLOCK_SAMPLES];
-  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) mix[i] = 0;
+  static float mix[AUDIO_BLOCK_SAMPLES], m1buf[AUDIO_BLOCK_SAMPLES];
+  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) mix[i] = m1buf[i] = 0;
 
   uint8_t active = 0;
   for (auto &v : _v) {
@@ -250,6 +286,17 @@ void N9Synth::update() {
     float fdecC = d.osc == O_303 ? decay(v.accent ? 130 : 300)           // the filter env's decay; accent: the "wow"
                 : d.osc == O_PRO5 ? decay(600) : 1.0f;
     float amp = v.vel * 0.12f;
+    float i1 = v.inc, i2 = v.minc, fmgVal = 0;
+    if (d.osc == O_M1) {                         // pitch EG and the MGs, at block rate
+      if (v.state == RELEASE) v.penv += v.pRc * (v.pRelL - v.penv);
+      else if (v.pseg == 0) { v.penv += v.pAc * (v.pAtkL - v.penv); if (fabsf(v.penv - v.pAtkL) < 0.01f) v.pseg = 1; }
+      else v.penv += v.pDc * (0.0f - v.penv);
+      v.lfoPh += v.lfoInc; if (v.lfoPh >= 1.0f) v.lfoPh -= 1.0f;
+      v.fmgPh += v.fmgInc; if (v.fmgPh >= 1.0f) v.fmgPh -= 1.0f;
+      float pf = exp2f((v.penv * 12.0f + mgShape(v.mgWave, v.lfoPh) * v.vibAmt) / 12.0f);
+      i1 *= pf; i2 *= pf;
+      fmgVal = mgShape(v.fmgWave, v.fmgPh) * v.fmgAmt;
+    }
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
       if (d.osc != O_M1 && d.osc != O_MWAVE) switch (v.state) {   // (the banks run their own EGs)
         case ATTACK:  v.env += atkC * (1.0f - v.env); if (v.env > 0.999f) v.state = HOLD; break;
@@ -308,27 +355,40 @@ void N9Synth::update() {
           break;
         }
         case O_M1: {
-          // VDA EG: attack to its level, decay to break, slope to sustain.
+          // VDA EGs: attack to level, decay to break, slope to sustain.
           if (v.state == RELEASE) v.env += v.eRc * (0.0f - v.env);
           else switch (v.mseg) {
             case 0: v.env += v.eAc * (v.lAtk - v.env + 0.001f); if (v.env >= v.lAtk) { v.env = v.lAtk; v.mseg = 1; } break;
             case 1: v.env += v.eDc * (v.lBreak - v.env); if (fabsf(v.env - v.lBreak) < 0.004f) v.mseg = 2; break;
             default: v.env += v.eSc * (v.lSus - v.env); break;
           }
-          float s0 = m1oscS(v.cat1, v.phase, v.inc, v.p3, v.mindex, v.rng);
-          if (v.dual) {
-            s0 = 0.6f * (s0 + m1oscS(v.cat2, v.mphase, v.minc, 0, 0, v.rng));
-            v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
+          float o = m1oscS(v.cat1, v.phase, i1, v.p3, v.mindex, v.rng) * v.env;
+          if (v.dual) {                          // osc2 with its own VDA EG
+            if (v.state == RELEASE) v.env2 += v.e2Rc * (0.0f - v.env2);
+            else switch (v.mseg2) {
+              case 0: v.env2 += v.e2Ac * (v.l2Atk - v.env2 + 0.001f); if (v.env2 >= v.l2Atk) { v.env2 = v.l2Atk; v.mseg2 = 1; } break;
+              case 1: v.env2 += v.e2Dc * (v.l2Break - v.env2); if (fabsf(v.env2 - v.l2Break) < 0.004f) v.mseg2 = 2; break;
+              default: v.env2 += v.e2Sc * (v.l2Sus - v.env2); break;
+            }
+            o = 0.7f * (o + m1oscS(v.cat2, v.mphase, i2, 0, 0, v.rng) * v.env2 * v.lvl2);
+            v.mphase += i2; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
           }
-          // VDF: a plain 4-pole lowpass, swept by its decaying envelope.
-          v.fenv += v.fdC * (v.fSus - v.fenv);
-          float fc = v.cutB + v.cutE * v.fenv; if (fc > 0.3f) fc = 0.3f;
+          // The VDF's own EG (signed levels), the MG and the keyboard on the cutoff.
+          if (v.state == RELEASE) v.fenv += v.fRc * (v.lfRl - v.fenv);
+          else switch (v.fseg) {
+            case 0: v.fenv += v.fAc * (v.lfAl - v.fenv); if (fabsf(v.fenv - v.lfAl) < 0.004f) v.fseg = 1; break;
+            case 1: v.fenv += v.fDc * (v.lfB - v.fenv); if (fabsf(v.fenv - v.lfB) < 0.004f) v.fseg = 2; break;
+            default: v.fenv += v.fSc * (v.lfS - v.fenv); break;
+          }
+          float fc = v.cutB + v.cutE * v.fenv + fmgVal + v.kbdCut;
+          if (fc > 0.3f) fc = 0.3f; else if (fc < 0.0015f) fc = 0.0015f;
           float w = 6.2832f * fc, g = w / (1.0f + w);
-          v.f1 += g * (s0 - v.f1); v.f2 += g * (v.f1 - v.f2);
+          v.f1 += g * (o - v.f1); v.f2 += g * (v.f1 - v.f2);
           v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
           s = v.f4 * 1.3f;
           v.mindex *= v.midxC;
           v.p3 += v.inc3; if (v.p3 >= 1.0f) v.p3 -= 1.0f;
+          v.phase += i1; if (v.phase >= 1.0f) v.phase -= 1.0f;
           break;
         }
         case O_MWAVE: {
@@ -362,17 +422,27 @@ void N9Synth::update() {
           v.lp += 0.5f * (s - v.lp); s = v.lp;
           break;
       }
-      v.phase += v.inc; if (v.phase >= 1.0f) v.phase -= 1.0f;
-      mix[i] += s * v.env * amp;
+      if (d.osc != O_M1) { v.phase += v.inc; if (v.phase >= 1.0f) v.phase -= 1.0f; }
+      if (d.osc == O_M1) m1buf[i] += s * amp;    // (its envelopes are already in s)
+      else mix[i] += s * v.env * amp;
     }
     if (v.env < 0.0005f && v.state != ATTACK) { v.state = IDLE; active--; }
   }
   _active = active;
 
+  static float outL[AUDIO_BLOCK_SAMPLES], outR[AUDIO_BLOCK_SAMPLES];
+  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) outL[i] = outR[i] = mix[i];
+  {
+    const M1Program &pr = M1_BANK[m1Prog];       // the M1 bus + its program's effects
+    fxProcess(m1buf, outL, outR, AUDIO_BLOCK_SAMPLES,
+              fxCatOf(pr.fx1), pr.fx1Wet / 100.0f, fxCatOf(pr.fx2), pr.fx2Wet / 100.0f);
+  }
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-    float s = mix[i];
-    if (s > 1.0f) s = 1.0f; else if (s < -1.0f) s = -1.0f;
-    l->data[i] = r->data[i] = (int16_t)(s * 32767.0f);
+    float sl = outL[i], sr = outR[i];
+    if (sl > 1.0f) sl = 1.0f; else if (sl < -1.0f) sl = -1.0f;
+    if (sr > 1.0f) sr = 1.0f; else if (sr < -1.0f) sr = -1.0f;
+    l->data[i] = (int16_t)(sl * 32767.0f);
+    r->data[i] = (int16_t)(sr * 32767.0f);
   }
   transmit(l, 0); transmit(r, 1);
   release(l); release(r);

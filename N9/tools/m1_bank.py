@@ -84,10 +84,26 @@ def main(syx_path, out_path):
             'ms2': r[14], 'oct2': s8(r[15]),
             'interval': s8(r[16]), 'detune': s8(r[17]),
             'vdfCutoff': r[71], 'vdfEgInt': r[74],
-            'vdfDecay': r[80], 'vdfSus': max(0, s8(r[83])),
             'vdaLevel': r[86], 'ampVel': s8(r[89]),
             'aA': r[92], 'aAl': r[93], 'aD': r[94], 'aB': r[95],
             'aSl': r[96], 'aS': r[97], 'aR': r[98],
+            # VDF EG (times 0-99, levels signed)
+            'fA': r[78], 'fAl': s8(r[79]), 'fD': r[80], 'fB': s8(r[81]),
+            'fSl': r[82], 'fS': s8(r[83]), 'fR': r[84], 'fRl': s8(r[85]),
+            'kbdCenter': r[72], 'cutKbd': s8(r[73]), 'egIntVel': s8(r[77]),
+            # osc2's own VDA EG and level (double mode)
+            'vda2Level': r[126], 'amp2Vel': s8(r[129]),
+            'bA': r[132], 'bAl': r[133], 'bD': r[134], 'bB': r[135],
+            'bSl': r[136], 'bS': r[137], 'bR': r[138],
+            # pitch EG
+            'pStartL': s8(r[63]), 'pAtkT': r[64], 'pAtkL': s8(r[65]),
+            'pDecT': r[66], 'pRelT': r[67], 'pRelL': s8(r[68]),
+            # pitch MG and VDF MG (waveform bits, freq, delay, intensity)
+            'mgWave': r[19], 'mgFreq': r[20], 'mgInt': r[22],
+            'fmgWave': r[23], 'fmgFreq': r[24], 'fmgInt': r[26],
+            # effects: pattern (raw 0-32 = 1-33, 33 = thru), wet = balance/100
+            'fx1': r[38], 'fx1Wet': (r[40] + r[41]) // 2,
+            'fx2': r[39], 'fx2Wet': (r[42] + r[43]) // 2,
         })
 
     with open(out_path, 'w') as f:
@@ -104,18 +120,23 @@ def main(syx_path, out_path):
                 '  uint8_t oscMode;              // 0 single, 1 double, 2 drums\n'
                 '  uint8_t ms1; int8_t oct1;     // multisound (>=100: card), octave -1/0/1\n'
                 '  uint8_t ms2; int8_t oct2;\n'
-                '  int8_t interval, detune;      // osc2: semitones, cents/2\n'
-                '  uint8_t vdfCutoff, vdfEgInt, vdfDecay, vdfSus;\n'
+                '  int8_t interval, detune;      // osc2: semitones, cents\n'
+                '  uint8_t vdfCutoff, vdfEgInt;\n'
                 '  uint8_t vdaLevel; int8_t ampVel;\n'
-                '  uint8_t aA, aAl, aD, aB, aSl, aS, aR;   // VDA EG: A time/level, D to break, slope to sustain, release\n'
+                '  uint8_t aA, aAl, aD, aB, aSl, aS, aR;   // VDA1 EG\n'
+                '  uint8_t fA; int8_t fAl; uint8_t fD; int8_t fB; uint8_t fSl; int8_t fS; uint8_t fR; int8_t fRl;   // VDF EG\n'
+                '  uint8_t kbdCenter; int8_t cutKbd, egIntVel;\n'
+                '  uint8_t vda2Level; int8_t amp2Vel;\n'
+                '  uint8_t bA, bAl, bD, bB, bSl, bS, bR;   // VDA2 EG\n'
+                '  int8_t pStartL; uint8_t pAtkT; int8_t pAtkL; uint8_t pDecT, pRelT; int8_t pRelL;   // pitch EG\n'
+                '  uint8_t mgWave, mgFreq, mgInt;          // pitch MG\n'
+                '  uint8_t fmgWave, fmgFreq, fmgInt;       // VDF MG\n'
+                '  uint8_t fx1, fx1Wet, fx2, fx2Wet;       // effects: raw pattern 0-32=1-33, 33=thru; wet 0-100\n'
                 '};\n\n')
         f.write('PROGMEM const M1Program M1_BANK[100] = {\n')
         for p in progs:
             n = p['name'].replace('\\', '\\\\').replace('"', '\\"')
-            f.write('    {"%s", %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d},\n' % (
-                n, p['oscMode'], p['ms1'], p['oct1'], p['ms2'], p['oct2'], p['interval'], p['detune'],
-                p['vdfCutoff'], p['vdfEgInt'], p['vdfDecay'], p['vdfSus'], p['vdaLevel'], p['ampVel'],
-                p['aA'], p['aAl'], p['aD'], p['aB'], p['aSl'], p['aS'], p['aR']))
+            f.write('    {"%s", ' % n + ', '.join(str(p[k]) for k in ['oscMode', 'ms1', 'oct1', 'ms2', 'oct2', 'interval', 'detune', 'vdfCutoff', 'vdfEgInt', 'vdaLevel', 'ampVel', 'aA', 'aAl', 'aD', 'aB', 'aSl', 'aS', 'aR', 'fA', 'fAl', 'fD', 'fB', 'fSl', 'fS', 'fR', 'fRl', 'kbdCenter', 'cutKbd', 'egIntVel', 'vda2Level', 'amp2Vel', 'bA', 'bAl', 'bD', 'bB', 'bSl', 'bS', 'bR', 'pStartL', 'pAtkT', 'pAtkL', 'pDecT', 'pRelT', 'pRelL', 'mgWave', 'mgFreq', 'mgInt', 'fmgWave', 'fmgFreq', 'fmgInt', 'fx1', 'fx1Wet', 'fx2', 'fx2Wet']) + '},\n')
         f.write('};\n')
     print(f'wrote {out_path}: 100 programs')
     for i in range(0, 100, 5):
