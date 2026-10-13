@@ -117,8 +117,15 @@ FLASHMEM bool usbDriveMode() {   // (flash: RAM1 is full)
   // that the new one arrived.
   bool card = cardRestart();
   usb_msc_set_media(card ? &MEDIA : nullptr);
+  usb_msc_clear_host_state();                       // (the computer's asking counted from now)
   Serial.printf("storage mode: started%s\n", card ? "" : " (no card)");
   uint32_t cardAt = millis();
+  // The computer connected but not asking about the drive for 3 s (its disk
+  // driver gave up on it earlier, a card taken out under it say, and won't
+  // look again): the USB connection dropped for a moment, so it looks afresh
+  // (once per card; the serial port and USB audio and MIDI come back with it).
+  uint32_t askAt = millis();
+  bool reconnected = false;
 
   int shown = -1;
   uint32_t hueAt = 0;
@@ -158,8 +165,20 @@ FLASHMEM bool usbDriveMode() {   // (flash: RAM1 is full)
         card = true;
         usb_msc_set_media(&MEDIA);                  // (a new medium: the computer mounts it)
         usb_msc_clear_host_state();
+        askAt = millis();
+        reconnected = false;
         Serial.println("storage mode: a card put in");
       }
+    }
+    if (card && !reconnected && usb_configuration && !usb_msc_host_seen() && millis() - askAt >= 3000) {
+      reconnected = true;
+      Serial.println("storage mode: the computer isn't asking for the drive: reconnecting USB");
+      USB1_USBCMD &= ~USB_USBCMD_RS;                // (detached: the computer sees it unplugged)
+      for (uint32_t at = millis(); millis() - at < 300;) {
+        if (usbDriveTick) usbDriveTick();
+      }
+      USB1_USBCMD |= USB_USBCMD_RS;                 // (attached again: enumerated afresh)
+      askAt = millis();
     }
     if (usb_msc_ejected()) return leave("EJECTED");
     int state = !card ? 3 : !usb_configuration ? 0 : usb_msc_host_seen() ? 2 : 1;
