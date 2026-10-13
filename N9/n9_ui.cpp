@@ -120,12 +120,14 @@ static void title(const char *name, const char *context) {
 }
 
 // Status row (y 214-239): screen-stack dots, scene, clock, tempo, action button.
+// With the status row focused (a SHIFT tap, nav.statusFocus) the stood-on
+// cell gets a light frame; B+arrows there edit it (the scene, the tempo).
 static void statusRow(uint8_t screenIx) {
-  char scene[4], clock[16];
+  char scene[4], clock[16], bpm[8];
   snprintf(scene, sizeof scene, "%d", nav.gridS + 1);
   uint8_t stp = synth.seqStepN();
   snprintf(clock, sizeof clock, "%u.%u.%u", synth.seqBarN() + 1, stp / 4 + 1, stp % 4 + 1);
-  const char *bpm = "132.0";
+  snprintf(bpm, sizeof bpm, "%d.0", (int)(synth.seqBpm() + 0.5f));
   for (int k = 0; k < SCR_COUNT; k++) rct(4, 215 + k * 3, 2, 2, k == screenIx ? ACCENT : DARK);
   int w = tagI(12, 218, "SCN");
   txt(12 + w + 4, 222, scene, LIGHT);
@@ -133,12 +135,23 @@ static void statusRow(uint8_t screenIx) {
   const int px0 = 128, py0 = 218, hh[5] = {10, 8, 6, 4, 2};
   for (int i = 0; i < 5; i++) rct(px0 + i * 2, py0 + (10 - hh[i]) / 2, 2, hh[i], synth.seqOn() ? ACCENT : DIM);
   txt(px0 + 14, 218, clock, LIGHT);
-  txt(292 - txtW(bpm) - txtW("BPM") - 12, 222, bpm, DIM);
+  int bx = 292 - txtW(bpm) - txtW("BPM") - 12;
+  txt(bx, 222, bpm, DIM);
   tagI(292 - txtW("BPM") - 8, 218, "BPM");
   // Action button: accent, left corners cut, a plus for now.
   rct(294, 214, 26, 26, ACCENT);
   rct(294, 214, PX, PX, BG); rct(294, 238, PX, PX, BG);
   rct(304, 222, 6, 2, BG); rct(306, 220, 2, 6, BG);
+  if (nav.statusFocus) {
+    int cx, cw;
+    switch (nav.statusSel) {
+      case 0:  cx = 8;   cw = 12 + w + 4 + txtW(scene) + 6 - 8; break;
+      case 1:  cx = 122; cw = px0 + 14 + txtW(clock) + 6 - 122; break;
+      case 2:  cx = bx - 6; cw = 292 - bx + 8; break;
+      default: cx = 294; cw = 26; break;
+    }
+    frm(cx, 214, cw, 26, LIGHT);
+  }
 }
 
 // A parameter cell: name dim, value white, amount bar under (amt < 0: none);
@@ -450,21 +463,58 @@ void uiMessage(const char *l1, const char *l2) {
   board.tft().updateScreen();
 }
 
+// ---- Menu (past the left edge; RIGHT off its edge leaves) -------------------
+
+// Empty for now: a dark ground and the N9 logo in the bottom left corner —
+// L7's corner-logo place and size (55 x 26 px at (PX, 214)) and style
+// (ui_splash.cpp: italic, a pixel right every three rows up, the 7's/9's
+// right edge slanting with it, two cuts near the bottom).
+static void drawN9Logo(int x, int y, uint16_t c) {
+  for (int p = 0; p < 26; p++) {
+    if ((p >= 18 && p < 20) || (p >= 22 && p < 24)) continue;   // the cuts
+    int off = (25 - p) / 3;                                     // italic
+    rct(x + off, y + p, 6, 1, c);                               // N: left stem,
+    rct(x + off + 6 + (7 * p) / 25, y + p, 7, 1, c);            //   its diagonal,
+    rct(x + off + 20, y + p, 6, 1, c);                          //   right stem
+    rct(x + off + 40, y + p, 7, 1, c);                          // 9: its stem,
+    if (p < 3 || (p >= 10 && p < 13)) rct(x + off + 28, y + p, 12, 1, c);   // bowl top/bottom,
+    else if (p < 10) rct(x + off + 28, y + p, 7, 1, c);                     // bowl wall
+  }
+}
+
+static void drawMenuScr() {
+  rct(0, 0, 320, 240, DARK);
+  drawN9Logo(PX, 214, LIGHT);
+}
+
 // ---- Entry -----------------------------------------------------------------
 
 void drawScreen(uint8_t ix) {
   board.tft().fillScreen(BG);
-  switch (ix) {
-    case SCR_MFX:  drawMfx();  break;
-    case SCR_FX:   drawFx();   break;
-    case SCR_MIX:  drawMix();  break;
-    case SCR_MOD:  drawMod();  break;
-    case SCR_TFX:  drawTfx();  break;
-    case SCR_INST: drawInst(); break;
-    case SCR_GRID: drawGrid(); break;
-    case SCR_EDIT: drawEdit(); break;
+  if (nav.menu) {
+    drawMenuScr();
+  } else {
+    switch (ix) {
+      case SCR_MFX:  drawMfx();  break;
+      case SCR_FX:   drawFx();   break;
+      case SCR_MIX:  drawMix();  break;
+      case SCR_MOD:  drawMod();  break;
+      case SCR_TFX:  drawTfx();  break;
+      case SCR_INST: drawInst(); break;
+      case SCR_GRID: drawGrid(); break;
+      case SCR_EDIT: drawEdit(); break;
+    }
+    statusRow(ix);
   }
-  statusRow(ix);
+  if (nav.edgePending) {
+    // An arrow held off an edge: its line, the edge's whole length, a block
+    // wide, light grey its first 50 ms then grey (L7's, ui.cpp).
+    uint16_t c = millis() - nav.edgeAt < 50 ? LIGHT : DIM;
+    if (nav.edgePending == m8::BTN_LEFT) rct(0, 0, PX, 240, c);
+    else if (nav.edgePending == m8::BTN_RIGHT) rct(320 - PX, 0, PX, 240, c);
+    else if (nav.edgePending == m8::BTN_UP) rct(0, 0, 320, PX, c);
+    else rct(0, 240 - PX, 320, PX, c);
+  }
   // Synchronous: ~40 ms per frame, only on key-driven redraws. (The DMA
   // updateScreenAsync() stalled on this panel: the first frame went out
   // partly and asyncUpdateActive() never cleared, the screen frozen for

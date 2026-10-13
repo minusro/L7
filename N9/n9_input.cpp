@@ -101,31 +101,70 @@ static bool move(int dx, int dy) {
   return false;
 }
 
+// The edge switch itself: LEFT into the menu, RIGHT (on the menu) back out,
+// UP/DOWN along the screen stack.
+static void edgeSwitch(uint8_t bit) {
+  if (nav.menu) { if (bit == BTN_RIGHT) nav.menu = false; }
+  else if (bit == BTN_LEFT) nav.menu = true;
+  else if (bit == BTN_UP && nav.screen > 0) nav.screen--;
+  else if (bit == BTN_DOWN && nav.screen < SCR_COUNT - 1) nav.screen++;
+  nav.edgePending = 0;
+}
+
 bool inputService() {
   uint8_t now = board.keys();
   static uint8_t prev = 0;
   uint8_t pressed = now & ~prev;
+  uint8_t released = prev & ~now;
   prev = now;
+  uint32_t ms = millis();
 
   bool shift = now & BTN_SHIFT, opt = now & BTN_OPT;
   bool dirtyNow = false;
+
+  // A SHIFT tap (nothing else touched while it's down, nothing held when it
+  // came down) toggles the cursor between the content and the status row.
+  static bool shiftUsed = false;
+  if (pressed & BTN_SHIFT) shiftUsed = (now & ~BTN_SHIFT) != 0;
+  if ((now & BTN_SHIFT) && (pressed & ~BTN_SHIFT)) shiftUsed = true;
+  if ((released & BTN_SHIFT) && !shiftUsed && !nav.menu) {
+    nav.statusFocus = !nav.statusFocus;
+    dirtyNow = true;
+  }
+
+  // A pending edge switch: any other key cancels it; its own arrow let go
+  // (or held 600 ms) fires it. A hold-fired arrow stays dead until let go.
+  static uint8_t edgeDead = 0;
+  edgeDead &= now;
+  if (nav.edgePending && (pressed & ~nav.edgePending)) { nav.edgePending = 0; dirtyNow = true; }
+  if (nav.edgePending && (released & nav.edgePending)) { edgeSwitch(nav.edgePending); dirtyNow = true; }
+  if (nav.edgePending && (now & nav.edgePending) && ms - nav.edgeAt >= 600) {
+    edgeDead |= nav.edgePending;
+    edgeSwitch(nav.edgePending);
+    dirtyNow = true;
+  }
+  static bool edgeLight = false;       // the line's first 50 ms are light grey:
+  bool lightNow = nav.edgePending && ms - nav.edgeAt < 50;   // one redraw at the turn
+  if (nav.edgePending && lightNow != edgeLight) dirtyNow = true;
+  edgeLight = lightNow;
+
   if ((pressed & BTN_EDIT) && shift && opt) {    // SHIFT+B+A: switch to L7
     appSwitchToL7();                             // (returns only on failure)
     dirtyNow = true;
   }
-  bool overlay = opt && !shift && nav.screen == SCR_GRID;
+  bool overlay = opt && !shift && !nav.menu && nav.screen == SCR_GRID;
   if (overlay != nav.scaleShow) { nav.scaleShow = overlay; dirtyNow = true; }
   if (pressed & BTN_PLAY) { synth.seqToggle(); dirtyNow = true; }   // start from 1.1.1 / stop
-  if ((pressed & BTN_EDIT) && !shift && !opt && nav.screen == SCR_MIX && nav.mixSel < 9) {
+  bool plainA = (pressed & BTN_EDIT) && !shift && !opt && !nav.menu && !nav.statusFocus;
+  if (plainA && nav.screen == SCR_MIX && nav.mixSel < 9) {
     trackMute[nav.mixSel] = !trackMute[nav.mixSel];
     dirtyNow = true;
   }
-  if ((pressed & BTN_EDIT) && !shift && !opt && nav.screen == SCR_EDIT) {
+  if (plainA && nav.screen == SCR_EDIT) {
     // A on the roll: add a step note at the cursor, or remove the one there.
     clipToggle(clipAt(nav.gridT, nav.gridS), nav.editPitch, nav.editPage * 16 + nav.editStep, 100);
     dirtyNow = true;
   }
-  uint32_t ms = millis();
   static uint32_t pressedAt[4], lastRep[4];
   bool dirty = false;
 
@@ -138,8 +177,27 @@ bool inputService() {
     if (!fire) continue;
 
     if (shift) {                                   // the screen stack (fresh presses only)
+      if (nav.menu) continue;
       if (i == A_UP && nav.screen > 0) { nav.screen--; dirty = true; }
       if (i == A_DOWN && nav.screen < SCR_COUNT - 1) { nav.screen++; dirty = true; }
+    } else if (nav.menu) {                         // the menu: RIGHT off its edge leaves
+      if (i == A_RIGHT && !opt && !(edgeDead & bit) && !nav.edgePending) {
+        nav.edgePending = BTN_RIGHT;
+        nav.edgeAt = ms;
+        dirty = true;
+      }
+    } else if (nav.statusFocus) {                  // the status row has the cursor
+      if (opt) {                                   // B + arrows: the stood-on cell
+        if (nav.statusSel == 0 && (i == A_LEFT || i == A_RIGHT)) {       // the scene
+          dirty |= to(nav.gridS, clamp(nav.gridS + (i == A_RIGHT ? 1 : -1), 0, 7));
+        } else if (nav.statusSel == 2) {                                 // the tempo
+          int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
+          synth.setSeqBpm((float)clamp((int)synth.seqBpm() + d, 40, 240));
+          dirty = true;
+        }
+      } else if (i == A_LEFT || i == A_RIGHT) {
+        dirty |= to(nav.statusSel, clamp(nav.statusSel + (i == A_RIGHT ? 1 : -1), 0, 3));
+      }
     } else if (opt) {                              // B + arrows on INST: step the engine,
       if (nav.screen == SCR_INST) {                // the preset, or a parameter cell
         if (nav.instRow == 0) {
@@ -214,7 +272,23 @@ bool inputService() {
         }
       }
     } else {
-      dirty |= move(i == A_LEFT ? -1 : i == A_RIGHT ? 1 : 0, i == A_UP ? -1 : i == A_DOWN ? 1 : 0);
+      bool moved = move(i == A_LEFT ? -1 : i == A_RIGHT ? 1 : 0, i == A_UP ? -1 : i == A_DOWN ? 1 : 0);
+      if (moved) {
+        dirty = true;
+        if (nav.edgePending) { nav.edgePending = 0; }
+      } else if (!(edgeDead & bit)) {
+        // Off the content's edge: arm the switch there (UP/DOWN along the
+        // screen stack, LEFT into the menu; RIGHT leads nowhere here).
+        uint8_t want = 0;
+        if (i == A_UP && nav.screen > 0) want = BTN_UP;
+        else if (i == A_DOWN && nav.screen < SCR_COUNT - 1) want = BTN_DOWN;
+        else if (i == A_LEFT) want = BTN_LEFT;
+        if (want && nav.edgePending != want) {
+          nav.edgePending = want;
+          nav.edgeAt = ms;
+          dirty = true;
+        }
+      }
     }
   }
   return dirty || dirtyNow;

@@ -37,6 +37,19 @@ struct NavState {
   int8_t editOct = 0;                  // window top = 60 + 12 * editOct
   bool scaleShow = false;              // B held on the grid: the key/scale overlay
 
+  // A SHIFT tap (pressed and let go alone) moves the cursor between the
+  // screen's content and the status row; cells there: 0 scene, 1 clock,
+  // 2 tempo, 3 the action button.
+  bool statusFocus = false;
+  uint8_t statusSel = 0;
+
+  bool menu = false;                   // past the left edge: the (empty) menu
+
+  // An arrow held past an edge: its line shows on that edge (light its first
+  // 50 ms, then grey, L7's grammar) and the switch fires when it's let go,
+  // or after 600 ms held. 0: none pending.
+  uint8_t edgePending = 0;
+  uint32_t edgeAt = 0;
 };
 
 extern NavState nav;

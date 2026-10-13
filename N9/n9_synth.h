@@ -33,6 +33,7 @@ public:
   uint8_t seqStepN() const { return _seqStep; }
   uint16_t seqBarN() const { return _seqBar; }
   float seqBpm() const { return _seqBpm; }
+  void setSeqBpm(float b) { _seqBpm = b; }         // picked up at the next step
   // The last audio block's cost in CPU cycles (max since last asked).
   uint32_t takeMaxCycles() { uint32_t c = _maxCycles; _maxCycles = 0; return c; }
 

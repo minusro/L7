@@ -6,6 +6,18 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **N9: edge navigation + status-row focus + the menu.** A SHIFT tap
+  (pressed and let go alone) toggles the cursor between the content and the
+  status row (a light frame on the stood-on cell: scene, clock, tempo, action);
+  there LEFT/RIGHT move, B+LEFT/RIGHT step the scene on its cell, B+arrows
+  set the tempo (40-240, 1/10 steps, live) on the BPM cell. An arrow pushed
+  past a content edge arms an edge switch, L7 style: a 1-block line the
+  edge's whole length (light grey 50 ms, then grey), the switch on letting
+  go or after 600 ms held (held on: dead until let go). UP/DOWN walk the
+  screen stack; LEFT opens the (empty) dark-grey menu with the N9 corner
+  logo (L7's place/size — judge the logo's look); RIGHT off the menu's edge
+  goes back. Check SHIFT+UP/DOWN still steps screens, SHIFT+B+A still
+  switches apps, and that a SHIFT used in a chord doesn't toggle the focus.
 - [ ] **N9: cursors on every screen** (arrows, held = repeating): FX cells and
   send bars, mixer strips, mod sources + cells (the cells' header follows the
   source row), INST selector + cells, grid cursor (its track shows in the
