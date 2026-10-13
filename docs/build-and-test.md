@@ -7,7 +7,13 @@ Teensyduino 1.62, board `teensy:avr:teensy40`, **USB type "Serial + MIDI + Audio
 midi_usb.h, and USB audio, playback.md; with plain "Serial" the menu item does nothing and there's no USB
 MIDI; a core patched before MIDI was added gets it by running the patch again), 600 MHz. That type isn't in Teensyduino:
 run `python3 tools/teensy_msc/patch.py` once (and again after a Teensyduino
-update; `--undo` restores the originals) before building. Without the patch,
+update; `--undo` restores the originals) before building. It also patches
+SdFat's SDIO driver (SdioTeensy.cpp): in DMA mode it switched its interrupt on
+before sending a read's command, and a long interrupt in between (the audio
+engine's, at a high tempo with many tracks stretched) let the transfer finish
+first, the handler clearing the flag the command was waiting for: 1 s timeouts
+("card error 0x0B/0x0C data 0xB" on the serial log), the card re-initialised,
+every track running dry. Built without it, that comes back. Without the patch,
 `usb=serialmtp` ("Serial + MTP Disk") also builds: storage mode then shows the
 card in an MTP app (Android File Transfer) instead of mounting it.
 Libraries: ILI9341_t3n (KurtE), Audio, SD/SdFat (bundled).

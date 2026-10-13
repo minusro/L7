@@ -25,6 +25,8 @@ What it changes, in <teensyduino>/hardware/avr/1.62.0:
   libraries/SdFat/src/common/FsStructs.h, FsName.cpp  file names may contain a carriage return (the "Icon\\r" file
                                        of a macOS folder icon, ableton.cpp); SdFat refuses control characters.
                                        Stored as U+F00D, as macOS does (it maps control characters to U+F000+c)
+  libraries/SdFat/src/SdCard/SdioTeensy.cpp  DMA transfers: the SDIO interrupt switched on only after the
+                                       command is through (a long interrupt in between made reads time out)
 """
 import glob
 import os
@@ -434,6 +436,38 @@ def apply():
     if edit(os.path.join(plat, "libraries", "SdFat", "src", "common", "FsName.cpp"),
             [("    if (cp <= 0XFFFF) {\n      rtn = cp;", "    if (cp <= 0XFFFF) {  // L7_MSC: a CR is stored as macOS does, U+F00D\n      rtn = cp == 0X0D ? 0XF00D : cp;")]):
         changed.append("FsName.cpp")
+    # SDIO in DMA mode: its interrupt was on before the command went out; a long
+    # interrupt (the audio engine's, at a high tempo) between the command and
+    # its completion being seen let the transfer finish meanwhile, and the
+    # interrupt's handler cleared the command-complete flag cardCommand() was
+    # waiting for: 1 s timeouts, the card re-initialised, every track dry.
+    # The interrupt now goes on only once the command is through (a transfer
+    # already done by then: finished there).
+    if edit(os.path.join(plat, "libraries", "SdFat", "src", "SdCard", "SdioTeensy.cpp"), [
+        ("  SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(n) | SDHC_BLKATTR_BLKSIZE(512);\n"
+         "  SDHC_IRQSIGEN = SDHC_IRQSIGEN_MASK;\n"
+         "  if (!cardCommand(xfertyp, m_highCapacity ? sector : 512*sector)) {\n"
+         "    return false;\n"
+         "  }\n"
+         "  return waitDmaStatus();\n",
+         "  SDHC_BLKATTR = SDHC_BLKATTR_BLKCNT(n) | SDHC_BLKATTR_BLKSIZE(512);\n"
+         "  // L7_MSC: the interrupt on only once the command is through (see tools/teensy_msc/patch.py)\n"
+         "  if (!cardCommand(xfertyp, m_highCapacity ? sector : 512*sector)) {\n"
+         "    return false;\n"
+         "  }\n"
+         "  noInterrupts();\n"
+         "  if (m_irqstat & (SDHC_IRQSTAT_TC | SDHC_IRQSTAT_ERROR)) {  // (done already)\n"
+         "#if defined(__IMXRT1062__)\n"
+         "    SDHC_MIX_CTRL &= ~(SDHC_MIX_CTRL_AC23EN | SDHC_MIX_CTRL_DMAEN);\n"
+         "#endif\n"
+         "    m_dmaBusy = false;\n"
+         "  } else {\n"
+         "    SDHC_IRQSIGEN = SDHC_IRQSIGEN_MASK;\n"
+         "  }\n"
+         "  interrupts();\n"
+         "  return waitDmaStatus();\n"),
+    ]):
+        changed.append("SdioTeensy.cpp")
     boards = os.path.join(plat, "boards.txt")
     b = open(boards).read()
     if MARK not in b:
@@ -464,7 +498,8 @@ def undo():
     for rel in ("cores/teensy4/usb_desc.h", "cores/teensy4/usb_desc.c", "cores/teensy4/usb.c", "boards.txt",
                 "cores/teensy4/usb_audio.h", "cores/teensy4/usb_audio.cpp",
                 "libraries/SdFat/src/common/FsStructs.h",
-                "libraries/SdFat/src/common/FsName.cpp"):
+                "libraries/SdFat/src/common/FsName.cpp",
+                "libraries/SdFat/src/SdCard/SdioTeensy.cpp"):
         path = os.path.join(plat, rel)
         if os.path.exists(path + ".l7orig"):
             shutil.move(path + ".l7orig", path)
