@@ -1,17 +1,25 @@
-// n9_fx.h — the effects behind the M1 engine (and later the FX slots):
-// chorus, stereo cross delay and a small reverb, in series as the M1 wires
-// its two effects. Each M1 program's two effect patterns are mapped to the
-// nearest of the three (or dry), the wet amounts from its balances.
+// n9_fx.h — the selectable effects behind the TFX and MFX screens: four
+// slots (two on the track bus, two on the master), each one of twelve
+// effects with four parameters (0-99). Audio runs the slots in order
+// (track 1, track 2, master 1, master 2) over the stereo bus.
 #pragma once
 #include <stdint.h>
 
-enum FxCat : uint8_t { FX_NONE, FX_REVERB, FX_DELAY, FX_CHORUS };
+#include "n9_state.h"   // ParamInfo
 
-// The M1 effect pattern (raw byte 0-32 = patterns 1-33, 33 = thru) as a category.
-FxCat fxCatOf(uint8_t raw);
+enum FxType : uint8_t {
+  FXT_NONE, FXT_CHORUS, FXT_FLANGER, FXT_PHASER, FXT_TREM, FXT_DELAY,
+  FXT_PINGPONG, FXT_REVERB, FXT_DRIVE, FXT_CRUSH, FXT_FILTER, FXT_COMP,
+  FXT_WOW, FX_TYPES
+};
+extern const char *const FX_TYPE_NAMES[FX_TYPES];
 
-// Runs the two-stage chain over one block: in (mono) -> addL/addR get the
-// dry + wet result added (the caller adds nothing else for this signal).
-// wet1/wet2 are 0..1. Buffers clear themselves at first use.
-void fxProcess(const float *in, float *addL, float *addR, int n,
-               FxCat cat1, float wet1, FxCat cat2, float wet2);
+struct FxSlot { uint8_t type; uint8_t p[4]; };
+extern FxSlot fxSlots[4];                 // 0,1 track; 2,3 master
+
+const ParamInfo *fxParams(uint8_t type);  // the type's four cells
+void fxSlotsInit();
+void fxSetType(uint8_t slot, uint8_t type);   // loads the defaults, clears state
+
+// Processes all four slots over one stereo block, in place.
+void fxProcessAll(float *l, float *r, int n);

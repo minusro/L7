@@ -23,6 +23,14 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
+- [ ] **N9: the 12 effects.** TFX (track bus) and MFX (master) slots are
+  live: the selector steps -, CHORUS, FLANGER, PHASER, TREM, DELAY, PINGPONG,
+  REVERB, DRIVE, CRUSH, FILTER, COMP, WOW; a type change loads its defaults;
+  the four cells edit with B+arrows. All parameters eased (~20 ms) against
+  zipper noise - DELAY/PINGPONG time changes bend pitch tape-style on
+  purpose. Listen per effect; watch CPU with reverb + delay + chorus + comp
+  at once. Boot showed 6 voices active twice - if that wasn't someone
+  playing, the serial MIDI in may be reading noise.
 - [ ] **N9: the trimmed lineup and live cells.** 27 engines: PROPHET, 303,
   JUNO, then the 24 Mutable models (engine selector a third of the screen,
   M1/Microwave gone from it). INST cells edit for real (B+arrows, LEFT/RIGHT

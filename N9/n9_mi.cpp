@@ -20,7 +20,7 @@ DMAMEM static char bufs[NV][16384];
 static plaits::Voice voices[NV];
 static plaits::Patch patches[NV];
 static plaits::Modulations mods[NV];
-static uint8_t vNote[NV];
+static uint8_t vNote[NV], vVel[NV];
 static bool vGate[NV];
 static float vLevel[NV], vTarget[NV];
 static uint8_t trigChunks[NV];
@@ -67,6 +67,7 @@ void miNoteOn(uint8_t note, uint8_t vel, uint8_t m) {
   for (int v = 0; v < NV; v++) if (!vGate[v] && vLevel[v] < 0.01f) { pick = v; break; }
   if (pick < 0) { uint32_t old = UINT32_MAX; for (int v = 0; v < NV; v++) if (vAge[v] < old) { old = vAge[v]; pick = v; } }
   vNote[pick] = note;
+  vVel[pick] = vel;
   const uint8_t *p = engParams[E_MI_FIRST + m];   // the INST cells
   patches[pick].engine = m;
   patches[pick].harmonics = p[0] / 99.0f;
@@ -98,6 +99,16 @@ void miRender(float *dst, int n) {
   if (!inited) return;
   for (int v = 0; v < NV; v++) {
     if (!vGate[v] && vLevel[v] <= 0.003f && fifoN[v] == 0) continue;
+    { // the INST cells land on sounding voices too, eased against zipper
+      const uint8_t *p = engParams[E_MI_FIRST + patches[v].engine];
+      auto ease = [](float &f, float tgt) { f += 0.12f * (tgt - f); };
+      ease(patches[v].harmonics, p[0] / 99.0f);
+      ease(patches[v].timbre, p[1] / 99.0f);
+      ease(patches[v].morph, p[2] / 99.0f);
+      ease(patches[v].decay, p[3] / 99.0f);
+      ease(patches[v].lpg_colour, p[4] / 99.0f);
+      if (vGate[v]) ease(vTarget[v], (0.1f + 0.9f * (vVel[v] / 127.0f)) * (0.25f + 0.75f * p[5] / 99.0f));
+    }
     int out = 0;
     while (out < n) {
       if (fifoN[v] == 0) {                        // render another plaits block

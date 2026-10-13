@@ -5,6 +5,7 @@
 #include "n9_state.h"
 #include "n9_synth.h"
 #include "n9_mi.h"
+#include "n9_fx.h"
 
 using namespace m8;
 
@@ -119,6 +120,19 @@ bool inputService() {
             p = (uint8_t)clamp(p + d, 0, 99);
             dirty = true;
           }
+        }
+      } else if (nav.screen == SCR_TFX || nav.screen == SCR_MFX) {
+        uint8_t row = nav.screen == SCR_TFX ? nav.tfxRow : nav.mfxRow;
+        uint8_t col = nav.screen == SCR_TFX ? nav.tfxCol : nav.mfxCol;
+        uint8_t slot = (nav.screen == SCR_MFX ? 2 : 0) + (row >= 2 ? 1 : 0);
+        if (!(row & 1)) {                        // the type selector
+          if (i == A_LEFT || i == A_RIGHT)
+            { fxSetType(slot, (fxSlots[slot].type + (i == A_RIGHT ? 1 : FX_TYPES - 1)) % FX_TYPES); dirty = true; }
+        } else if (fxParams(fxSlots[slot].type)[col].name[0] != '-') {
+          int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
+          uint8_t &p = fxSlots[slot].p[col];
+          p = (uint8_t)clamp(p + d, 0, 99);
+          dirty = true;
         }
       }
     } else {

@@ -55,6 +55,9 @@ static void paramsInit() {
 static inline float pms(uint8_t v) { return 1.5f * expf(0.069f * v); }
 static inline float pcoef(uint8_t v) { return 1.0f - expf(-1.0f / (pms(v) * 44.1f)); }
 
+static inline float decay(float ms);
+static void applyLiveParams(N9Synth::Voice &v, bool snap);
+
 enum OscType : uint8_t {
   O_SAW,     // naive saw through the one-pole lowpass
   O_PULSE,   // naive square, same lowpass
@@ -160,6 +163,44 @@ static inline float sinT(float ph) {
 
 // decay multiplier per sample for a time constant in ms
 static inline float decay(float ms) { return expf(-1.0f / (ms * 44.1f)); }
+
+// The analog engines' cells applied to a voice: snapped at noteOn, then,
+// while it sounds and its engine is on screen, eased toward the cells every
+// block (~20 ms) so edits land on held notes without zipper noise.
+static void applyLiveParams(N9Synth::Voice &v, bool snap) {
+  const uint8_t *p = engParams[v.engine];
+  auto set = [snap](float &f, float target) { if (snap) f = target; else f += 0.14f * (target - f); };
+  if (v.engine == E_PRO5) {
+    set(v.minc, v.inc * (1.0f + 0.012f * p[0] / 99.0f));
+    float c = p[1] / 99.0f;
+    set(v.cutB, 0.004f + 0.20f * c * c);
+    set(v.resK, 3.0f * p[2] / 99.0f);
+    set(v.cutE, 0.16f * (p[3] / 99.0f) * (0.6f + 0.4f * v.velN));
+    v.eAc = pcoef(p[4]); v.eDc = pcoef(p[5]);
+    set(v.lSus, p[6] / 99.0f);
+    v.eRc = pcoef(p[7]);
+    v.fdC = decay(60.0f + 8.0f * pms(p[5]));
+  } else if (v.engine == E_303) {
+    v.cat1 = p[6] < 50 ? 0 : 1;                  // saw / square
+    set(v.cutB, 0.003f + 0.02f * p[0] / 99.0f);
+    set(v.resK, 3.6f * p[1] / 99.0f);
+    set(v.cutE, (0.13f + (v.accent ? 0.05f * p[5] / 99.0f : 0)) * p[2] / 99.0f);
+    v.fdC = decay(v.accent ? 110 : 60 + 500.0f * p[3] / 99.0f);
+    v.midxC = 1.0f - expf(-1.0f / ((5.0f + 120.0f * p[4] / 99.0f) * 44.1f));   // the slide
+    set(v.vel, v.velN * (p[7] / 99.0f) * (v.accent ? 1.0f + 0.5f * p[5] / 99.0f : 1.0f));
+  } else if (v.engine == E_JUNO) {
+    set(v.inc3, v.inc * (1.0f + 0.010f * p[0] / 99.0f));
+    set(v.lfAl, 0.5f * p[0] / 99.0f);            // the detuned saw's level
+    set(v.lfB, 0.8f * p[1] / 99.0f);             // the sub's
+    v.minc = v.inc * 0.5f;
+    float c = p[2] / 99.0f;
+    set(v.cutB, 0.005f + 0.19f * c * c);
+    set(v.resK, 3.0f * p[3] / 99.0f);
+    v.eAc = pcoef(p[4]); v.eDc = pcoef(p[5]);
+    set(v.lSus, p[6] / 99.0f);
+    v.eRc = pcoef(p[7]);
+  }
+}
 
 // polyBLEP residual: subtracts the saw's step discontinuity alias
 static inline float polyblep(float t, float dt) {
@@ -288,36 +329,10 @@ void N9Synth::update() {
         v->mindex = 0;                           // the wave env, rising
         v->midxC = 1.0f - expf(-1.0f / (900.0f * 44.1f));
       } else {                                   // the analog engines read the INST cells
-        const uint8_t *p = engParams[nav.engine];
-        if (nav.engine == E_PRO5) {
-          v->minc = inc * (1.0f + 0.012f * p[0] / 99.0f);
-          float c = p[1] / 99.0f; v->cutB = 0.004f + 0.20f * c * c;
-          v->resK = 3.0f * p[2] / 99.0f;
-          v->cutE = 0.16f * (p[3] / 99.0f) * (0.6f + 0.4f * v->vel);
-          v->eAc = pcoef(p[4]); v->eDc = pcoef(p[5]);
-          v->lSus = p[6] / 99.0f; v->eRc = pcoef(p[7]);
-          v->mseg = 0; v->fenv = 1.0f;
-          v->fdC = decay(60.0f + 8.0f * pms(p[5]));
-        } else if (nav.engine == E_303) {
-          v->cat1 = p[6] < 50 ? 0 : 1;           // saw / square
-          v->cutB = 0.003f + 0.02f * p[0] / 99.0f;
-          v->resK = 3.6f * p[1] / 99.0f;
-          v->cutE = (0.13f + (v->accent ? 0.05f * p[5] / 99.0f : 0)) * p[2] / 99.0f;
-          v->fdC = decay(v->accent ? 110 : 60 + 500.0f * p[3] / 99.0f);
-          v->midxC = 1.0f - expf(-1.0f / ((5.0f + 120.0f * p[4] / 99.0f) * 44.1f));   // the slide
-          v->vel *= (p[7] / 99.0f) * (v->accent ? 1.0f + 0.5f * p[5] / 99.0f : 1.0f);
-          v->fenv = 1.0f;
-        } else if (nav.engine == E_JUNO) {
-          v->inc3 = inc * (1.0f + 0.010f * p[0] / 99.0f);
-          v->lfAl = 0.5f * p[0] / 99.0f;         // the detuned saw's level
-          v->lfB = 0.8f * p[1] / 99.0f;          // the sub's
-          v->minc = inc * 0.5f;
-          float c = p[2] / 99.0f; v->cutB = 0.005f + 0.19f * c * c;
-          v->resK = 3.0f * p[3] / 99.0f;
-          v->eAc = pcoef(p[4]); v->eDc = pcoef(p[5]);
-          v->lSus = p[6] / 99.0f; v->eRc = pcoef(p[7]);
-          v->mseg = 0;
-        }
+        v->velN = e.vel / 127.0f;
+        if (nav.engine == E_PRO5 || nav.engine == E_JUNO) { v->mseg = 0; v->fenv = 1.0f; }
+        if (nav.engine == E_303) v->fenv = 1.0f;
+        applyLiveParams(*v, true);
       }
       v->age = ++_ageCounter;
       v->state = ATTACK;
@@ -346,6 +361,7 @@ void N9Synth::update() {
     float idxC = d.osc == O_FM ? decay(d.idxDecMs) : 1.0f;
     // (the 303's and PROPHET's filter decays are per-voice now: v.fdC)
     float amp = v.vel * 0.12f;
+    if (v.engine == nav.engine && v.engine < E_MI_FIRST) applyLiveParams(v, false);   // live cell edits, eased
     float i1 = v.inc, i2 = v.minc, fmgVal = 0;
     if (d.osc == O_M1) {                         // pitch EG and the MGs, at block rate
       if (v.state == RELEASE) v.penv += v.pRc * (v.pRelL - v.penv);
@@ -520,12 +536,8 @@ void N9Synth::update() {
   _active = active + miActive();
 
   static float outL[AUDIO_BLOCK_SAMPLES], outR[AUDIO_BLOCK_SAMPLES];
-  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) outL[i] = outR[i] = mix[i];
-  {
-    const M1Program &pr = M1_BANK[m1Prog];       // the M1 bus + its program's effects
-    fxProcess(m1buf, outL, outR, AUDIO_BLOCK_SAMPLES,
-              fxCatOf(pr.fx1), pr.fx1Wet / 100.0f, fxCatOf(pr.fx2), pr.fx2Wet / 100.0f);
-  }
+  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) outL[i] = outR[i] = mix[i] + m1buf[i];
+  fxProcessAll(outL, outR, AUDIO_BLOCK_SAMPLES);   // track slots, then master slots
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
     float sl = outL[i], sr = outR[i];
     if (sl > 1.0f) sl = 1.0f; else if (sl < -1.0f) sl = -1.0f;
@@ -546,6 +558,7 @@ static HardwareSerial *midiSerial = nullptr;
 
 void synthMidiBegin() {
   paramsInit();
+  fxSlotsInit();
   midiSerial = board.midiInBegin();
 }
 

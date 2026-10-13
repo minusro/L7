@@ -6,6 +6,7 @@
 #include "n9_m1_bank.h"
 #include "n9_mw_bank.h"
 #include "n9_mi.h"
+#include "n9_fx.h"
 #include "n9_state.h"
 #include "n9_synth.h"
 
@@ -244,42 +245,40 @@ static void drawMod() {
 // ---- 5 · Track FX -----------------------------------------------------------
 // Two selectable FX slots per track; the types and values are mock.
 
-static void tfxSlot(int y, const char *name, const char *cnt, bool selSel, int selCell,
-                    const char *n1, const char *v1, float a1, const char *n2, const char *v2, float a2,
-                    const char *n3, const char *v3, float a3, const char *n4, const char *v4, float a4) {
-  if (selSel) frm(4, y, 312, 22, LIGHT);          // two blocks taller, toward the cells
-  txt(8, y + 6, "<", DIM);
-  txt(24, y + 6, name, INK);
-  txt(24 + txtW(name) + 10, y + 6, ">", DIM);
-  txt(282, y + 6, cnt, DIM);
-  const char *n[4] = {n1, n2, n3, n4}, *v[4] = {v1, v2, v3, v4};
-  float a[4] = {a1, a2, a3, a4};
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, y + 26, 76, 42, n[i], v[i], a[i], selCell == i);
+static void fxSlotScreen(const char *tag, const char *ctx, int base, uint8_t row, uint8_t col) {
+  title(tag, ctx);
+  for (int k = 0; k < 2; k++) {
+    int ly = k ? 112 : 26, y = k ? 124 : 38;
+    char lbl[8];
+    snprintf(lbl, sizeof lbl, "SLOT %d", k + 1);
+    txt(6, ly, lbl, LIGHT);
+    const FxSlot &sl = fxSlots[base + k];
+    if (row == k * 2) frm(4, y, 312, 22, LIGHT);
+    txt(8, y + 6, "<", DIM);
+    txt(24, y + 6, FX_TYPE_NAMES[sl.type], sl.type ? INK : DIM);
+    txt(24 + txtW(FX_TYPE_NAMES[sl.type]) + 10, y + 6, ">", DIM);
+    char cnt[8];
+    snprintf(cnt, sizeof cnt, "%d/12", sl.type);
+    if (sl.type) txt(282, y + 6, cnt, DIM);
+    const ParamInfo *fp = fxParams(sl.type);
+    for (int i = 0; i < 4; i++) {
+      char val[8];
+      bool empty = fp[i].name[0] == '-';
+      if (!empty) snprintf(val, sizeof val, "%d", sl.p[i]);
+      paramCell(4 + i * 79, y + 26, 76, 42, fp[i].name, empty ? "" : val,
+                empty ? -1.0f : sl.p[i] / 99.0f, row == k * 2 + 1 && col == i);
+    }
+  }
 }
 
 static void drawTfx() {
   char ctx[12];
   snprintf(ctx, sizeof ctx, "TRACK %d", nav.gridT + 1);
-  title("TFX", ctx);
-  txt(6, 26, "SLOT 1", LIGHT);   // a block of air before the selector
-  tfxSlot(38, "CHORUS", "2/8", nav.tfxRow == 0, nav.tfxRow == 1 ? nav.tfxCol : -1,
-          "RATE", "35", 0.35f, "DEPTH", "60", 0.6f, "SPREAD", "80", 0.8f, "MIX", "50", 0.5f);
-  txt(6, 112, "SLOT 2", LIGHT);
-  tfxSlot(124, "DRIVE", "4/8", nav.tfxRow == 2, nav.tfxRow == 3 ? nav.tfxCol : -1,
-          "GAIN", "28", 0.28f, "TONE", "55", 0.55f, "LEVEL", "70", 0.7f, "MIX", "100", 1.0f);
+  fxSlotScreen("TFX", ctx, 0, nav.tfxRow, nav.tfxCol);
 }
 
-// ---- 1 · Master FX slots --------------------------------------------------
-// Two selectable FX slots on the mix bus, above the sends; mock types/values.
-
 static void drawMfx() {
-  title("MFX", "MASTER");
-  txt(6, 26, "SLOT 1", LIGHT);   // a block of air before the selector
-  tfxSlot(38, "COMP", "3/8", nav.mfxRow == 0, nav.mfxRow == 1 ? nav.mfxCol : -1,
-          "THRESH", "-18", 0.6f, "RATIO", "4", 0.5f, "GAIN", "+6", 0.55f, "MIX", "100", 1.0f);
-  txt(6, 112, "SLOT 2", LIGHT);
-  tfxSlot(124, "TAPE", "6/8", nav.mfxRow == 2, nav.mfxRow == 3 ? nav.mfxCol : -1,
-          "DRIVE", "35", 0.35f, "TONE", "60", 0.6f, "WOW", "15", 0.15f, "MIX", "100", 1.0f);
+  fxSlotScreen("MFX", "MASTER", 2, nav.mfxRow, nav.mfxCol);
 }
 
 // ---- 6 · Track instrument ---------------------------------------------------

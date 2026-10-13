@@ -23,7 +23,7 @@ public:
   // The last audio block's cost in CPU cycles (max since last asked).
   uint32_t takeMaxCycles() { uint32_t c = _maxCycles; _maxCycles = 0; return c; }
 
-private:
+  // (public so the live-parameter mapper in n9_synth.cpp can touch voices)
   enum : uint8_t { IDLE, ATTACK, HOLD, RELEASE };
   struct Voice {
     volatile uint8_t state = IDLE;
@@ -55,10 +55,11 @@ private:
     float mindex = 0;                // FM index, decaying
     float f1 = 0, f2 = 0, f3 = 0, f4 = 0, fenv = 0;   // 303: ladder stages + filter env
     float env = 0, lp = 0;
-    float vel = 0;
+    float vel = 0, velN = 0;   // vel is level-scaled; velN the raw velocity
     uint32_t rng = 1;                // the NOISE engine's generator
     uint32_t age = 0;                // for stealing: noteOn order
   };
+private:
   Voice _v[32];
   uint32_t _ageCounter = 0;
   volatile uint8_t _active = 0;
