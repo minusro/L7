@@ -15,17 +15,21 @@ enum FxType : uint8_t {
 extern const char *const FX_TYPE_NAMES[FX_TYPES];
 
 struct FxSlot { uint8_t type; uint8_t p[4]; };
-extern FxSlot fxSlots[4];                 // the processors: 0,1 track; 2,3 master
-
-// Each track keeps its own two slot settings; only the selected track's
-// chain processes (there is one voice chain for now), so switching tracks
-// swaps its settings into processors 0/1 (tails clear).
-extern FxSlot trackFx[9][2];
-void fxApplyTrack(uint8_t t);
+// Every track owns a live mono insert (before the mixer) - all nine process
+// at once - and the master a stereo effect (before the master volume). The
+// time-based types (DELAY, PINGPONG, REVERB) need more delay memory than a
+// track slot carries, so they are selectable on the master only.
+extern FxSlot trackFx[9];
+extern FxSlot masterFx;
 
 const ParamInfo *fxParams(uint8_t type);  // the type's four cells
+bool fxTrackAllowed(uint8_t type);
 void fxSlotsInit();
-void fxSetType(uint8_t slot, uint8_t type);   // loads the defaults, clears state
+void fxSetTrackType(uint8_t t, uint8_t type);   // loads defaults, clears state
+void fxSetMasterType(uint8_t type);
 
-// Processes all four slots over one stereo block, in place.
-void fxProcessAll(float *l, float *r, int n);
+void fxProcessTrack(uint8_t t, float *mono, int n);   // in place
+void fxProcessMaster(float *l, float *r, int n);
+
+// The output soft clipper: unity through +-1.0, never past it.
+float fxSoftClip(float x);

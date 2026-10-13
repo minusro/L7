@@ -58,14 +58,14 @@ static bool move(int dx, int dy) {
     }
     case SCR_TFX: {
       bool c = false;
-      if (dy) c = to(nav.tfxRow, clamp(nav.tfxRow + dy, 0, 3));
-      if (dx && (nav.tfxRow & 1)) c |= to(nav.tfxCol, clamp(nav.tfxCol + dx, 0, 3));
+      if (dy) c = to(nav.tfxRow, clamp(nav.tfxRow + dy, 0, 1));
+      if (dx && nav.tfxRow == 1) c |= to(nav.tfxCol, clamp(nav.tfxCol + dx, 0, 3));
       return c;
     }
     case SCR_MFX: {
       bool c = false;
-      if (dy) c = to(nav.mfxRow, clamp(nav.mfxRow + dy, 0, 3));
-      if (dx && (nav.mfxRow & 1)) c |= to(nav.mfxCol, clamp(nav.mfxCol + dx, 0, 3));
+      if (dy) c = to(nav.mfxRow, clamp(nav.mfxRow + dy, 0, 1));
+      if (dx && nav.mfxRow == 1) c |= to(nav.mfxCol, clamp(nav.mfxCol + dx, 0, 3));
       return c;
     }
     case SCR_GRID: {
@@ -143,32 +143,27 @@ bool inputService() {
           dirty = true;
         }
       } else if (nav.screen == SCR_TFX || nav.screen == SCR_MFX) {
-        uint8_t row = nav.screen == SCR_TFX ? nav.tfxRow : nav.mfxRow;
-        uint8_t col = nav.screen == SCR_TFX ? nav.tfxCol : nav.mfxCol;
-        uint8_t slot = (nav.screen == SCR_MFX ? 2 : 0) + (row >= 2 ? 1 : 0);
-        if (!(row & 1)) {                        // the type selector
+        bool master = nav.screen == SCR_MFX;
+        uint8_t row = master ? nav.mfxRow : nav.tfxRow;
+        uint8_t col = master ? nav.mfxCol : nav.tfxCol;
+        FxSlot &sl = master ? masterFx : trackFx[nav.gridT];
+        if (row == 0) {                          // the type selector
           if (i == A_LEFT || i == A_RIGHT) {
-            fxSetType(slot, (fxSlots[slot].type + (i == A_RIGHT ? 1 : FX_TYPES - 1)) % FX_TYPES);
-            if (slot < 2) trackFx[nav.gridT][slot] = fxSlots[slot];   // the track keeps it
+            uint8_t ty = sl.type;
+            do ty = (ty + (i == A_RIGHT ? 1 : FX_TYPES - 1)) % FX_TYPES;
+            while (!master && !fxTrackAllowed(ty));   // the big types are master-only
+            if (master) fxSetMasterType(ty); else fxSetTrackType(nav.gridT, ty);
             dirty = true;
           }
-        } else if (fxParams(fxSlots[slot].type)[col].name[0] != '-') {
+        } else if (fxParams(sl.type)[col].name[0] != '-') {
           int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
-          uint8_t &p = fxSlots[slot].p[col];
-          p = (uint8_t)clamp(p + d, 0, 99);
-          if (slot < 2) trackFx[nav.gridT][slot].p[col] = p;
+          sl.p[col] = (uint8_t)clamp(sl.p[col] + d, 0, 99);
           dirty = true;
         }
       }
     } else {
       dirty |= move(i == A_LEFT ? -1 : i == A_RIGHT ? 1 : 0, i == A_UP ? -1 : i == A_DOWN ? 1 : 0);
     }
-  }
-  static uint8_t lastTrack = 0;                  // a track switch brings its engine's
-  if (nav.gridT != lastTrack) {                  // screens and its FX chain with it
-    lastTrack = nav.gridT;
-    fxApplyTrack(nav.gridT);
-    dirtyNow = true;
   }
   return dirty || dirtyNow;
 }

@@ -9,9 +9,9 @@
 constexpr uint8_t MI_MODELS = 24;
 extern const char *const MI_MODEL_NAMES[MI_MODELS];
 
-void miNoteOn(uint8_t note, uint8_t vel, uint8_t model);
-void miNoteOff(uint8_t note);
-void miRender(float *dst, int n);   // adds into the dry bus
+void miNoteOn(uint8_t track, uint8_t note, uint8_t vel, uint8_t model);
+void miNoteOff(uint8_t track, uint8_t note);
+void miRender(float (*bus)[128], int n);   // adds into the track buses
 uint8_t miActive();
 
 uint8_t miModel();

@@ -229,17 +229,18 @@ static inline float m1oscS(uint8_t cat, float ph, float dt, float fmPhase, float
   }
 }
 
-void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
-  if (curEngine() >= E_MI_FIRST) {            // the plaits pool plays the Mutable models
-    miNoteOn(note, vel, curEngine() - E_MI_FIRST);
+void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
+  uint8_t engine = trackEngine[track];
+  if (engine >= E_MI_FIRST) {            // the plaits pool plays the Mutable models
+    miNoteOn(track, note, vel, engine - E_MI_FIRST);
     return;
   }
-  const EngineDef &d = ENGINES[curEngine()];
+  const EngineDef &d = ENGINES[engine];
   float hz = 440.0f * exp2f((note - 69) / 12.0f);
   float inc = hz / 44100.0f;
   Voice *v = nullptr;
-  if (curEngine() == E_303) {                   // mono: one 303 voice, reused
-    for (auto &c : _v) if (c.state != IDLE && c.engine == E_303) { v = &c; break; }
+  if (engine == E_303) {                   // mono per track: its 303 voice, reused
+    for (auto &c : _v) if (c.state != IDLE && c.engine == E_303 && c.track == track) { v = &c; break; }
     if (v && v->state != RELEASE) {            // legato: slide there, envelopes kept running
       v->tinc = inc;
       v->note = note;
@@ -255,7 +256,7 @@ void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
       if (!v) { uint32_t old = UINT32_MAX; for (auto &c : _v) if (c.age < old) { old = c.age; v = &c; } }
     }
   }
-  v->note = note; v->engine = curEngine(); v->track = nav.gridT;
+  v->note = note; v->engine = engine; v->track = track;
   v->accent = vel >= 100;
   v->inc = v->tinc = inc;
   v->minc = d.osc == O_SUPER ? inc * 1.0045f : inc * d.ratio;
@@ -266,9 +267,9 @@ void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
   v->fenv = v->accent ? 1.25f : 0.85f;
   v->env = 0; v->lp = 0;
   v->vel = vel / 127.0f;
-  if (curEngine() == E_303 && v->accent) v->vel = 1.2f;   // the accent's kick
+  if (engine == E_303 && v->accent) v->vel = 1.2f;   // the accent's kick
   v->rng = _ageCounter * 2654435761u + note * 7919u + 1;
-  if (curEngine() == E_M1) {                  // cache the program into the voice
+  if (engine == E_M1) {                  // cache the program into the voice
     const M1Program &pr = M1_BANK[m1Prog];
     float velN = vel / 127.0f;
     v->dual = pr.oscMode == 1;               // (drum programs play as single)
@@ -307,7 +308,7 @@ void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
     v->mindex = v->cat1 == M1C_BELL ? 2.5f : v->cat1 == M1C_PLUCK ? 3.0f : 1.2f;
     v->midxC = v->cat1 == M1C_BELL ? decay(400) : v->cat1 == M1C_PLUCK ? decay(100) : decay(600);
     v->inc3 = v->inc * (v->cat1 == M1C_BELL ? 3.5f : 1.0f);      // the FM stand-ins' modulator
-  } else if (curEngine() == E_MWAVE) {        // cache the sound into the voice
+  } else if (engine == E_MWAVE) {        // cache the sound into the voice
     const MWSound &sn = MW_BANK[mwProg];
     v->eAc = mwcoef(sn.a); v->eDc = mwcoef(sn.dec);
     v->eSc = v->eDc; v->eRc = mwcoef(sn.r);
@@ -324,18 +325,18 @@ void N9Synth::noteOnNow(uint8_t note, uint8_t vel) {
     v->midxC = 1.0f - expf(-1.0f / (900.0f * 44.1f));
   } else {                                   // the analog engines read the INST cells
     v->velN = vel / 127.0f;
-    if (curEngine() == E_PRO5 || curEngine() == E_JUNO) { v->mseg = 0; v->fenv = 1.0f; }
-    if (curEngine() == E_303) v->fenv = 1.0f;
+    if (engine == E_PRO5 || engine == E_JUNO) { v->mseg = 0; v->fenv = 1.0f; }
+    if (engine == E_303) v->fenv = 1.0f;
     applyLiveParams(*v, true);
   }
   v->age = ++_ageCounter;
   v->state = ATTACK;
 }
 
-void N9Synth::noteOffNow(uint8_t note) {
-  miNoteOff(note);
+void N9Synth::noteOffNow(uint8_t track, uint8_t note) {
+  miNoteOff(track, note);
   for (auto &c : _v)
-    if (c.state != IDLE && c.state != RELEASE && c.note == note) c.state = RELEASE;
+    if (c.state != IDLE && c.state != RELEASE && c.track == track && c.note == note) c.state = RELEASE;
 }
 
 void N9Synth::seqToggle() {
@@ -344,18 +345,21 @@ void N9Synth::seqToggle() {
 }
 
 // Offs due this step first, then the clip's notes that start on it.
+// Offs due this step first, then every track's clip notes that start on it.
 void N9Synth::fireStep(uint8_t step) {
   for (int i = 0; i < _seqNoteCount;) {
-    if (--_seqNotes[i].left == 0) { noteOffNow(_seqNotes[i].pitch); _seqNotes[i] = _seqNotes[--_seqNoteCount]; }
+    if (--_seqNotes[i].left == 0) { noteOffNow(_seqNotes[i].track, _seqNotes[i].pitch); _seqNotes[i] = _seqNotes[--_seqNoteCount]; }
     else i++;
   }
-  const Clip &c = clipAt(nav.gridT, nav.gridS);
-  uint8_t n = c.count;
-  for (uint8_t i = 0; i < n && i < CLIP_MAX_NOTES; i++) {
-    const ClipNote &cn = c.notes[i];
-    if (cn.start == step && _seqNoteCount < 32) {
-      noteOnNow(cn.pitch, cn.vel);
-      _seqNotes[_seqNoteCount++] = {cn.pitch, cn.len};
+  for (uint8_t t = 0; t < 9; t++) {
+    const Clip &c = clipAt(t, nav.gridS);
+    uint8_t n = c.count;
+    for (uint8_t i = 0; i < n && i < CLIP_MAX_NOTES; i++) {
+      const ClipNote &cn = c.notes[i];
+      if (cn.start == step && _seqNoteCount < 32) {
+        noteOnNow(t, cn.pitch, cn.vel);
+        _seqNotes[_seqNoteCount++] = {t, cn.pitch, cn.len};
+      }
     }
   }
 }
@@ -371,14 +375,14 @@ void N9Synth::update() {
   while (evr != evw) {
     Ev e = evq[evr];
     evr = (evr + 1) & 31;
-    if (e.on) noteOnNow(e.note, e.vel);
-    else noteOffNow(e.note);
+    if (e.on) noteOnNow(nav.gridT, e.note, e.vel);   // MIDI plays the selected track
+    else noteOffNow(nav.gridT, e.note);
   }
 
   // The transport.
   if (_seqStopReq) {
     _seqStopReq = false; _seqOn = false;
-    for (int i = 0; i < _seqNoteCount; i++) noteOffNow(_seqNotes[i].pitch);
+    for (int i = 0; i < _seqNoteCount; i++) noteOffNow(_seqNotes[i].track, _seqNotes[i].pitch);
     _seqNoteCount = 0;
   }
   if (_seqStartReq) {
@@ -402,8 +406,8 @@ void N9Synth::update() {
   audio_block_t *r = allocate();
   if (!l || !r) { if (l) release(l); if (r) release(r); return; }
 
-  static float mix[AUDIO_BLOCK_SAMPLES], m1buf[AUDIO_BLOCK_SAMPLES];
-  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) mix[i] = m1buf[i] = 0;
+  static float tbus[9][AUDIO_BLOCK_SAMPLES];
+  memset(tbus, 0, sizeof tbus);
 
   uint8_t active = 0;
   for (auto &v : _v) {
@@ -582,24 +586,24 @@ void N9Synth::update() {
           break;
       }
       if (d.osc != O_M1) { v.phase += v.inc; if (v.phase >= 1.0f) v.phase -= 1.0f; }
-      if (d.osc == O_M1) m1buf[i] += s * amp;    // (its envelopes are already in s)
-      else mix[i] += s * v.env * amp;
+      tbus[v.track][i] += d.osc == O_M1 ? s * amp : s * v.env * amp;
     }
     bool quiet = v.env < 0.002f && (!v.dual || v.env2 < 0.002f);
     if (quiet && v.state != ATTACK) { v.state = IDLE; active--; }
   }
-  miRender(mix, AUDIO_BLOCK_SAMPLES);
+  miRender(tbus, AUDIO_BLOCK_SAMPLES);
   _active = active + miActive();
 
   static float outL[AUDIO_BLOCK_SAMPLES], outR[AUDIO_BLOCK_SAMPLES];
-  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) outL[i] = outR[i] = mix[i] + m1buf[i];
-  fxProcessAll(outL, outR, AUDIO_BLOCK_SAMPLES);   // track slots, then master slots
-  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-    float sl = outL[i], sr = outR[i];
-    if (sl > 1.0f) sl = 1.0f; else if (sl < -1.0f) sl = -1.0f;
-    if (sr > 1.0f) sr = 1.0f; else if (sr < -1.0f) sr = -1.0f;
-    l->data[i] = (int16_t)(sl * 32767.0f);
-    r->data[i] = (int16_t)(sr * 32767.0f);
+  memset(outL, 0, sizeof outL); memset(outR, 0, sizeof outR);
+  for (uint8_t t = 0; t < 9; t++) {                // each track: its mono insert, into the mix
+    fxProcessTrack(t, tbus[t], AUDIO_BLOCK_SAMPLES);
+    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) { outL[i] += tbus[t][i]; outR[i] += tbus[t][i]; }
+  }
+  fxProcessMaster(outL, outR, AUDIO_BLOCK_SAMPLES);   // the master's stereo effect
+  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {     // (master volume is unity for now,)
+    l->data[i] = (int16_t)(fxSoftClip(outL[i]) * 32767.0f);   // (then the soft clipper)
+    r->data[i] = (int16_t)(fxSoftClip(outR[i]) * 32767.0f);
   }
   transmit(l, 0); transmit(r, 1);
   release(l); release(r);

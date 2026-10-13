@@ -68,15 +68,15 @@ public:
     uint32_t age = 0;                // for stealing: noteOn order
   };
 private:
-  void noteOnNow(uint8_t note, uint8_t vel);       // audio side
-  void noteOffNow(uint8_t note);
+  void noteOnNow(uint8_t track, uint8_t note, uint8_t vel);   // audio side
+  void noteOffNow(uint8_t track, uint8_t note);
   void fireStep(uint8_t step);
 
   volatile bool _seqOn = false, _seqStartReq = false, _seqStopReq = false;
   volatile uint8_t _seqStep = 0;
   volatile uint16_t _seqBar = 0;
   float _seqAcc = 0, _seqBpm = 132.0f;
-  struct SeqNote { uint8_t pitch, left; };
+  struct SeqNote { uint8_t track, pitch, left; };
   SeqNote _seqNotes[32];
   uint8_t _seqNoteCount = 0;
 

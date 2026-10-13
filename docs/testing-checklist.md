@@ -23,6 +23,15 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
+- [ ] **N9: all tracks play at once; the decided FX topology.** PLAY now
+  fires every track's clip at the current scene through its own engine and
+  its own MONO insert (one per track, live simultaneously - light effects
+  only; DELAY/PINGPONG/REVERB are master-only and the track selector skips
+  them), summed to ONE stereo master effect, then a soft clipper into 16
+  bit (no hard clipping however loud). MIDI still plays the selected track;
+  a track's 303 is mono per track. Listen: two+ tracks with different
+  engines and inserts at once; CPU log with a full grid; the clipper's
+  behaviour when stacking loud tracks (should squash, not crack).
 - [ ] **N9: per-track engines and FX.** Each track keeps its own engine, its
   per-engine cells, and its two TFX slot settings; the grid cursor's track is
   what plays, and switching tracks swaps its FX settings into the two track

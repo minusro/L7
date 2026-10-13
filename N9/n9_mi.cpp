@@ -60,7 +60,7 @@ void miSetModel(uint8_t m) {
   Serial.printf("mi: model %02u %s\n", model, MI_MODEL_NAMES[model]);
 }
 
-void miNoteOn(uint8_t note, uint8_t vel, uint8_t m) {
+void miNoteOn(uint8_t track, uint8_t note, uint8_t vel, uint8_t m) {
   if (!inited) init();
   if (m >= MI_MODELS) m = 0;
   int pick = -1;
@@ -68,8 +68,8 @@ void miNoteOn(uint8_t note, uint8_t vel, uint8_t m) {
   if (pick < 0) { uint32_t old = UINT32_MAX; for (int v = 0; v < NV; v++) if (vAge[v] < old) { old = vAge[v]; pick = v; } }
   vNote[pick] = note;
   vVel[pick] = vel;
-  vTrack[pick] = nav.gridT;
-  const uint8_t *p = engParams[nav.gridT][E_MI_FIRST + m];   // the track's INST cells
+  vTrack[pick] = track;
+  const uint8_t *p = engParams[track][E_MI_FIRST + m];   // the track's INST cells
   patches[pick].engine = m;
   patches[pick].harmonics = p[0] / 99.0f;
   patches[pick].timbre = p[1] / 99.0f;
@@ -84,9 +84,9 @@ void miNoteOn(uint8_t note, uint8_t vel, uint8_t m) {
   vAge[pick] = ++ageCtr;
 }
 
-void miNoteOff(uint8_t note) {
+void miNoteOff(uint8_t track, uint8_t note) {
   for (int v = 0; v < NV; v++)
-    if (vGate[v] && vNote[v] == note) { vGate[v] = false; vTarget[v] = 0; }
+    if (vGate[v] && vTrack[v] == track && vNote[v] == note) { vGate[v] = false; vTarget[v] = 0; }
 }
 
 uint8_t miActive() {
@@ -96,7 +96,7 @@ uint8_t miActive() {
   return n;
 }
 
-void miRender(float *dst, int n) {
+void miRender(float (*bus)[128], int n) {
   if (!inited) return;
   for (int v = 0; v < NV; v++) {
     if (!vGate[v] && vLevel[v] <= 0.003f && fifoN[v] == 0) continue;
@@ -125,7 +125,7 @@ void miRender(float *dst, int n) {
       }
       int take = fifoN[v] < n - out ? fifoN[v] : n - out;
       int base = plaits::kBlockSize - fifoN[v];
-      for (int i = 0; i < take; i++) dst[out + i] += fifo[v][base + i] * 0.35f;
+      for (int i = 0; i < take; i++) bus[vTrack[v]][out + i] += fifo[v][base + i] * 0.35f;
       fifoN[v] -= take;
       out += take;
     }

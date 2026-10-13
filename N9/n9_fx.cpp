@@ -27,8 +27,8 @@ static const ParamInfo FX_PARAMS[FX_TYPES][4] = {
 
 const ParamInfo *fxParams(uint8_t type) { return FX_PARAMS[type < FX_TYPES ? type : 0]; }
 
-FxSlot fxSlots[4];
-FxSlot trackFx[9][2];
+FxSlot trackFx[9];
+FxSlot masterFx;
 
 // Per-slot DSP state. `line` holds the type's delay memory:
 //   CHORUS/FLANGER/WOW: L at 0, R at 4096 (2048 samples each is plenty)
@@ -36,16 +36,19 @@ FxSlot trackFx[9][2];
 //   PINGPONG: L at 0, R at 13824 (300 ms each)
 //   REVERB: combs at c*2700, allpasses at 16400 / 17200 / 17700
 struct FxState {
-  float sp[4];   // the four params, eased per block against zipper
+  int16_t *line;   // the type's delay memory (the master's is large enough
+  int lineLen;     //   for the time-based types; a track's is 4096 samples)
+  float sp[4];     // the four params, eased per block against zipper
   float ph = 0;
   float envL = 0, envR = 0, gain = 1;
   float lpL = 0, lpR = 0, s1L = 0, s2L = 0, s1R = 0, s2R = 0;
   float apL[4], apR[4], cf[6];
   float heldL = 0, heldR = 0;
   int hold = 0, pos = 0, idx[10];
-  int16_t line[27648];
 };
-DMAMEM static FxState st[4];
+DMAMEM static int16_t masterLine[27648];
+DMAMEM static int16_t trackLine[9][4096];
+static FxState stTrack[9], stMaster;
 
 static inline float i16f(int16_t v) { return v * (1.0f / 32768.0f); }
 static inline int16_t fi16(float v) {
@@ -64,31 +67,38 @@ static inline float softsat(float x) {
   return x - x * x * x * (4.0f / 27.0f);
 }
 
-void fxSetType(uint8_t slot, uint8_t type) {
-  if (slot >= 4 || type >= FX_TYPES) return;
-  memset(&st[slot], 0, sizeof(FxState));
-  st[slot].gain = 1;
-  fxSlots[slot].type = type;
-  for (int i = 0; i < 4; i++) {
-    fxSlots[slot].p[i] = FX_PARAMS[type][i].def;
-    st[slot].sp[i] = FX_PARAMS[type][i].def / 99.0f;
-  }
-  Serial.printf("fx: slot %u %s\n", slot, FX_TYPE_NAMES[type]);
+static void resetState(FxState &t, int16_t *line, int lineLen, const FxSlot &sl) {
+  memset(&t, 0, sizeof(FxState));
+  t.gain = 1;
+  t.line = line; t.lineLen = lineLen;
+  memset(line, 0, lineLen * 2);
+  for (int i = 0; i < 4; i++) t.sp[i] = sl.p[i] / 99.0f;
+}
+
+bool fxTrackAllowed(uint8_t type) {
+  return type != FXT_DELAY && type != FXT_PINGPONG && type != FXT_REVERB;
+}
+
+void fxSetTrackType(uint8_t t, uint8_t type) {
+  if (t >= 9 || type >= FX_TYPES || !fxTrackAllowed(type)) return;
+  trackFx[t].type = type;
+  for (int i = 0; i < 4; i++) trackFx[t].p[i] = FX_PARAMS[type][i].def;
+  resetState(stTrack[t], trackLine[t], 4096, trackFx[t]);
+  Serial.printf("fx: track %u %s\n", t + 1, FX_TYPE_NAMES[type]);
+}
+
+void fxSetMasterType(uint8_t type) {
+  if (type >= FX_TYPES) return;
+  masterFx.type = type;
+  for (int i = 0; i < 4; i++) masterFx.p[i] = FX_PARAMS[type][i].def;
+  resetState(stMaster, masterLine, 27648, masterFx);
+  Serial.printf("fx: master %s\n", FX_TYPE_NAMES[type]);
 }
 
 void fxSlotsInit() {
-  for (int s = 0; s < 4; s++) { memset(&st[s], 0, sizeof(FxState)); st[s].gain = 1; fxSlots[s] = {FXT_NONE, {0, 0, 0, 0}}; }
-  for (int t = 0; t < 9; t++) for (int k = 0; k < 2; k++) trackFx[t][k] = {FXT_NONE, {0, 0, 0, 0}};
-}
-
-void fxApplyTrack(uint8_t t) {
-  for (int k = 0; k < 2; k++) {
-    fxSetType(k, trackFx[t][k].type);            // defaults in, state cleared
-    for (int i = 0; i < 4; i++) {
-      fxSlots[k].p[i] = trackFx[t][k].p[i];
-      st[k].sp[i] = trackFx[t][k].p[i] / 99.0f;
-    }
-  }
+  for (int t = 0; t < 9; t++) { trackFx[t] = {FXT_NONE, {0, 0, 0, 0}}; resetState(stTrack[t], trackLine[t], 4096, trackFx[t]); }
+  masterFx = {FXT_NONE, {0, 0, 0, 0}};
+  resetState(stMaster, masterLine, 27648, masterFx);
 }
 
 static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
@@ -153,6 +163,7 @@ static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
       break;
     }
     case FXT_DELAY: {
+      if (t.lineLen < 26460) break;              // master only
       int d = (int)((40.0f + 560.0f * p0) * 44.1f);
       float fb = 0.75f * p1, mix = p3;
       float tone = 0.08f + 0.6f * p2;
@@ -166,6 +177,7 @@ static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
       break;
     }
     case FXT_PINGPONG: {
+      if (t.lineLen < 26460) break;
       int d = (int)((30.0f + 270.0f * p0) * 44.1f);
       float fb = 0.8f * p1, mix = p3, width = p2;
       int16_t *L = t.line, *R = t.line + 13824;
@@ -182,6 +194,7 @@ static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
       break;
     }
     case FXT_REVERB: {
+      if (t.lineLen < 26460) break;
       static const int BASE[6] = {1116, 1188, 1277, 1356, 1422, 1491};
       float scale = 0.55f + 1.15f * p0;
       float fbk = 0.72f + 0.25f * p0;
@@ -271,7 +284,19 @@ static void processSlot(FxSlot &sl, FxState &t, float *l, float *r, int n) {
   }
 }
 
-void fxProcessAll(float *l, float *r, int n) {
-  for (int s = 0; s < 4; s++)
-    if (fxSlots[s].type != FXT_NONE) processSlot(fxSlots[s], st[s], l, r, n);
+// A track insert is mono: the effect runs as stereo and the result is
+// summed back down, so every allowed type behaves.
+void fxProcessTrack(uint8_t tr, float *mono, int n) {
+  if (tr >= 9 || trackFx[tr].type == FXT_NONE) return;
+  static float tmp[128];
+  for (int i = 0; i < n; i++) tmp[i] = mono[i];
+  processSlot(trackFx[tr], stTrack[tr], tmp, mono, n);
+  for (int i = 0; i < n; i++) mono[i] = (tmp[i] + mono[i]) * 0.5f;
 }
+
+void fxProcessMaster(float *l, float *r, int n) {
+  if (masterFx.type == FXT_NONE) return;
+  processSlot(masterFx, stMaster, l, r, n);
+}
+
+float fxSoftClip(float x) { return softsat(x); }
