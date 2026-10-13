@@ -247,8 +247,39 @@ FLASHMEM void setup() {
   // already loaded and ready to play.)
 }
 
+// A loop() pass's time, part by part (the serial log: a pass over
+// SLOW_PASS_MS, playing, its parts; a pass that long can starve the streams
+// at a high tempo).
+static constexpr uint32_t SLOW_PASS_MS = 60;
+static const char *passPart[12];
+static uint32_t passAt[12];
+static int passParts = 0;
+static void passMark(const char *part) {
+  if (passParts < 12) {
+    passPart[passParts] = part;
+    passAt[passParts++] = micros();
+  }
+}
+static void passReport() {
+  static uint32_t reportedAt = 0;
+  passMark("end");
+  const uint32_t total = passAt[passParts - 1] - passAt[0];
+  if (transport.running && total >= SLOW_PASS_MS * 1000 && millis() - reportedAt >= 200) {
+    reportedAt = millis();
+    char b[200];
+    int n = snprintf(b, sizeof b, "slow pass: %lu ms:", (unsigned long)(total / 1000));
+    for (int i = 0; i + 1 < passParts && n < (int)sizeof b - 24; i++) {
+      uint32_t ms = (passAt[i + 1] - passAt[i]) / 1000;
+      if (ms >= 5) n += snprintf(b + n, sizeof b - n, " %s %lu", passPart[i], (unsigned long)ms);
+    }
+    Serial.println(b);
+  }
+  passParts = 0;
+}
+
 void loop() {
   loopCount++;
+  passMark("power");
   debugStage = "power button";
   handlePowerButton();
   // Another card (hot swap: stopped, nothing recording): checked twice a second;
@@ -266,8 +297,10 @@ void loop() {
       for (int i = 0; i < ROWS; i++) drawTrack(i);
     }
   }
+  passMark("storage");
   debugStage = "storage";
   serviceStorage();
+  passMark("phones");
 
   // Speaker off while headphones are plugged in (a computer recording the
   // M8's USB audio leaves it on).
@@ -288,6 +321,7 @@ void loop() {
     Serial.printf("speaker %s%s%s\n", speakerOn ? "on" : "off", phonesIn ? " (headphones in)" : "", usbRecording ? " (streaming to USB)" : "");
   }
 
+  passMark("midi, follow");
   debugStage = "MIDI in";
   midiInService();                                 // an external clock: its start, stop, tempo and beat
   audioFollowService();                            // the tempo and beat heard in the input
@@ -346,9 +380,12 @@ void loop() {
       }
     }
   }
+  passMark("battery, usb");
   pollKeys();
+  passMark("keys");
   saveSessionWhenIdle();
   serviceScenes();
+  passMark("scenes");
   // The click (the metronome setting, app.h), and on through a recording
   // started with it until that's completely recorded (not just when it's
   // told to stop: the end of the bar is still to come).
@@ -375,6 +412,8 @@ void loop() {
 
   followRecording();
 
+  passMark("screen");
   debugStage = "screen";
   uiRefresh();
+  passReport();
 }

@@ -219,6 +219,7 @@ static void drawGaps(int i) {
 }
 
 void drawTrack(int i) {
+  keepStreaming();                                 // (a long redraw, row by row: the streams kept topped up)
   followTracks();
   if (i < 0 || i >= ROWS || (menuOpen() && i != STATUS_ROW)) return;   // (the menu: in the track rows' place)
   drawCells(i);

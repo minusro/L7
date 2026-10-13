@@ -3077,7 +3077,26 @@ FLASHMEM static void serviceProfiles() {
   stopProfileScan();
 }
 
+// The streams topped up from outside serviceStorage() (the UI between its
+// rows: a long redraw, a key's, mustn't starve them at a high tempo).
+static bool inStorage = false;
+static void serviceStorageNow();
+void keepStreaming() {
+  if (inStorage || !transport.running || sdFailed) return;
+  inStorage = true;
+  const char *was = (const char *)debugStage;
+  serviceStreams();
+  debugStage = was;
+  inStorage = false;
+}
+
 void serviceStorage() {
+  inStorage = true;
+  serviceStorageNow();
+  inStorage = false;
+}
+
+static void serviceStorageNow() {
   if (sdFailed) recoverSd();
   serviceFiles();
   serviceChanges();

@@ -74,6 +74,7 @@ bool cardRestart();
 // scenesBegin() then read it all again. Stopped and not recording only.
 void storageForget();
 void serviceStorage();               // call as often as possible from loop()
+void keepStreaming();                // the playing streams topped up now (from long UI work; not inside storage)
 
 void transportStart();               // from bar 1, all tracks in sync
 // From that beat (the clock reads it; each track where it'd be then: an
