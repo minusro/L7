@@ -18,10 +18,10 @@ struct NavState {
   // edit the source row last stood on (modSrc).
   uint8_t modRow = 0, modCell = 3, modSrc = 0;
 
-  // INST: row 0 holds two cells — the preset (0, engines with banks only)
-  // and the engine selector (1, instTop) — rows 1..2 the parameter cells
-  // (col 0..3).
-  uint8_t instRow = 0, instCol = 0, instTop = 1;
+  // INST: row 0 holds two cells — the engine selector (instTop 0, left,
+  // a quarter of the row) and the preset cell (1, engines with banks) —
+  // rows 1..2 the parameter cells (col 0..3).
+  uint8_t instRow = 0, instCol = 0, instTop = 0;
 
   // TFX (the track's two FX slots): rows 0/2 the slots' selectors, 1/3 their
   // parameter cells (col 0..3).
@@ -42,6 +42,8 @@ extern NavState nav;
 // The agreed engine lineup (2026-10-13; docs/design/n9_mockup.html). The
 // synth implements SAW, PULSE, SUPER, FM2, PLUCK and NOISE; the rest play
 // placeholder voices until their emulations exist (n9_synth.cpp).
-constexpr uint8_t ENGINE_COUNT = 13;
+constexpr uint8_t ENGINE_COUNT = 15;
 extern const char *const ENGINE_NAMES[ENGINE_COUNT];
-constexpr uint8_t E_303 = 8, E_MWAVE = 11, E_M1 = 12;   // engines the code treats specially
+// Engines the code treats specially. E_M1 is hidden from the selector for
+// now (the stand-ins disappoint until the real PCM is in).
+constexpr uint8_t E_303 = 8, E_MWAVE = 11, E_M1 = 12, E_PLAITS = 13, E_SPELL = 14;

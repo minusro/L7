@@ -4,6 +4,7 @@
 #include "M8Board.h"
 #include "n9_state.h"
 #include "n9_synth.h"
+#include "n9_mi.h"
 
 using namespace m8;
 
@@ -105,11 +106,13 @@ bool inputService() {
       if (i == A_DOWN && nav.screen < SCR_COUNT - 1) { nav.screen++; dirty = true; }
     } else if (opt) {                              // B + LEFT/RIGHT on INST: step the engine,
       if (nav.screen == SCR_INST && (i == A_LEFT || i == A_RIGHT)) {   // or, on the preset cell, the preset
-        if (nav.instRow == 0 && nav.instTop == 0) {
+        if (nav.instRow == 0 && nav.instTop == 1) {   // the preset cell (right)
           if (nav.engine == E_M1) { m1SetProgram((m1Program() + (i == A_RIGHT ? 1 : 99)) % 100); dirty = true; }
           else if (nav.engine == E_MWAVE) { mwSetProgram((uint8_t)(mwProgram() + (i == A_RIGHT ? 1 : 255))); dirty = true; }
+          else if (nav.engine == E_PLAITS) { miSetModel((miModel() + (i == A_RIGHT ? 1 : MI_MODELS - 1)) % MI_MODELS); dirty = true; }
         } else {
-          nav.engine = (nav.engine + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
+          do nav.engine = (nav.engine + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
+          while (nav.engine == E_M1);            // hidden for now
           dirty = true;
         }
       }

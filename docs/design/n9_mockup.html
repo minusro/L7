@@ -192,9 +192,11 @@
       <li><strong>Piano roll</strong> for the clip editor.</li>
       <li><strong>Modulation</strong> — four selectable sources per track, each with two destination slots.</li>
       <li><strong>Voices</strong> — 32, a shared pool across the nine tracks.</li>
-      <li><strong>Engines (13)</strong> — SAW, PULSE, SUPER (detuned saw stack), FM2, FM4, PLUCK
-      (Karplus-Strong), WT (wavetable), NOISE, plus five emulations: 303, Juno-60 (with
-      chorus I + II), Prophet-5, Waldorf Microwave, Korg M1.</li>
+      <li><strong>Engines (15)</strong> — SAW, PULSE, SUPER (detuned saw stack), FM2, FM4, PLUCK
+      (Karplus-Strong), WT (wavetable), NOISE, five emulations — 303, Juno-60 (with chorus
+      I + II), Prophet-5, Waldorf Microwave, Korg M1 (hidden until its real PCM is in) — plus
+      PLAITS (the open-source Mutable Instruments engines, all 24 models) and SPELL (a Speak
+      &amp; Spell flavoured LPC speech voice via the plaits speech model).</li>
       <li><strong>FX slots</strong> — two selectable FX slots on each track (a screen between
       modulation and instrument) and two more selectable master FX slots on a topmost screen,
       above the send effects.</li>
@@ -346,21 +348,21 @@
 
   // A selectable FX slot: selector row + four parameter cells.
   const fxSlot = (y, name, cnt, selSel, selCell, ps) => {
-    if (selSel) frame(4, y, 312, 18, C.LIGHT);
+    if (selSel) frame(4, y, 312, 22, C.LIGHT);
     text(8, y + 6, '<', C.DIM);
     text(24, y + 6, name, C.INK);
     text(24 + textW(name) + 10, y + 6, '>', C.DIM);
     text(282, y + 6, cnt, C.DIM);
-    ps.forEach((p, i) => paramCell(4 + i * 79, y + 22, 76, 42, p[0], p[1], p[2], selCell === i));
+    ps.forEach((p, i) => paramCell(4 + i * 79, y + 26, 76, 42, p[0], p[1], p[2], selCell === i));
   };
 
   // ---- 1 · Master FX slots --------------------------------------------------
   screen('mfx', () => {
     title('MFX', 'MASTER');
     text(6, 26, 'SLOT 1', C.LIGHT);
-    fxSlot(36, 'COMP', '3/8', true, -1, [['THRESH', '-18', 0.6], ['RATIO', '4', 0.5], ['GAIN', '+6', 0.55], ['MIX', '100', 1.0]]);
-    text(6, 110, 'SLOT 2', C.LIGHT);
-    fxSlot(120, 'TAPE', '6/8', false, -1, [['DRIVE', '35', 0.35], ['TONE', '60', 0.6], ['WOW', '15', 0.15], ['MIX', '100', 1.0]]);
+    fxSlot(38, 'COMP', '3/8', true, -1, [['THRESH', '-18', 0.6], ['RATIO', '4', 0.5], ['GAIN', '+6', 0.55], ['MIX', '100', 1.0]]);
+    text(6, 112, 'SLOT 2', C.LIGHT);
+    fxSlot(124, 'TAPE', '6/8', false, -1, [['DRIVE', '35', 0.35], ['TONE', '60', 0.6], ['WOW', '15', 0.15], ['MIX', '100', 1.0]]);
     statusRow(0);
   });
 
@@ -464,9 +466,9 @@
   screen('tfx', () => {
     title('TFX', 'TRACK 3');
     text(6, 26, 'SLOT 1', C.LIGHT);
-    fxSlot(36, 'CHORUS', '2/8', true, -1, [['RATE', '35', 0.35], ['DEPTH', '60', 0.6], ['SPREAD', '80', 0.8], ['MIX', '50', 0.5]]);
-    text(6, 110, 'SLOT 2', C.LIGHT);
-    fxSlot(120, 'DRIVE', '4/8', false, -1, [['GAIN', '28', 0.28], ['TONE', '55', 0.55], ['LEVEL', '70', 0.7], ['MIX', '100', 1.0]]);
+    fxSlot(38, 'CHORUS', '2/8', true, -1, [['RATE', '35', 0.35], ['DEPTH', '60', 0.6], ['SPREAD', '80', 0.8], ['MIX', '50', 0.5]]);
+    text(6, 112, 'SLOT 2', C.LIGHT);
+    fxSlot(124, 'DRIVE', '4/8', false, -1, [['GAIN', '28', 0.28], ['TONE', '55', 0.55], ['LEVEL', '70', 0.7], ['MIX', '100', 1.0]]);
     statusRow(4);
   });
 
@@ -474,14 +476,15 @@
   screen('inst', () => {
     title('INST', 'TRACK 3');
     // Engine selector: < PLUCK >  4/12
-    // Preset cell (engines with banks: number + name; others a dash),
-    // then the engine selector; B + LEFT/RIGHT steps the selected one.
-    text(10, 32, '-', C.DIM);
-    text(140, 32, '<', C.DIM);
-    text(156, 32, 'PLUCK', C.INK);
-    text(156 + textW('PLUCK') + 10, 32, '>', C.DIM);
-    text(282, 32, '6/13', C.DIM);
-    rect(4, 46, 312, 2, C.DARK);
+    // Engine selector (left, a quarter of the row; framed when selected,
+    // two blocks below the row) and the preset cell (engines with banks:
+    // number + name; others a dash). B + LEFT/RIGHT steps the selected one.
+    frame(4, 26, 76, 22, C.LIGHT);
+    text(8, 32, '<', C.DIM);
+    text(20, 32, 'PLUCK', C.INK);
+    text(20 + textW('PLUCK') + 6, 32, '>', C.DIM);
+    text(90, 32, '-', C.DIM);
+    rect(4, 50, 312, 2, C.DARK);
     const r1 = [['TUNE', '+0', 0.5], ['SHAPE', '38', 0.38], ['CUTOFF', '86', 0.86], ['RES', '22', 0.22]];
     const r2 = [['ATK', '2', 0.05], ['DEC', '340', 0.45], ['SUS', '60', 0.6], ['REL', '180', 0.3]];
     r1.forEach((c, i) => paramCell(4 + i * 79, 54, 76, 44, c[0], c[1], c[2], i === 2));

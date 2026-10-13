@@ -5,6 +5,7 @@
 
 #include "n9_m1_bank.h"
 #include "n9_mw_bank.h"
+#include "n9_mi.h"
 #include "n9_state.h"
 #include "n9_synth.h"
 
@@ -246,25 +247,25 @@ static void drawMod() {
 static void tfxSlot(int y, const char *name, const char *cnt, bool selSel, int selCell,
                     const char *n1, const char *v1, float a1, const char *n2, const char *v2, float a2,
                     const char *n3, const char *v3, float a3, const char *n4, const char *v4, float a4) {
-  if (selSel) frm(4, y, 312, 18, LIGHT);
+  if (selSel) frm(4, y, 312, 22, LIGHT);          // two blocks taller, toward the cells
   txt(8, y + 6, "<", DIM);
   txt(24, y + 6, name, INK);
   txt(24 + txtW(name) + 10, y + 6, ">", DIM);
   txt(282, y + 6, cnt, DIM);
   const char *n[4] = {n1, n2, n3, n4}, *v[4] = {v1, v2, v3, v4};
   float a[4] = {a1, a2, a3, a4};
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, y + 22, 76, 42, n[i], v[i], a[i], selCell == i);
+  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, y + 26, 76, 42, n[i], v[i], a[i], selCell == i);
 }
 
 static void drawTfx() {
   char ctx[12];
   snprintf(ctx, sizeof ctx, "TRACK %d", nav.gridT + 1);
   title("TFX", ctx);
-  txt(6, 26, "SLOT 1", LIGHT);
-  tfxSlot(36, "CHORUS", "2/8", nav.tfxRow == 0, nav.tfxRow == 1 ? nav.tfxCol : -1,
+  txt(6, 26, "SLOT 1", LIGHT);   // a block of air before the selector
+  tfxSlot(38, "CHORUS", "2/8", nav.tfxRow == 0, nav.tfxRow == 1 ? nav.tfxCol : -1,
           "RATE", "35", 0.35f, "DEPTH", "60", 0.6f, "SPREAD", "80", 0.8f, "MIX", "50", 0.5f);
-  txt(6, 110, "SLOT 2", LIGHT);
-  tfxSlot(120, "DRIVE", "4/8", nav.tfxRow == 2, nav.tfxRow == 3 ? nav.tfxCol : -1,
+  txt(6, 112, "SLOT 2", LIGHT);
+  tfxSlot(124, "DRIVE", "4/8", nav.tfxRow == 2, nav.tfxRow == 3 ? nav.tfxCol : -1,
           "GAIN", "28", 0.28f, "TONE", "55", 0.55f, "LEVEL", "70", 0.7f, "MIX", "100", 1.0f);
 }
 
@@ -273,11 +274,11 @@ static void drawTfx() {
 
 static void drawMfx() {
   title("MFX", "MASTER");
-  txt(6, 26, "SLOT 1", LIGHT);
-  tfxSlot(36, "COMP", "3/8", nav.mfxRow == 0, nav.mfxRow == 1 ? nav.mfxCol : -1,
+  txt(6, 26, "SLOT 1", LIGHT);   // a block of air before the selector
+  tfxSlot(38, "COMP", "3/8", nav.mfxRow == 0, nav.mfxRow == 1 ? nav.mfxCol : -1,
           "THRESH", "-18", 0.6f, "RATIO", "4", 0.5f, "GAIN", "+6", 0.55f, "MIX", "100", 1.0f);
-  txt(6, 110, "SLOT 2", LIGHT);
-  tfxSlot(120, "TAPE", "6/8", nav.mfxRow == 2, nav.mfxRow == 3 ? nav.mfxCol : -1,
+  txt(6, 112, "SLOT 2", LIGHT);
+  tfxSlot(124, "TAPE", "6/8", nav.mfxRow == 2, nav.mfxRow == 3 ? nav.mfxCol : -1,
           "DRIVE", "35", 0.35f, "TONE", "60", 0.6f, "WOW", "15", 0.15f, "MIX", "100", 1.0f);
 }
 
@@ -288,22 +289,23 @@ static void drawInst() {
   snprintf(ctx, sizeof ctx, "TRACK %d", nav.gridT + 1);
   title("INST", ctx);
   const char *name = ENGINE_NAMES[nav.engine];
-  snprintf(cnt, sizeof cnt, "%d/%d", nav.engine + 1, ENGINE_COUNT);
-  // The preset cell (engines with banks; the M1's program) left of the
-  // engine selector; B + LEFT/RIGHT steps whichever is selected.
-  if (nav.instRow == 0) frm(nav.instTop == 0 ? 4 : 136, 26, nav.instTop == 0 ? 128 : 180, 18, LIGHT);
-  if (nav.engine == E_M1 || nav.engine == E_MWAVE) {
+  (void)cnt;
+  // The engine selector (left, a quarter of the row) and the preset cell
+  // (engines with banks; the rest of the row). B + LEFT/RIGHT steps
+  // whichever is selected; the frames reach two blocks below the row.
+  if (nav.instRow == 0) frm(nav.instTop == 0 ? 4 : 84, 26, nav.instTop == 0 ? 76 : 232, 22, LIGHT);
+  txt(8, 32, "<", DIM);
+  txt(20, 32, name, INK);
+  txt(20 + txtW(name) + 6, 32, ">", DIM);
+  if (nav.engine == E_M1 || nav.engine == E_MWAVE || nav.engine == E_PLAITS) {
     char pn[18];
     if (nav.engine == E_M1) snprintf(pn, sizeof pn, "%02u %.10s", m1Program(), M1_BANK[m1Program()].name);
-    else snprintf(pn, sizeof pn, "%03u %.10s", mwProgram(), MW_BANK[mwProgram()].name);
+    else if (nav.engine == E_MWAVE) snprintf(pn, sizeof pn, "%03u %.10s", mwProgram(), MW_BANK[mwProgram()].name);
+    else snprintf(pn, sizeof pn, "%02u %.10s", miModel(), MI_MODEL_NAMES[miModel()]);
     for (char *q = pn; *q; q++) *q = toupper(*q);
-    txt(10, 32, pn, INK);
-  } else txt(10, 32, "-", DIM);
-  txt(140, 32, "<", DIM);
-  txt(156, 32, name, INK);
-  txt(156 + txtW(name) + 10, 32, ">", DIM);
-  txt(282, 32, cnt, DIM);
-  rct(4, 46, 312, 2, DARK);
+    txt(90, 32, pn, INK);
+  } else txt(90, 32, "-", DIM);
+  rct(4, 50, 312, 2, DARK);
   struct { const char *n, *v; float a; } r1[] = {{"TUNE", "+0", 0.5f}, {"SHAPE", "38", 0.38f}, {"CUTOFF", "86", 0.86f}, {"RES", "22", 0.22f}},
                                          r2[] = {{"ATK", "2", 0.05f}, {"DEC", "340", 0.45f}, {"SUS", "60", 0.6f}, {"REL", "180", 0.3f}};
   for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 54, 76, 44, r1[i].n, r1[i].v, r1[i].a, nav.instRow == 1 && nav.instCol == i);

@@ -5,6 +5,7 @@
 #include "n9_m1_bank.h"
 #include "n9_mw_bank.h"
 #include "n9_fx.h"
+#include "n9_mi.h"
 #include "n9_state.h"
 
 // The M1 engine's current program (0-99), set by MIDI program change.
@@ -23,7 +24,7 @@ static volatile uint8_t mwProg = 0;
 // for now: the selector and voice pool are real, the sound isn't yet.
 const char *const ENGINE_NAMES[ENGINE_COUNT] = {
     "SAW", "PULSE", "SUPER", "FM2", "FM4", "PLUCK", "WT", "NOISE",
-    "303", "JUNO", "PRO5", "MWAVE", "M1"};
+    "303", "JUNO", "PRO5", "MWAVE", "M1", "PLAITS", "SPELL"};
 
 enum OscType : uint8_t {
   O_SAW,     // naive saw through the one-pole lowpass
@@ -70,6 +71,8 @@ static const EngineDef ENGINES[ENGINE_COUNT] = {
     {O_PRO5, 5, 350, false, 0, 1.004f, 0, 0},          // PRO5 (ratio = osc B's detune)
     {O_MWAVE, 2, 220, false, 0, 0, 0, 0},              // MWAVE (envelopes come from the sound)
     {O_M1, 1, 300, false, 0, 0, 0, 0},                 // M1 (envelopes come from the program)
+    {O_SAW, 1, 100, false, 0, 0, 0, 0},                // PLAITS (never in the pool: n9_mi)
+    {O_SAW, 1, 100, false, 0, 0, 0, 0},                // SPELL  (likewise)
 };
 
 // M1 helpers: a time value 0-99 as an easing time constant in ms (the M1's
@@ -171,6 +174,10 @@ void N9Synth::update() {
     Ev e = evq[evr];
     evr = (evr + 1) & 31;
     if (e.on) {
+      if (nav.engine == E_PLAITS || nav.engine == E_SPELL) {   // the plaits pool plays these
+        miNoteOn(e.note, e.vel, nav.engine == E_SPELL);
+        continue;
+      }
       const EngineDef &d = ENGINES[nav.engine];
       float hz = 440.0f * exp2f((e.note - 69) / 12.0f);
       float inc = hz / 44100.0f;
@@ -263,6 +270,7 @@ void N9Synth::update() {
       v->age = ++_ageCounter;
       v->state = ATTACK;
     } else {
+      miNoteOff(e.note);
       for (auto &c : _v)
         if (c.state != IDLE && c.state != RELEASE && c.note == e.note) c.state = RELEASE;
     }
@@ -430,7 +438,8 @@ void N9Synth::update() {
     bool quiet = v.env < 0.002f && (!v.dual || v.env2 < 0.002f);
     if (quiet && v.state != ATTACK) { v.state = IDLE; active--; }
   }
-  _active = active;
+  miRender(mix, AUDIO_BLOCK_SAMPLES);
+  _active = active + miActive();
 
   static float outL[AUDIO_BLOCK_SAMPLES], outR[AUDIO_BLOCK_SAMPLES];
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) outL[i] = outR[i] = mix[i];

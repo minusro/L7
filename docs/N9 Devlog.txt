@@ -3,7 +3,13 @@ N9 / ©️2026 Daniel Stanciu  / minusro@gmail.com
 
 # 13oct26
 
--
+- basic ui mockup V
+- try out some synth engines
+- look at the piano roll
+- general ui rules for playback/recording/other
+- menu
+- settings
+- help
 
 
 # Backlog

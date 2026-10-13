@@ -14,8 +14,9 @@
 // ../docs/sibling-app-notes.md. M8Board.cpp/.h and colors.h are copies of
 // L7's (../); keep them in step.
 //
-// Build/upload like L7 (docs/build-and-test.md), from this folder:
-//   arduino-cli compile -b teensy:avr:teensy40:usb=serialmsc --build-path <out> .
+// Build/upload like L7 (docs/build-and-test.md), from this folder (the
+// vendored Mutable Instruments library must be passed explicitly):
+//   arduino-cli compile -b teensy:avr:teensy40:usb=serialmsc --library libraries/mi --build-path <out> .
 //   arduino-cli upload  -b teensy:avr:teensy40:usb=serialmsc -p usb:100000 --input-dir <out> .
 
 #include <Audio.h>
