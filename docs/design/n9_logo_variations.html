@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>N9 Logo Variations</title>
+<style>
+  :root {
+    --bg: #000; --dark: #2c2c2c; --dim: #707070; --light: #d0d0d0;
+    --ink: #fff; --accent: rgb(48, 230, 170);
+  }
+  body { background: var(--bg); color: var(--light); font-family: ui-monospace, Menlo, monospace;
+         margin: 0; padding: 24px 16px; }
+  h1 { font-size: 16px; color: var(--ink); letter-spacing: 2px; }
+  p.lead { color: var(--dim); max-width: 640px; font-size: 12px; line-height: 1.6; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; max-width: 1100px; }
+  .card { background: #111; border: 1px solid #222; padding: 14px; }
+  .card h2 { font-size: 13px; color: var(--ink); margin: 0 0 2px; }
+  .card .note { font-size: 11px; color: var(--dim); min-height: 30px; margin: 0 0 10px; line-height: 1.5; }
+  .card canvas { display: block; image-rendering: pixelated; }
+  .big { margin-bottom: 10px; }
+  .ctx-label { font-size: 10px; color: var(--dim); margin: 8px 0 4px; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<h1>N9 — LOGO VARIATIONS</h1>
+<p class="lead">Each mark is 55 × 26 units, drawn row by row exactly as the firmware
+does (drawN9Logo in n9_ui.cpp): an italic offset per row, glyphs as horizontal
+spans, the 80s cuts where a variant keeps them. Top: 4× enlarged, light grey.
+Below: at true corner size (55 × 26 px) on the menu's dark ground and in the
+accent (storage mode, connected). V1 is what's on the device now.</p>
+<div class="grid" id="grid"></div>
+<script>
+const COLORS = { dark: '#2c2c2c', dim: '#707070', light: '#d0d0d0', accent: 'rgb(48,230,170)' };
+const fl = Math.floor;
+
+// A variant: slantDiv (off = floor((25-p)/slantDiv)), cuts rows, and spans(p, off)
+// returning [x, w] pairs in units.
+const variants = [
+  { name: 'V1 — CURRENT', note: 'Straight N, square-bowl 9, the L7 cuts. What ships today.',
+    slantDiv: 3, cuts: [[18,20],[22,24]],
+    spans(p, off) {
+      const s = [[off, 6], [off + 6 + fl(7 * p / 25), 7], [off + 20, 6], [off + 40, 7]];
+      if (p < 3 || (p >= 10 && p < 13)) s.push([off + 28, 12]);
+      else if (p < 10) s.push([off + 28, 7]);
+      return s;
+    } },
+  { name: 'V2 — SEVEN-KIN', note: 'The 9’s right edge slopes like the L7 seven’s diagonal (1 px per 2 rows); the bowl hangs off it.',
+    slantDiv: 3, cuts: [[18,20],[22,24]],
+    spans(p, off) {
+      const r = 55 - fl(p / 2);                      // the 9's sloping right edge
+      const s = [[off, 6], [off + 6 + fl(7 * p / 25), 7], [off + 20, 6], [r - 7, 7]];
+      if (p < 3 || (p >= 10 && p < 13)) s.push([off + 28, r - off - 28 - 7 + 7]);
+      else if (p < 10) s.push([off + 28, 7]);
+      return s;
+    } },
+  { name: 'V3 — TAIL 9', note: 'The 9’s stem curls left below the bowl, an open tail; cuts kept.',
+    slantDiv: 3, cuts: [[18,20],[22,24]],
+    spans(p, off) {
+      const tail = p > 19 ? Math.min(6, p - 19) : 0;
+      const s = [[off, 6], [off + 6 + fl(7 * p / 25), 7], [off + 20, 6], [off + 40 - tail, 7]];
+      if (p < 3 || (p >= 10 && p < 13)) s.push([off + 28, 12]);
+      else if (p < 10) s.push([off + 28, 7]);
+      return s;
+    } },
+  { name: 'V4 — WIDE N', note: 'A broader N with a 45-degree-feeling diagonal; the 9 narrows to match.',
+    slantDiv: 3, cuts: [[18,20],[22,24]],
+    spans(p, off) {
+      const s = [[off, 6], [off + 6 + fl(16 * p / 25), 7], [off + 22, 6], [off + 40, 7]];
+      if (p < 3 || (p >= 10 && p < 13)) s.push([off + 30, 10]);
+      else if (p < 10) s.push([off + 30, 7]);
+      return s;
+    } },
+  { name: 'V5 — NO CUTS', note: 'V1 without the 80s stripes: calmer, reads at a glance.',
+    slantDiv: 3, cuts: [],
+    spans(p, off) {
+      const s = [[off, 6], [off + 6 + fl(7 * p / 25), 7], [off + 20, 6], [off + 40, 7]];
+      if (p < 3 || (p >= 10 && p < 13)) s.push([off + 28, 12]);
+      else if (p < 10) s.push([off + 28, 7]);
+      return s;
+    } },
+  { name: 'V6 — STEEP ITALIC', note: 'Twice the slant (1 px per 2 rows): more forward motion, narrower glyphs to stay in 55.',
+    slantDiv: 2, cuts: [[18,20],[22,24]],
+    spans(p, off) {
+      const s = [[off, 6], [off + 6 + fl(10 * p / 25), 6], [off + 16, 6], [off + 36, 7]];
+      if (p < 3 || (p >= 10 && p < 13)) s.push([off + 24, 12]);
+      else if (p < 10) s.push([off + 24, 7]);
+      return s;
+    } },
+  { name: 'V7 — TRIPLE CUT', note: 'V1 with three thinner cuts spread up the mark, like scanlines.',
+    slantDiv: 3, cuts: [[7,8],[15,16],[22,23]],
+    spans(p, off) {
+      const s = [[off, 6], [off + 6 + fl(7 * p / 25), 7], [off + 20, 6], [off + 40, 7]];
+      if (p < 3 || (p >= 10 && p < 13)) s.push([off + 28, 12]);
+      else if (p < 10) s.push([off + 28, 7]);
+      return s;
+    } },
+];
+
+function draw(ctx, v, x0, y0, scale, color) {
+  ctx.fillStyle = color;
+  for (let p = 0; p < 26; p++) {
+    if (v.cuts.some(([a, b]) => p >= a && p < b)) continue;
+    const off = fl((25 - p) / v.slantDiv);
+    for (const [x, w] of v.spans(p, off))
+      ctx.fillRect(x0 + x * scale, y0 + p * scale, w * scale, scale);
+  }
+}
+
+const grid = document.getElementById('grid');
+for (const v of variants) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `<h2>${v.name}</h2><p class="note">${v.note}</p>
+    <canvas class="big" width="252" height="120"></canvas>
+    <div class="ctx-label">MENU CORNER (1:1) · STORAGE MODE</div>
+    <canvas class="ctx" width="280" height="40"></canvas>`;
+  grid.appendChild(card);
+  const big = card.querySelector('.big').getContext('2d');
+  big.fillStyle = COLORS.dark;
+  big.fillRect(0, 0, 252, 120);
+  draw(big, v, 16, 8, 4, COLORS.light);
+  const ctx = card.querySelector('.ctx').getContext('2d');
+  ctx.fillStyle = COLORS.dark;                     // the menu's ground
+  ctx.fillRect(0, 0, 136, 40);
+  draw(ctx, v, 4, 7, 1, COLORS.light);
+  ctx.fillStyle = COLORS.dim;                      // storage mode's ground
+  ctx.fillRect(140, 0, 140, 40);
+  draw(ctx, v, 148, 7, 1, COLORS.accent);
+}
+</script>
+</body>
+</html>
