@@ -973,7 +973,7 @@ void LooperEngine::update() {
           if (!tr.live) continue;
           speed[t] = (double)tr.playSpb / spb;
         }
-        if (tr.head - tail < 2) { tr.underruns++; underrunStage = debugStage; continue; }   // (what loop() was doing as it ran short: the log)
+        if ((int32_t)(tr.head - tail) < 2) { tr.underruns++; underrunStage = debugStage; continue; }   // (what loop() was doing as it ran short: the log)
         float sl, sr;
         if (tr.stretch) {
           stretchSample(tr, tail, speed[t], sl, sr);
@@ -1029,6 +1029,14 @@ void LooperEngine::update() {
         }
         double fr = tr.frac + speed[t];
         while (fr >= 1.0) { fr -= 1.0; tail++; }
+        // Over twice its own speed (a clip played at more than twice the tempo it
+        // was recorded at), a step can pass what's been read: held at the stream's
+        // end instead (past it, the frames counted as read wrapped round, and the
+        // track ran on through stale data for good, its switches never reached).
+        if ((int32_t)(tr.head - tail) < 0) {
+          tail = tr.head;
+          fr = 0;
+        }
         tr.frac = fr;
         tr.tail = tail;
       }

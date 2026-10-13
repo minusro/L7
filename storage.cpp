@@ -2934,6 +2934,14 @@ void transportStartAt(int32_t beat, uint32_t (*inBeat)()) {
   clockOriginNext = -1;
   transport.beat = beat;
   transport.sampleInBeat = 0;
+  // The latest bar line (a record press just after it starts there): this
+  // start, if it's on one; none otherwise (not the one from before a stop:
+  // a recording pressed at once started at that old bar line, its length
+  // reckoned from the wrong beat).
+  noInterrupts();
+  transport.lastBarSample = beat % BEATS_PER_BAR == 0 ? transport.now : transport.now - 0x40000000u;
+  transport.lastBarBeat = beat - beat % BEATS_PER_BAR;
+  interrupts();
   for (int t = 0; t < NUM_TRACKS; t++) {
     // Each track plays from its start position at 1.1.1 (beat 0).
     Track &tr = tracks[t];

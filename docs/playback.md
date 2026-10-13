@@ -429,6 +429,17 @@ macOS and Windows 10 (1703) and later have the class driver built in.
   Teensyduino's stereo audio) may need it removed once in Device Manager
   (View > Show hidden devices, the "L7" entries: Uninstall device) before the
   16 channels show up.
+* A track's stream, played over twice the speed it was recorded at (a clip
+  from 120 at 250 BPM and up), can take a step longer than what's left in its
+  ring: run dry (an underrun), its read position is held at the end of what's
+  been read (`tail` never past `head`, compared signed). Before, it went past,
+  the frames counted as read wrapped round, and the track played on through
+  stale data for good: its switches were never reached (a scene switch, after
+  a long resampling, waited for ever until SHIFT+START).
+* A recording pressed just after the clock starts begins at that start's bar
+  line (`transportStartAt()` sets `lastBarSample`; started off a bar line:
+  none): it used to take the bar line from before the stop, its length
+  reckoned from the wrong beat.
 * The master limiter (engine.cpp `Limiter`, config.h `LIMIT_*`): the mix is
   float all the way (tracks, filters, their make-up, the sum: no clipping
   inside); one limiter, on the tracks summed (and the monitored input: what a

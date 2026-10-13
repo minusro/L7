@@ -92,3 +92,5 @@ checked, or turn it into a fix.
 - Defrag with little room: it drops the recording space first (the log says so), then copies; the recording space comes back while stopped (watch the log: 'recording space: making ...'), recording works right after.
 - Switch off in the looper: it starts in the looper (the selection as it was); off in the menu: the menu. Key bus trouble: the serial log says 'keys: the key bus failed', the app keeps running (reads backed off 50 ms), no long freezes in 'keys (I2C)'.
 - High tempo, many stretched tracks, editing cells: no 'slow SD read … card error 0x0B/0x0C data 0xB' on the serial log any more (the SDIO patch), no 'slow pass' lines over ~60 ms, no stutter.
+- High tempo (more than twice the clips' own), a long resampling (10+ bars): the new scene switches in by itself (no SHIFT+START needed); if a track runs dry it comes back in step.
+- Stop, start and press record at once: the recording starts on the start's bar line, its length right.

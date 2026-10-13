@@ -3620,6 +3620,71 @@ for f in os.listdir("."):
     check(deleted >= 1 && !sampleExists(silentId) && tracks[4].state == TrackState::Empty, m);
   }
 
+  printf("a long resampling on another track at a high tempo: its scene switches in\n");
+  {
+    lastAction = "long resample";
+    for (auto &x : tracks) x.stretch = true;       // (as on the M8: stretched)
+    if (transport.running) transportStop();
+    runUntilIdle();
+    for (int i = 0; i < 400; i++) serviceStorage();   // (the recording space made again, stopped: the test before took it)
+    transportStart();
+    {                                              // a record press at once after a start: from this start's bar line, not one from before the stop
+      clearTrack(3);
+      recordPress(3);
+      char m0[160];
+      snprintf(m0, sizeof m0, "recording pressed just after a start: from its bar line (beat %ld, the clock at %ld)", (long)recording.startBeat, (long)transport.beat);
+      check(recording.mode == Recording::Running && recording.startBeat == 0 && transport.beat == 0, m0);
+      cancelRecording(3);
+      runUntilIdle();
+    }
+    const float keep = simTempo();
+    {                                              // more than twice its speed, run dry: held at what's been read, then in step again
+      tempoByHand(100);
+      runBeats(4);
+      clearTrack(3);
+      recordTrack(3, 3.5, 1, "  (track 4 recorded at 100)");
+      tracks[3].stretch = false;                   // (exact frames: resampled)
+      tempoByHand(250);
+      runBeats(4);
+      for (int i = 0; i < 300; i++) audioBlock();  // (the loop held up ~0.9 s: dry)
+      const int32_t dry = (int32_t)(tracks[3].head - tracks[3].tail);
+      runBeats(4);
+      char m1[160];
+      snprintf(m1, sizeof m1, "2.5 times its speed, run dry: what's read never passed (%ld frames ahead), playing on (live %d)", (long)dry, tracks[3].live);
+      check(dry >= 0 && (int32_t)(tracks[3].head - tracks[3].tail) >= 0 && tracks[3].live, m1);
+      tracks[3].underruns = 0;                     // (the stall's own counted out)
+      checkSync(3, "then in step again");
+      tracks[3].stretch = true;
+    }
+    tempoByHand(200);
+    runBeats(4.5);                                 // (the tempo in first: the helpers count beats at the tempo now; not just past a bar line)
+    feedRamp = true;
+    for (int t = 1; t < NUM_TRACKS; t++) if (recording.mode == Recording::Idle && t != 6) clearTrack(t);
+    recordTrack(2, 3.5, 1, "  (track 5 recorded)");
+    recordTrack(1, 3.5, 1, "  (track 6 recorded, then muted)");
+    setTrackMuted(1, true);
+    feedRamp = false;
+    runBeats(4.5);
+    check(recordPress(4, true) && recording.resample, "resample on track 3");
+    for (int i = 0; i < 4000 && recording.mode == Recording::WaitBar; i++) block();
+    runBeats(11 * 4 + 1.5);                        // (11 bars and a bit: on to 12)
+    recordPress(4);
+    runUntilIdle();
+    const uint32_t sample = tracks[4].sample;
+    int on = takeResampled() == 4 ? sceneFromResample(4) : -1;
+    int waited = 0;
+    while (sceneChangeWaiting() && waited < 20000) { block(); waited++; }
+    runBeats(2);
+    char m[200];
+    snprintf(m, sizeof m, "its scene: switched (%d blocks waited, still waiting %d), on track %d (track 1 at %d): sample ours %d, live %d, state %d",
+             waited, sceneChangeWaiting(), on, NUM_TRACKS - 1, tracks[on < 0 ? 0 : on].sample == sample, tracks[on < 0 ? 0 : on].live, (int)tracks[on < 0 ? 0 : on].state);
+    check(on == NUM_TRACKS - 1 && !sceneChangeWaiting() && tracks[on].sample == sample && tracks[on].live &&
+          tracks[on].state == TrackState::Playing, m);
+    tempoByHand(keep);
+    for (auto &x : tracks) x.stretch = false;
+    feedRamp = true;
+  }
+
   printf("a card whose free space is in pieces: recording space grown a chunk at a time while stopped\n");
   {
     if (transport.running) transportStop();
