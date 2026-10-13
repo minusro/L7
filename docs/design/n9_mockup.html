@@ -42,7 +42,8 @@
     (channel 1 plays and records into the selected track). These screens reuse L7's visual
     language: the 2&times;2 block grid, the five greys plus accent, the 3&times;5 pixel font,
     and the status row along the bottom. The small dot column at the status row's left shows
-    where you are in the screen stack (accent dot = this screen).</p>
+    where you are in the screen stack (accent dot = this screen). A navigation prototype of
+    these screens runs on the device: the <code>N9/</code> sketch in the L7 project folder.</p>
   </header>
 
   <section>
@@ -81,11 +82,12 @@
       <figure class="shot">
         <span class="label">MOD &mdash; the selected track's modulation slots</span>
         <canvas id="mod" width="320" height="240"></canvas>
-        <figcaption>Three modulation slots per track, each source &gt; destination &gt; amount;
-        UP/DOWN picks a slot (slot 1 selected), the parameter cells below edit the selected
-        slot's source (here LFO 1: shape, rate, sync, depth). The shape preview bottom-left
-        draws the configured LFO; the dim notes beside it are the slot's remaining settings.
-        Destinations come from the selected engine's parameter list.</figcaption>
+        <figcaption>Four selectable modulation sources per track (here LFO 1, LFO 2, an
+        envelope and velocity), each with two destination slots (destination + amount, dash =
+        free); UP/DOWN picks a source (source 1 selected), the parameter cells below edit it
+        (LFO 1: shape, rate, sync, depth). The shape preview bottom-left draws the configured
+        LFO; the dim notes beside it are its remaining settings. Destinations come from the
+        selected engine's parameter list.</figcaption>
       </figure>
     </div>
   </section>
@@ -99,8 +101,8 @@
         <figcaption>The selected track's engine: the selector on top (B + LEFT/RIGHT steps
         engines, gapless at the next bar like L7's sample switch; the X/N count beside it),
         then two rows of four parameter cells — the engine defines their names. ADSR preview
-        bottom-left; voice info (polyphony, MIDI channel) beside it. Engine names here are
-        placeholders.</figcaption>
+        bottom-left; voice info beside it (the 32 voices are a shared pool across the nine
+        tracks). Engine names here are placeholders.</figcaption>
       </figure>
     </div>
   </section>
@@ -149,13 +151,19 @@
   </section>
 
   <section>
+    <h2>Decided (2026-10-13)</h2>
+    <ul>
+      <li><strong>Six screens</strong> in the stack, SHIFT + UP/DOWN; scenes are no longer launched by SHIFT + arrows (the grid launches them).</li>
+      <li><strong>Piano roll</strong> for the clip editor.</li>
+      <li><strong>Modulation</strong> — four selectable sources per track, each with two destination slots.</li>
+      <li><strong>Voices</strong> — 32, a shared pool across the nine tracks.</li>
+    </ul>
+  </section>
+
+  <section>
     <h2>Open questions</h2>
     <ul>
-      <li><strong>Four vs six</strong> — the brief said four main screens but listed six; are FX and the editor secondary (e.g. only via B + A), or is it simply six in the stack?</li>
-      <li><strong>Scene stepping</strong> — SHIFT + UP/DOWN meant scenes in L7 and means screens here. Scenes from the grid only, or keep a shortcut (SHIFT + LEFT/RIGHT?)?</li>
-      <li><strong>Editor style</strong> — piano roll (mocked) or an M8-style tracker column? The piano roll suits the d-pad but holds less per screen.</li>
-      <li><strong>Engines</strong> — which engines, how many voices per track fit the Teensy beside 9 tracks of mixing and two send effects?</li>
-      <li><strong>Modulation model</strong> — free slots (mocked, 3 per track) vs fixed LFO + envelope pages per engine.</li>
+      <li><strong>Engines</strong> — which engines; what fits the Teensy beside 9 tracks of mixing and two send effects.</li>
       <li><strong>Clip length</strong> — per clip (1–8 bars?) with the grid showing length, or scene-wide like L7?</li>
       <li><strong>MIDI</strong> — channel 1 to the selected track for now; later one channel per track (1–9)?</li>
     </ul>
@@ -356,30 +364,35 @@
   // ---- 3 · Track modulation ----------------------------------------------
   screen('mod', () => {
     title('MOD', 'TRACK 3  PLUCK');
-    const slots = [
-      ['1  LFO1 > CUTOFF', '+42'],
-      ['2  ENV2 > PITCH', '-12'],
-      ['3  VEL  > LEVEL', '+64'],
+    // Four selectable sources per track, two destination slots each (dash = free).
+    const rows = [
+      ['1 LFO1', 'CUTOFF', '+42', 'PITCH', '-12'],
+      ['2 LFO2', 'SHAPE', '+20', '-', ''],
+      ['3 ENV', 'LEVEL', '+64', 'RES', '+8'],
+      ['4 VEL', 'LEVEL', '+50', '-', ''],
     ];
-    slots.forEach((s, i) => {
-      const y = 26 + i * 17;
-      if (i === 0) { rect(4, y, 312, 16, C.DARK); frame(4, y, 312, 16, C.LIGHT); }
-      text(10, y + 3, s[0], i === 0 ? C.INK : C.DIM);
-      text(282, y + 3, s[1], i === 0 ? C.ACC : C.DIM);
+    rows.forEach((s, i) => {
+      const y = 26 + i * 17, sel = i === 0;
+      if (sel) { rect(4, y, 312, 16, C.DARK); frame(4, y, 312, 16, C.LIGHT); }
+      text(10, y + 3, s[0], sel ? C.INK : C.DIM);
+      text(80, y + 3, s[1], sel ? C.LIGHT : C.DIM);
+      text(146, y + 3, s[2], sel ? C.ACC : C.DIM);
+      text(200, y + 3, s[3], sel ? C.LIGHT : C.DIM);
+      text(266, y + 3, s[4], sel ? C.ACC : C.DIM);
     });
-    text(6, 84, 'LFO1', C.LIGHT);
+    text(6, 98, 'LFO1', C.LIGHT);
     const p = [['SHAPE', 'TRI', null], ['RATE', '1/8', 0.4], ['SYNC', 'ON', null], ['DEPTH', '+42', 0.66]];
-    p.forEach((c, i) => paramCell(4 + i * 79, 96, 76, 42, c[0], c[1], c[2], i === 3));
+    p.forEach((c, i) => paramCell(4 + i * 79, 110, 76, 42, c[0], c[1], c[2], i === 3));
     // LFO shape preview: a triangle wave in the accent colour.
-    frame(4, 148, 180, 56, C.DARK);
-    rect(8, 175, 172, 2, C.DARK);
+    frame(4, 158, 180, 48, C.DARK);
+    rect(8, 181, 172, 2, C.DARK);
     for (let i = 0; i < 86; i++) {
       const ph = (i % 43) / 43, v = ph < 0.5 ? ph * 2 : 2 - ph * 2;
-      rect(8 + i * 2, 196 - Math.round(v * 20) * 2, 2, 2, C.ACC);
+      rect(8 + i * 2, 198 - Math.round(v * 16) * 2, 2, 2, C.ACC);
     }
-    text(196, 156, 'RETRIG ON', C.DIM);
-    text(196, 170, 'FADE 0', C.DIM);
-    text(196, 184, 'MODE FREE', C.DIM);
+    text(196, 164, 'RETRIG ON', C.DIM);
+    text(196, 178, 'FADE 0', C.DIM);
+    text(196, 192, 'MODE FREE', C.DIM);
     statusRow(2);
   });
 
@@ -403,7 +416,7 @@
     for (let i = 0; i < 24; i++) rect(24 + i * 2, top + Math.round((i / 24) * 16), 2, 2, C.ACC);              // decay
     rect(72, top + 16, 60, 2, C.ACC);                                                                          // sustain
     for (let i = 0; i < 22; i++) rect(132 + i * 2, top + 16 + Math.round((i / 22) * (base - top - 16)), 2, 2, C.ACC); // release
-    text(196, 160, 'POLY 4', C.DIM);
+    text(196, 160, 'VOICES 32', C.DIM);
     text(196, 174, 'MIDI CH 1', C.DIM);
     text(196, 188, 'OUT A+B', C.DIM);
     statusRow(3);

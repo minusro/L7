@@ -188,6 +188,12 @@ TTTTT000000TTTTT
 - when first showing the wave shift outline, don't show the label first but wait .5s and then cycle through all labels every second (name number/count, original bpm, date time recorded) (?)
 - a menu to load different apps
 
+
+#12oct26
+
+- 
+
+
 # Backlog
 
 - further manual tweaks

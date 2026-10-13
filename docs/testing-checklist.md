@@ -6,6 +6,10 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **N9 navigation prototype** (`N9/`, its own sketch): all six screens draw
+  as the mockup document shows, SHIFT+UP/DOWN steps the stack (stops at the
+  ends), no flicker on a switch (frame buffer), power button still powers off.
+  Uploaded once; never watched on the device.
 - [ ] **Ableton export, the fine rotate's direction.** Export a project with a
   clip shifted (B then A + LEFT/RIGHT) and play it in Live next to the M8.
   The whole loop moves the clip's start marker; a range inside the loop moves
