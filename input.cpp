@@ -1321,6 +1321,7 @@ void pollKeys() {
   static uint8_t prev = 0, repeatKey = 0;
   static uint32_t repeatAt = 0;
   const uint8_t ARROWS = m8::BTN_LEFT | m8::BTN_RIGHT | m8::BTN_UP | m8::BTN_DOWN;
+  debugStage = "keys (I2C)";
   if (board.keysChanged(keys)) {
     debugStage = "key action";
     uint8_t pressed = keys & ~prev;
@@ -1356,8 +1357,10 @@ void pollKeys() {
     edgeWaiting = false;
     repeatKey = 0;
   }
+  debugStage = "keys held (menu)";
   menuHold();
   switchHold();
+  debugStage = "keys (rotate, nudge, tap)";
   serviceRotate();
   nudgeService();
   phaseService();

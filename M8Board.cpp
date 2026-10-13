@@ -339,7 +339,7 @@ Board::Touch Board::touchRead() {
   return t;
 }
 
-uint8_t Board::readExpander() {
+int Board::readExpander() {
   int v;
   if (_variant == VARIANT_A) {
     v = readReg(0x09);                   // MCP23008 GPIO
@@ -347,15 +347,30 @@ uint8_t Board::readExpander() {
     v = readReg(0x08);                   // SX1508 RegData
     writeReg(0x0C, 0xFF);                // clear interrupt source
   }
-  if (v < 0) return _keys;               // bus error: keep last state
+  if (v < 0) return -1;                  // bus error: the caller keeps the last state
   return (uint8_t)~v;                    // keys pull to GND -> invert
 }
 
 uint8_t Board::keys() {
-  // Only hit the bus when INT is asserted (low), or on the very first call.
-  if (_first || digitalReadFast(_pins->keyInt) == LOW) {
-    _keys = readExpander();
+  // Only hit the bus when INT is asserted (low), or on the very first call;
+  // and not again for _keyGap (a failed read: much longer, the keys as they were).
+  const uint32_t now = micros();
+  if (_first || (digitalReadFast(_pins->keyInt) == LOW && now - _keyReadAt >= _keyGap)) {
+    _keyReadAt = now;
     _first = false;
+    int v = readExpander();
+    if (v >= 0) {
+      _keys = (uint8_t)v;
+      _keyGap = 1000;
+    } else {
+      _keyGap = 50000;
+      _keyErrors++;
+      if (millis() - _keyErrorLogAt >= 1000) {
+        _keyErrorLogAt = millis();
+        Serial.printf("keys: the key bus failed (%lu times so far; read %lu us)\n", (unsigned long)_keyErrors,
+                      (unsigned long)(micros() - now));
+      }
+    }
   }
   return _keys;
 }

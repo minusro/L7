@@ -233,9 +233,16 @@ FLASHMEM void setup() {
   freezeTimer.priority(255);
   freezeTimer.begin(freezeCheck, 100000);
   hideSplash();
-  // The app starts in the menu, on the loaded project's card (the dummy
-  // project loaded: the first empty slot's; none empty: the first card).
-  restoreMenu(1000 + (projectCurrent() >= 0 ? projectCurrent() : max(menuFirstEmptySlot(), 0)));
+  // The app starts where it was left: in the looper (its selection as it
+  // was), or in the menu, on the loaded project's card (the dummy project
+  // loaded: always the menu, on the first empty slot's; none empty: the first card).
+  if (sessionMenu() >= 0 && sessionMenu() < 1000 && projectCurrent() >= 0) {
+    board.tft().fillScreen(BG);
+    uiGeneration++;
+    for (int i = 0; i < ROWS; i++) drawTrack(i);
+  } else {
+    restoreMenu(1000 + (projectCurrent() >= 0 ? projectCurrent() : max(menuFirstEmptySlot(), 0)));
+  }
   // (The clock stopped, whatever it was: START starts it, the project's tracks
   // already loaded and ready to play.)
 }
@@ -339,7 +346,6 @@ void loop() {
       }
     }
   }
-  debugStage = "keys (I2C)";
   pollKeys();
   saveSessionWhenIdle();
   serviceScenes();

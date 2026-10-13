@@ -121,7 +121,7 @@ public:
 private:
   bool initMCP23008();
   bool initSX1508();
-  uint8_t readExpander();
+  int readExpander();                     // (-1: the bus failed)
   bool writeReg(uint8_t reg, uint8_t val);
   int  readReg(uint8_t reg);
   void applyVariantBPanelTuning();
@@ -132,6 +132,11 @@ private:
   ILI9341_t3n *_tft = nullptr;
   uint8_t _keys = 0, _lastReported = 0;
   bool _first = true;
+  // The key bus read at most every _keyGap us (keys() is asked many times a
+  // pass): 1 ms normally, 50 ms after a failed read (a stuck bus's every read
+  // waits its timeouts: asked that often, the loop starved and the audio
+  // streams ran dry).
+  uint32_t _keyReadAt = 0, _keyGap = 0, _keyErrors = 0, _keyErrorLogAt = 0;
   uint8_t _touchId = 0;
   int8_t _hpState = -1;              // -1: not reported yet
   uint8_t _hpCount = 0;
