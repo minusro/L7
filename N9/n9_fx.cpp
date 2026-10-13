@@ -55,7 +55,7 @@ struct FxState {
   int hold = 0, pos = 0, idx[10];
 };
 DMAMEM static int16_t masterLine[27648];
-DMAMEM static int16_t trackLine[9][2][4096];
+DMAMEM static int16_t trackLine[9][2][1024];   // inserts' taps never pass ~820 samples
 DMAMEM static int16_t sendDelayLine[27648];
 DMAMEM static int16_t sendReverbLine[27648];
 DMAMEM static int16_t sendChorusLine[4096];
@@ -96,7 +96,7 @@ void fxSetTrackType(uint8_t t, uint8_t slot, uint8_t type) {
   if (t >= 9 || slot >= 2 || type >= FX_TYPES || type == FXT_PINGPONG) return;
   loadDefaults(trackFx[t][slot], type);
   if (fxIsSend(type)) trackFx[t][slot].p[7] = 0;        // send starts silent
-  resetState(stTrack[t][slot], trackLine[t][slot], 4096, trackFx[t][slot]);
+  resetState(stTrack[t][slot], trackLine[t][slot], 1024, trackFx[t][slot]);
   Serial.printf("fx: track %u.%u %s%s\n", t + 1, slot + 1, FX_TYPE_NAMES[type], fxIsSend(type) ? " (send)" : "");
 }
 
@@ -115,7 +115,7 @@ uint8_t fxStepMasterType(uint8_t type, int dir) { return (type + FX_TYPES + dir)
 
 void fxSlotsInit() {
   for (int t = 0; t < 9; t++)
-    for (int k = 0; k < 2; k++) { loadDefaults(trackFx[t][k], FXT_NONE); resetState(stTrack[t][k], trackLine[t][k], 4096, trackFx[t][k]); }
+    for (int k = 0; k < 2; k++) { loadDefaults(trackFx[t][k], FXT_NONE); resetState(stTrack[t][k], trackLine[t][k], 1024, trackFx[t][k]); }
   loadDefaults(sendFx[0], FXT_DELAY);
   loadDefaults(sendFx[1], FXT_REVERB);
   loadDefaults(sendFx[2], FXT_CHORUS);
@@ -148,10 +148,10 @@ static void processSlot(const FxSlot &sl, FxState &t, float *l, float *r, int n,
         float m1 = sinf(t.ph * 6.2832f), m2 = sinf((t.ph + spread) * 6.2832f);
         float d1 = base + depth * (1.0f + m1) * 0.5f + wob + 2.0f;
         float d2 = base + depth * (1.0f + m2) * 0.5f + wob + 2.0f;
-        float w1 = readLine(t.line, 4096, t.pos, d1);
-        float w2 = readLine(t.line, 4096, t.pos, d2);
+        float w1 = readLine(t.line, t.lineLen, t.pos, d1);
+        float w2 = readLine(t.line, t.lineLen, t.pos, d2);
         t.line[t.pos] = fi16(x + w1 * fb);
-        t.pos = (t.pos + 1) & 4095;
+        t.pos = (t.pos + 1) & (t.lineLen - 1);
         t.ph += hz / 44100.0f; if (t.ph >= 1.0f) t.ph -= 1.0f;
         float ol = l[i] * dry + w1 * wet, orr = r[i] * dry + w2 * wet;
         if (sat > 0.01f) { float g = 1.0f + 4.0f * sat; ol = softsat(ol * g) / (1 + sat); orr = softsat(orr * g) / (1 + sat); }

@@ -47,7 +47,12 @@ void setup() {
   for (int i = 0; i < 6 && !codec.enable(); i++) delay(10);
   codec.volume(0.6f);
   synthMidiBegin();
-  board.tft().useFrameBuffer(true);
+  // The frame buffer is STATIC: left to malloc it silently fails once
+  // RAM2's heap runs low, and the library falls back to direct drawing -
+  // which is exactly a full-screen flicker on every sequencer step.
+  static DMAMEM uint16_t framebuffer[320 * 240];
+  board.tft().setFrameBuffer(framebuffer);
+  if (!board.tft().useFrameBuffer(true)) Serial.println("n9: NO FRAMEBUFFER");
   drawScreen(nav.screen);
 }
 
