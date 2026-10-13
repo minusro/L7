@@ -109,7 +109,7 @@ private:
 #define FIFO_SDIO 0
 struct SdioConfig { explicit SdioConfig(int) {} };
 struct FsDateTime { static void setCallback(void (*)(uint16_t *, uint16_t *)) {} };
-struct SdCard { uint8_t errorCode() { return 0; } uint32_t errorData() { return 0; } };
+struct SdCard { uint8_t errorCode() { return 0; } uint32_t errorData() { return 0; } uint32_t status() { return 0x900; } };   // (status: ready, in transfer)
 
 class SdFs {
 public:

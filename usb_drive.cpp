@@ -111,8 +111,14 @@ FLASHMEM bool usbDriveMode() {   // (flash: RAM1 is full)
   uiGeneration++;
 
   pollTimer.end();                                  // (polled from here from now on: reads and writes wait for the card)
-  usb_msc_set_media(&MEDIA);
-  Serial.println("storage mode: started");
+  // The card started again (another may have been put in since it was last
+  // read); none: an empty card reader until one is put in. Checked twice a
+  // second: taken out (or swapped), the computer is told it's gone, then
+  // that the new one arrived.
+  bool card = cardRestart();
+  usb_msc_set_media(card ? &MEDIA : nullptr);
+  Serial.printf("storage mode: started%s\n", card ? "" : " (no card)");
+  uint32_t cardAt = millis();
 
   int shown = -1;
   uint32_t hueAt = 0;
@@ -142,8 +148,21 @@ FLASHMEM bool usbDriveMode() {   // (flash: RAM1 is full)
                       (unsigned long)usb_msc_broken, (unsigned long)usb_msc_restarts);
       }
     }
+    if (millis() - cardAt >= 500) {
+      cardAt = millis();
+      if (card && !cardResponds()) {
+        card = false;
+        usb_msc_set_media(nullptr);                 // (no medium: the computer drops the drive)
+        Serial.println("storage mode: the card taken out");
+      } else if (!card && cardRestart()) {
+        card = true;
+        usb_msc_set_media(&MEDIA);                  // (a new medium: the computer mounts it)
+        usb_msc_clear_host_state();
+        Serial.println("storage mode: a card put in");
+      }
+    }
     if (usb_msc_ejected()) return leave("EJECTED");
-    int state = !usb_configuration ? 0 : usb_msc_host_seen() ? 2 : 1;
+    int state = !card ? 3 : !usb_configuration ? 0 : usb_msc_host_seen() ? 2 : 1;
     if (millis() - hueAt >= 40) {                   // the title and logo: light grey, and once connected the hue goes round, once in 4 s
       hueAt = millis();
       drawBatteryIcon(false, DARK, SCREEN);          // (its charge read every few seconds: redrawn as it changes)
@@ -155,7 +174,7 @@ FLASHMEM bool usbDriveMode() {   // (flash: RAM1 is full)
     }
     if (state != shown) {
       shown = state;
-      static const char *const TEXT[3] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED"};
+      static const char *const TEXT[4] = {"CONNECT A USB CABLE", "WAITING FOR THE COMPUTER", "CONNECTED", "INSERT AN SD CARD"};
       line(STATE_Y, TEXT[state], INK);
       Serial.printf("storage mode: %s\n", TEXT[state]);
     }

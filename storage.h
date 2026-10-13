@@ -64,6 +64,10 @@ bool storageMayWrite();
 // Mount SD, load saved tracks; prepares recording space the first time
 // (progress messages go to `progress`). false = no card / no space.
 bool storageBegin(void (*progress)(const char *));
+// The card: there and answering (none, or another one put in since: false);
+// started again (true: a card there now). Both stopped and idle only.
+bool cardResponds();
+bool cardRestart();
 // Drops everything held from the card without touching it (storage mode: the
 // computer may have changed any file), the tracks emptied; storageBegin() and
 // scenesBegin() then read it all again. Stopped and not recording only.

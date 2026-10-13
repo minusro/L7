@@ -143,3 +143,16 @@ ms to seconds and starves the streams. So:
   pastes it onto an empty track, keeping its alignment.
 * `trackChanged(t)` marks the unit file dirty and lets the current scene
   follow (not while a scene is being applied: `applyingUnit`).
+
+## Changing cards
+
+Cards can be swapped while the clock is stopped and nothing records: twice
+a second loop() asks the card for its status (`cardResponds()`, CMD13,
+microseconds); one taken out (or another put in, which doesn't answer to the
+old one's address) is noticed, "INSERT AN SD CARD" is shown until a card
+answers (`waitForCard()`), and everything is read from it as after storage
+mode (`reloadFromCard()`: projects, samples, the session; a card without
+/L7 gets a fresh one). Edits not yet written to the old card when it was
+taken out are lost. At a start with no card: the same screen, then the
+start goes on. Storage mode starts the card again on entry and follows
+swaps while open (usb_drive.cpp).

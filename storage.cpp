@@ -1982,6 +1982,11 @@ static bool sdBegin() {
   return SD.sdfs.begin(SdioConfig(DMA_SDIO));
 }
 
+// A card there, answering (its status, CMD13: microseconds; none, or another
+// card put in since, doesn't answer). And the card started again (a new one).
+bool cardResponds() { return SD.sdfs.card() && SD.sdfs.card()->status() != 0; }
+bool cardRestart() { return sdBegin(); }
+
 FLASHMEM bool storageBegin(void (*progress)(const char *)) {
   if (!sdBegin()) return false;
   if (!SD.sdfs.exists("/L7") && SD.sdfs.exists("/looper")) SD.sdfs.rename("/looper", "/L7");   // (the app's folder, renamed)

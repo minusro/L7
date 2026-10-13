@@ -256,7 +256,10 @@ A recording track's waveform area is in the accent colour (a block of black betw
   is loaded: closing the menu, storage mode and moving the selection leave it ("EXPORT
   FAILED" goes when the menu closes); while it shows,
   the export item's action button is greyed and A does nothing. Storage mode (A or B, on release):
-  writes everything out, then shows the card to a computer over USB as a
+  writes everything out, starts the card again (`cardRestart()`: another may have been put in
+  since; none: "INSERT AN SD CARD" in the state's line, an empty card reader to the computer,
+  until one is; checked twice a second, `cardResponds()`, a card taken out or swapped meanwhile:
+  the computer told it's gone, then that the new one arrived), then shows the card to a computer over USB as a
   mounted drive (USB mass storage, see usb_drive.h; it mounts like a flash
   drive on macOS, Windows and Linux) under a grey screen with the title (the L7 logo,
   in the menu's corner place and size, in the same colour at all times):

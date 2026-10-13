@@ -147,13 +147,36 @@ static void fatal(const char *msg) {
   for (;;) handlePowerButton();
 }
 
-// Back from storage mode: everything the app knew of the card is dropped and read
-// again, as at a start (the computer may have changed any file); the menu stays open.
+// No card (taken out, or none at a start): a screen asking for one, until a
+// card answers (the power key still works meanwhile).
+static void waitForCard() {
+  auto &t = board.tft();
+  t.fillScreen(BG);
+  const char *msg = "INSERT AN SD CARD";
+  drawText((320 - textWidth(msg)) / 2, (240 - FONT_H) / 2, msg, LIGHT, BG);
+  Serial.println("SD card: none, waiting for one");
+  while (!cardRestart()) {
+    for (uint32_t at = millis(); millis() - at < 300;) {
+      loopCount++;
+      handlePowerButton();
+    }
+  }
+  Serial.println("SD card: in");
+  t.fillScreen(BG);
+}
+
+// Back from storage mode, or another card put in: everything the app knew of
+// the card is dropped and read again, as at a start (the computer may have
+// changed any file; another card has other files); the menu stays as it was.
+// No card: waits for one.
 static void reloadFromCard() {
-  storageForget();
-  scenesForget();
-  if (!storageBegin([](const char *msg) { Serial.println(msg); }))
-    fatal("SD card missing or full: the looper needs ~100 MB free in /L7.");
+  for (;;) {
+    storageForget();
+    scenesForget();
+    if (storageBegin([](const char *msg) { Serial.println(msg); })) break;
+    if (cardResponds()) fatal("SD card full: the looper needs ~100 MB free in /L7.");
+    waitForCard();
+  }
   beginSession();
   transport.spb = spbForBpm(bpm);
   scenesBegin([] { return bpm; }, loadTempo, sessionProject(), newProjectTempo);
@@ -188,8 +211,12 @@ FLASHMEM void setup() {
     Serial.println(msg);
     splashTick();
   };
-  if (!storageBegin(progress))
-    fatal("SD card missing or full: the looper needs ~100 MB free in /L7.");
+  while (!storageBegin(progress)) {                  // (no card: wait for one)
+    if (cardResponds()) fatal("SD card full: the looper needs ~100 MB free in /L7.");
+    storageForget();
+    waitForCard();
+    showSplash();
+  }
   progress("");
   splashTick();
   beginSession();                                  // the tempo and the selection
@@ -217,6 +244,21 @@ void loop() {
   loopCount++;
   debugStage = "power button";
   handlePowerButton();
+  // Another card (hot swap: stopped, nothing recording): checked twice a second;
+  // a card not answering (taken out, or another put in) is waited for and
+  // everything read again from it.
+  static uint32_t cardCheckAt = 0;
+  if (!transport.running && recording.mode == Recording::Idle && millis() - cardCheckAt >= 500) {
+    cardCheckAt = millis();
+    debugStage = "SD card check";
+    if (!cardResponds()) {
+      Serial.println("SD card: gone (taken out, or another one put in)");
+      reloadFromCard();
+      uiGeneration++;
+      if (menuOpen()) drawMenu();
+      for (int i = 0; i < ROWS; i++) drawTrack(i);
+    }
+  }
   debugStage = "storage";
   serviceStorage();
 
