@@ -72,9 +72,10 @@ static const EngineDef ENGINES[ENGINE_COUNT] = {
     {O_M1, 1, 300, false, 0, 0, 0, 0},                 // M1 (envelopes come from the program)
 };
 
-// M1 helpers: a time value 0-99 as milliseconds (roughly the M1's log
-// scale), and as a per-sample easing coefficient.
-static inline float m1ms(uint8_t v) { return 2.0f * expf(0.0816f * v); }
+// M1 helpers: a time value 0-99 as an easing time constant in ms (the M1's
+// log scale over ~7 time constants of audible decay: value 99 ~ a 6-7 s
+// tail, not a 50 s one), and as a per-sample easing coefficient.
+static inline float m1ms(uint8_t v) { return 1.0f * expf(0.07f * v); }
 static inline float m1coef(uint8_t v) { return 1.0f - expf(-1.0f / (m1ms(v) * 44.1f)); }
 
 // Microwave times (0-127), the scale a guess until a spec surfaces.
@@ -426,7 +427,8 @@ void N9Synth::update() {
       if (d.osc == O_M1) m1buf[i] += s * amp;    // (its envelopes are already in s)
       else mix[i] += s * v.env * amp;
     }
-    if (v.env < 0.0005f && v.state != ATTACK) { v.state = IDLE; active--; }
+    bool quiet = v.env < 0.002f && (!v.dual || v.env2 < 0.002f);
+    if (quiet && v.state != ATTACK) { v.state = IDLE; active--; }
   }
   _active = active;
 

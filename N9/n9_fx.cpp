@@ -50,8 +50,8 @@ static constexpr int DL = 13230, DR = 9922;     // 300 ms, 225 ms
 static void delayFx(const float *in, float *l, float *r, int n) {
   for (int i = 0; i < n; i++) {
     float tl = i16f(dbL[(dpos - DL) & 16383]), tr = i16f(dbR[(dpos - DR) & 16383]);
-    dbL[dpos] = fi16(in[i] + tr * 0.42f);
-    dbR[dpos] = fi16(in[i] * 0.85f + tl * 0.42f);
+    dbL[dpos] = fi16(in[i] + tr * 0.35f);
+    dbR[dpos] = fi16(in[i] * 0.85f + tl * 0.35f);
     l[i] = tl; r[i] = tr;
     dpos = (dpos + 1) & 16383;
   }
@@ -85,7 +85,7 @@ static void reverb(const float *in, float *l, float *r, int n) {
       if (++cp[c] >= CLEN[c]) cp[c] = 0;
       sum += y;
     }
-    sum *= (1.0f / NC) * 2.4f;
+    sum *= (1.0f / NC) * 1.8f;
     float a = allpass(ab1, AL1, ap1, sum);
     l[i] = allpass(ab2, AL2, ap2, a);
     r[i] = allpass(ab3, AL3, ap3, a);
@@ -95,6 +95,7 @@ static void reverb(const float *in, float *l, float *r, int n) {
 // ---- The chain ------------------------------------------------------------
 
 static void stage(const float *in, float *l, float *r, int n, FxCat cat, float wet) {
+  if (wet > 0.7f) wet = 0.7f;                   // the dry part always stays audible
   if (cat == FX_NONE || wet <= 0.001f) {
     for (int i = 0; i < n; i++) l[i] = r[i] = in[i];
     return;
