@@ -132,10 +132,13 @@ static void appMsg(const char *l1, const char *l2) {
   if (l2) drawText((320 - textWidth(l2)) / 2, 124, l2, LIGHT, BG);
 }
 
+// Only the progress line repaints (a fixed-width opaque box over the old
+// text): appMsg's fillScreen on every percent made the whole screen flicker.
 static void appProgress(int pct) {
   char ln[24];
   snprintf(ln, sizeof ln, "READING  %d", pct);
-  appMsg("SWITCHING TO N9", ln);
+  int w = textWidth("READING  100");
+  drawText((320 - w) / 2, 124, ln, LIGHT, BG, w);
 }
 
 static void appPreMove() {
