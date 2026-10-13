@@ -23,6 +23,14 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
+- [ ] **N9: the trimmed lineup and live cells.** 27 engines: PROPHET, 303,
+  JUNO, then the 24 Mutable models (engine selector a third of the screen,
+  M1/Microwave gone from it). INST cells edit for real (B+arrows, LEFT/RIGHT
+  1, UP/DOWN 10, repeats): PROPHET detune/cutoff/res/env/ADSR; 303 incl.
+  WAVE (square at 50+) and SLIDE time; JUNO's new DCO voice (saw + detune +
+  sub); Mutable harmonics/timbre/morph/decay/LPG/level. Values apply to NEW
+  notes (not live on held ones yet). Listen: plaits models at 4 voices (CPU
+  log), speech model on the SPEECH engine, drum models trigger right.
 - [ ] **N9: the Microwave.** Engine 12 plays the user's factory bank (256
   sounds, sounds/Microwave soundbank): preset cell shows "NNN NAME", B +
   LEFT/RIGHT or MIDI program change steps it. Parameter offsets were
