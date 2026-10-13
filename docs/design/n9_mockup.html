@@ -36,9 +36,9 @@
   <header>
     <h1>N9 Screen Mockups</h1>
     <p>N9 is L7's sister app on the same M8 hardware: nine MIDI clip tracks, each with its own
-    selectable synthesizer engine. Six screens, stepped through with SHIFT + UP/DOWN, top to
-    bottom: master effects &amp; sends, mixer, track modulation, track instrument, clip grid,
-    clip editor. Notes are edited by hand in the clip editor or recorded from USB/serial MIDI
+    selectable synthesizer engine. Eight screens, stepped through with SHIFT + UP/DOWN, top to
+    bottom: master FX slots, send effects, mixer, track modulation, track FX, track
+    instrument, clip grid, clip editor. Notes are edited by hand in the clip editor or recorded from USB/serial MIDI
     (channel 1 plays and records into the selected track). These screens reuse L7's visual
     language: the 2&times;2 block grid, the five greys plus accent, the 3&times;5 pixel font,
     and the status row along the bottom. The small dot column at the status row's left shows
@@ -49,7 +49,21 @@
   </header>
 
   <section>
-    <h2>1 &middot; Master effects &amp; sends (top screen)</h2>
+    <h2>1 &middot; Master FX slots (top screen)</h2>
+    <div class="grid">
+      <figure class="shot">
+        <span class="label">MFX &mdash; two selectable effects on the mix bus</span>
+        <canvas id="mfx" width="320" height="240"></canvas>
+        <figcaption>The topmost screen: two selectable master FX slots (here a bus compressor
+        and tape saturation), above the send effects. Each slot is a selector row (B +
+        LEFT/RIGHT steps the effect type, like the engine selector) with four parameter cells
+        in L7's cell grammar.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>2 &middot; Send effects</h2>
     <div class="grid">
       <figure class="shot">
         <span class="label">FX &mdash; two send effects and per-track send levels</span>
@@ -63,7 +77,7 @@
   </section>
 
   <section>
-    <h2>2 &middot; Mixer</h2>
+    <h2>3 &middot; Mixer</h2>
     <div class="grid">
       <figure class="shot">
         <span class="label">MIX &mdash; nine channel strips</span>
@@ -79,7 +93,7 @@
   </section>
 
   <section>
-    <h2>3 &middot; Track modulation</h2>
+    <h2>4 &middot; Track modulation</h2>
     <div class="grid">
       <figure class="shot">
         <span class="label">MOD &mdash; the selected track's modulation slots</span>
@@ -95,7 +109,20 @@
   </section>
 
   <section>
-    <h2>4 &middot; Track instrument</h2>
+    <h2>5 &middot; Track FX</h2>
+    <div class="grid">
+      <figure class="shot">
+        <span class="label">TFX &mdash; the selected track's two FX slots</span>
+        <canvas id="tfx" width="320" height="240"></canvas>
+        <figcaption>Between modulation and instrument: two selectable FX slots on each track
+        (here chorus and drive), the same grammar as the master slots. The Juno engine's
+        chorus I/II lives with the engine; these are free slots.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>6 &middot; Track instrument</h2>
     <div class="grid">
       <figure class="shot">
         <span class="label">INST &mdash; engine select and its parameters</span>
@@ -110,7 +137,7 @@
   </section>
 
   <section>
-    <h2>5 &middot; Clip grid</h2>
+    <h2>7 &middot; Clip grid</h2>
     <div class="grid">
       <figure class="shot">
         <span class="label">GRID &mdash; 9 tracks &times; 8 scenes</span>
@@ -127,17 +154,21 @@
   </section>
 
   <section>
-    <h2>6 &middot; Clip editor (bottom screen)</h2>
+    <h2>8 &middot; Clip editor (bottom screen)</h2>
     <div class="grid">
       <figure class="shot">
         <span class="label">EDIT &mdash; piano roll of the cursor's clip</span>
         <canvas id="editor" width="320" height="240"></canvas>
         <figcaption>A piano roll, one bar of sixteenth steps per page: pitches down the left
         (white keys light in the key strip, octave line above each C), beats as dark vertical
-        lines, the playhead in accent. Arrows move the cursor; A adds or removes a note; with a
-        note under the cursor (white, framed) B + LEFT/RIGHT sets its length, B + UP/DOWN its
-        velocity — shown in the lane along the bottom. Recording from MIDI writes into this
-        view live. Page/zoom and a tracker-style alternative are open questions below.</figcaption>
+        lines, the playhead in accent. The bar strip on top shows the clip's bars (at most 16;
+        here 4) with the loop brace in accent — a whole-bar range that may wrap around the loop
+        boundary (here bars 3-4-1) — and a white frame on the bar the roll shows. Arrows move
+        the cursor; A adds or removes a note; with a note under the cursor (white, framed)
+        B + LEFT/RIGHT sets its length, B + UP/DOWN its velocity — the lane along the bottom.
+        Recording from MIDI writes into this view live: recordings are a fixed number of bars,
+        start and stop on the first beat, and stopping the recording sets the clip's
+        length.</figcaption>
       </figure>
     </div>
   </section>
@@ -162,6 +193,12 @@
       <li><strong>Engines (13)</strong> — SAW, PULSE, SUPER (detuned saw stack), FM2, FM4, PLUCK
       (Karplus-Strong), WT (wavetable), NOISE, plus five emulations: 303, Juno-60 (with
       chorus I + II), Prophet-5, Waldorf Microwave, Korg M1.</li>
+      <li><strong>FX slots</strong> — two selectable FX slots on each track (a screen between
+      modulation and instrument) and two more selectable master FX slots on a topmost screen,
+      above the send effects.</li>
+      <li><strong>Clips</strong> — at most 16 bars. A loop brace selects a whole-bar range, which may
+      wrap around the loop boundary. Recordings are a fixed number of bars, starting and stopping
+      on the first beat; the length is set by stopping the clip recording.</li>
     </ul>
   </section>
 
@@ -170,7 +207,6 @@
     <ul>
       <li><strong>Emulation depth</strong> — per-engine CPU cost of the five emulations against the
       32-voice pool; measured per block on the prototype's serial log.</li>
-      <li><strong>Clip length</strong> — per clip (1–8 bars?) with the grid showing length, or scene-wide like L7?</li>
       <li><strong>MIDI</strong> — channel 1 to the selected track for now; later one channel per track (1–9)?</li>
     </ul>
   </section>
@@ -272,7 +308,7 @@
 
   // Status row (y 214-239): screen-stack dots, scene, clock, tempo, action button.
   const statusRow = (screenIx, { scene = '2', clock = '2.3.1', bpm = '132.0', playing = true } = {}) => {
-    for (let k = 0; k < 6; k++) rect(4, 216 + k * 4, 2, 2, k === screenIx ? C.ACC : C.DARK);
+    for (let k = 0; k < 8; k++) rect(4, 215 + k * 3, 2, 2, k === screenIx ? C.ACC : C.DARK);
     const w = tag(12, 218, 'SCN');
     text(12 + w + 4, 222, scene, C.LIGHT);
     // Play icon + clock, roughly centred as L7's clock cell.
@@ -306,9 +342,29 @@
     draw();
   };
 
-  // ---- 1 · Master effects & sends -----------------------------------------
+  // A selectable FX slot: selector row + four parameter cells.
+  const fxSlot = (y, name, cnt, selSel, selCell, ps) => {
+    if (selSel) frame(4, y, 312, 18, C.LIGHT);
+    text(8, y + 6, '<', C.DIM);
+    text(24, y + 6, name, C.INK);
+    text(24 + textW(name) + 10, y + 6, '>', C.DIM);
+    text(282, y + 6, cnt, C.DIM);
+    ps.forEach((p, i) => paramCell(4 + i * 79, y + 22, 76, 42, p[0], p[1], p[2], selCell === i));
+  };
+
+  // ---- 1 · Master FX slots --------------------------------------------------
+  screen('mfx', () => {
+    title('MFX', 'MASTER');
+    text(6, 26, 'SLOT 1', C.LIGHT);
+    fxSlot(36, 'COMP', '3/8', true, -1, [['THRESH', '-18', 0.6], ['RATIO', '4', 0.5], ['GAIN', '+6', 0.55], ['MIX', '100', 1.0]]);
+    text(6, 110, 'SLOT 2', C.LIGHT);
+    fxSlot(120, 'TAPE', '6/8', false, -1, [['DRIVE', '35', 0.35], ['TONE', '60', 0.6], ['WOW', '15', 0.15], ['MIX', '100', 1.0]]);
+    statusRow(0);
+  });
+
+  // ---- 2 · Send effects -----------------------------------------
   screen('fx', () => {
-    title('FX', 'MASTER');
+    title('FX', 'SENDS');
     text(6, 26, 'DELAY', C.LIGHT);
     const d = [['TIME', '3/16', 0.45], ['FDBK', '52', 0.52], ['HP', '160', 0.25], ['MIX', '100', 1.0]];
     d.forEach((p, i) => paramCell(4 + i * 79, 38, 76, 42, p[0], p[1], p[2], false));
@@ -327,10 +383,10 @@
     };
     send(162, 'A DEL', [0.3, 0, 0.7, 0.2, 0, 0.5, 0.1, 0, 0], 2);
     send(188, 'B REV', [0.5, 0.2, 0.4, 0, 0.6, 0.3, 0, 0.2, 0], -1);
-    statusRow(0);
+    statusRow(1);
   });
 
-  // ---- 2 · Mixer ----------------------------------------------------------
+  // ---- 3 · Mixer ----------------------------------------------------------
   screen('mix', () => {
     title('MIX', 'N9 A02');
     const vols = [0.8, 0.6, 0.7, 0.5, 0.65, 0.55, 0.4, 0.75, 0];
@@ -364,10 +420,10 @@
       else if (muted[t]) { frame(bx, by, 13, 17, C.DIM); text(bx + 4, by + 4, String(t + 1), C.DIM); }
       else { rect(bx, by, 13, 17, C.ACC); text(bx + 4, by + 4, String(t + 1), C.BG); }
     }
-    statusRow(1);
+    statusRow(2);
   });
 
-  // ---- 3 · Track modulation ----------------------------------------------
+  // ---- 4 · Track modulation ----------------------------------------------
   screen('mod', () => {
     title('MOD', 'TRACK 3  PLUCK');
     // Four selectable sources per track, two destination slots each (dash = free).
@@ -399,10 +455,20 @@
     text(196, 164, 'RETRIG ON', C.DIM);
     text(196, 178, 'FADE 0', C.DIM);
     text(196, 192, 'MODE FREE', C.DIM);
-    statusRow(2);
+    statusRow(3);
   });
 
-  // ---- 4 · Track instrument ----------------------------------------------
+  // ---- 5 · Track FX ---------------------------------------------------------
+  screen('tfx', () => {
+    title('TFX', 'TRACK 3');
+    text(6, 26, 'SLOT 1', C.LIGHT);
+    fxSlot(36, 'CHORUS', '2/8', true, -1, [['RATE', '35', 0.35], ['DEPTH', '60', 0.6], ['SPREAD', '80', 0.8], ['MIX', '50', 0.5]]);
+    text(6, 110, 'SLOT 2', C.LIGHT);
+    fxSlot(120, 'DRIVE', '4/8', false, -1, [['GAIN', '28', 0.28], ['TONE', '55', 0.55], ['LEVEL', '70', 0.7], ['MIX', '100', 1.0]]);
+    statusRow(4);
+  });
+
+  // ---- 6 · Track instrument ----------------------------------------------
   screen('inst', () => {
     title('INST', 'TRACK 3');
     // Engine selector: < PLUCK >  4/12
@@ -425,10 +491,10 @@
     text(196, 160, 'VOICES 32', C.DIM);
     text(196, 174, 'MIDI CH 1', C.DIM);
     text(196, 188, 'OUT A+B', C.DIM);
-    statusRow(3);
+    statusRow(5);
   });
 
-  // ---- 5 · Clip grid ------------------------------------------------------
+  // ---- 7 · Clip grid ------------------------------------------------------
   screen('clipgrid', () => {
     // No title tag: the header row is the tracks. The dot column places the screen.
     const colX = t => 16 + t * 33;
@@ -465,12 +531,24 @@
         if (CUR[0] === t && CUR[1] === s) frame(x, y - 2, 33, 23, C.INK);
       }
     }
-    statusRow(4);
+    statusRow(6);
   });
 
-  // ---- 6 · Clip editor ----------------------------------------------------
+  // ---- 8 · Clip editor ----------------------------------------------------
   screen('editor', () => {
-    title('EDIT', 'T3 S2  BAR 1/2  1/16');
+    title('EDIT', 'T3');
+    // Bar strip: 16 slots (clips are at most 16 bars); this clip has 4. The
+    // loop brace (accent) selects whole bars and may wrap: here bars 3-4-1.
+    // The white frame is the bar the roll below shows.
+    const CLIP_BARS = 4, LOOP_START = 2, LOOP_LEN = 3, PAGE_BAR = 0;
+    const inR = b => { for (let k = 0; k < LOOP_LEN; k++) if ((LOOP_START + k) % CLIP_BARS === b) return true; return false; };
+    for (let b = 0; b < 16; b++) {
+      const x = 76 + b * 14;
+      if (b < CLIP_BARS) rect(x, 8, 12, 10, inR(b) ? C.LIGHT : C.DIM);
+      else frame(x, 8, 12, 10, C.DARK);
+      if (inR(b)) rect(x, 4, inR((b + 1) % CLIP_BARS) && b + 1 < CLIP_BARS ? 14 : 12, 2, C.ACC);
+    }
+    frame(76 + PAGE_BAR * 14 - 2, 6, 16, 14, C.INK);
     const ROWS = 13, rowH = 12, top = 24, left = 14, stepW = 19;
     // Pitches top to bottom, chromatic: C4 B3 A#3 A3 G#3 G3 F#3 F3 E3 D#3 D3 C#3 C3.
     const blackRow = [false, false, true, false, true, false, true, false, false, true, false, true, false];
@@ -503,7 +581,7 @@
       const bh = Math.round(20 * n.v);
       rect(left + n.s * stepW + 2, vy + 22 - bh, 8, bh, i === SEL ? C.INK : C.DIM);
     });
-    statusRow(5);
+    statusRow(7);
   });
 })();
 </script>

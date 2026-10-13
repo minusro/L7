@@ -26,6 +26,9 @@ enum OscType : uint8_t {
   O_303,     // mono acid voice: polyBLEP saw into a resonant 4-pole ladder,
              // the filter swept by its own decaying envelope; slide on
              // overlapping notes, accent on velocity >= 100
+  O_PRO5,    // poly: two detuned polyBLEP saws into the ladder, mild
+             // resonance, the filter easing to a sustain level (velocity
+             // opens it: fenv starts from the velocity)
 };
 
 constexpr uint8_t E_303 = 8;   // its place in ENGINE_NAMES
@@ -49,7 +52,7 @@ static const EngineDef ENGINES[ENGINE_COUNT] = {
     {O_NOISE, 1, 120, true, 250, 0, 0, 0},             // NOISE
     {O_303, 3, 12, true, 3500, 0, 0, 0},               // 303 (the VCA decays while gated, off fast)
     {O_SUPER, 3, 300, false, 0, 0, 0, 0},              // JUNO   (placeholder)
-    {O_SUPER, 2, 250, false, 0, 0, 0, 0},              // PRO5   (placeholder)
+    {O_PRO5, 5, 350, false, 0, 1.004f, 0, 0},          // PRO5 (ratio = osc B's detune)
     {O_FM, 2, 220, false, 0, 1.5f, 2.0f, 600},         // MWAVE  (placeholder)
     {O_FM, 1, 300, false, 0, 3.5f, 2.0f, 500},         // M1     (placeholder)
 };
@@ -165,7 +168,8 @@ void N9Synth::update() {
     float decC = d.pluck ? decay(d.decMs) : 1.0f;
     float relC = decay(d.relMs);
     float idxC = d.osc == O_FM ? decay(d.idxDecMs) : 1.0f;
-    float fdecC = d.osc == O_303 ? decay(v.accent ? 130 : 300) : 1.0f;   // the filter env's decay; accent: the "wow"
+    float fdecC = d.osc == O_303 ? decay(v.accent ? 130 : 300)           // the filter env's decay; accent: the "wow"
+                : d.osc == O_PRO5 ? decay(600) : 1.0f;
     float amp = v.vel * 0.12f;
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
       switch (v.state) {
@@ -205,6 +209,23 @@ void N9Synth::update() {
           v.f1 += g * (in - v.f1); v.f2 += g * (v.f1 - v.f2);
           v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
           s = v.f4 * 2.4f;                                 // makeup for what the ladder takes
+          break;
+        }
+        case O_PRO5: {
+          v.fenv *= fdecC;
+          float sawA = 2.0f * v.phase - 1.0f - polyblep(v.phase, v.inc);
+          float sawB = 2.0f * v.mphase - 1.0f - polyblep(v.mphase, v.minc);
+          float s0 = (sawA + sawB) * 0.5f;
+          float sweep = 0.35f + 0.65f * v.fenv;            // eases to a sustain level, never closed
+          float fc = 0.012f + 0.085f * sweep;
+          float w = 6.2832f * fc, g = w / (1.0f + w);
+          float in = s0 - 1.3f * v.f4;                     // mild resonance
+          if (in > 1.4f) in = 1.4f; else if (in < -1.4f) in = -1.4f;
+          in -= in * in * in * (1.0f / 6.0f);
+          v.f1 += g * (in - v.f1); v.f2 += g * (v.f1 - v.f2);
+          v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
+          s = v.f4 * 1.6f;
+          v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
           break;
         }
         default:                               // O_SAW, O_PULSE

@@ -21,6 +21,13 @@ struct NavState {
   // INST: row 0 the engine selector, rows 1..2 the parameter cells (col 0..3).
   uint8_t instRow = 0, instCol = 0;
 
+  // TFX (the track's two FX slots): rows 0/2 the slots' selectors, 1/3 their
+  // parameter cells (col 0..3).
+  uint8_t tfxRow = 0, tfxCol = 0;
+
+  // MFX (the master's two FX slots, above the sends): the same shape.
+  uint8_t mfxRow = 0, mfxCol = 0;
+
   uint8_t gridT = 2, gridS = 1;  // clip grid cursor: its track is the selected track
 
   uint8_t editStep = 8, editRow = 0;   // piano roll cursor (16 steps x 13 rows)

@@ -15,6 +15,18 @@ checked, or turn it into a fix.
   B + LEFT/RIGHT on INST steps the 13 engines (takes effect for new notes).
   SAW, PULSE, SUPER, FM2, PLUCK and NOISE are real (simple) voices; FM4, WT
   and the emulations JUNO, PRO5, MWAVE, M1 are placeholder sounds.
+- [ ] **N9: the two FX-slot screens and the bar strip.** The stack is eight
+  now: MFX (two selectable master FX slots, topmost), sends (the old FX page,
+  retagged SENDS), mixer, mod, TFX (the track's two slots, between mod and
+  INST), instrument, grid, editor — eight dots in the status row. MFX/TFX:
+  UP/DOWN over selector/cells rows, LEFT/RIGHT on the cell rows; mock types
+  (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
+  clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
+  bar.
+- [ ] **N9: the Prophet-5.** Poly voice: two detuned polyBLEP saws into the
+  ladder (mild resonance 1.3), filter easing to a sustain level over ~600 ms,
+  velocity opens it. Numbers by ear: detune (0.4%), cutoff floor, env sweep,
+  release 350 ms. Never heard yet.
 - [ ] **N9: the 303.** Mono with slide (overlapping notes glide, ~35 ms, no
   retrigger) and accent (velocity >= 100: louder, more filter env, faster
   "wow" decay). PolyBLEP saw into a resonant 4-pole ladder (feedback 3.3,

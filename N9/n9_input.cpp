@@ -49,6 +49,18 @@ static bool move(int dx, int dy) {
       if (dx && nav.instRow > 0) c |= to(nav.instCol, clamp(nav.instCol + dx, 0, 3));
       return c;
     }
+    case SCR_TFX: {
+      bool c = false;
+      if (dy) c = to(nav.tfxRow, clamp(nav.tfxRow + dy, 0, 3));
+      if (dx && (nav.tfxRow & 1)) c |= to(nav.tfxCol, clamp(nav.tfxCol + dx, 0, 3));
+      return c;
+    }
+    case SCR_MFX: {
+      bool c = false;
+      if (dy) c = to(nav.mfxRow, clamp(nav.mfxRow + dy, 0, 3));
+      if (dx && (nav.mfxRow & 1)) c |= to(nav.mfxCol, clamp(nav.mfxCol + dx, 0, 3));
+      return c;
+    }
     case SCR_GRID: {
       bool c = false;
       if (dx) c = to(nav.gridT, clamp(nav.gridT + dx, 0, 8));

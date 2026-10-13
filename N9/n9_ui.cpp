@@ -115,7 +115,7 @@ static void title(const char *name, const char *context) {
 // Status row (y 214-239): screen-stack dots, scene, clock, tempo, action button.
 static void statusRow(uint8_t screenIx) {
   const char *scene = "2", *clock = "2.3.1", *bpm = "132.0";
-  for (int k = 0; k < 6; k++) rct(4, 216 + k * 4, 2, 2, k == screenIx ? ACCENT : DARK);
+  for (int k = 0; k < SCR_COUNT; k++) rct(4, 215 + k * 3, 2, 2, k == screenIx ? ACCENT : DARK);
   int w = tagI(12, 218, "SCN");
   txt(12 + w + 4, 222, scene, LIGHT);
   // Play icon + clock, roughly centred as L7's clock cell.
@@ -142,7 +142,7 @@ static void paramCell(int x, int y, int w, int h, const char *name, const char *
   }
 }
 
-// ---- 1 · Master effects & sends -------------------------------------------
+// ---- 2 · Send effects -------------------------------------------
 
 static void sendRow(int y, const char *label, const float *levels, int selTrack) {
   txt(4, y + 8, label, DIM);
@@ -155,7 +155,7 @@ static void sendRow(int y, const char *label, const float *levels, int selTrack)
 }
 
 static void drawFx() {
-  title("FX", "MASTER");
+  title("FX", "SENDS");
   struct { const char *n, *v; float a; } d[] = {{"TIME", "3/16", 0.45f}, {"FDBK", "52", 0.52f}, {"HP", "160", 0.25f}, {"MIX", "100", 1.0f}},
                                          r[] = {{"SIZE", "72", 0.72f}, {"DAMP", "45", 0.45f}, {"PRE", "20", 0.2f}, {"MIX", "100", 1.0f}};
   txt(6, 26, "DELAY", LIGHT);
@@ -169,7 +169,7 @@ static void drawFx() {
   sendRow(188, "B REV", b, nav.fxRow == 3 ? nav.fxCol : -1);
 }
 
-// ---- 2 · Mixer -------------------------------------------------------------
+// ---- 3 · Mixer -------------------------------------------------------------
 
 static void drawMix() {
   title("MIX", "N9 A02");
@@ -198,7 +198,7 @@ static void drawMix() {
   }
 }
 
-// ---- 3 · Track modulation ---------------------------------------------------
+// ---- 4 · Track modulation ---------------------------------------------------
 // Four selectable sources per track, two destination slots each.
 
 static void drawMod() {
@@ -237,7 +237,48 @@ static void drawMod() {
   txt(196, 192, "MODE FREE", DIM);
 }
 
-// ---- 4 · Track instrument ---------------------------------------------------
+// ---- 5 · Track FX -----------------------------------------------------------
+// Two selectable FX slots per track; the types and values are mock.
+
+static void tfxSlot(int y, const char *name, const char *cnt, bool selSel, int selCell,
+                    const char *n1, const char *v1, float a1, const char *n2, const char *v2, float a2,
+                    const char *n3, const char *v3, float a3, const char *n4, const char *v4, float a4) {
+  if (selSel) frm(4, y, 312, 18, LIGHT);
+  txt(8, y + 6, "<", DIM);
+  txt(24, y + 6, name, INK);
+  txt(24 + txtW(name) + 10, y + 6, ">", DIM);
+  txt(282, y + 6, cnt, DIM);
+  const char *n[4] = {n1, n2, n3, n4}, *v[4] = {v1, v2, v3, v4};
+  float a[4] = {a1, a2, a3, a4};
+  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, y + 22, 76, 42, n[i], v[i], a[i], selCell == i);
+}
+
+static void drawTfx() {
+  char ctx[12];
+  snprintf(ctx, sizeof ctx, "TRACK %d", nav.gridT + 1);
+  title("TFX", ctx);
+  txt(6, 26, "SLOT 1", LIGHT);
+  tfxSlot(36, "CHORUS", "2/8", nav.tfxRow == 0, nav.tfxRow == 1 ? nav.tfxCol : -1,
+          "RATE", "35", 0.35f, "DEPTH", "60", 0.6f, "SPREAD", "80", 0.8f, "MIX", "50", 0.5f);
+  txt(6, 110, "SLOT 2", LIGHT);
+  tfxSlot(120, "DRIVE", "4/8", nav.tfxRow == 2, nav.tfxRow == 3 ? nav.tfxCol : -1,
+          "GAIN", "28", 0.28f, "TONE", "55", 0.55f, "LEVEL", "70", 0.7f, "MIX", "100", 1.0f);
+}
+
+// ---- 1 · Master FX slots --------------------------------------------------
+// Two selectable FX slots on the mix bus, above the sends; mock types/values.
+
+static void drawMfx() {
+  title("MFX", "MASTER");
+  txt(6, 26, "SLOT 1", LIGHT);
+  tfxSlot(36, "COMP", "3/8", nav.mfxRow == 0, nav.mfxRow == 1 ? nav.mfxCol : -1,
+          "THRESH", "-18", 0.6f, "RATIO", "4", 0.5f, "GAIN", "+6", 0.55f, "MIX", "100", 1.0f);
+  txt(6, 110, "SLOT 2", LIGHT);
+  tfxSlot(120, "TAPE", "6/8", nav.mfxRow == 2, nav.mfxRow == 3 ? nav.mfxCol : -1,
+          "DRIVE", "35", 0.35f, "TONE", "60", 0.6f, "WOW", "15", 0.15f, "MIX", "100", 1.0f);
+}
+
+// ---- 6 · Track instrument ---------------------------------------------------
 
 static void drawInst() {
   char ctx[12], cnt[8];
@@ -267,7 +308,7 @@ static void drawInst() {
   txt(196, 188, "OUT A+B", DIM);
 }
 
-// ---- 5 · Clip grid ----------------------------------------------------------
+// ---- 7 · Clip grid ----------------------------------------------------------
 
 static void drawGrid() {
   // No title tag: the header row is the tracks; the dot column places the screen.
@@ -309,12 +350,29 @@ static void drawGrid() {
   }
 }
 
-// ---- 6 · Clip editor --------------------------------------------------------
+// ---- 8 · Clip editor --------------------------------------------------------
+
+static bool inLoopRange(int b, int clipBars, int loopStart, int loopLen) {
+  for (int k = 0; k < loopLen; k++) if ((loopStart + k) % clipBars == b) return true;
+  return false;
+}
 
 static void drawEdit() {
-  char ctx[32];
-  snprintf(ctx, sizeof ctx, "T%d S%d  BAR 1/2  1/16", nav.gridT + 1, nav.gridS + 1);
+  char ctx[8];
+  snprintf(ctx, sizeof ctx, "T%d", nav.gridT + 1);
   title("EDIT", ctx);
+  // Bar strip: 16 slots (clips are at most 16 bars); this mock clip has 4.
+  // The loop brace (accent) selects whole bars and may wrap: here bars 3-4-1.
+  // The white frame is the bar the roll below shows.
+  const int CLIP_BARS = 4, LOOP_START = 2, LOOP_LEN = 3, PAGE_BAR = 0;
+  for (int b = 0; b < 16; b++) {
+    int x = 76 + b * 14;
+    bool in = inLoopRange(b, CLIP_BARS, LOOP_START, LOOP_LEN);
+    if (b < CLIP_BARS) rct(x, 8, 12, 10, in ? LIGHT : DIM);
+    else frm(x, 8, 12, 10, DARK);
+    if (in) rct(x, 4, inLoopRange((b + 1) % CLIP_BARS, CLIP_BARS, LOOP_START, LOOP_LEN) && b + 1 < CLIP_BARS ? 14 : 12, 2, ACCENT);
+  }
+  frm(76 + PAGE_BAR * 14 - 2, 6, 16, 14, INK);
   const int ROWS = 13, rowH = 12, top = 24, left = 14, stepW = 19;
   // Pitches top to bottom, chromatic: C4 B3 A#3 A3 G#3 G3 F#3 F3 E3 D#3 D3 C#3 C3.
   static const bool blackRow[ROWS] = {0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0};
@@ -353,9 +411,11 @@ static void drawEdit() {
 void drawScreen(uint8_t ix) {
   board.tft().fillScreen(BG);
   switch (ix) {
+    case SCR_MFX:  drawMfx();  break;
     case SCR_FX:   drawFx();   break;
     case SCR_MIX:  drawMix();  break;
     case SCR_MOD:  drawMod();  break;
+    case SCR_TFX:  drawTfx();  break;
     case SCR_INST: drawInst(); break;
     case SCR_GRID: drawGrid(); break;
     case SCR_EDIT: drawEdit(); break;
