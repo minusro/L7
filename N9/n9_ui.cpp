@@ -492,8 +492,8 @@ static void drawN9Logo(int x, int y, uint16_t c) {
     if ((p >= 18 && p < 20) || (p >= 22 && p < 24)) continue;   // the cuts
     int off = (25 - p) / 3;                                     // italic
     rct(x + off, y + p, 6, 1, c);                               // N: left stem,
-    rct(x + off + 6 + (7 * p) / 25, y + p, 7, 1, c);            //   its diagonal,
-    rct(x + off + 20, y + p, 6, 1, c);                          //   right stem
+    rct(x + 14, y + p, 6, 1, c);                                //   middle dead vertical (meets
+    rct(x + off + 20, y + p, 6, 1, c);                          //   the stems top and bottom), right stem
     rct(x + off + 40, y + p, 7, 1, c);                          // 9: its stem,
     if (p < 3 || (p >= 10 && p < 13)) rct(x + off + 28, y + p, 12, 1, c);   // bowl top/bottom,
     else if (p < 10) rct(x + off + 28, y + p, 7, 1, c);                     // bowl wall

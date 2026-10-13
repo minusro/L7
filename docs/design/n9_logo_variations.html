@@ -37,10 +37,10 @@ const fl = Math.floor;
 // A variant: slantDiv (off = floor((25-p)/slantDiv)), cuts rows, and spans(p, off)
 // returning [x, w] pairs in units.
 const variants = [
-  { name: 'V1 — CURRENT', note: 'Straight N, square-bowl 9, the L7 cuts. What ships today.',
+  { name: 'V1 — CURRENT', note: 'Vertical-middle N, square-bowl 9, the L7 cuts. What ships today.',
     slantDiv: 3, cuts: [[18,20],[22,24]],
     spans(p, off) {
-      const s = [[off, 6], [off + 6 + fl(7 * p / 25), 7], [off + 20, 6], [off + 40, 7]];
+      const s = [[off, 6], [14, 6], [off + 20, 6], [off + 40, 7]];
       if (p < 3 || (p >= 10 && p < 13)) s.push([off + 28, 12]);
       else if (p < 10) s.push([off + 28, 7]);
       return s;
@@ -49,7 +49,7 @@ const variants = [
     slantDiv: 3, cuts: [[18,20],[22,24]],
     spans(p, off) {
       const r = 55 - fl(p / 2);                      // the 9's sloping right edge
-      const s = [[off, 6], [off + 6 + fl(7 * p / 25), 7], [off + 20, 6], [r - 7, 7]];
+      const s = [[off, 6], [14, 6], [off + 20, 6], [r - 7, 7]];
       if (p < 3 || (p >= 10 && p < 13)) s.push([off + 28, r - off - 28 - 7 + 7]);
       else if (p < 10) s.push([off + 28, 7]);
       return s;
@@ -58,7 +58,7 @@ const variants = [
     slantDiv: 3, cuts: [[18,20],[22,24]],
     spans(p, off) {
       const tail = p > 19 ? Math.min(6, p - 19) : 0;
-      const s = [[off, 6], [off + 6 + fl(7 * p / 25), 7], [off + 20, 6], [off + 40 - tail, 7]];
+      const s = [[off, 6], [14, 6], [off + 20, 6], [off + 40 - tail, 7]];
       if (p < 3 || (p >= 10 && p < 13)) s.push([off + 28, 12]);
       else if (p < 10) s.push([off + 28, 7]);
       return s;
@@ -66,7 +66,7 @@ const variants = [
   { name: 'V4 — WIDE N', note: 'A broader N with a 45-degree-feeling diagonal; the 9 narrows to match.',
     slantDiv: 3, cuts: [[18,20],[22,24]],
     spans(p, off) {
-      const s = [[off, 6], [off + 6 + fl(16 * p / 25), 7], [off + 22, 6], [off + 40, 7]];
+      const s = [[off, 6], [14, 8], [off + 22, 6], [off + 40, 7]];
       if (p < 3 || (p >= 10 && p < 13)) s.push([off + 30, 10]);
       else if (p < 10) s.push([off + 30, 7]);
       return s;
@@ -74,7 +74,7 @@ const variants = [
   { name: 'V5 — NO CUTS', note: 'V1 without the 80s stripes: calmer, reads at a glance.',
     slantDiv: 3, cuts: [],
     spans(p, off) {
-      const s = [[off, 6], [off + 6 + fl(7 * p / 25), 7], [off + 20, 6], [off + 40, 7]];
+      const s = [[off, 6], [14, 6], [off + 20, 6], [off + 40, 7]];
       if (p < 3 || (p >= 10 && p < 13)) s.push([off + 28, 12]);
       else if (p < 10) s.push([off + 28, 7]);
       return s;
@@ -82,7 +82,7 @@ const variants = [
   { name: 'V6 — STEEP ITALIC', note: 'Twice the slant (1 px per 2 rows): more forward motion, narrower glyphs to stay in 55.',
     slantDiv: 2, cuts: [[18,20],[22,24]],
     spans(p, off) {
-      const s = [[off, 6], [off + 6 + fl(10 * p / 25), 6], [off + 16, 6], [off + 36, 7]];
+      const s = [[off, 6], [15, 6], [off + 16, 6], [off + 36, 7]];
       if (p < 3 || (p >= 10 && p < 13)) s.push([off + 24, 12]);
       else if (p < 10) s.push([off + 24, 7]);
       return s;
@@ -90,7 +90,7 @@ const variants = [
   { name: 'V7 — TRIPLE CUT', note: 'V1 with three thinner cuts spread up the mark, like scanlines.',
     slantDiv: 3, cuts: [[7,8],[15,16],[22,23]],
     spans(p, off) {
-      const s = [[off, 6], [off + 6 + fl(7 * p / 25), 7], [off + 20, 6], [off + 40, 7]];
+      const s = [[off, 6], [14, 6], [off + 20, 6], [off + 40, 7]];
       if (p < 3 || (p >= 10 && p < 13)) s.push([off + 28, 12]);
       else if (p < 10) s.push([off + 28, 7]);
       return s;
