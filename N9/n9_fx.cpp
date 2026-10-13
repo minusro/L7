@@ -87,8 +87,13 @@ static void resetState(FxState &t, int16_t *line, int lineLen, const FxSlot &sl)
   for (int i = 0; i < 8; i++) t.sp[i] = sl.p[i] / 99.0f;
 }
 
+// The slot's TYPE is the activation gate the audio interrupt reads: it goes
+// to NONE first, the state and parameters are rebuilt, and the real type is
+// written LAST. (Setting it first left a window where the interrupt ran a
+// line-based effect over a null, zero-length line: a hard fault at boot and
+// on live type changes.)
 static void loadDefaults(FxSlot &sl, uint8_t type) {
-  sl.type = type;
+  sl.type = FXT_NONE;
   for (int i = 0; i < 8; i++) sl.p[i] = FX_PARAMS[type][i].def;
 }
 
@@ -97,6 +102,7 @@ void fxSetTrackType(uint8_t t, uint8_t slot, uint8_t type) {
   loadDefaults(trackFx[t][slot], type);
   if (fxIsSend(type)) trackFx[t][slot].p[7] = 0;        // send starts silent
   resetState(stTrack[t][slot], trackLine[t][slot], 1024, trackFx[t][slot]);
+  trackFx[t][slot].type = type;                         // armed last
   Serial.printf("fx: track %u.%u %s%s\n", t + 1, slot + 1, FX_TYPE_NAMES[type], fxIsSend(type) ? " (send)" : "");
 }
 
@@ -104,6 +110,7 @@ void fxSetMasterType(uint8_t type) {
   if (type >= FX_TYPES) return;
   loadDefaults(masterFx, type);
   resetState(stMaster, masterLine, 27648, masterFx);
+  masterFx.type = type;                                 // armed last
   Serial.printf("fx: master %s\n", FX_TYPE_NAMES[type]);
 }
 
@@ -116,12 +123,14 @@ uint8_t fxStepMasterType(uint8_t type, int dir) { return (type + FX_TYPES + dir)
 void fxSlotsInit() {
   for (int t = 0; t < 9; t++)
     for (int k = 0; k < 2; k++) { loadDefaults(trackFx[t][k], FXT_NONE); resetState(stTrack[t][k], trackLine[t][k], 1024, trackFx[t][k]); }
-  loadDefaults(sendFx[0], FXT_DELAY);
-  loadDefaults(sendFx[1], FXT_REVERB);
-  loadDefaults(sendFx[2], FXT_CHORUS);
-  resetState(stSend[0], sendDelayLine, 27648, sendFx[0]);
-  resetState(stSend[1], sendReverbLine, 27648, sendFx[1]);
-  resetState(stSend[2], sendChorusLine, 4096, sendFx[2]);
+  static const uint8_t SEND_TYPES[3] = {FXT_DELAY, FXT_REVERB, FXT_CHORUS};
+  int16_t *const SEND_LINES[3] = {sendDelayLine, sendReverbLine, sendChorusLine};
+  static const int SEND_LENS[3] = {27648, 27648, 4096};
+  for (int i = 0; i < 3; i++) {
+    loadDefaults(sendFx[i], SEND_TYPES[i]);
+    resetState(stSend[i], SEND_LINES[i], SEND_LENS[i], sendFx[i]);
+    sendFx[i].type = SEND_TYPES[i];                     // armed last
+  }
   loadDefaults(masterFx, FXT_NONE);
   resetState(stMaster, masterLine, 27648, masterFx);
 }
@@ -134,6 +143,7 @@ static void processSlot(const FxSlot &sl, FxState &t, float *l, float *r, int n,
   float dry = pureWet ? 0.0f : 1.0f - wet;
   switch (sl.type) {
     case FXT_CHORUS: case FXT_FLANGER: case FXT_WOW: {
+      if (t.lineLen < 1024) break;               // state not armed yet
       bool fl = sl.type == FXT_FLANGER, wow = sl.type == FXT_WOW;
       float hz = wow ? 0.3f + 2.2f * p1 : 0.08f * expf(0.042f * p0 * 99.0f);
       float base = fl ? 40.0f + 300.0f * p3 : wow ? 320.0f : 480.0f;
