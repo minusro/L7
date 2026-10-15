@@ -90,14 +90,20 @@ static bool commit(uint8_t prog) {
   delay(6);
   uint32_t addr = BASE + victim * SLOT, size = dirSize[prog], done = 0;
   f.seek(dirOff[prog]);
-  static uint8_t buf[SECTOR];
+  // The core's flash_write feeds the FlexSPI registers (device memory):
+  // sources must be word-aligned and lengths multiples of four, or its
+  // memcpy hard-faults (UNALIGNED). The record's tail is padded with 0xFF,
+  // which lands on erased flash and changes nothing.
+  static uint8_t buf[SECTOR] __attribute__((aligned(8)));
   AudioNoInterrupts();
   while (done < size) {
     uint32_t n = size - done < SECTOR ? size - done : SECTOR;
     if (f.read(buf, n) != (int)n) break;
+    uint32_t w = (n + 3) & ~3u;
+    if (w > n) memset(buf + n, 0xFF, w - n);
     eepromemu_flash_erase_sector((void *)(addr + done));
-    if (done == 0) eepromemu_flash_write((void *)(addr + 4), buf + 4, n - 4);
-    else eepromemu_flash_write((void *)(addr + done), buf, n);
+    if (done == 0) eepromemu_flash_write((void *)(addr + 4), buf + 4, w - 4);
+    else eepromemu_flash_write((void *)(addr + done), buf, w);
     done += n;
   }
   bool ok = done >= size;
