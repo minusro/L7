@@ -264,8 +264,11 @@ def add_wav_drum(stem, caps):
     cache[key] = ix
     return ix
 
-ATTEMPTS = [(4, 0.42, 0.14, 0.06), (4, 0.38, 0.11, 0.05), (3, 0.38, 0.11, 0.05),
-            (3, 0.34, 0.09, 0.04), (2, 0.32, 0.08, 0.04)]
+# The attack window descends until the bank fits: the pre-loop middle is
+# worth more than anything else left to cut.
+ATTEMPTS = [(4, 0.42, 0.60, 0.10), (4, 0.42, 0.50, 0.09), (4, 0.42, 0.42, 0.08),
+            (4, 0.40, 0.34, 0.07), (4, 0.38, 0.26, 0.06), (4, 0.38, 0.18, 0.06),
+            (3, 0.38, 0.16, 0.05), (2, 0.32, 0.10, 0.04)]
 for zone_max, oneshot, atk, pre in ATTEMPTS:
     caps = (oneshot, atk, pre)
     zones_out, drums_out = build(caps, zone_max)
