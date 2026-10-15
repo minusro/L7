@@ -285,7 +285,12 @@ bool inputService() {
           if (nav.instTop == 0 && (i == A_LEFT || i == A_RIGHT)) {
             curEngine() = (curEngine() + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
             dirty = true;
-          }                                        // (the preset cell: no banked engine right now)
+          } else if (nav.instTop == 1 && curEngine() == E_GM) {
+            // The preset cell: GM's 128 programs (UP/DOWN jumps a family of 8).
+            int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 8 : -8;
+            gmProgram[nav.gridT] = (uint8_t)((gmProgram[nav.gridT] + d + 128) & 127);
+            dirty = true;
+          }                                        // (the other engines: no banks yet)
         } else {
           int idx = (nav.instRow - 1) * 4 + nav.instCol;
           if (engineParams(curEngine())[idx].name[0] != '-') {

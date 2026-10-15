@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 
+#include "n9_gm_bank.h"
 #include "n9_m1_bank.h"
 #include "n9_mw_bank.h"
 #include "n9_mi.h"
@@ -326,7 +327,13 @@ static void drawInst() {
   txt(8, 32, "<", DIM);
   txt(20, 32, name, INK);
   txt(20 + txtW(name) + 6, 32, ">", DIM);
-  txt(118, 32, "-", DIM);                        // the preset cell: no banked engine right now
+  if (curEngine() == E_GM) {                     // the preset cell: GM's 128 programs
+    char pn[20];
+    snprintf(pn, sizeof pn, "%03d %s", gmProgram[nav.gridT] + 1, GM_NAMES[gmProgram[nav.gridT] & 127]);
+    txt(118, 32, pn, INK);
+  } else {
+    txt(118, 32, "-", DIM);                      // (the other engines: no banks yet)
+  }
   rct(4, 50, 312, 2, DARK);
   const ParamInfo *pi = engineParams(curEngine());
   for (int i = 0; i < 8; i++) {

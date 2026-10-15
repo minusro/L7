@@ -67,8 +67,13 @@ inline uint8_t gridScene() { return nav.gridS > 7 ? 7 : nav.gridS; }
 // Microwave emulations are parked (code kept, selector entries gone) until
 // their real sample/wavetable data is in.
 constexpr uint8_t E_PRO5 = 0, E_303 = 1, E_JUNO = 2, E_MI_FIRST = 3;
-constexpr uint8_t ENGINE_COUNT = 3 + 24;
+constexpr uint8_t E_GM = 27;         // General MIDI, after the Mutable models
+constexpr uint8_t ENGINE_COUNT = 3 + 24 + 1;
 const char *engineName(uint8_t e);   // n9_synth.cpp
+
+// The GM engine's program per track (0-127, n9_gm_bank.h): the INST preset
+// cell steps it, MIDI program change sets the selected track's.
+extern uint8_t gmProgram[9];
 
 // The INST screen's eight parameter cells, live per engine (0-99); names and
 // defaults per engine kind (n9_synth.cpp). A "-" name is an empty cell.

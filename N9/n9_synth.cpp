@@ -2,6 +2,7 @@
 #include "n9_synth.h"
 
 #include "M8Board.h"
+#include "n9_gm_bank.h"
 #include "n9_m1_bank.h"
 #include "n9_mw_bank.h"
 #include "n9_fx.h"
@@ -25,8 +26,11 @@ static volatile uint8_t mwProg = 0;
 // for now: the selector and voice pool are real, the sound isn't yet.
 static const char *const BASE_NAMES[E_MI_FIRST] = {"PROPHET", "303", "JUNO"};
 const char *engineName(uint8_t e) {
+  if (e == E_GM) return "GM";
   return e < E_MI_FIRST ? BASE_NAMES[e] : MI_MODEL_NAMES[e - E_MI_FIRST];
 }
+
+uint8_t gmProgram[9];
 
 // The INST cells per engine kind.
 static const ParamInfo PROPHET_P[8] = {{"DETUNE", 20}, {"CUTOFF", 60}, {"RES", 25}, {"ENV", 50},
@@ -37,9 +41,12 @@ static const ParamInfo JUNO_P[8] = {{"DETUNE", 25}, {"SUB", 60}, {"CUTOFF", 65},
                                     {"ATK", 3}, {"DEC", 50}, {"SUS", 70}, {"REL", 40}};
 static const ParamInfo MI_P[8] = {{"HARMON", 50}, {"TIMBRE", 50}, {"MORPH", 50}, {"DECAY", 55},
                                   {"LPG", 30}, {"LEVEL", 80}, {"-", 0}, {"-", 0}};
+// GM: the cells are offsets over the program's own patch (50 = as authored).
+static const ParamInfo GM_P[8] = {{"CUT", 50}, {"RES", 50}, {"ENV", 50}, {"ATK", 50},
+                                  {"DEC", 50}, {"REL", 50}, {"VIB", 50}, {"LEVEL", 80}};
 
 const ParamInfo *engineParams(uint8_t e) {
-  return e == E_PRO5 ? PROPHET_P : e == E_303 ? P303_P : e == E_JUNO ? JUNO_P : MI_P;
+  return e == E_PRO5 ? PROPHET_P : e == E_303 ? P303_P : e == E_JUNO ? JUNO_P : e == E_GM ? GM_P : MI_P;
 }
 
 uint8_t trackEngine[9];
@@ -84,6 +91,10 @@ enum OscType : uint8_t {
              // offsets inferred from the data): VCA ADSR, resonant VCF with
              // its env sweep, and a morphing wave (sine-saw-square) swept
              // from the sound's start wave — the wavetable stand-in
+  O_GM,      // General MIDI, Sound Canvas style but synthesized
+             // (n9_gm_bank.h): two polyBLEP/table oscillators per the
+             // program's patch, ladder filter with its own decaying env,
+             // full ADSR amp, block-rate vibrato that fades in
 };
 
 // (E_303 / E_M1: n9_state.h)
@@ -103,6 +114,8 @@ static const EngineDef ENGINES[E_MI_FIRST] = {
     {O_303, 3, 12, true, 3500, 0, 0, 0},               // 303 (the VCA decays while gated, off fast)
     {O_JUNO, 3, 300, false, 0, 0, 0, 0},               // JUNO (ADSR comes from the cells)
 };
+static const EngineDef GM_DEF = {O_GM, 3, 300, false, 0, 0, 0, 0};   // (everything from the patch)
+static inline const EngineDef &engineDefOf(uint8_t e) { return e == E_GM ? GM_DEF : ENGINES[e]; }
 
 // M1 helpers: a time value 0-99 as an easing time constant in ms (the M1's
 // log scale over ~7 time constants of audible decay: value 99 ~ a 6-7 s
@@ -204,6 +217,20 @@ static void applyLiveParams(N9Synth::Voice &v, bool snap) {
     v.eAc = pcoef(p[4]); v.eDc = pcoef(p[5]);
     set(v.lSus, p[6] / 99.0f);
     v.eRc = pcoef(p[7]);
+  } else if (v.engine == E_GM) {               // the program's patch, cells as offsets
+    const GmPatch &gp = GM_BANK[gmProgram[v.track] & 127];
+    auto ofs = [](int base, uint8_t cell) { int r = base + cell - 50; return r < 0 ? 0 : r > 99 ? 99 : r; };
+    float c = ofs(gp.cut, p[0]) / 99.0f;
+    set(v.cutB, 0.004f + 0.22f * c * c);
+    set(v.resK, 3.2f * ofs(gp.res, p[1]) / 99.0f);
+    set(v.cutE, 0.24f * (ofs(gp.env, p[2]) / 99.0f) * (0.5f + 0.5f * v.velN));
+    v.eAc = pcoef(ofs(gp.a, p[3]));
+    v.eDc = pcoef(ofs(gp.d, p[4]));
+    set(v.lSus, gp.s / 99.0f);
+    v.eRc = pcoef(ofs(gp.r, p[5]));
+    v.fdC = decay(8.0f * pms(gp.fd));
+    v.vibAmt = 0.4f * ofs(gp.vib, p[6]) / 99.0f;
+    set(v.vel, v.velN * (gp.lvl / 99.0f) * (p[7] / 80.0f));
   }
 }
 
@@ -212,6 +239,25 @@ static inline float polyblep(float t, float dt) {
   if (t < dt) { t /= dt; return t + t - t * t - 1.0f; }
   if (t > 1.0f - dt) { t = (t - 1.0f) / dt; return t * t + t + t + 1.0f; }
   return 0.0f;
+}
+
+// A GM oscillator by wave (n9_gm_bank.h): polyBLEP saw, square and 25% pulse
+// (as saw differences), triangle, table sine, noise.
+static inline float gmOsc(uint8_t w, float ph, float dt, uint32_t &rng) {
+  switch (w) {
+    case GW_SAW: return 2.0f * ph - 1.0f - polyblep(ph, dt);
+    case GW_SQR: {
+      float p2 = ph + 0.5f; if (p2 >= 1.0f) p2 -= 1.0f;
+      return ((2.0f * ph - 1.0f - polyblep(ph, dt)) - (2.0f * p2 - 1.0f - polyblep(p2, dt))) * 0.7f;
+    }
+    case GW_PUL: {
+      float p2 = ph + 0.75f; if (p2 >= 1.0f) p2 -= 1.0f;
+      return ((2.0f * ph - 1.0f - polyblep(ph, dt)) - (2.0f * p2 - 1.0f - polyblep(p2, dt)) - 0.5f) * 0.8f;
+    }
+    case GW_TRI: return ph < 0.5f ? 4.0f * ph - 1.0f : 3.0f - 4.0f * ph;
+    case GW_SIN: return sinT(ph);
+    default: rng = rng * 1664525u + 1013904223u; return (int32_t)rng * 4.6566e-10f;
+  }
 }
 
 static inline float sinT(float ph);
@@ -231,11 +277,11 @@ static inline float m1oscS(uint8_t cat, float ph, float dt, float fmPhase, float
 
 void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
   uint8_t engine = trackEngine[track];
-  if (engine >= E_MI_FIRST) {            // the plaits pool plays the Mutable models
+  if (engine >= E_MI_FIRST && engine != E_GM) {            // the plaits pool plays the Mutable models
     miNoteOn(track, note, vel, engine - E_MI_FIRST);
     return;
   }
-  const EngineDef &d = ENGINES[engine];
+  const EngineDef &d = engineDefOf(engine);
   float hz = 440.0f * exp2f((note - 69) / 12.0f);
   float inc = hz / 44100.0f;
   Voice *v = nullptr;
@@ -323,6 +369,21 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
     v->wStart = sn.startWave / 63.0f;
     v->mindex = 0;                           // the wave env, rising
     v->midxC = 1.0f - expf(-1.0f / (900.0f * 44.1f));
+  } else if (engine == E_GM) {             // cache the GM program into the voice
+    const GmPatch &gp = GM_BANK[gmProgram[track] & 127];
+    v->velN = vel / 127.0f;
+    v->cat1 = gp.w1;
+    v->cat2 = gp.w2;
+    v->inc3 = exp2f(gp.semi2 / 12.0f + gp.det / 1200.0f);   // osc 2's ratio
+    v->minc = inc * v->inc3;
+    v->lfAl = gp.mix / 99.0f;
+    v->mseg = 0;
+    v->fenv = 0.5f + 0.5f * v->velN;       // velocity opens the sweep
+    v->lfoPh = 0;
+    v->lfoInc = 5.3f / 44100.0f * AUDIO_BLOCK_SAMPLES;      // vibrato, block rate
+    v->env2 = 0;                           // its fade-in
+    v->e2Ac = 1.0f - expf(-2.902f / 500.0f);
+    applyLiveParams(*v, true);
   } else {                                   // the analog engines read the INST cells
     v->velN = vel / 127.0f;
     if (engine == E_PRO5 || engine == E_JUNO) { v->mseg = 0; v->fenv = 1.0f; }
@@ -430,14 +491,14 @@ void N9Synth::update() {
   for (auto &v : _v) {
     if (v.state == IDLE) continue;
     active++;
-    const EngineDef &d = ENGINES[v.engine];
+    const EngineDef &d = engineDefOf(v.engine);
     float atkC = 1.0f - decay(d.atkMs < 0.1f ? 0.1f : d.atkMs);
     float decC = d.pluck ? decay(d.decMs) : 1.0f;
     float relC = decay(d.relMs);
     float idxC = d.osc == O_FM ? decay(d.idxDecMs) : 1.0f;
     // (the 303's and PROPHET's filter decays are per-voice now: v.fdC)
     float amp = v.vel * 0.12f;
-    if (v.track == nav.gridT && v.engine == curEngine() && v.engine < E_MI_FIRST)
+    if (v.track == nav.gridT && v.engine == curEngine() && (v.engine < E_MI_FIRST || v.engine == E_GM))
       applyLiveParams(v, false);                 // live cell edits, eased
     float i1 = v.inc, i2 = v.minc, fmgVal = 0;
     if (d.osc == O_M1) {                         // pitch EG and the MGs, at block rate
@@ -449,9 +510,15 @@ void N9Synth::update() {
       float pf = exp2f((v.penv * 12.0f + mgShape(v.mgWave, v.lfoPh) * v.vibAmt) / 12.0f);
       i1 *= pf; i2 *= pf;
       fmgVal = mgShape(v.fmgWave, v.fmgPh) * v.fmgAmt;
+    } else if (d.osc == O_GM && v.vibAmt > 0.001f) {   // vibrato, fading in
+      v.lfoPh += v.lfoInc; if (v.lfoPh >= 1.0f) v.lfoPh -= 1.0f;
+      v.env2 += v.e2Ac * (1.0f - v.env2);
+      float pf = exp2f(mgShape(0, v.lfoPh) * v.vibAmt * v.env2 / 12.0f);
+      v.inc = v.tinc * pf;
+      v.minc = v.tinc * v.inc3 * pf;
     }
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-      if (d.osc != O_M1 && d.osc != O_MWAVE && d.osc != O_PRO5 && d.osc != O_JUNO)
+      if (d.osc != O_M1 && d.osc != O_MWAVE && d.osc != O_PRO5 && d.osc != O_JUNO && d.osc != O_GM)
       switch (v.state) {                         // (those engines run their own EGs)
         case ATTACK:  v.env += atkC * (1.0f - v.env); if (v.env > 0.999f) v.state = HOLD; break;
         case HOLD:    v.env *= decC; break;
@@ -531,6 +598,23 @@ void N9Synth::update() {
           v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
           s = v.f4 * 1.5f;
           v.p3 += v.inc3; if (v.p3 >= 1.0f) v.p3 -= 1.0f;
+          v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
+          break;
+        }
+        case O_GM: {
+          if (v.state == RELEASE) v.env += v.eRc * (0.0f - v.env);
+          else if (v.mseg == 0) { v.env += v.eAc * (1.0f - v.env + 0.001f); if (v.env >= 1.0f) { v.env = 1.0f; v.mseg = 1; } }
+          else v.env += v.eDc * (v.lSus - v.env);
+          v.fenv *= v.fdC;
+          float s0 = (gmOsc(v.cat1, v.phase, v.inc, v.rng) + gmOsc(v.cat2, v.mphase, v.minc, v.rng) * v.lfAl) * 0.6f;
+          float fc = v.cutB + v.cutE * v.fenv;
+          float w = 6.2832f * fc, g = w / (1.0f + w);
+          float in = s0 - v.resK * v.f4;
+          if (in > 1.4f) in = 1.4f; else if (in < -1.4f) in = -1.4f;
+          in -= in * in * in * (1.0f / 6.0f);
+          v.f1 += g * (in - v.f1); v.f2 += g * (v.f1 - v.f2);
+          v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
+          s = v.f4 * (1.6f + 0.3f * v.resK);
           v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
           break;
         }
@@ -677,7 +761,8 @@ void mwSetProgram(uint8_t p) {
 
 // A MIDI program change goes to the current engine's bank.
 static void setPreset(uint8_t p) {
-  if (curEngine() == E_MWAVE) mwSetProgram(p);
+  if (curEngine() == E_GM) gmProgram[nav.gridT] = p & 127;
+  else if (curEngine() == E_MWAVE) mwSetProgram(p);
   else m1SetProgram(p);
 }
 

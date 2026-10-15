@@ -6,6 +6,16 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **N9: the GM engine (all 128 melodic programs, synthesized).** The
+  engine selector's last entry, after the Mutable models; the INST preset
+  cell shows "001 ACOU GRAND" etc, B+LEFT/RIGHT steps programs, B+UP/DOWN a
+  family of 8; MIDI program change sets the selected track's program. Each
+  program is a two-oscillator patch (n9_gm_bank.h) - no PCM, so judge them
+  as Sound Canvas impressions: sweep the 16 families and flag the worst.
+  The cells (CUT/RES/ENV/ATK/DEC/REL/VIB at 50 = as authored, LEVEL) offset
+  the patch live. Programs save with projects (format bumped to N9P2: any
+  project saved before 2026-10-15 is skipped, delete the old files). No drum
+  kits yet. Watch the synth CPU line with many GM voices held.
 - [ ] **N9: clip launching + the stop row + the clip clipboard.** The grid's
   rows are tighter (17 px cells) with a stop-button row underneath. A on an
   empty slot makes a clip (a hollow light frame: a clip with no notes); A on
