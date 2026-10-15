@@ -72,6 +72,12 @@ public:
     float vel = 0, velN = 0;   // vel is level-scaled; velN the raw velocity
     uint32_t rng = 1;                // the NOISE engine's generator
     uint32_t age = 0;                // for stealing: noteOn order
+    // GM / GM DRUM: a baked SC-88 sample playing from flash (n9_gm_pcm.h);
+    // null: the GM program has no sample and synthesizes instead.
+    const uint8_t *pcm = nullptr;    // mu-law data
+    uint32_t pcmLen = 0, pcmLoopS = 0, pcmLoopE = 0;   // loopE 0: one-shot
+    float pcmPos = 0, pcmRate = 0;
+    uint32_t dmT = 0;                // DRUMS: a sample counter (the clap's bursts)
   };
 private:
   void noteOnNow(uint8_t track, uint8_t note, uint8_t vel);   // audio side

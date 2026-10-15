@@ -331,6 +331,11 @@ static void drawInst() {
     char pn[20];
     snprintf(pn, sizeof pn, "%03d %s", gmProgram[nav.gridT] + 1, GM_NAMES[gmProgram[nav.gridT] & 127]);
     txt(118, 32, pn, INK);
+  } else if (curEngine() == E_DM) {              // DRUMS: the machine
+    static const char *const MACH[4] = {"606", "707", "808", "909"};
+    txt(118, 32, MACH[drumMachine[nav.gridT] & 3], INK);
+  } else if (curEngine() == E_GMDRUM) {
+    txt(118, 32, "STANDARD KIT", DIM);
   } else {
     txt(118, 32, "-", DIM);                      // (the other engines: no banks yet)
   }

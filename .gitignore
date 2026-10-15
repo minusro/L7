@@ -1,1 +1,5 @@
 apps_sd/
+# Generated from the SC-88 samples (freewavesamples.com: no re-hosting copies,
+# and mu-law transcodes are still copies). Rebuild: cd N9 && python3 tools/sc88_bank.py
+N9/n9_gm_pcm.cpp
+N9/n9_gm_pcm.h

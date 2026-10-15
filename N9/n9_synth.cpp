@@ -3,6 +3,7 @@
 
 #include "M8Board.h"
 #include "n9_gm_bank.h"
+#include "n9_gm_pcm.h"
 #include "n9_m1_bank.h"
 #include "n9_mw_bank.h"
 #include "n9_fx.h"
@@ -27,10 +28,13 @@ static volatile uint8_t mwProg = 0;
 static const char *const BASE_NAMES[E_MI_FIRST] = {"PROPHET", "303", "JUNO"};
 const char *engineName(uint8_t e) {
   if (e == E_GM) return "GM";
+  if (e == E_GMDRUM) return "GM DRUM";
+  if (e == E_DM) return "DRUMS";
   return e < E_MI_FIRST ? BASE_NAMES[e] : MI_MODEL_NAMES[e - E_MI_FIRST];
 }
 
 uint8_t gmProgram[9];
+uint8_t drumMachine[9];
 
 // The INST cells per engine kind.
 static const ParamInfo PROPHET_P[8] = {{"DETUNE", 20}, {"CUTOFF", 60}, {"RES", 25}, {"ENV", 50},
@@ -44,9 +48,15 @@ static const ParamInfo MI_P[8] = {{"HARMON", 50}, {"TIMBRE", 50}, {"MORPH", 50},
 // GM: the cells are offsets over the program's own patch (50 = as authored).
 static const ParamInfo GM_P[8] = {{"CUT", 50}, {"RES", 50}, {"ENV", 50}, {"ATK", 50},
                                   {"DEC", 50}, {"REL", 50}, {"VIB", 50}, {"LEVEL", 80}};
+static const ParamInfo GMD_P[8] = {{"-", 0}, {"-", 0}, {"-", 0}, {"-", 0},
+                                   {"-", 0}, {"-", 0}, {"-", 0}, {"LEVEL", 80}};
+// DRUMS: offsets over the machine's sounds (50 = as authored), at note-on.
+static const ParamInfo DM_P[8] = {{"TUNE", 50}, {"DECAY", 50}, {"SNAP", 50}, {"TONE", 50},
+                                  {"-", 0}, {"-", 0}, {"-", 0}, {"LEVEL", 80}};
 
 const ParamInfo *engineParams(uint8_t e) {
-  return e == E_PRO5 ? PROPHET_P : e == E_303 ? P303_P : e == E_JUNO ? JUNO_P : e == E_GM ? GM_P : MI_P;
+  return e == E_PRO5 ? PROPHET_P : e == E_303 ? P303_P : e == E_JUNO ? JUNO_P
+       : e == E_GM ? GM_P : e == E_GMDRUM ? GMD_P : e == E_DM ? DM_P : MI_P;
 }
 
 uint8_t trackEngine[9];
@@ -91,6 +101,9 @@ enum OscType : uint8_t {
              // offsets inferred from the data): VCA ADSR, resonant VCF with
              // its env sweep, and a morphing wave (sine-saw-square) swept
              // from the sound's start wave — the wavetable stand-in
+  O_DM,      // DRUMS: synthesized 606/707/808/909 hits, 12 sounds an octave
+             // (C kick, C# closed hat, D snare, D# open hat, E clap, F/G/A
+             // toms, F#/G#/A# crash/ride/cymbal, B rim)
   O_GM,      // General MIDI, Sound Canvas style but synthesized
              // (n9_gm_bank.h): two polyBLEP/table oscillators per the
              // program's patch, ladder filter with its own decaying env,
@@ -115,7 +128,76 @@ static const EngineDef ENGINES[E_MI_FIRST] = {
     {O_JUNO, 3, 300, false, 0, 0, 0, 0},               // JUNO (ADSR comes from the cells)
 };
 static const EngineDef GM_DEF = {O_GM, 3, 300, false, 0, 0, 0, 0};   // (everything from the patch)
-static inline const EngineDef &engineDefOf(uint8_t e) { return e == E_GM ? GM_DEF : ENGINES[e]; }
+static const EngineDef DM_DEF = {O_DM, 0, 10, false, 0, 0, 0, 0};
+static inline const EngineDef &engineDefOf(uint8_t e) {
+  return e == E_GM || e == E_GMDRUM ? GM_DEF : e == E_DM ? DM_DEF : ENGINES[e];
+}
+
+// ---- DRUMS: the four machines' kits -----------------------------------------
+// One analog hit per octave slot; flavoured by machine. tone doubles as the
+// kick's drive and the hats' brightness; sweep/pdecMs are the pitch env.
+enum : uint8_t { DM_KICK, DM_HAT, DM_SNARE, DM_CLAP, DM_TOM, DM_CYM, DM_RIM };
+struct DmSound { uint8_t type; float f, decMs, noise, tone, lvl, sweep, pdecMs; };
+// Slots: 0 kick, 1 CH, 2 snare, 3 OH, 4 clap, 5 LT, 6 crash, 7 MT, 8 ride,
+// 9 HT, 10 cym 2, 11 rim.
+static const DmSound DM_KIT[4][12] = {
+  { // 606: sharp and tinny
+    {DM_KICK,  58, 150, 0.0f, 0.15f, 0.95f, 1.5f, 28},
+    {DM_HAT, 4900,  40, 0.55f, 0.75f, 0.70f, 0, 0},
+    {DM_SNARE, 192, 105, 0.85f, 0.45f, 0.90f, 0.35f, 24},
+    {DM_HAT, 4900, 300, 0.55f, 0.70f, 0.70f, 0, 0},
+    {DM_CLAP,   0, 420, 1.0f, 0.5f, 0.85f, 0, 0},
+    {DM_TOM,  105, 190, 0.12f, 0.3f, 0.95f, 0.8f, 42},
+    {DM_CYM, 4200, 850, 0.60f, 0.55f, 0.70f, 0, 0},
+    {DM_TOM,  150, 170, 0.12f, 0.3f, 0.95f, 0.8f, 40},
+    {DM_CYM, 5600, 650, 0.45f, 0.80f, 0.62f, 0, 0},
+    {DM_TOM,  215, 150, 0.12f, 0.3f, 0.95f, 0.8f, 38},
+    {DM_CYM, 4600, 420, 0.60f, 0.60f, 0.66f, 0, 0},
+    {DM_RIM, 1750,  26, 0.2f, 0.5f, 0.85f, 0, 0},
+  },
+  { // 707: boxy and punchy
+    {DM_KICK,  56, 190, 0.0f, 0.30f, 0.95f, 1.3f, 32},
+    {DM_HAT, 4300,  48, 0.65f, 0.65f, 0.72f, 0, 0},
+    {DM_SNARE, 186, 125, 0.75f, 0.50f, 0.92f, 0.3f, 26},
+    {DM_HAT, 4300, 330, 0.65f, 0.60f, 0.72f, 0, 0},
+    {DM_CLAP,   0, 430, 1.0f, 0.5f, 0.88f, 0, 0},
+    {DM_TOM,  100, 230, 0.15f, 0.3f, 0.95f, 0.7f, 48},
+    {DM_CYM, 4100, 950, 0.60f, 0.55f, 0.72f, 0, 0},
+    {DM_TOM,  145, 210, 0.15f, 0.3f, 0.95f, 0.7f, 46},
+    {DM_CYM, 5400, 800, 0.40f, 0.82f, 0.62f, 0, 0},
+    {DM_TOM,  205, 190, 0.15f, 0.3f, 0.95f, 0.7f, 44},
+    {DM_CYM, 4500, 520, 0.60f, 0.60f, 0.66f, 0, 0},
+    {DM_RIM, 1700,  30, 0.25f, 0.5f, 0.88f, 0, 0},
+  },
+  { // 808: round and long
+    {DM_KICK,  48, 640, 0.0f, 0.10f, 1.00f, 2.2f, 44},
+    {DM_HAT, 3800,  42, 0.50f, 0.70f, 0.66f, 0, 0},
+    {DM_SNARE, 180, 140, 0.70f, 0.45f, 0.92f, 0.3f, 24},
+    {DM_HAT, 3800, 430, 0.50f, 0.65f, 0.66f, 0, 0},
+    {DM_CLAP,   0, 450, 1.0f, 0.5f, 0.88f, 0, 0},
+    {DM_TOM,   88, 320, 0.10f, 0.3f, 0.95f, 0.6f, 60},
+    {DM_CYM, 4000, 1300, 0.55f, 0.50f, 0.70f, 0, 0},
+    {DM_TOM,  128, 290, 0.10f, 0.3f, 0.95f, 0.6f, 56},
+    {DM_CYM, 5200, 900, 0.40f, 0.78f, 0.60f, 0, 0},
+    {DM_TOM,  180, 260, 0.10f, 0.3f, 0.95f, 0.6f, 52},
+    {DM_CYM, 4400, 600, 0.55f, 0.58f, 0.64f, 0, 0},
+    {DM_RIM, 1720,  22, 0.15f, 0.5f, 0.85f, 0, 0},
+  },
+  { // 909: hard and driven
+    {DM_KICK,  51, 420, 0.0f, 0.75f, 1.00f, 2.0f, 55},
+    {DM_HAT, 5200,  52, 0.80f, 0.80f, 0.72f, 0, 0},
+    {DM_SNARE, 184, 130, 0.95f, 0.55f, 0.95f, 0.45f, 28},
+    {DM_HAT, 5200, 380, 0.80f, 0.75f, 0.72f, 0, 0},
+    {DM_CLAP,   0, 400, 1.0f, 0.55f, 0.90f, 0, 0},
+    {DM_TOM,   98, 260, 0.25f, 0.3f, 0.98f, 0.9f, 50},
+    {DM_CYM, 4300, 1100, 0.70f, 0.60f, 0.74f, 0, 0},
+    {DM_TOM,  140, 240, 0.25f, 0.3f, 0.98f, 0.9f, 48},
+    {DM_CYM, 5600, 950, 0.50f, 0.85f, 0.64f, 0, 0},
+    {DM_TOM,  200, 220, 0.25f, 0.3f, 0.98f, 0.9f, 46},
+    {DM_CYM, 4700, 560, 0.70f, 0.65f, 0.68f, 0, 0},
+    {DM_RIM, 1760,  32, 0.3f, 0.5f, 0.90f, 0, 0},
+  },
+};
 
 // M1 helpers: a time value 0-99 as an easing time constant in ms (the M1's
 // log scale over ~7 time constants of audible decay: value 99 ~ a 6-7 s
@@ -171,6 +253,7 @@ void N9Synth::noteOff(uint8_t note) {
 static float SINE[257];
 static bool sineReady = false;
 
+static float MULAWF[256];
 static inline float sinT(float ph) {
   ph -= floorf(ph);
   float f = ph * 256.0f;
@@ -220,6 +303,11 @@ static void applyLiveParams(N9Synth::Voice &v, bool snap) {
   } else if (v.engine == E_GM) {               // the program's patch, cells as offsets
     const GmPatch &gp = GM_BANK[gmProgram[v.track] & 127];
     auto ofs = [](int base, uint8_t cell) { int r = base + cell - 50; return r < 0 ? 0 : r > 99 ? 99 : r; };
+    if (v.pcm) {                               // a sample: its timbre is baked; level + release
+      v.eRc = pcoef(ofs(gp.r, p[5]));
+      set(v.vel, v.velN * (gp.lvl / 99.0f) * (p[7] / 80.0f));
+      return;
+    }
     float c = ofs(gp.cut, p[0]) / 99.0f;
     set(v.cutB, 0.004f + 0.22f * c * c);
     set(v.resK, 3.2f * ofs(gp.res, p[1]) / 99.0f);
@@ -277,7 +365,8 @@ static inline float m1oscS(uint8_t cat, float ph, float dt, float fmPhase, float
 
 void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
   uint8_t engine = trackEngine[track];
-  if (engine >= E_MI_FIRST && engine != E_GM) {            // the plaits pool plays the Mutable models
+  if (engine == E_GMDRUM && GM_DRUMMAP[note & 127].smp < 0) return;   // no hit on that key
+  if (engine >= E_MI_FIRST && engine < E_GM) {            // the plaits pool plays the Mutable models
     miNoteOn(track, note, vel, engine - E_MI_FIRST);
     return;
   }
@@ -315,6 +404,8 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
   v->vel = vel / 127.0f;
   if (engine == E_303 && v->accent) v->vel = 1.2f;   // the accent's kick
   v->rng = _ageCounter * 2654435761u + note * 7919u + 1;
+  v->pcm = nullptr;
+  v->dmT = 0;
   if (engine == E_M1) {                  // cache the program into the voice
     const M1Program &pr = M1_BANK[m1Prog];
     float velN = vel / 127.0f;
@@ -372,6 +463,23 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
   } else if (engine == E_GM) {             // cache the GM program into the voice
     const GmPatch &gp = GM_BANK[gmProgram[track] & 127];
     v->velN = vel / 127.0f;
+    int smp = -1;                          // a baked SC-88 sample for this program?
+    for (int z = 0; z < 3; z++) {
+      const GmZone &zz = GM_ZONES[gmProgram[track] & 127][z];
+      if (zz.smp >= 0 && note <= zz.hi) { smp = zz.smp; break; }
+    }
+    if (smp >= 0) {
+      const GmSample &gs = GM_SAMPLES[smp];
+      v->pcm = GM_PCM + gs.off;
+      v->pcmLen = gs.len; v->pcmLoopS = gs.loopS; v->pcmLoopE = gs.loopE;
+      v->pcmPos = 0;
+      v->pcmRate = 0.5f * exp2f((note - gs.root) / 12.0f);   // (the data is 22050 Hz)
+      v->eAc = pcoef(2);
+      applyLiveParams(*v, true);
+      v->age = ++_ageCounter;
+      v->state = ATTACK;
+      return;
+    }
     v->cat1 = gp.w1;
     v->cat2 = gp.w2;
     v->inc3 = exp2f(gp.semi2 / 12.0f + gp.det / 1200.0f);   // osc 2's ratio
@@ -384,6 +492,44 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
     v->env2 = 0;                           // its fade-in
     v->e2Ac = 1.0f - expf(-2.902f / 500.0f);
     applyLiveParams(*v, true);
+  } else if (engine == E_GMDRUM) {         // the GM drum map (SC-88 one-shots)
+    const GmDrumHit &dh = GM_DRUMMAP[note & 127];
+    const GmSample &gs = GM_SAMPLES[dh.smp];
+    v->velN = vel / 127.0f;
+    v->pcm = GM_PCM + gs.off;
+    v->pcmLen = gs.len; v->pcmLoopS = 0; v->pcmLoopE = 0;
+    v->pcmPos = 0;
+    v->pcmRate = 0.5f * dh.rate256 / 256.0f;
+    v->eAc = pcoef(0);
+    v->eRc = pcoef(20);
+    v->vel = v->velN * (engParams[track][E_GMDRUM][7] / 80.0f);
+    if (note == 42 || note == 44)          // a closed/pedal hat chokes the open one
+      for (auto &c : _v)
+        if (&c != v && c.state != IDLE && c.engine == E_GMDRUM && c.track == track && c.note == 46)
+          { c.state = RELEASE; c.eRc = pcoef(6); }
+  } else if (engine == E_DM) {             // DRUMS: one analog hit per octave slot
+    const DmSound &ds = DM_KIT[drumMachine[track] & 3][note % 12];
+    const uint8_t *cp = engParams[track][E_DM];
+    v->velN = vel / 127.0f;
+    v->cat1 = ds.type;
+    v->inc = ds.f * exp2f((cp[0] - 50) / 60.0f) / 44100.0f;
+    v->minc = v->inc * (ds.type == DM_SNARE ? 1.83f : 1.4471f);
+    float dsc = exp2f((cp[1] - 50) / 30.0f);
+    v->eDc = decay(ds.decMs * dsc);
+    v->eRc = decay(ds.decMs * 0.5f * dsc);     // the snare's noise env
+    v->lfB = ds.noise * (0.4f + 1.2f * cp[2] / 99.0f);
+    v->lfAl = ds.tone * (0.4f + 1.2f * cp[3] / 99.0f);
+    v->cutE = ds.sweep;
+    v->fdC = decay(ds.pdecMs);
+    v->fenv = 1.0f; v->env = 1.0f; v->env2 = 1.0f;
+    v->f1 = v->f2 = 0; v->lp = 0;
+    v->vel = v->velN * ds.lvl * (cp[7] / 80.0f);
+    int slot = note % 12;
+    if (slot == 1 || slot == 3)            // a new hat chokes the other one
+      for (auto &c : _v)
+        if (&c != v && c.state != IDLE && c.engine == E_DM && c.track == track &&
+            (c.note % 12 == 1 || c.note % 12 == 3))
+          c.eDc = 0.996f;
   } else {                                   // the analog engines read the INST cells
     v->velN = vel / 127.0f;
     if (engine == E_PRO5 || engine == E_JUNO) { v->mseg = 0; v->fenv = 1.0f; }
@@ -397,7 +543,10 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
 void N9Synth::noteOffNow(uint8_t track, uint8_t note) {
   miNoteOff(track, note);
   for (auto &c : _v)
-    if (c.state != IDLE && c.state != RELEASE && c.track == track && c.note == note) c.state = RELEASE;
+    if (c.state != IDLE && c.state != RELEASE && c.track == track && c.note == note) {
+      if (c.engine == E_GMDRUM || c.engine == E_DM) continue;   // one-shots play through
+      c.state = RELEASE;
+    }
 }
 
 void N9Synth::seqToggle() {
@@ -445,6 +594,10 @@ void N9Synth::update() {
   uint32_t t0 = ARM_DWT_CYCCNT;
   if (!sineReady) {
     for (int i = 0; i <= 256; i++) SINE[i] = sinf(i * (2.0f * (float)M_PI / 256.0f));
+    for (int i = 0; i < 256; i++) {              // mu-law expand (tools/sc88_bank.py's encode)
+      float y = i / 127.5f - 1.0f;
+      MULAWF[i] = (y < 0 ? -1.0f : 1.0f) * (expf(fabsf(y) * 5.5452f) - 1.0f) / 255.0f;
+    }
     sineReady = true;
   }
 
@@ -518,7 +671,7 @@ void N9Synth::update() {
       v.minc = v.tinc * v.inc3 * pf;
     }
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-      if (d.osc != O_M1 && d.osc != O_MWAVE && d.osc != O_PRO5 && d.osc != O_JUNO && d.osc != O_GM)
+      if (d.osc != O_M1 && d.osc != O_MWAVE && d.osc != O_PRO5 && d.osc != O_JUNO && d.osc != O_GM && d.osc != O_DM)
       switch (v.state) {                         // (those engines run their own EGs)
         case ATTACK:  v.env += atkC * (1.0f - v.env); if (v.env > 0.999f) v.state = HOLD; break;
         case HOLD:    v.env *= decC; break;
@@ -602,6 +755,26 @@ void N9Synth::update() {
           break;
         }
         case O_GM: {
+          if (v.pcm) {                       // a baked SC-88 sample from flash
+            if (v.state == RELEASE) v.env += v.eRc * (0.0f - v.env);
+            else { v.env += v.eAc * (1.0f - v.env); if (v.state == ATTACK && v.env > 0.98f) v.state = HOLD; }
+            uint32_t ip = (uint32_t)v.pcmPos;
+            if (v.pcmLoopE && ip >= v.pcmLoopE - 1) {        // the loop wraps (seam crossfaded)
+              v.pcmPos -= (float)(v.pcmLoopE - v.pcmLoopS);
+              ip = (uint32_t)v.pcmPos;
+            }
+            if (ip + 1 >= v.pcmLen) {                        // a one-shot played out
+              s = 0;
+              v.env = 0;
+              if (v.state == ATTACK) v.state = HOLD;
+            } else {
+              float fr = v.pcmPos - ip;
+              float a = MULAWF[v.pcm[ip]], b = MULAWF[v.pcm[ip + 1]];
+              s = a + (b - a) * fr;
+              v.pcmPos += v.pcmRate;
+            }
+            break;
+          }
           if (v.state == RELEASE) v.env += v.eRc * (0.0f - v.env);
           else if (v.mseg == 0) { v.env += v.eAc * (1.0f - v.env + 0.001f); if (v.env >= 1.0f) { v.env = 1.0f; v.mseg = 1; } }
           else v.env += v.eDc * (v.lSus - v.env);
@@ -616,6 +789,76 @@ void N9Synth::update() {
           v.f3 += g * (v.f2 - v.f3); v.f4 += g * (v.f3 - v.f4);
           s = v.f4 * (1.6f + 0.3f * v.resK);
           v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
+          break;
+        }
+        case O_DM: {                       // DRUMS: one analog hit per slot
+          if (v.state == ATTACK) v.state = HOLD;   // (instant on; the quiet check kills it)
+          v.rng = v.rng * 1664525u + 1013904223u;
+          float n = (int32_t)v.rng * 4.6566e-10f, s0 = 0;
+          switch (v.cat1) {
+            case DM_KICK: {
+              v.fenv *= v.fdC;
+              s0 = sinT(v.phase);
+              if (v.dmT < 32) s0 += 0.5f * n;                // the click
+              s0 *= 1.0f + 2.5f * v.lfAl;                    // tone = drive
+              if (s0 > 1.4f) s0 = 1.4f; else if (s0 < -1.4f) s0 = -1.4f;
+              s0 -= s0 * s0 * s0 * (1.0f / 6.0f);
+              v.phase += v.inc * (1.0f + v.cutE * v.fenv); if (v.phase >= 1.0f) v.phase -= 1.0f;
+              v.env *= v.eDc;
+              s0 *= v.env;
+              break;
+            }
+            case DM_TOM: {
+              v.fenv *= v.fdC;
+              s0 = sinT(v.phase) + 0.25f * v.lfB * n;
+              v.phase += v.inc * (1.0f + v.cutE * v.fenv); if (v.phase >= 1.0f) v.phase -= 1.0f;
+              v.env *= v.eDc;
+              s0 *= v.env;
+              break;
+            }
+            case DM_SNARE: {
+              v.fenv *= v.fdC;
+              float tone = (sinT(v.phase) + 0.6f * sinT(v.mphase)) * 0.55f;
+              v.phase += v.inc * (1.0f + 0.6f * v.cutE * v.fenv); if (v.phase >= 1.0f) v.phase -= 1.0f;
+              v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
+              v.f1 += 0.22f * (n - v.f1);                    // the snap, highpassed
+              v.env *= v.eDc; v.env2 *= v.eRc;
+              s0 = tone * v.env * (1.1f - 0.6f * v.lfB) + (n - v.f1) * 1.4f * v.lfB * v.env2;
+              break;
+            }
+            case DM_CLAP: {
+              if (v.dmT == 480 || v.dmT == 960) v.env2 = 1.0f;   // three bursts, ~11 ms apart
+              v.f1 += 0.32f * (n - v.f1);
+              v.f2 += 0.07f * (n - v.f2);
+              s0 = (v.f1 - v.f2) * 2.6f * v.env2;
+              v.env2 *= v.dmT < 1400 ? 0.994f : v.eDc;
+              v.env = v.env2;                                // (the quiet check reads env)
+              break;
+            }
+            case DM_HAT:
+            case DM_CYM: {
+              float sq1 = v.phase < 0.5f ? 1.0f : -1.0f, sq2 = v.mphase < 0.5f ? 1.0f : -1.0f;
+              v.phase += v.inc; if (v.phase >= 1.0f) v.phase -= 1.0f;
+              v.mphase += v.minc; if (v.mphase >= 1.0f) v.mphase -= 1.0f;
+              float metal = 0.7f * sq1 * sq2 + n * v.lfB;
+              v.f1 += (0.10f + 0.3f * v.lfAl) * (metal - v.f1);
+              s0 = metal - v.f1;                             // highpassed ring
+              if (v.cat1 == DM_CYM) { v.f2 += 0.035f * (metal - v.f2); s0 += 0.3f * (metal - v.f2); }
+              v.env *= v.eDc;
+              s0 *= 0.8f * v.env;
+              break;
+            }
+            default: {                                       // DM_RIM
+              s0 = 1.2f * sinT(v.phase);
+              if (v.dmT < 24) s0 += 0.8f * n;
+              v.phase += v.inc; if (v.phase >= 1.0f) v.phase -= 1.0f;
+              v.env *= v.eDc;
+              s0 *= v.env;
+              break;
+            }
+          }
+          v.dmT++;
+          s = s0;
           break;
         }
         case O_M1: {
@@ -686,8 +929,9 @@ void N9Synth::update() {
           v.lp += 0.5f * (s - v.lp); s = v.lp;
           break;
       }
-      if (d.osc != O_M1) { v.phase += v.inc; if (v.phase >= 1.0f) v.phase -= 1.0f; }
-      tbus[v.track][i] += d.osc == O_M1 ? s * amp : s * v.env * amp;
+      if (d.osc != O_M1 && d.osc != O_DM && !(d.osc == O_GM && v.pcm))
+        { v.phase += v.inc; if (v.phase >= 1.0f) v.phase -= 1.0f; }
+      tbus[v.track][i] += (d.osc == O_M1 || d.osc == O_DM) ? s * amp : s * v.env * amp;
     }
     bool quiet = v.env < 0.002f && (!v.dual || v.env2 < 0.002f);
     if (quiet && v.state != ATTACK) { v.state = IDLE; active--; }
@@ -762,16 +1006,23 @@ void mwSetProgram(uint8_t p) {
 // A MIDI program change goes to the current engine's bank.
 static void setPreset(uint8_t p) {
   if (curEngine() == E_GM) gmProgram[nav.gridT] = p & 127;
+  else if (curEngine() == E_DM) drumMachine[nav.gridT] = p & 3;
   else if (curEngine() == E_MWAVE) mwSetProgram(p);
   else m1SetProgram(p);
+}
+
+// Drum tracks take notes as played: the scale would wreck their maps.
+static uint8_t snapIn(uint8_t n) {
+  uint8_t e = trackEngine[nav.gridT];
+  return (e == E_GMDRUM || e == E_DM) ? n : scaleSnap(n);
 }
 
 void synthServiceMidi() {
   while (usbMIDI.read()) {
     if (usbMIDI.getChannel() != 1) continue;
     uint8_t type = usbMIDI.getType();
-    if (type == usbMIDI.NoteOn && usbMIDI.getData2() > 0) synth.noteOn(scaleSnap(usbMIDI.getData1()), usbMIDI.getData2());
-    else if (type == usbMIDI.NoteOff || type == usbMIDI.NoteOn) synth.noteOff(scaleSnap(usbMIDI.getData1()));
+    if (type == usbMIDI.NoteOn && usbMIDI.getData2() > 0) synth.noteOn(snapIn(usbMIDI.getData1()), usbMIDI.getData2());
+    else if (type == usbMIDI.NoteOff || type == usbMIDI.NoteOn) synth.noteOff(snapIn(usbMIDI.getData1()));
     else if (type == usbMIDI.ProgramChange) setPreset(usbMIDI.getData1());
   }
   if (!midiSerial) return;
@@ -783,8 +1034,8 @@ void synthServiceMidi() {
     if (status == 0xC0) { setPreset(b); continue; }   // channel 1 program change
     if (status == 0x90 || status == 0x80) {       // channel 1 only
       if (d1 == 255) { d1 = b; continue; }
-      if (status == 0x90 && b > 0) synth.noteOn(scaleSnap(d1), b);
-      else synth.noteOff(scaleSnap(d1));
+      if (status == 0x90 && b > 0) synth.noteOn(snapIn(d1), b);
+      else synth.noteOff(snapIn(d1));
       d1 = 255;                                   // (running status kept)
     }
   }

@@ -6,6 +6,22 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **N9: GM now plays real SC-88 samples + two drum engines.** ~80 GM
+  programs play baked SC-88 one-notes (mu-law 22 kHz from flash, sustained
+  ones auto-looped: LISTEN FOR LOOP CLICKS and bad loop points - each is
+  fixable in tools/sc88_bank.py; the piano is a 3-zone multisample); the
+  rest keep the synth patches. GM DRUM: the standard GM drum map on SC-88
+  hits (35/36 kicks, 38 snare, 42/46 hats with choke, cymbals, toms, Latin
+  percussion; some notes borrowed+pitched). DRUMS: synthesized 606/707/808/
+  909 (preset cell picks the machine), 12 sounds every octave - C kick,
+  C# CH, D snare, D# OH (choked by CH), E clap, F/G/A toms, F#/G#/A#
+  crash/ride/cym, B rim; cells TUNE/DECAY/SNAP/TONE/LEVEL at note-on. Drum
+  tracks skip the scale snap on MIDI in; the roll still navigates in-scale
+  rows (annoying on drum tracks - fix later?). Projects: format now N9P3
+  (older files skipped). NOTE: n9_gm_pcm.cpp/.h are generated and
+  GITIGNORED (license: no re-hosting) - a fresh clone must run
+  `cd N9 && python3 tools/sc88_bank.py` before building. Watch CPU with
+  many sampled voices; flash is now ~86% full (352 KB free).
 - [ ] **N9: the GM engine (all 128 melodic programs, synthesized).** The
   engine selector's last entry, after the Mutable models; the INST preset
   cell shows "001 ACOU GRAND" etc, B+LEFT/RIGHT steps programs, B+UP/DOWN a

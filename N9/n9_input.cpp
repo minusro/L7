@@ -290,6 +290,9 @@ bool inputService() {
             int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 8 : -8;
             gmProgram[nav.gridT] = (uint8_t)((gmProgram[nav.gridT] + d + 128) & 127);
             dirty = true;
+          } else if (nav.instTop == 1 && curEngine() == E_DM && (i == A_LEFT || i == A_RIGHT)) {
+            drumMachine[nav.gridT] = (uint8_t)((drumMachine[nav.gridT] + (i == A_RIGHT ? 1 : 3)) & 3);
+            dirty = true;
           }                                        // (the other engines: no banks yet)
         } else {
           int idx = (nav.instRow - 1) * 4 + nav.instCol;
