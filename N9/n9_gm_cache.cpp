@@ -90,10 +90,12 @@ static bool commit(uint8_t prog) {
   delay(6);
   uint32_t addr = BASE + victim * SLOT, size = dirSize[prog], done = 0;
   f.seek(dirOff[prog]);
-  // The core's flash_write feeds the FlexSPI registers (device memory):
-  // sources must be word-aligned and lengths multiples of four, or its
-  // memcpy hard-faults (UNALIGNED). The record's tail is padded with 0xFF,
-  // which lands on erased flash and changes nothing.
+  // The core's flash_write issues ONE program command for the whole length,
+  // and NOR page programming WRAPS at 256-byte pages (the EEPROM emulation
+  // only ever writes 4 bytes, so the core never meets this). Writes here go
+  // page by page, from an 8-aligned buffer, lengths padded to words (the
+  // 0xFF padding lands on erased flash; unaligned sources fault the
+  // function's memcpy into the FlexSPI registers).
   static uint8_t buf[SECTOR] __attribute__((aligned(8)));
   AudioNoInterrupts();
   while (done < size) {
@@ -101,9 +103,11 @@ static bool commit(uint8_t prog) {
     if (f.read(buf, n) != (int)n) break;
     uint32_t w = (n + 3) & ~3u;
     if (w > n) memset(buf + n, 0xFF, w - n);
+    if (done == 0) memset(buf, 0xFF, 4);           // the magic goes in last
     eepromemu_flash_erase_sector((void *)(addr + done));
-    if (done == 0) eepromemu_flash_write((void *)(addr + 4), buf + 4, w - 4);
-    else eepromemu_flash_write((void *)(addr + done), buf, w);
+    for (uint32_t o = 0; o < w; o += 256)
+      eepromemu_flash_write((void *)(addr + done + o), buf + o,
+                            w - o < 256 ? w - o : 256);
     done += n;
   }
   bool ok = done >= size;
