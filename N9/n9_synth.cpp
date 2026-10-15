@@ -760,7 +760,7 @@ void N9Synth::update() {
             if (v.state == RELEASE) v.env += v.eRc * (0.0f - v.env);
             else { v.env += v.eAc * (1.0f - v.env); if (v.state == ATTACK && v.env > 0.98f) v.state = HOLD; }
             uint32_t ip = (uint32_t)v.pcmPos;
-            if (v.pcmLoopE && ip >= v.pcmLoopE - 1) {        // the loop wraps (seam crossfaded)
+            if (v.pcmLoopE && ip >= v.pcmLoopE) {            // the loop wraps (the pad covers ip+1)
               v.pcmPos -= (float)(v.pcmLoopE - v.pcmLoopS);
               ip = (uint32_t)v.pcmPos;
             }

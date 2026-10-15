@@ -102,35 +102,63 @@ def resample(x, srate):
     return np.interp(grid, np.arange(len(x)), x), r
 
 def add_sample(smp_ix, looped, caps):
-    BODY, ONESHOT = caps             # kept loop length / one-shot cap, seconds
-    ATTACK, PRE = int(0.16 * SR), int(0.07 * SR)
+    """Looped samples keep the font's own loop points. A loop longer than the
+    budget is shortened by moving its start toward the end, with the cut
+    chosen by waveform correlation (the font's loops are match-aligned, not
+    period-aligned) and a source-domain crossfade over the moved seam; the
+    middle before the loop is spliced out (attack kept). The loop region is
+    then resampled to an exact integer length, with the sub-sample pitch
+    error compensated in cents (returned with the index)."""
+    BODY, ONESHOT = caps
     key = (smp_ix, looped, caps)
     if key in cache: return cache[key]
     name, start, end, lstart, lend, srate, pitch, corr, link, typ = SHDR[smp_ix]
     x = SMPL[start:end].astype(np.float32) / 32768.0
     ls, le = lstart - start, lend - start
+    r = SR / srate
     use_loop = looped and 8 < le - ls and le <= len(x)
-    y, r = resample(x, srate)
+    cents_fix = 0.0
     if use_loop:
-        y = np.ascontiguousarray(y).copy()
-        nls, nle = int(round(ls * r)), int(round(le * r))
-        nle = min(nle, len(y) - 2)
-        # the loop kept to BODY seconds (its tail: quasi-stationary)
-        if nle - nls > int(BODY * SR): nls = nle - int(BODY * SR)
-        # the middle before the loop spliced out (attack kept, crossfaded in)
-        if nls - ATTACK > PRE + 512:
-            c0, c1 = ATTACK, nls - PRE
-            fade = 256
-            seg = y[c1:].copy()
-            w = np.linspace(0, 1, fade)
-            seg[:fade] = y[c0:c0 + fade] * (1 - w) + seg[:fade] * w
-            y = np.concatenate((y[:c0], seg))
-            nls -= c1 - c0; nle -= c1 - c0
-        y = y[:nle + 2]
-        fade = min(96, (nle - nls) // 2)
-        w = np.linspace(0, 1, fade)
-        y[nle - fade:nle] = y[nle - fade:nle] * (1 - w) + y[nls - fade:nls] * w   # the wrap's seam
+        x = x.copy()
+        A, PRE = int(0.16 * srate), int(0.07 * srate)
+        Lt = int(BODY * srate)                     # the loop budget, source samples
+        L = le - ls
+        if L > int(Lt * 1.3):                      # shorten: best-matching cut
+            W = 512
+            lo, hi = max(64, int(Lt * 0.75)), min(L, int(Lt * 1.3))
+            best, bestL = 1e9, Lt
+            a = x[le - W:le]
+            for Lc in range(lo, hi, 2):
+                if le - Lc - W < 0: break
+                d = float(np.mean((a - x[le - Lc - W:le - Lc]) ** 2))
+                if d < best: best, bestL = d, Lc
+            ls = le - bestL
+            fade = min(384, bestL // 3)            # the moved seam, blended in source
+            w = np.linspace(0, 1, fade, dtype=np.float32)
+            x[le - fade:le] = x[le - fade:le] * (1 - w) + x[ls - fade:ls] * w
+            L = bestL
+        if ls - A > PRE + 1024:                    # splice out the middle before the loop
+            c0, c1 = A, ls - PRE
+            fade = 384
+            seg = x[c1:].copy()
+            w = np.linspace(0, 1, fade, dtype=np.float32)
+            seg[:fade] = x[c0:c0 + fade] * (1 - w) + seg[:fade] * w
+            x = np.concatenate((x[:c0], seg))
+            ls -= c1 - c0; le -= c1 - c0
+        # lowpass once (to the target Nyquist), then resample the attack and
+        # the loop separately so the loop lands on an exact integer length
+        if srate > SR:
+            t = np.arange(-31, 32)
+            h = np.sinc(t * r) * np.hamming(63); h = (h / h.sum()).astype(np.float32)
+            x = np.convolve(x, h, mode='same')
+        Lp = max(8, int(round(L * r)))
+        atk = np.interp(np.arange(0, ls, 1.0 / r), np.arange(len(x)), x) if ls > 0 else np.zeros(0, np.float32)
+        loop = np.interp(ls + np.arange(Lp) * (L / Lp), np.arange(len(x)), x)
+        cents_fix = 1200.0 * np.log2(Lp / (L * r))
+        nls, nle = len(atk), len(atk) + Lp
+        y = np.concatenate((atk, loop, loop[:2]))  # the pad the reader's ip+1 needs
     else:
+        y, _r = resample(x, srate)
         nls = nle = 0
         cap = int(ONESHOT * SR)
         y = np.ascontiguousarray(y[:cap]).copy()
@@ -145,7 +173,7 @@ def add_sample(smp_ix, looped, caps):
     blob.extend(enc.tobytes())
     ix = len(samples)
     nm = name.rstrip(b'\0 ').decode('latin1')
-    samples.append((nm, off, len(y), nls, nle, 0, 0, gain))   # root/cents live per zone
+    samples.append((nm, off, len(y), nls, nle, 0, cents_fix, gain))
     cache[key] = ix
     return ix
 
@@ -175,7 +203,7 @@ def build(caps, zone_max):
             klo, khi, vlo, vhi, smp, root, cents, modes = z
             six = add_sample(smp, modes in (1, 3), caps)
             hi = khi if zi < len(zs) - 1 and zi < zone_max - 1 else 127
-            zones_out[prog][zi] = (six, hi, root, cents)
+            zones_out[prog][zi] = (six, hi, root, int(round(cents + samples[six][6])))
     drums_out = [(-1, 256, 64)] * 128
     for note, (stem, shift) in WAV_DRUMS.items():
         six = add_wav_drum(stem, caps)
