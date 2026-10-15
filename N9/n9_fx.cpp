@@ -47,7 +47,7 @@ struct FxState {
   int16_t *line;
   int lineLen;
   float sp[8];
-  float ph = 0;
+  float ph = 0, ph2 = 0;
   float envL = 0, gain = 1;
   float lpL = 0, lpR = 0, s1L = 0, s2L = 0, s1R = 0, s2R = 0;
   float apL[6], apR[6], cf[6];
@@ -73,6 +73,15 @@ static inline float readLine(const int16_t *buf, int len, int wr, float back) {
   if (a < 0) a += len; if (b < 0) b += len;
   return i16f(buf[a]) + (i16f(buf[b]) - i16f(buf[a])) * fr;
 }
+// LFO sine from a table (the audio interrupt pays for sinf() per sample).
+static float FXSINE[257];
+static inline float fxsin(float ph) {
+  ph -= (int)ph;
+  float f = ph * 256.0f;
+  int i = (int)f;
+  return FXSINE[i] + (FXSINE[i + 1] - FXSINE[i]) * (f - i);
+}
+
 static inline float softsat(float x) {
   if (x > 1.5f) x = 1.5f; else if (x < -1.5f) x = -1.5f;
   return x - x * x * x * (4.0f / 27.0f);
@@ -121,6 +130,7 @@ uint8_t fxStepTrackType(uint8_t type, int dir) {
 uint8_t fxStepMasterType(uint8_t type, int dir) { return (type + FX_TYPES + dir) % FX_TYPES; }
 
 void fxSlotsInit() {
+  for (int i = 0; i <= 256; i++) FXSINE[i] = sinf(i * (2.0f * (float)M_PI / 256.0f));
   for (int t = 0; t < 9; t++)
     for (int k = 0; k < 2; k++) { loadDefaults(trackFx[t][k], FXT_NONE); resetState(stTrack[t][k], trackLine[t][k], 1024, trackFx[t][k]); }
   static const uint8_t SEND_TYPES[3] = {FXT_DELAY, FXT_REVERB, FXT_CHORUS};
@@ -154,15 +164,16 @@ static void processSlot(const FxSlot &sl, FxState &t, float *l, float *r, int n,
       float flut = wow ? 24.0f * p3 : 0;
       for (int i = 0; i < n; i++) {
         float x = (l[i] + r[i]) * 0.5f;
-        float wob = flut > 0 ? flut * sinf(t.ph * 43.7f) : 0;
-        float m1 = sinf(t.ph * 6.2832f), m2 = sinf((t.ph + spread) * 6.2832f);
+        float wob = flut > 0 ? flut * fxsin(t.ph2) : 0;
+        float m1 = fxsin(t.ph), m2 = fxsin(t.ph + spread);
         float d1 = base + depth * (1.0f + m1) * 0.5f + wob + 2.0f;
         float d2 = base + depth * (1.0f + m2) * 0.5f + wob + 2.0f;
         float w1 = readLine(t.line, t.lineLen, t.pos, d1);
         float w2 = readLine(t.line, t.lineLen, t.pos, d2);
-        t.line[t.pos] = fi16(x + w1 * fb);
+        t.line[t.pos] = fi16(softsat(x + w1 * fb));   // (hot buses: no hard 16-bit clip)
         t.pos = (t.pos + 1) & (t.lineLen - 1);
         t.ph += hz / 44100.0f; if (t.ph >= 1.0f) t.ph -= 1.0f;
+        t.ph2 += 6.955f * hz / 44100.0f; if (t.ph2 >= 1.0f) t.ph2 -= 1.0f;   // the flutter, phase-continuous
         float ol = l[i] * dry + w1 * wet, orr = r[i] * dry + w2 * wet;
         if (sat > 0.01f) { float g = 1.0f + 4.0f * sat; ol = softsat(ol * g) / (1 + sat); orr = softsat(orr * g) / (1 + sat); }
         l[i] = ol; r[i] = orr;
@@ -175,7 +186,7 @@ static void processSlot(const FxSlot &sl, FxState &t, float *l, float *r, int n,
       int stages = 2 + 2 * (int)(p3 * 2.99f);
       for (int i = 0; i < n; i++) {
         t.ph += hz / 44100.0f; if (t.ph >= 1.0f) t.ph -= 1.0f;
-        float a = 0.1f + 0.5f * p4 + 0.45f * p1 * (0.5f + 0.5f * sinf(t.ph * 6.2832f));
+        float a = 0.1f + 0.5f * p4 + 0.45f * p1 * (0.5f + 0.5f * fxsin(t.ph));
         if (a > 0.93f) a = 0.93f;
         float xl = l[i] + t.lpL * fb, xr = r[i] + t.lpR * fb;
         for (int k = 0; k < stages; k++) {
@@ -194,8 +205,8 @@ static void processSlot(const FxSlot &sl, FxState &t, float *l, float *r, int n,
       for (int i = 0; i < n; i++) {
         t.ph += hz / 44100.0f; if (t.ph >= 1.0f) t.ph -= 1.0f;
         float phR = t.ph + 0.5f * p2; if (phR >= 1.0f) phR -= 1.0f;
-        float mL = square ? (t.ph < 0.5f ? 1.0f : 0.0f) : 0.5f + 0.5f * sinf(t.ph * 6.2832f);
-        float mR = square ? (phR < 0.5f ? 1.0f : 0.0f) : 0.5f + 0.5f * sinf(phR * 6.2832f);
+        float mL = square ? (t.ph < 0.5f ? 1.0f : 0.0f) : 0.5f + 0.5f * fxsin(t.ph);
+        float mR = square ? (phR < 0.5f ? 1.0f : 0.0f) : 0.5f + 0.5f * fxsin(phR);
         l[i] = l[i] * dry + l[i] * (1.0f - p1 * (1.0f - mL)) * wet;
         r[i] = r[i] * dry + r[i] * (1.0f - p1 * (1.0f - mR)) * wet;
       }
