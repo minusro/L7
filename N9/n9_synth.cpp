@@ -3,6 +3,7 @@
 
 #include "M8Board.h"
 #include "n9_gm_bank.h"
+#include "n9_gm_cache.h"
 #include "n9_gm_pcm.h"
 #include "n9_m1_bank.h"
 #include "n9_mw_bank.h"
@@ -463,14 +464,16 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
   } else if (engine == E_GM) {             // cache the GM program into the voice
     const GmPatch &gp = GM_BANK[gmProgram[track] & 127];
     v->velN = vel / 127.0f;
-    const GmZone *zone = nullptr;          // a baked SC-88 sample for this program?
-    for (int z = 0; z < GM_ZONE_MAX; z++) {
-      const GmZone &zz = GM_ZONES[gmProgram[track] & 127][z];
-      if (zz.smp >= 0 && note <= zz.hi) { zone = &zz; break; }
-    }
+    const GmCacheHdr *cs = gmCacheFor(gmProgram[track] & 127);   // a cached record?
+    const GmCacheZone *zone = nullptr;
+    if (cs)
+      for (int z = 0; z < cs->nzones; z++) {
+        const GmCacheZone &zz = cs->zone[z];
+        if (zz.smp >= 0 && note <= zz.hi) { zone = &zz; break; }
+      }
     if (zone) {
-      const GmSample &gs = GM_SAMPLES[zone->smp];
-      v->pcm = GM_PCM + gs.off;
+      const GmCacheSmp &gs = cs->smp[zone->smp];
+      v->pcm = (const uint8_t *)cs + sizeof(GmCacheHdr) + gs.off;
       v->pcmLen = gs.len; v->pcmLoopS = gs.loopS; v->pcmLoopE = gs.loopE;
       v->pcmPos = 0;
       v->pcmRate = (gs.rateQ / 256.0f) * exp2f((note - zone->root) / 12.0f + zone->cents / 1200.0f);
@@ -610,6 +613,11 @@ void N9Synth::update() {
     else noteOffNow(nav.gridT, e.note);
   }
 
+  if (_pcmPanic) {                       // a flash slot is about to be rewritten
+    _pcmPanic = false;
+    for (auto &c : _v) c.state = IDLE;
+    _seqNoteCount = 0;
+  }
   // The transport.
   if (_seqStopReq) {
     _seqStopReq = false; _seqOn = false;

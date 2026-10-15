@@ -25,6 +25,7 @@
 #include "n9_input.h"
 #include "n9_state.h"
 #include "n9_apps.h"
+#include "n9_gm_cache.h"
 #include "n9_project.h"
 #include "n9_song.h"
 #include "n9_synth.h"
@@ -64,6 +65,8 @@ void setup() {
   appsInit();                                      // the card's /N9 and /APPS folders
   usbDriveBegin();                                 // the computer's disk probing answered from now on
   projectsBegin();                                 // the last project back in
+  gmCacheInit();                                   // the GM bank's directory + held-over slots
+  for (int i = 0; i < 10 && gmCacheService(true); i++) splashTick();   // the project's programs in
   splashHide();                                    // waits out its minimum, fades
   drawScreen(nav.screen);
 }
@@ -71,6 +74,7 @@ void setup() {
 void loop() {
   if (inputService()) dirty = true;
   if (projectService()) dirty = true;              // a beat-load came due
+  if (gmCacheService()) dirty = true;              // a settled GM program flashed in
   synthServiceMidi();
   static uint8_t lastStep = 255;                 // the playhead and clock follow the transport
   if (synth.seqOn() && synth.seqStepN() != lastStep) { lastStep = synth.seqStepN(); dirty = true; }

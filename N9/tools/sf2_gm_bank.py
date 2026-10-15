@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-# sf2_gm_bank.py — bakes sounds/Roland_SC-88.sf2 into flash for the GM engine,
+# sf2_gm_bank.py — the GM engine's two outputs:
+#  * n9_gm_pcm.cpp/.h — the baked flash part: ONLY the GM drum map now (the
+#    freewavesamples one-shots).
+#  * ../apps_sd/GM.BNK — the SD bank: all melodic programs at FULL quality
+#    (loops and pre-loop middles whole, one-shots to 2 s), one self-contained
+#    record per program, each at most a cache slot (104 KB minus the header).
+#    N9 flashes the records a project needs into a 960 KB cache region above
+#    the app image (n9_gm_cache.cpp); programs stay on synth patches until
+#    their record is cached. Copy GM.BNK to the card as /N9/GM.BNK.
+# Originally: bakes sounds/Roland_SC-88.sf2 into flash for the GM engine,
 # replacing sc88_bank.py's one-note rips with the soundfont's real multisamples
 # and loop points. Bank 0 presets 0-127 become the melodic programs (up to
 # GM_ZONE_MAX key zones each, the velocity layer nearest 100); bank 128's
@@ -15,7 +24,8 @@ WAVDIR = os.path.join(os.path.dirname(__file__), '..', 'sounds', 'SC-88')
 OUT_H = os.path.join(os.path.dirname(__file__), '..', 'n9_gm_pcm.h')
 OUT_C = os.path.join(os.path.dirname(__file__), '..', 'n9_gm_pcm.cpp')
 SR = 22050
-BUDGET = 1500 * 1024                 # mu-law bytes of PCM, tops
+SLOT_BYTES = 0x1A000          # a cache slot (26 flash sectors)
+HDR_BYTES = 128                 # mu-law bytes of PCM, tops
 ZONE_MAX = 4
 
 # ---- SF2 parsing -------------------------------------------------------------
@@ -189,35 +199,98 @@ def pick_vel(zs):
         if k not in out or (z[2] <= 100 <= z[3]) and not (out[k][2] <= 100 <= out[k][3]): out[k] = z
     return list(out.values())
 
-def build(caps, zone_max):
-    global blob, samples, cache
-    blob, samples, cache = bytearray(), [], {}
-    zones_out = [[(-1, 127, 0, 0)] * ZONE_MAX for _ in range(128)]
-    for prog in range(128):
-        zs = pick_vel(preset_zones(0, prog))
-        zs = [z for z in zs if z[1] >= 24 and z[0] <= 96]
-        zs.sort(key=lambda z: z[0])
-        if not zs: continue
-        if len(zs) > zone_max:       # spread the picks over the keyboard
-            want = [zs[int(round(i * (len(zs) - 1) / (zone_max - 1)))] for i in range(zone_max)]
-            seen, zs2 = set(), []
-            for z in want:
-                if id(z) not in seen: seen.add(id(z)); zs2.append(z)
-            zs = zs2
-        for zi, z in enumerate(zs[:zone_max]):
-            klo, khi, vlo, vhi, smp, root, cents, modes = z
-            six = add_sample(smp, modes in (1, 3), caps)
-            hi = khi if zi < len(zs) - 1 and zi < zone_max - 1 else 127
-            zones_out[prog][zi] = (six, hi, root, int(round(cents + samples[six][6])))
-    drums_out = [(-1, 256, 64)] * 128
-    for note, (stem, shift) in WAV_DRUMS.items():
-        six = add_wav_drum(stem, caps)
-        drums_out[note] = (six, int(round(256 * 2 ** (shift / 12.0))), 64)
-    return zones_out, drums_out
+def process(smp_ix, looped, mid_keep, oneshot):
+    """One sample at full quality: the loop whole, mid_keep seconds of the
+    pre-loop middle (None: all of it), one-shots capped at `oneshot`.
+    Returns (mu-law bytes, len, ls, le, rateQ, cents, gain)."""
+    name, start, end, lstart, lend, srate, pitch, corr, link, typ = SHDR[smp_ix]
+    x = SMPL[start:end].astype(np.float32) / 32768.0
+    ls, le = lstart - start, lend - start
+    use_loop = looped and 8 < le - ls and le <= len(x)
+    cents_fix = 0.0
+    out_sr = pick_rate(x[ls:le] if use_loop else x, srate)
+    r = out_sr / srate
+    if use_loop:
+        x = x.copy()
+        if mid_keep is not None:
+            A, PRE = int(0.16 * srate), int(max(0.04, mid_keep - 0.16) * srate)
+            if ls - A > PRE + 1024:
+                c0, c1 = A, ls - PRE
+                fade = 384
+                seg = x[c1:].copy()
+                w = np.linspace(0, 1, fade, dtype=np.float32)
+                seg[:fade] = x[c0:c0 + fade] * (1 - w) + seg[:fade] * w
+                x = np.concatenate((x[:c0], seg))
+                ls -= c1 - c0; le -= c1 - c0
+        L = le - ls
+        x = lowpass_for(x, r)
+        Lp = max(8, int(round(L * r)))
+        atk = np.interp(np.arange(0, ls, 1.0 / r), np.arange(len(x)), x) if ls > 0 else np.zeros(0, np.float32)
+        loop = np.interp(ls + np.arange(Lp) * (L / Lp), np.arange(len(x)), x)
+        cents_fix = 1200.0 * np.log2(Lp / (L * r))
+        nls, nle = len(atk), len(atk) + Lp
+        y = np.concatenate((atk, loop, loop[:2]))
+    else:
+        x = lowpass_for(x, r)
+        y = np.interp(np.arange(0, len(x) - 1, 1.0 / r), np.arange(len(x)), x)
+        nls = nle = 0
+        y = np.ascontiguousarray(y[:int(oneshot * out_sr)]).copy()
+        fd = min(len(y) // 4, int(0.06 * out_sr))
+        if fd > 0: y[-fd:] *= np.linspace(1, 0, fd)
+    enc, gain = encode(y)
+    return enc.tobytes(), len(y), nls, nle, int(round(256 * out_sr / 44100)), cents_fix, gain
+
+def program_record(prog, ver):
+    """A self-contained SD record: header + its samples, under SLOT_BYTES.
+    Quality steps down (middle, then one-shots, then zones) only if a
+    program can't fit a slot whole."""
+    zs = pick_vel(preset_zones(0, prog))
+    zs = [z for z in zs if z[1] >= 24 and z[0] <= 96]
+    zs.sort(key=lambda z: z[0])
+    if not zs: return None
+    for zone_max in (4, 3, 2, 1):
+        zl = zs
+        if len(zl) > zone_max:
+            zl = [zs[int(round(i * (len(zs) - 1) / max(1, zone_max - 1)))] for i in range(zone_max)]
+            seen, z2 = set(), []
+            for z in zl:
+                if id(z) not in seen: seen.add(id(z)); z2.append(z)
+            zl = z2
+        for mid_keep, oneshot in ((None, 2.0), (1.2, 1.5), (0.7, 1.0), (0.42, 0.7), (0.25, 0.5)):
+            local, datas, zone_rows = {}, [], []
+            for (klo, khi, vlo, vhi, smp, root, cents, modes) in zl:
+                k = (smp, modes in (1, 3))
+                if k not in local:
+                    local[k] = len(datas)
+                    datas.append(process(smp, modes in (1, 3), mid_keep, oneshot))
+                zone_rows.append((local[k], khi, root, cents))
+            size = HDR_BYTES + sum(len(d[0]) for d in datas)
+            if size <= SLOT_BYTES and len(datas) <= 4:
+                hdr = struct.pack('<IIBBBBI', 0x5047394E, ver, prog, len(zone_rows), len(datas), 0,
+                                  size - HDR_BYTES)
+                for zi in range(4):
+                    if zi < len(zone_rows):
+                        li, khi, root, cents = zone_rows[zi]
+                        hi = khi if zi < len(zone_rows) - 1 else 127
+                        c = int(round(cents + datas[li][5]))
+                        hdr += struct.pack('<hBBhH', li, hi, root & 0xFF, c, 0)
+                    else:
+                        hdr += struct.pack('<hBBhH', -1, 127, 60, 0, 0)
+                off = 0
+                for di in range(4):
+                    if di < len(datas):
+                        d, ln, ls_, le_, rateQ, _c, gain = datas[di]
+                        hdr += struct.pack('<IIIIHBB', off, ln, ls_, le_, rateQ, gain, 0)
+                        off += len(d)
+                    else:
+                        hdr += struct.pack('<IIIIHBB', 0, 0, 0, 0, 0, 0, 0)
+                assert len(hdr) == HDR_BYTES
+                return hdr + b''.join(d[0] for d in datas), mid_keep is None
+    return None
 
 # ---- the GM drum map: the freewavesamples one-shots (the soundfont's
 # Standard kit holds only 11 hits - no toms, no Latin percussion).
-import wave as wavemod, re
+import wave as wavemod
 WAV_DRUMS = {
   27:('High-Q',0), 29:('Scratch-Push',0), 30:('Scratch-Pull',0), 31:('Sticks',0),
   32:('Square-Click',0), 34:('Metronome-Bell',0),
@@ -264,32 +337,53 @@ def add_wav_drum(stem, caps):
     cache[key] = ix
     return ix
 
-# The attack window descends until the bank fits: the pre-loop middle is
-# worth more than anything else left to cut.
-ATTEMPTS = [(4, 0.42, 0.60, 0.10), (4, 0.42, 0.50, 0.09), (4, 0.42, 0.42, 0.08),
-            (4, 0.40, 0.34, 0.07), (4, 0.38, 0.26, 0.06), (4, 0.38, 0.18, 0.06),
-            (3, 0.38, 0.16, 0.05), (2, 0.32, 0.10, 0.04)]
-for zone_max, oneshot, atk, pre in ATTEMPTS:
-    caps = (oneshot, atk, pre)
-    zones_out, drums_out = build(caps, zone_max)
-    total = len(blob)
-    print(f'zones={zone_max} shot={oneshot}s atk={atk}s: {len(samples)} samples, {total/1024:.0f} KB')
-    if total <= BUDGET: break
+def build_drums():
+    global blob, samples, cache
+    blob, samples, cache = bytearray(), [], {}
+    drums_out = [(-1, 256, 64)] * 128
+    for note, (stem, shift) in WAV_DRUMS.items():
+        six = add_wav_drum(stem, (0, 0, 0))
+        drums_out[note] = (six, int(round(256 * 2 ** (shift / 12.0))), 64)
+    return drums_out
+
+import zlib
+drums_out = build_drums()
+print(f'drums baked: {len(samples)} samples, {len(blob)/1024:.0f} KB')
+
+ver = zlib.crc32(open(SF2, 'rb').read(1 << 16)) ^ 0x4E394202   # the bank's identity
+records, trimmed = {}, []
+for prog in range(128):
+    r = program_record(prog, ver)
+    if r is None: continue
+    records[prog], full = r
+    if not full: trimmed.append(prog + 1)
+bnk = bytearray()
+bnk += struct.pack('<III', 0x4247394E, ver, 128)
+dir_off = len(bnk)
+bnk += b'\0' * (128 * 8)
+for prog in range(128):
+    if prog in records:
+        rec = records[prog]
+        struct.pack_into('<II', bnk, dir_off + prog * 8, len(bnk), len(rec))
+        bnk += rec
+BNK_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'apps_sd', 'GM.BNK')
+open(BNK_PATH, 'wb').write(bnk)
+print(f'GM.BNK: {len(records)}/128 programs, {len(bnk)/1024/1024:.2f} MB '
+      f'({len(trimmed)} trimmed to fit a slot: {trimmed})')
 
 with open(OUT_H, 'w') as out:
-    out.write('// n9_gm_pcm.h — the GM engine\'s baked samples, from the SC-88 soundfont\n'
-              '// (tools/sf2_gm_bank.py). Mu-law, 22050 Hz mono; loopE == 0: one-shot.\n'
-              '// GENERATED and GITIGNORED (not ours to redistribute), do not edit.\n'
+    out.write('// n9_gm_pcm.h — the baked flash part of GM: the DRUM MAP only (the\n'
+              '// melodic programs live on the card as /N9/GM.BNK and cache into flash:\n'
+              '// n9_gm_cache.h). Mu-law, mono. GENERATED by tools/sf2_gm_bank.py and\n'
+              '// GITIGNORED (not ours to redistribute), do not edit.\n'
               '#pragma once\n#include <stdint.h>\n\n'
-              'struct GmSample { uint32_t off, len, loopS, loopE; uint16_t rateQ; uint8_t gain; };   // rateQ: storage rate * 256 / 44100\n'
-              'struct GmZone { int16_t smp; uint8_t hi, root; int16_t cents; };\n'
+              'struct GmSample { uint32_t off, len, loopS, loopE; uint16_t rateQ; uint8_t gain; };\n'
               'struct GmDrumHit { int16_t smp; uint16_t rate256; uint8_t gain; };\n\n'
               f'constexpr uint32_t GM_PCM_BYTES = {len(blob)}u;\n'
               f'constexpr uint16_t GM_SAMPLE_COUNT = {len(samples)};\n'
-              f'constexpr uint8_t GM_ZONE_MAX = {ZONE_MAX};\n'
+              f'constexpr uint32_t GM_BANK_VER = {ver}u;   // GM.BNK must match (n9_gm_cache)\n'
               'extern const uint8_t GM_PCM[GM_PCM_BYTES];\n'
               'extern const GmSample GM_SAMPLES[GM_SAMPLE_COUNT];\n'
-              'extern const GmZone GM_ZONES[128][GM_ZONE_MAX];\n'
               'extern const GmDrumHit GM_DRUMMAP[128];\n')
 
 with open(OUT_C, 'w') as out:
@@ -298,18 +392,12 @@ with open(OUT_C, 'w') as out:
     out.write('PROGMEM const GmSample GM_SAMPLES[GM_SAMPLE_COUNT] = {\n')
     for (nm, off, ln, ls, le, rateQ, _c, gain) in samples:
         out.write(f'  {{{off}u, {ln}u, {ls}u, {le}u, {rateQ}, {gain}}},  // {nm}\n')
-    out.write('};\n\nPROGMEM const GmZone GM_ZONES[128][GM_ZONE_MAX] = {\n')
-    for p in range(128):
-        z = ', '.join(f'{{{s}, {hi}, {root}, {cents}}}' for (s, hi, root, cents) in zones_out[p])
-        out.write(f'  {{{z}}},\n')
     out.write('};\n\nPROGMEM const GmDrumHit GM_DRUMMAP[128] = {\n')
     for n in range(128):
-        s, r, g = drums_out[n]
-        out.write(f'  {{{s}, {r}, {g}}},\n')
+        sm, r_, g = drums_out[n]
+        out.write(f'  {{{sm}, {r_}, {g}}},\n')
     out.write('};\n\nPROGMEM const uint8_t GM_PCM[GM_PCM_BYTES] = {\n')
     for i in range(0, len(blob), 24):
         out.write(' ' + ''.join(f'{b},' for b in blob[i:i + 24]) + '\n')
     out.write('};\n')
-covered = sum(1 for p in range(128) if zones_out[p][0][0] >= 0)
-dnotes = sum(1 for n in range(128) if drums_out[n][0] >= 0)
-print(f'wrote bank: {covered}/128 programs, {dnotes} drum notes, {len(blob)/1024:.0f} KB')
+print(f'wrote the baked drum part: {len(blob)/1024:.0f} KB')

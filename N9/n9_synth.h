@@ -29,6 +29,7 @@ public:
   // The transport: a sixteenth-step clock in the audio interrupt, playing
   // the grid cursor's clip through the current engine.
   void seqToggle();                                // start from 1.1.1 / stop
+  void pcmPanic() { _pcmPanic = true; }            // all voices off (a flash slot rewrite)
   bool seqOn() const { return _seqOn; }
   uint8_t seqStepN() const { return _seqStep; }
   uint16_t seqBarN() const { return _seqBar; }
@@ -85,6 +86,7 @@ private:
   void fireStep(uint8_t step);
 
   volatile bool _seqOn = false, _seqStartReq = false, _seqStopReq = false;
+  volatile bool _pcmPanic = false;
   volatile uint8_t _seqStep = 0;
   volatile uint16_t _seqBar = 0;
   float _seqAcc = 0, _seqBpm = 132.0f;

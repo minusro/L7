@@ -6,6 +6,18 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **N9: GM full quality via the SD-to-flash sample cache.** Copy
+  apps_sd/GM.BNK to the card as /N9/GM.BNK (storage mode works). The
+  melodic bank left the firmware: a 960 KB flash region above the app image
+  caches the full-quality records (whole loops AND whole pre-loop middles,
+  2 s one-shots - nothing trimmed) for the up to nine GM programs in use.
+  Check: a program plays the synth patch instantly while uncached, then
+  "GM LOADING <name>" (audio mutes ~1-2 s) about 0.7 s after settling on
+  it, and the samples take over for new notes; boot reloads the project's
+  programs during the splash; slots survive a power cycle (no reload);
+  switching apps wipes the cache (shared with the switcher's buffer) and
+  the next N9 boot reloads; no GM.BNK on the card = synth patches + a
+  serial line. Drums are still baked in flash, unaffected.
 - [ ] **N9: clips hold 128 notes now (were 64).** The clips moved to RAM2
   and projects stream them after the header blob (format N9P4; older
   files skipped). Check: a dense clip (chords every step) past 64
