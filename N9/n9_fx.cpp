@@ -171,7 +171,7 @@ static void processSlot(const FxSlot &sl, FxState &t, float *l, float *r, int n,
         float w1 = readLine(t.line, t.lineLen, t.pos, d1);
         float w2 = readLine(t.line, t.lineLen, t.pos, d2);
         t.line[t.pos] = fi16(softsat(x + w1 * fb));   // (hot buses: no hard 16-bit clip)
-        t.pos = (t.pos + 1) & (t.lineLen - 1);
+        if (++t.pos >= t.lineLen) t.pos = 0;   // (the master line isn't a power of two)
         t.ph += hz / 44100.0f; if (t.ph >= 1.0f) t.ph -= 1.0f;
         t.ph2 += 6.955f * hz / 44100.0f; if (t.ph2 >= 1.0f) t.ph2 -= 1.0f;   // the flutter, phase-continuous
         float ol = l[i] * dry + w1 * wet, orr = r[i] * dry + w2 * wet;
