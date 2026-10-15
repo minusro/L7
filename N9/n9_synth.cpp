@@ -463,17 +463,18 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
   } else if (engine == E_GM) {             // cache the GM program into the voice
     const GmPatch &gp = GM_BANK[gmProgram[track] & 127];
     v->velN = vel / 127.0f;
-    int smp = -1;                          // a baked SC-88 sample for this program?
-    for (int z = 0; z < 3; z++) {
+    const GmZone *zone = nullptr;          // a baked SC-88 sample for this program?
+    for (int z = 0; z < GM_ZONE_MAX; z++) {
       const GmZone &zz = GM_ZONES[gmProgram[track] & 127][z];
-      if (zz.smp >= 0 && note <= zz.hi) { smp = zz.smp; break; }
+      if (zz.smp >= 0 && note <= zz.hi) { zone = &zz; break; }
     }
-    if (smp >= 0) {
-      const GmSample &gs = GM_SAMPLES[smp];
+    if (zone) {
+      const GmSample &gs = GM_SAMPLES[zone->smp];
       v->pcm = GM_PCM + gs.off;
       v->pcmLen = gs.len; v->pcmLoopS = gs.loopS; v->pcmLoopE = gs.loopE;
       v->pcmPos = 0;
-      v->pcmRate = 0.5f * exp2f((note - gs.root) / 12.0f);   // (the data is 22050 Hz)
+      v->pcmRate = 0.5f * exp2f((note - zone->root) / 12.0f + zone->cents / 1200.0f);   // (22050 Hz data)
+      v->velN *= gs.gain / 64.0f;            // the soundfont's balance between samples
       v->eAc = pcoef(2);
       applyLiveParams(*v, true);
       v->age = ++_ageCounter;
@@ -502,7 +503,7 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
     v->pcmRate = 0.5f * dh.rate256 / 256.0f;
     v->eAc = pcoef(0);
     v->eRc = pcoef(20);
-    v->vel = v->velN * (engParams[track][E_GMDRUM][7] / 80.0f);
+    v->vel = v->velN * (gs.gain / 64.0f) * (dh.gain / 64.0f) * (engParams[track][E_GMDRUM][7] / 80.0f);
     if (note == 42 || note == 44)          // a closed/pedal hat chokes the open one
       for (auto &c : _v)
         if (&c != v && c.state != IDLE && c.engine == E_GMDRUM && c.track == track && c.note == 46)

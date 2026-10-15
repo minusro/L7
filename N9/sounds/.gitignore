@@ -4,3 +4,5 @@ Korg_M1_Plus1/*.pdf
 # freewavesamples.com: royalty-free to USE, but copies may not be re-hosted
 # for download - so the files stay local (their NOTES.md is tracked).
 SC-88/*.wav
+# The SC-88 soundfont: not ours to redistribute.
+*.sf2

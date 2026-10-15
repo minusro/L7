@@ -6,7 +6,15 @@ checked, or turn it into a fix.
 
 ## To check
 
-- [ ] **N9: GM now plays real SC-88 samples + two drum engines.** ~80 GM
+- [ ] **N9: GM rebuilt from the Roland_SC-88.sf2 soundfont.** The bank now
+  comes from the soundfont's real multisamples: 106 of 128 programs covered,
+  up to 4 key zones each (the soundfont's roots, tunings and loop points),
+  deep loops kept by splicing out the middle (attack + 0.19 s loop,
+  crossfaded seams - LISTEN for splice/loop artefacts, esp. pianos and
+  pads); the GM drum map stays on the freewavesamples one-shots (the
+  soundfont kit has only 11 hits). Regenerate with
+  `cd N9 && python3 tools/sf2_gm_bank.py` (the sf2 is gitignored too).
+- [ ] **N9: GM samples + two drum engines (superseded bank, same engines).** ~80 GM
   programs play baked SC-88 one-notes (mu-law 22 kHz from flash, sustained
   ones auto-looped: LISTEN FOR LOOP CLICKS and bad loop points - each is
   fixable in tools/sc88_bank.py; the piano is a 3-zone multisample); the
