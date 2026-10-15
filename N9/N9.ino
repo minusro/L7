@@ -48,7 +48,7 @@ void setup() {
   if (CrashReport) Serial.print(CrashReport);
   songInit();                                      // the clips live in DMAMEM: no startup init there
   AudioMemory(8);
-  board.begin();
+  board.begin(60000000);                          // the panel takes 70 MHz from stock firmware
   board.powerButtonPressed();                      // the press that switched us on
   // The frame buffer is STATIC: left to malloc it silently fails once
   // RAM2's heap runs low, and the library falls back to direct drawing -

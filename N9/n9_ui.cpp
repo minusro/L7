@@ -488,34 +488,15 @@ static void drawEdit() {
   }
 }
 
-// The frame leaves over DMA when the panel cooperates: the synchronous send
-// blocks the loop ~40 ms a frame, and worse once the audio interrupt owns
-// most of the CPU (the DMA transfer doesn't care). The panel that stalled
-// the async path earlier is caught by the watchdog: a transfer that never
-// clears flips the send back to synchronous for good.
-static int uiAsync = 0;                          // 0 untried, 1 on, -1 off
-static void uiWaitAsync() {
-  if (uiAsync < 1) return;
-  uint32_t t0 = millis();
-  while (board.tft().asyncUpdateActive() && millis() - t0 < 80) {}
-  if (board.tft().asyncUpdateActive()) {
-    uiAsync = -1;
-    Serial.println("ui: the async update stalled - synchronous from now on");
-  }
-}
-static void uiSend() {
-  auto &t = board.tft();
-  uiWaitAsync();
-  if (uiAsync >= 0 && !t.asyncUpdateActive() && t.updateScreenAsync(false)) {
-    uiAsync = 1;
-    return;
-  }
-  if (uiAsync >= 0 && uiAsync != 1) uiAsync = -1;
-  t.updateScreen();
-}
+// The frame goes out SYNCHRONOUSLY. The DMA path (updateScreenAsync) is dead
+// on this panel: tried twice - at bring-up the first frame stalled with
+// asyncUpdateActive() stuck, and again 2026-10-15, when even a watchdog
+// fallback wedged the app (a stuck transfer poisons the synchronous send
+// too). The frame cost is tamed by the SPI clock instead (the stock
+// firmware runs this panel at 70 MHz; N9 asks for 60).
+static void uiSend() { board.tft().updateScreen(); }
 
 void uiMessage(const char *l1, const char *l2) {
-  uiWaitAsync();
   rct(0, 0, 320, 240, BG);
   txt((320 - txtW(l1)) / 2, 100, l1, INK);
   if (l2) txt((320 - txtW(l2)) / 2, 124, l2, DIM);
@@ -684,7 +665,6 @@ static void drawMenuScr() {
 // line, the logo and battery as the menu's. Sent at once (the drive loop
 // calls this only when something changes).
 void uiStorageDraw(uint8_t state, const char *msg) {
-  uiWaitAsync();
   const uint16_t SCRN = DIM;                       // L7's storage grey (GREY_44)
   rct(0, 0, 320, 240, SCRN);
   int lx = menuShape(MENU_CARDS).x * PX;

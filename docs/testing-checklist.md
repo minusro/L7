@@ -10,12 +10,14 @@ checked, or turn it into a fix.
   Storage mode now re-begins the card in DMA_SDIO for the MSC session (L7's
   proven mode; FIFO was the one untested difference) and back to FIFO on
   leave - retest mount/copy/eject on the computer; if it still fails, grab
-  the serial log ("storage mode: ..." lines). The screen now sends over DMA
-  (updateScreenAsync) with an 80 ms stall watchdog that drops to the old
-  synchronous send for good and says so on serial - check the UI stays
-  live, no frozen/partial frames, and that the framerate holds up with the
-  synth near 70% CPU. Splash/messages/storage screens still send
-  synchronously behind an async-drain guard.
+  the serial log ("storage mode: ..." lines). The DMA screen send is DEAD
+  ON THIS PANEL (second strike: even the watchdog fallback wedged the app -
+  a stuck transfer poisons the synchronous path too; never retry async).
+  Instead the SPI clock went 30 -> 60 MHz (stock firmware runs the panel at
+  70): the frame send halves to ~18 ms. CHECK for visual artifacts
+  (streaks, wrong pixels) at 60 MHz, and that the framerate under ~70%
+  synth CPU feels fixed; if artifacts show, step down to 48 MHz. L7 still
+  runs at 30 MHz - bump it after N9 proves the speed.
 - [ ] **N9: GM full quality via the SD-to-flash sample cache.** Copy
   apps_sd/GM.BNK to the card as /N9/GM.BNK (storage mode works). The
   melodic bank left the firmware: a 960 KB flash region above the app image
