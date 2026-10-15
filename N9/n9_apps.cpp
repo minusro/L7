@@ -20,6 +20,7 @@ static bool sdBegin() {
 
 SdFs &appsSd() { return sd; }
 bool appsCardRestart() { sdUp = sd.begin(SdioConfig(FIFO_SDIO)); return sdUp; }
+bool appsCardRestartDma() { sdUp = sd.begin(SdioConfig(DMA_SDIO)); return sdUp; }
 bool appsCardResponds() { return sdUp && sd.card() && sd.card()->status() != 0; }
 
 void appsInit() {

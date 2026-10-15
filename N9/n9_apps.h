@@ -12,4 +12,5 @@ void appSwitchToL7();               // returns only on failure (a message was sh
 // a fresh begin() (another card may be in), and a liveness check.
 SdFs &appsSd();
 bool appsCardRestart();
+bool appsCardRestartDma();   // storage mode: L7 runs MSC against DMA_SDIO
 bool appsCardResponds();

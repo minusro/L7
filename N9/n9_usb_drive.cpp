@@ -62,7 +62,7 @@ FLASHMEM bool usbDriveMode() {
   // read); none: an empty card reader until one is put in. Checked twice a
   // second: taken out (or swapped), the computer is told it's gone, then
   // that the new one arrived.
-  bool card = appsCardRestart();
+  bool card = appsCardRestartDma();              // MSC against DMA_SDIO, as L7 runs it
   usb_msc_set_media(card ? &MEDIA : nullptr);
   usb_msc_clear_host_state();                       // (the computer's asking counted from now)
   Serial.printf("storage mode: started%s\n", card ? "" : " (no card)");
@@ -100,7 +100,7 @@ FLASHMEM bool usbDriveMode() {
         card = false;
         usb_msc_set_media(nullptr);                 // (no medium: the computer drops the drive)
         Serial.println("storage mode: the card taken out");
-      } else if (!card && appsCardRestart()) {
+      } else if (!card && appsCardRestartDma()) {
         card = true;
         usb_msc_set_media(&MEDIA);                  // (a new medium: the computer mounts it)
         usb_msc_clear_host_state();
