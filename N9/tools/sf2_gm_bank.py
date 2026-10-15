@@ -15,7 +15,7 @@ WAVDIR = os.path.join(os.path.dirname(__file__), '..', 'sounds', 'SC-88')
 OUT_H = os.path.join(os.path.dirname(__file__), '..', 'n9_gm_pcm.h')
 OUT_C = os.path.join(os.path.dirname(__file__), '..', 'n9_gm_pcm.cpp')
 SR = 22050
-BUDGET = 1340 * 1024                 # mu-law bytes of PCM, tops
+BUDGET = 1500 * 1024                 # mu-law bytes of PCM, tops
 ZONE_MAX = 4
 
 # ---- SF2 parsing -------------------------------------------------------------
@@ -101,42 +101,54 @@ def resample(x, srate):
     grid = np.arange(0, len(x) - 1, 1.0 / r)
     return np.interp(grid, np.arange(len(x)), x), r
 
+RATES = (22050, 18375, 14700, 11025)
+
+def pick_rate(x, srate):
+    """The lowest storage rate whose Nyquist still clears the content: the
+    frequency below which 99.6% of the energy sits, with 20% headroom."""
+    n = min(len(x), 1 << 15)
+    mag = np.abs(np.fft.rfft(x[:n] * np.hanning(n))) ** 2
+    cum = np.cumsum(mag)
+    if cum[-1] <= 0: return RATES[-1]
+    f996 = np.searchsorted(cum, 0.996 * cum[-1]) * (srate / 2) / len(mag)
+    need = max(2400.0, f996 * 1.2) * 2
+    for sr in reversed(RATES):
+        if sr >= need: return sr
+    return RATES[0]
+
+def encode(y):
+    peak = float(np.max(np.abs(y))) or 1.0
+    gain = max(16, min(64, int(round(64 * min(1.0, peak / 0.55)))))
+    y = y / peak * 0.92
+    mu = 255.0
+    return np.round((np.sign(y) * np.log1p(mu * np.abs(y)) / np.log1p(mu) + 1) * 127.5).astype(np.uint8), gain
+
+def lowpass_for(x, r):
+    if r >= 1.0: return x
+    t = np.arange(-31, 32)
+    h = np.sinc(t * r) * np.hamming(63)
+    return np.convolve(x, (h / h.sum()).astype(np.float32), mode='same')
+
 def add_sample(smp_ix, looped, caps):
-    """Looped samples keep the font's own loop points. A loop longer than the
-    budget is shortened by moving its start toward the end, with the cut
-    chosen by waveform correlation (the font's loops are match-aligned, not
-    period-aligned) and a source-domain crossfade over the moved seam; the
-    middle before the loop is spliced out (attack kept). The loop region is
-    then resampled to an exact integer length, with the sub-sample pitch
-    error compensated in cents (returned with the index)."""
-    BODY, ONESHOT = caps
+    """Loops are NEVER shortened: the font's own loop region is kept whole
+    (the middle between the attack and the loop is still spliced out). The
+    flash budget comes from a content-aware storage rate per sample (dark
+    sounds store slower, compensated in the playback rate) and the one-shot
+    caps. The loop region is resampled to an exact integer length, the
+    sub-sample rounding compensated in cents (returned with the index)."""
+    ONESHOT, ATK_S, PRE_S = caps
     key = (smp_ix, looped, caps)
     if key in cache: return cache[key]
     name, start, end, lstart, lend, srate, pitch, corr, link, typ = SHDR[smp_ix]
     x = SMPL[start:end].astype(np.float32) / 32768.0
     ls, le = lstart - start, lend - start
-    r = SR / srate
     use_loop = looped and 8 < le - ls and le <= len(x)
     cents_fix = 0.0
+    out_sr = pick_rate(x[ls:le] if use_loop else x, srate)
+    r = out_sr / srate
     if use_loop:
         x = x.copy()
-        A, PRE = int(0.16 * srate), int(0.07 * srate)
-        Lt = int(BODY * srate)                     # the loop budget, source samples
-        L = le - ls
-        if L > int(Lt * 1.3):                      # shorten: best-matching cut
-            W = 512
-            lo, hi = max(64, int(Lt * 0.75)), min(L, int(Lt * 1.3))
-            best, bestL = 1e9, Lt
-            a = x[le - W:le]
-            for Lc in range(lo, hi, 2):
-                if le - Lc - W < 0: break
-                d = float(np.mean((a - x[le - Lc - W:le - Lc]) ** 2))
-                if d < best: best, bestL = d, Lc
-            ls = le - bestL
-            fade = min(384, bestL // 3)            # the moved seam, blended in source
-            w = np.linspace(0, 1, fade, dtype=np.float32)
-            x[le - fade:le] = x[le - fade:le] * (1 - w) + x[ls - fade:ls] * w
-            L = bestL
+        A, PRE = int(ATK_S * srate), int(PRE_S * srate)
         if ls - A > PRE + 1024:                    # splice out the middle before the loop
             c0, c1 = A, ls - PRE
             fade = 384
@@ -145,12 +157,8 @@ def add_sample(smp_ix, looped, caps):
             seg[:fade] = x[c0:c0 + fade] * (1 - w) + seg[:fade] * w
             x = np.concatenate((x[:c0], seg))
             ls -= c1 - c0; le -= c1 - c0
-        # lowpass once (to the target Nyquist), then resample the attack and
-        # the loop separately so the loop lands on an exact integer length
-        if srate > SR:
-            t = np.arange(-31, 32)
-            h = np.sinc(t * r) * np.hamming(63); h = (h / h.sum()).astype(np.float32)
-            x = np.convolve(x, h, mode='same')
+        L = le - ls
+        x = lowpass_for(x, r)
         Lp = max(8, int(round(L * r)))
         atk = np.interp(np.arange(0, ls, 1.0 / r), np.arange(len(x)), x) if ls > 0 else np.zeros(0, np.float32)
         loop = np.interp(ls + np.arange(Lp) * (L / Lp), np.arange(len(x)), x)
@@ -158,22 +166,19 @@ def add_sample(smp_ix, looped, caps):
         nls, nle = len(atk), len(atk) + Lp
         y = np.concatenate((atk, loop, loop[:2]))  # the pad the reader's ip+1 needs
     else:
-        y, _r = resample(x, srate)
+        x = lowpass_for(x, r)
+        y = np.interp(np.arange(0, len(x) - 1, 1.0 / r), np.arange(len(x)), x)
         nls = nle = 0
-        cap = int(ONESHOT * SR)
-        y = np.ascontiguousarray(y[:cap]).copy()
-        fd = min(len(y) // 4, int(0.06 * SR))
+        y = np.ascontiguousarray(y[:int(ONESHOT * out_sr)]).copy()
+        fd = min(len(y) // 4, int(0.06 * out_sr))
         if fd > 0: y[-fd:] *= np.linspace(1, 0, fd)
-    peak = float(np.max(np.abs(y))) or 1.0
-    gain = max(16, min(64, int(round(64 * min(1.0, peak / 0.55)))))
-    y = y / peak * 0.92
-    mu = 255.0
-    enc = np.round((np.sign(y) * np.log1p(mu * np.abs(y)) / np.log1p(mu) + 1) * 127.5).astype(np.uint8)
+    enc, gain = encode(y)
     off = len(blob)
     blob.extend(enc.tobytes())
     ix = len(samples)
     nm = name.rstrip(b'\0 ').decode('latin1')
-    samples.append((nm, off, len(y), nls, nle, 0, cents_fix, gain))
+    rateQ = int(round(256 * out_sr / 44100))
+    samples.append((nm, off, len(y), nls, nle, rateQ, cents_fix, gain))
     cache[key] = ix
     return ix
 
@@ -241,33 +246,31 @@ def add_wav_drum(stem, caps):
     d = np.frombuffer(w.readframes(w.getnframes()), dtype='<i2').astype(np.float32).reshape(-1, 2)
     w.close()
     x = d.mean(axis=1) / 32768.0
-    t = np.arange(-31, 32)
-    h = np.sinc(t / 2.0) * np.hamming(63); h /= h.sum()
-    y = np.convolve(x, h, mode='same')[::2]
-    i0 = int(np.argmax(np.abs(y) > 0.004))
-    y = y[max(0, i0 - 16):]
-    cap = int((0.62 if stem in LONG_DRUM else 0.30) * SR)
-    y = y[:cap]
-    fd = min(len(y) // 4, int(0.05 * SR))
+    i0 = int(np.argmax(np.abs(x) > 0.004))
+    x = x[max(0, i0 - 32):]
+    out_sr = pick_rate(x, 44100)
+    r = out_sr / 44100.0
+    x = lowpass_for(x, r)
+    y = np.interp(np.arange(0, len(x) - 1, 1.0 / r), np.arange(len(x)), x)
+    cap = int((0.62 if stem in LONG_DRUM else 0.30) * out_sr)
+    y = np.ascontiguousarray(y[:cap]).copy()
+    fd = min(len(y) // 4, int(0.05 * out_sr))
     if fd > 0: y[-fd:] *= np.linspace(1, 0, fd)
-    peak = float(np.max(np.abs(y))) or 1.0
-    y = y / peak * 0.92
-    mu = 255.0
-    enc = np.round((np.sign(y) * np.log1p(mu * np.abs(y)) / np.log1p(mu) + 1) * 127.5).astype(np.uint8)
+    enc, gain = encode(y)
     off = len(blob)
     blob.extend(enc.tobytes())
     ix = len(samples)
-    samples.append((stem, off, len(y), 0, 0, 0, 0, 60))
+    samples.append((stem, off, len(y), 0, 0, int(round(256 * out_sr / 44100)), 0.0, min(60, gain)))
     cache[key] = ix
     return ix
 
-ATTEMPTS = [(4, 0.30, 0.50), (4, 0.24, 0.45), (4, 0.19, 0.42), (3, 0.24, 0.45),
-            (3, 0.19, 0.40), (3, 0.15, 0.36), (2, 0.18, 0.40), (2, 0.14, 0.34)]
-for zone_max, body, oneshot in ATTEMPTS:
-    caps = (body, oneshot)
+ATTEMPTS = [(4, 0.42, 0.14, 0.06), (4, 0.38, 0.11, 0.05), (3, 0.38, 0.11, 0.05),
+            (3, 0.34, 0.09, 0.04), (2, 0.32, 0.08, 0.04)]
+for zone_max, oneshot, atk, pre in ATTEMPTS:
+    caps = (oneshot, atk, pre)
     zones_out, drums_out = build(caps, zone_max)
     total = len(blob)
-    print(f'zones={zone_max} loop={body}s shot={oneshot}s: {len(samples)} samples, {total/1024:.0f} KB')
+    print(f'zones={zone_max} shot={oneshot}s atk={atk}s: {len(samples)} samples, {total/1024:.0f} KB')
     if total <= BUDGET: break
 
 with open(OUT_H, 'w') as out:
@@ -275,7 +278,7 @@ with open(OUT_H, 'w') as out:
               '// (tools/sf2_gm_bank.py). Mu-law, 22050 Hz mono; loopE == 0: one-shot.\n'
               '// GENERATED and GITIGNORED (not ours to redistribute), do not edit.\n'
               '#pragma once\n#include <stdint.h>\n\n'
-              'struct GmSample { uint32_t off, len, loopS, loopE; uint8_t gain; };\n'
+              'struct GmSample { uint32_t off, len, loopS, loopE; uint16_t rateQ; uint8_t gain; };   // rateQ: storage rate * 256 / 44100\n'
               'struct GmZone { int16_t smp; uint8_t hi, root; int16_t cents; };\n'
               'struct GmDrumHit { int16_t smp; uint16_t rate256; uint8_t gain; };\n\n'
               f'constexpr uint32_t GM_PCM_BYTES = {len(blob)}u;\n'
@@ -290,8 +293,8 @@ with open(OUT_C, 'w') as out:
     out.write('// n9_gm_pcm.cpp — GENERATED by tools/sf2_gm_bank.py, do not edit.\n'
               '#include "n9_gm_pcm.h"\n#include <Arduino.h>\n\n')
     out.write('PROGMEM const GmSample GM_SAMPLES[GM_SAMPLE_COUNT] = {\n')
-    for (nm, off, ln, ls, le, _r, _c, gain) in samples:
-        out.write(f'  {{{off}u, {ln}u, {ls}u, {le}u, {gain}}},  // {nm}\n')
+    for (nm, off, ln, ls, le, rateQ, _c, gain) in samples:
+        out.write(f'  {{{off}u, {ln}u, {ls}u, {le}u, {rateQ}, {gain}}},  // {nm}\n')
     out.write('};\n\nPROGMEM const GmZone GM_ZONES[128][GM_ZONE_MAX] = {\n')
     for p in range(128):
         z = ', '.join(f'{{{s}, {hi}, {root}, {cents}}}' for (s, hi, root, cents) in zones_out[p])

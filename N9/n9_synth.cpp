@@ -473,7 +473,7 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
       v->pcm = GM_PCM + gs.off;
       v->pcmLen = gs.len; v->pcmLoopS = gs.loopS; v->pcmLoopE = gs.loopE;
       v->pcmPos = 0;
-      v->pcmRate = 0.5f * exp2f((note - zone->root) / 12.0f + zone->cents / 1200.0f);   // (22050 Hz data)
+      v->pcmRate = (gs.rateQ / 256.0f) * exp2f((note - zone->root) / 12.0f + zone->cents / 1200.0f);
       v->velN *= gs.gain / 64.0f;            // the soundfont's balance between samples
       v->eAc = pcoef(2);
       applyLiveParams(*v, true);
@@ -500,7 +500,7 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
     v->pcm = GM_PCM + gs.off;
     v->pcmLen = gs.len; v->pcmLoopS = 0; v->pcmLoopE = 0;
     v->pcmPos = 0;
-    v->pcmRate = 0.5f * dh.rate256 / 256.0f;
+    v->pcmRate = (gs.rateQ / 256.0f) * (dh.rate256 / 256.0f);
     v->eAc = pcoef(0);
     v->eRc = pcoef(20);
     v->vel = v->velN * (gs.gain / 64.0f) * (dh.gain / 64.0f) * (engParams[track][E_GMDRUM][7] / 80.0f);
