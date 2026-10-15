@@ -19,7 +19,7 @@ static bool clipFileExists = false;
 static int8_t pendingLoad = -1;     // a load waiting for the next beat
 static uint32_t pendingBeat = 0;    // the beat it was asked on
 
-static constexpr uint32_t MAGIC = 0x3350394E;   // "N9P3" (GM DRUM + DRUMS grew params; old files are skipped)
+static constexpr uint32_t MAGIC = 0x3450394E;   // "N9P4" (clips stream after the blob, 128 notes each)
 
 struct ProjectBlob {
   uint32_t magic;
@@ -35,8 +35,7 @@ struct ProjectBlob {
   uint8_t gmProg[9];
   uint8_t drumMach[9];
   uint8_t params[9][ENGINE_COUNT][8];
-  Clip clips[9][8];
-};
+};   // (the clips stream into the file right after this blob)
 static DMAMEM ProjectBlob blob;
 
 static void path(int slot, char *out, size_t n) {
@@ -64,7 +63,6 @@ static void gather(ProjectBlob &b) {
   memcpy((void *)b.gmProg, gmProgram, sizeof b.gmProg);
   memcpy((void *)b.drumMach, drumMachine, sizeof b.drumMach);
   memcpy(b.params, engParams, sizeof b.params);
-  memcpy(b.clips, clips, sizeof b.clips);
 }
 
 static void apply(const ProjectBlob &b) {
@@ -73,7 +71,6 @@ static void apply(const ProjectBlob &b) {
   fxSetMasterType(FXT_NONE);
   for (int t = 0; t < 9; t++)
     for (int s = 0; s < 2; s++) fxSetTrackType(t, s, FXT_NONE);
-  memcpy(clips, b.clips, sizeof clips);
   memcpy(gmProgram, b.gmProg, sizeof gmProgram);
   memcpy(drumMachine, b.drumMach, sizeof drumMachine);
   memcpy(engParams, b.params, sizeof engParams);
@@ -117,6 +114,7 @@ bool projectSaveCurrent() {
   FsFile f = appsSd().open(p, O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return false;
   bool ok = f.write(&blob, sizeof blob) == (int)sizeof blob;
+  ok &= f.write(clips, sizeof clips) == (int)sizeof clips;   // (loop() owns the clips: safe to stream live)
   f.close();
   if (ok) projExists[projCurrent] = true;
   FsFile c = appsSd().open("/N9/CURRENT.TXT", O_WRONLY | O_CREAT | O_TRUNC);
@@ -130,6 +128,15 @@ static bool doLoad(uint8_t slot) {
   FsFile f = appsSd().open(p, O_RDONLY);
   if (!f) return false;
   bool ok = f.read(&blob, sizeof blob) == (int)sizeof blob && blob.magic == MAGIC;
+  if (ok) {                                        // the clips stream in under the freeze
+    clipFreeze = 1;
+    for (int t = 0; t < 9; t++) { clipPlaying[t] = -1; clipPending[t] = -1; }
+    if (f.read(clips, sizeof clips) != (int)sizeof clips) {
+      memset(clips, 0, sizeof clips);              // half a read: a clean slate instead
+      for (int t = 0; t < 9; t++)
+        for (int sc = 0; sc < 8; sc++) clips[t][sc].bars = 1;
+    }
+  }
   f.close();
   if (!ok) { Serial.printf("project %c: bad file\n", 'A' + slot); return false; }
   apply(blob);

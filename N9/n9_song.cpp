@@ -1,7 +1,16 @@
 // n9_song.cpp — see n9_song.h.
 #include "n9_song.h"
 
-Clip clips[9][8];
+#include <Arduino.h>
+#include <string.h>
+
+DMAMEM Clip clips[9][8];
+
+void songInit() {
+  memset(clips, 0, sizeof clips);
+  for (int t = 0; t < 9; t++)
+    for (int s = 0; s < 8; s++) clips[t][s].bars = 1;
+}
 
 volatile int8_t clipPlaying[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
 volatile int8_t clipPending[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};

@@ -6,7 +6,7 @@
 #pragma once
 #include <stdint.h>
 
-constexpr uint8_t CLIP_STEPS = 16, CLIP_MAX_NOTES = 64, CLIP_MAX_BARS = 16;
+constexpr uint8_t CLIP_STEPS = 16, CLIP_MAX_NOTES = 128, CLIP_MAX_BARS = 16;
 // The editor's pitch window is 13 rows; its top note moves by octaves.
 constexpr uint8_t EDIT_TOP_PITCH = 60;
 
@@ -18,7 +18,10 @@ struct ClipNote { uint8_t pitch, vel, start, len; };
 // have no notes). Adding a note in the editor marks the slot used too.
 struct Clip { uint8_t used; uint8_t count; uint8_t bars = 1; ClipNote notes[CLIP_MAX_NOTES]; };
 
+// The clips live in RAM2 (DMAMEM: no startup init there - songInit() does it);
+// the sequencer reads them at step rate only, so the slower RAM is free.
 extern Clip clips[9][8];
+void songInit();   // zero the clips, every bar count to 1 (call before audio)
 
 // Clip launching, session style: per track, the playing scene (-1: none) and
 // what's pending for the next bar line (-1: nothing, CLIP_STOP: stop, else a

@@ -6,6 +6,11 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **N9: clips hold 128 notes now (were 64).** The clips moved to RAM2
+  and projects stream them after the header blob (format N9P5? no: N9P4;
+  older files skipped). Check: a dense clip (chords every step) past 64
+  notes records/edits/plays; projects with such clips survive a power
+  cycle; the editor stays responsive on a full clip.
 - [ ] **N9: GM rebuilt from the Roland_SC-88.sf2 soundfont.** The bank now
   comes from the soundfont's real multisamples: 106 of 128 programs covered,
   up to 4 key zones each (the soundfont's roots, tunings and loop points),

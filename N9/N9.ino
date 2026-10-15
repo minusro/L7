@@ -26,6 +26,7 @@
 #include "n9_state.h"
 #include "n9_apps.h"
 #include "n9_project.h"
+#include "n9_song.h"
 #include "n9_synth.h"
 #include "n9_ui.h"
 #include "n9_usb_drive.h"
@@ -44,6 +45,7 @@ static bool dirty = false;
 void setup() {
   Serial.begin(115200);
   if (CrashReport) Serial.print(CrashReport);
+  songInit();                                      // the clips live in DMAMEM: no startup init there
   AudioMemory(8);
   board.begin();
   board.powerButtonPressed();                      // the press that switched us on
