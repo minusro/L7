@@ -6,6 +6,19 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **K6: the rename (6 tracks x 6 scenes), the split selector, and the
+  boot-loaded GM region.** The app shows a K6 mark (splash + menu corner -
+  judge the K and 6 glyphs by eye); the grid is 6x6 (cells 48x30). INST's
+  top row has two cells now: the engine selector (40% wide) and, for GM and
+  DRUMS, a preset box (4 blocks apart; L/R moves between them, the preset
+  cell steps with B+L/R, B+U/D jumps a GM family). GM samples moved to a
+  BOOT-loaded flash region: copy apps_sd/GM.FLB to the card as /N9/GM.FLB
+  (GM.BNK is obsolete, delete it). First boot after copying (or after an
+  app switch) shows "GM SAMPLES n%" for ~8-10 s; afterwards boots are
+  instant and PRESET/PROJECT SWITCHES NEVER INTERRUPT AUDIO. Quality ladder
+  landed at 0.5 s accurate starts / 0.2 s match-cut loops / 0.55 s
+  one-shots - listen for loop quality vs before. Infra names (N9/ folder,
+  /N9 card dir, N9.HEX) unchanged - a full rename is a separate migration.
 - [ ] **N4: the whole reorganised UI (2026-10-16).** Three wrapping screens
   (GRID / NOTE / INST), 4 tracks x 4 scenes, minimalist. Check against the
   spec: GRID - A plays/stops instantly (phase kept on switch), B tap opens
@@ -347,3 +360,4 @@ checked, or turn it into a fix.
 - High tempo, many stretched tracks, editing cells: no 'slow SD read … card error 0x0B/0x0C data 0xB' on the serial log any more (the SDIO patch), no 'slow pass' lines over ~60 ms, no stutter.
 - High tempo (more than twice the clips' own), a long resampling (10+ bars): the new scene switches in by itself (no SHIFT+START needed); if a track runs dry it comes back in step.
 - Stop, start and press record at once: the recording starts on the start's bar line, its length right.
+- Export while playing, right after recording (the export stops the clock itself): the Live set's samples are the clips' own size (not 22 MB each, the recording space's) and named (A30012.wav ...); the export no slower than from stopped. The set opens in Live, the new clips play.

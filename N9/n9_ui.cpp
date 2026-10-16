@@ -166,43 +166,44 @@ static int clampP(int p) { p -= 24; return p < 0 ? 0 : p > 72 ? 72 : p; }
 // ---- GRID --------------------------------------------------------------------
 
 static void drawGrid() {
+  // 6 x 6: cells 48 x 30 on a 52 x 34 pitch under the status bar.
+  constexpr int GX = 2, GY = 30, GW = 48, GH = 30, GSX = 52, GSY = 34, NW = GW - 6;
   statusBar(0, nav.gridRow == 0 ? nav.statusSel : -1);
-  rct(2 + nav.selTrack * 80, 236, 76, 4, ACCENT);  // the selected track, under its column
+  rct(GX + nav.selTrack * GSX, 236, GW, 4, ACCENT);   // the selected track, bottom
   for (int t = 0; t < NT; t++)
     for (int sc = 0; sc < NS; sc++) {
-      int x = 2 + t * 80, y = 31 + sc * 52;
+      int x = GX + t * GSX, y = GY + sc * GSY;
       const Clip &c = clips[t][sc];
       bool armed = clipPlaying[t] == sc;
       bool playing = armed && synth.seqOn();
       uint16_t f = playing ? ACCENT : armed ? ACCENT_DARK : c.count ? LIGHT : DARK;
-      frm(x, y, 76, 48, f);
-      // the notes, tiny
+      frm(x, y, GW, GH, f);
       int span = c.bars * 16;
-      for (uint8_t i = 0; i < c.count; i++) {
+      for (uint8_t i = 0; i < c.count; i++) {    // the notes, tiny
         const ClipNote &n = c.notes[i];
-        int ny = y + 42 - clampP(n.pitch) * 38 / 72;
+        int ny = y + GH - 6 - clampP(n.pitch) * (GH - 10) / 72;
         int e = n.start + clipEffLen(c, i);
         for (int seg = 0; seg < 2; seg++) {      // a note over the loop point wraps
           int a = seg ? 0 : n.start, b = seg ? e - span : (e > span ? span : e);
           if (seg && e <= span) break;
-          int nx = x + 3 + a * 70 / span;
-          int nw = (b - a) * 70 / span; if (nw < 2) nw = 2;
+          int nx = x + 3 + a * NW / span;
+          int nw = (b - a) * NW / span; if (nw < 2) nw = 2;
           rct(nx, ny, nw, 2, n.vel ? LIGHT : DIM);
         }
       }
       for (int b = 1; b < c.bars; b++) {         // bar crossings, on the outline
-        int bx = x + 3 + b * 16 * 70 / span;
+        int bx = x + 3 + b * 16 * NW / span;
         rct(bx, y, 2, 2, DIM);
-        rct(bx, y + 46, 2, 2, DIM);
+        rct(bx, y + GH - 2, 2, 2, DIM);
       }
       int lp = playing ? (int)synth.clipLocalStep(t) : -1;
-      if (lp >= 0) rct(x + 3 + lp * 70 / span, y + 3, 2, 42, ACCENT);   // the playhead
+      if (lp >= 0) rct(x + 3 + lp * NW / span, y + 3, 2, GH - 6, ACCENT);   // the playhead
       if (!c.barsFixed) {                        // the auto mark rides under it
-        int ax = lp >= 0 ? x + 3 + lp * 70 / span : x + 4;
-        if (ax > x + 66) ax = x + 66;
-        txt(ax, y + 36, "A", DIM);
+        int ax = lp >= 0 ? x + 3 + lp * NW / span : x + 4;
+        if (ax > x + GW - 10) ax = x + GW - 10;
+        txt(ax, y + GH - 12, "A", DIM);
       }
-      if (nav.gridRow > 0 && nav.gridT == t && nav.gridS == sc) frm(x - 2, y - 2, 80, 52, INK);
+      if (nav.gridRow > 0 && nav.gridT == t && nav.gridS == sc) frm(x - 2, y - 2, GW + 4, GH + 4, INK);
     }
 }
 
@@ -377,20 +378,27 @@ static void instCellView(uint8_t pg, uint8_t row, uint8_t col, const char *&name
   snprintf(val, vn, "%d", v); amt = v / 99.0f;
 }
 
+static bool engineHasPresets(uint8_t e) { return e == E_GM || e == E_DM; }
+
 static void drawInst() {
-  // the synth selector, above the tabs
+  // The synth selector (40% wide) and, for engines with banks, the preset
+  // box over the rest, four blocks apart.
   const char *name = engineName(curEngine());
-  if (nav.instRow == 0) frm(2, 0, 316, 24, INK);
+  bool presets = engineHasPresets(curEngine());
+  if (nav.instRow == 0) {
+    if (nav.instTop == 0 || !presets) frm(2, 0, 126, 24, INK);
+    else frm(136, 0, 182, 24, INK);
+  }
   txt(8, 8, "<", DIM);
   txt(20, 8, name, INK);
   txt(20 + txtW(name) + 6, 8, ">", DIM);
   if (curEngine() == E_GM) {
-    char pn[20];
+    char pn[24];
     snprintf(pn, sizeof pn, "%03d %s", gmProgram[nav.selTrack] + 1, GM_NAMES[gmProgram[nav.selTrack] & 127]);
-    txt(314 - txtW(pn), 8, pn, DIM);
+    txt(142, 8, pn, nav.instTop == 1 ? INK : LIGHT);
   } else if (curEngine() == E_DM) {
     static const char *const MACH[4] = {"606", "707", "808", "909"};
-    txt(314 - txtW(MACH[drumMachine[nav.selTrack] & 3]), 8, MACH[drumMachine[nav.selTrack] & 3], DIM);
+    txt(142, 8, MACH[drumMachine[nav.selTrack] & 3], nav.instTop == 1 ? INK : LIGHT);
   }
   static const char *const TABS[3] = {"SYN", "MOD", "FX"};
   int tx = 4;
@@ -433,14 +441,17 @@ static void drawN9Mark(int x, int y, float s, uint16_t c, int shiftN = 0, int sh
     if ((p >= lu(18, s) && p < lu(20, s)) || (p >= lu(22, s) && p < lu(24, s))) continue;
     int off = (h - 1 - p) / 2;                                  // italic: every diagonal 1:2
     int xn = x + shiftN, x9 = x + shift9;
-    rct(xn + off, y + p, lu(6, s), 1, c);                       // N: left stem,
-    rct(xn + lu(15, s), y + p, lu(6, s), 1, c);                 //   middle dead vertical,
-    rct(xn + off + lu(16, s), y + p, lu(6, s), 1, c);           //   right stem
-    rct(x9 + off + lu(38, s), y + p, lu(7, s), 1, c);           // 4: its stem,
-    if (p >= lu(13, s) && p < lu(16, s))
-      rct(x9 + off + lu(24, s), y + p, lu(21, s), 1, c);        // the bar,
-    else if (p < lu(13, s))
-      rct(x9 + off + lu(24, s), y + p, lu(7, s), 1, c);         // the left arm
+    int mid = lu(13, s);
+    rct(xn + off, y + p, lu(6, s), 1, c);                       // K: its stem,
+    if (p < mid)                                                //   the upper arm (1:2 up),
+      rct(xn + off + lu(6, s) + (mid - 1 - p) / 2, y + p, lu(7, s), 1, c);
+    else                                                        //   the lower arm (1:2 down)
+      rct(xn + off + lu(6, s) + (p - mid) / 2, y + p, lu(7, s), 1, c);
+    rct(x9 + off + lu(24, s), y + p, lu(7, s), 1, c);           // 6: its left stem,
+    if ((p >= lu(13, s) && p < lu(16, s)) || p >= lu(23, s))
+      rct(x9 + off + lu(24, s), y + p, lu(21, s), 1, c);        // the bowl's top and bottom,
+    else if (p >= lu(16, s))
+      rct(x9 + off + lu(38, s), y + p, lu(7, s), 1, c);         // its right wall
   }
 }
 
@@ -597,7 +608,7 @@ void uiStorageDraw(uint8_t state, const char *msg) {
   board.tft().updateScreen();
 }
 
-// ---- Splash: static. Just the N4 mark, no animation (2026-10-16). ----------
+// ---- Splash: static. Just the K6 mark, no animation. ------------------------
 
 static constexpr float SPL_SCALE = 2.5f;
 static constexpr int SPL_W = 145, SPL_H = 65;

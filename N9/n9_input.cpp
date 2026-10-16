@@ -728,15 +728,18 @@ bool inputService() {
 
     // INST
     if (opt) {
-      if (nav.instRow == 0) {                    // the synth selector
-        if (dx && fresh) {
-          curEngine() = (uint8_t)((curEngine() + dx + ENGINE_COUNT) % ENGINE_COUNT);
-          dirty = true;
-        } else if (dy && curEngine() == E_GM) {
-          gmProgram[nav.selTrack] = (uint8_t)((gmProgram[nav.selTrack] - dy + 128) & 127);
-          dirty = true;
-        } else if (dy && curEngine() == E_DM && fresh) {
-          drumMachine[nav.selTrack] = (uint8_t)((drumMachine[nav.selTrack] - dy + 4) & 3);
+      if (nav.instRow == 0) {                    // the selector row's two cells
+        bool onPreset = nav.instTop == 1 && (curEngine() == E_GM || curEngine() == E_DM);
+        if (!onPreset) {
+          if (dx && fresh) {
+            curEngine() = (uint8_t)((curEngine() + dx + ENGINE_COUNT) % ENGINE_COUNT);
+            dirty = true;
+          }
+        } else if (curEngine() == E_GM) {
+          if (dx) { gmProgram[nav.selTrack] = (uint8_t)((gmProgram[nav.selTrack] + dx + 128) & 127); dirty = true; }
+          else { gmProgram[nav.selTrack] = (uint8_t)((gmProgram[nav.selTrack] - dy * 8 + 128) & 127); dirty = true; }
+        } else if (dx && fresh) {
+          drumMachine[nav.selTrack] = (uint8_t)((drumMachine[nav.selTrack] + dx + 4) & 3);
           dirty = true;
         }
       } else if (nav.instRow == 3) {
@@ -755,8 +758,11 @@ bool inputService() {
         if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
       } else { nav.instRow = (uint8_t)row; dirty = true; }
     } else {
-      if (nav.instRow == 0) {                    // the selector: sideways = the pages
-        if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
+      if (nav.instRow == 0) {                    // two cells, then the page edges
+        bool presets = curEngine() == E_GM || curEngine() == E_DM;
+        int tp = nav.instTop + dx;
+        if (presets && tp >= 0 && tp <= 1) { nav.instTop = (uint8_t)tp; dirty = true; }
+        else if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
       } else if (nav.instRow == 3) {
         int cc = nav.statusSel + dx;
         if (cc < 0 || cc >= ST_COUNT) {

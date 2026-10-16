@@ -546,6 +546,13 @@ FLASHMEM static bool createPoolFile() {
 }
 
 static void reopenSample(uint32_t n);
+static void trimSample(uint32_t id);
+
+// Every finished sample cut down to size and named now, not left to the
+// stopped clock's servicing (one a pass): before the export or the defrag reads them.
+FLASHMEM void trimSamples() {
+  while (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);
+}
 
 // Cuts a finished sample down to its recording, and names it after the
 // project and track it was recorded in (changes the file system).
@@ -1463,7 +1470,7 @@ FLASHMEM static void dropPool() {
 FLASHMEM int defragSamples(int &noRoom) {
   noRoom = 0;
   if (transport.running || recording.mode != Recording::Idle) return 0;
-  while (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);   // (cut down to size first)
+  trimSamples();                                 // (cut down to size first)
   uint64_t total = 0, done = 0, bytes;
   int pieces = 0;
   for (int i = 0; i < sampleTotal; i++)
@@ -2043,7 +2050,7 @@ FLASHMEM bool storageBegin(void (*progress)(const char *)) {
     moveFile(from, to);
   }
   scanSamples();
-  while (untrimmedCount) trimSample(untrimmed[--untrimmedCount]);
+  trimSamples();
   bool ok = true;
   for (int t = 0; t < NUM_TRACKS; t++) {
     char path[40];

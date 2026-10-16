@@ -7,9 +7,9 @@
 
 #include "n9_ui.h"   // Screen
 
-// Four tracks and four scenes for now (the engine underneath still carries
-// nine and eight; only these are shown and played).
-constexpr uint8_t NT = 4, NS = 4;
+// K6: six tracks and six scenes (the engine underneath still carries nine
+// and eight; only these are shown and played).
+constexpr uint8_t NT = 6, NS = 6;
 
 struct NavState {
   uint8_t screen = SCR_GRID;
@@ -34,7 +34,7 @@ struct NavState {
 
   // INST: page 0 SYN, 1 MOD, 2 FX; cursor row 0 = the synth selector, rows
   // 1..2 the page's two knob rows (col 0..3); the status bar is row 3.
-  uint8_t instPage = 0, instRow = 0, instCol = 0;
+  uint8_t instPage = 0, instRow = 0, instCol = 0, instTop = 0;   // instTop: 0 engine, 1 preset
 
   bool menu = false;             // past the grid's left/right edge: the menu
   uint8_t menuSel = 0;

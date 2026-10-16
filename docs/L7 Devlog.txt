@@ -189,9 +189,9 @@ TTTTT000000TTTTT
 - a menu to load different apps
 
 
-#12oct26
+#16oct26
 
-- 
+- presentation video
 
 
 # Backlog

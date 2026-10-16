@@ -182,6 +182,7 @@ bool moveFile(const char *from, const char *to);        // renames a file (an ol
 // where they fell when the tempo changed while it recorded, else evenly.
 struct SampleDetails { uint32_t frames, spb, loopBars; uint64_t bytes; char name[12]; uint32_t bars[MAX_BARS]; float headroomDb; uint8_t profile[PROFILE_BYTES]; };   // (headroomDb: its volume scale, engine.h)
 bool sampleDetails(uint32_t n, SampleDetails &d);
+void trimSamples();                      // finished samples cut down to size and named now (stopped, not recording)
 bool copySample(uint32_t n, const char *to, void (*progress)() = nullptr);
 bool copySampleDoubled(uint32_t n, uint32_t frames, const char *to, void (*progress)() = nullptr);   // its loop twice over, a plain WAV (the export)
 uint32_t sampleCount();

@@ -24,7 +24,7 @@ WAVDIR = os.path.join(os.path.dirname(__file__), '..', 'sounds', 'SC-88')
 OUT_H = os.path.join(os.path.dirname(__file__), '..', 'n9_gm_pcm.h')
 OUT_C = os.path.join(os.path.dirname(__file__), '..', 'n9_gm_pcm.cpp')
 SR = 22050
-SLOT_BYTES = 0x1A000          # a cache slot (26 flash sectors)
+REGION_BYTES = 0xF0000        # the boot-loaded flash region (960 KB)
 HDR_BYTES = 128                 # mu-law bytes of PCM, tops
 ZONE_MAX = 4
 
@@ -146,7 +146,7 @@ def add_sample(smp_ix, looped, caps):
     sounds store slower, compensated in the playback rate) and the one-shot
     caps. The loop region is resampled to an exact integer length, the
     sub-sample rounding compensated in cents (returned with the index)."""
-    ONESHOT, ATK_S, PRE_S = caps
+    pass
     key = (smp_ix, looped, caps)
     if key in cache: return cache[key]
     name, start, end, lstart, lend, srate, pitch, corr, link, typ = SHDR[smp_ix]
@@ -199,7 +199,7 @@ def pick_vel(zs):
         if k not in out or (z[2] <= 100 <= z[3]) and not (out[k][2] <= 100 <= out[k][3]): out[k] = z
     return list(out.values())
 
-def process(smp_ix, looped, mid_keep, oneshot):
+def process(smp_ix, looped, mid_keep, loop_keep, oneshot):
     """One sample at full quality: the loop whole, mid_keep seconds of the
     pre-loop middle (None: all of it), one-shots capped at `oneshot`.
     Returns (mu-law bytes, len, ls, le, rateQ, cents, gain)."""
@@ -212,6 +212,21 @@ def process(smp_ix, looped, mid_keep, oneshot):
     r = out_sr / srate
     if use_loop:
         x = x.copy()
+        Lt = int(loop_keep * srate)                # the loop budget: a best-matching cut
+        L = le - ls
+        if L > int(Lt * 1.3):
+            W = 512
+            lo, hi = max(64, int(Lt * 0.75)), min(L, int(Lt * 1.3))
+            best, bestL = 1e9, Lt
+            aw = x[le - W:le]
+            for Lc in range(lo, hi, 2):
+                if le - Lc - W < 0: break
+                d = float(np.mean((aw - x[le - Lc - W:le - Lc]) ** 2))
+                if d < best: best, bestL = d, Lc
+            ls = le - bestL
+            fade = min(384, bestL // 3)
+            w = np.linspace(0, 1, fade, dtype=np.float32)
+            x[le - fade:le] = x[le - fade:le] * (1 - w) + x[ls - fade:ls] * w
         if mid_keep is not None:
             A, PRE = int(0.16 * srate), int(max(0.04, mid_keep - 0.16) * srate)
             if ls - A > PRE + 1024:
@@ -240,32 +255,33 @@ def process(smp_ix, looped, mid_keep, oneshot):
     enc, gain = encode(y)
     return enc.tobytes(), len(y), nls, nle, int(round(256 * out_sr / 44100)), cents_fix, gain
 
-def program_record(prog, ver):
-    """A self-contained SD record: header + its samples, under SLOT_BYTES.
-    Quality steps down (middle, then one-shots, then zones) only if a
-    program can't fit a slot whole."""
+def program_record(prog, ver, caps):
+    """A self-contained record: header + its samples (the region loads them
+    verbatim). caps = (mid_keep, loop_keep, oneshot); the global ladder in
+    the main flow picks the caps that fit the region."""
+    mid_keep, loop_keep, oneshot = caps
     zs = pick_vel(preset_zones(0, prog))
     zs = [z for z in zs if z[1] >= 24 and z[0] <= 96]
     zs.sort(key=lambda z: z[0])
     if not zs: return None
-    for zone_max in (4, 3, 2, 1):
+    if True:
         zl = zs
-        if len(zl) > zone_max:
-            zl = [zs[int(round(i * (len(zs) - 1) / max(1, zone_max - 1)))] for i in range(zone_max)]
+        if len(zl) > 4:
+            zl = [zs[int(round(i * (len(zs) - 1) / 3))] for i in range(4)]
             seen, z2 = set(), []
             for z in zl:
                 if id(z) not in seen: seen.add(id(z)); z2.append(z)
             zl = z2
-        for mid_keep, oneshot in ((None, 2.0), (1.2, 1.5), (0.7, 1.0), (0.42, 0.7), (0.25, 0.5)):
+        if True:
             local, datas, zone_rows = {}, [], []
             for (klo, khi, vlo, vhi, smp, root, cents, modes) in zl:
-                k = (smp, modes in (1, 3))
+                k = (smp, modes in (1, 3), caps)
                 if k not in local:
                     local[k] = len(datas)
-                    datas.append(process(smp, modes in (1, 3), mid_keep, oneshot))
+                    datas.append(process(smp, modes in (1, 3), mid_keep, loop_keep, oneshot))
                 zone_rows.append((local[k], khi, root, cents))
             size = HDR_BYTES + sum(len(d[0]) for d in datas)
-            if size <= SLOT_BYTES and len(datas) <= 4:
+            if len(datas) <= 4:
                 hdr = struct.pack('<IIBBBBI', 0x5047394E, ver, prog, len(zone_rows), len(datas), 0,
                                   size - HDR_BYTES)
                 for zi in range(4):
@@ -285,7 +301,7 @@ def program_record(prog, ver):
                     else:
                         hdr += struct.pack('<IIIIHBB', 0, 0, 0, 0, 0, 0, 0)
                 assert len(hdr) == HDR_BYTES
-                return hdr + b''.join(d[0] for d in datas), mid_keep is None
+                return hdr + b''.join(d[0] for d in datas)
     return None
 
 # ---- the GM drum map: the freewavesamples one-shots (the soundfont's
@@ -350,26 +366,31 @@ import zlib
 drums_out = build_drums()
 print(f'drums baked: {len(samples)} samples, {len(blob)/1024:.0f} KB')
 
-ver = zlib.crc32(open(SF2, 'rb').read(1 << 16)) ^ 0x4E394202   # the bank's identity
-records, trimmed = {}, []
-for prog in range(128):
-    r = program_record(prog, ver)
-    if r is None: continue
-    records[prog], full = r
-    if not full: trimmed.append(prog + 1)
-bnk = bytearray()
-bnk += struct.pack('<III', 0x4247394E, ver, 128)
-dir_off = len(bnk)
-bnk += b'\0' * (128 * 8)
+ver = zlib.crc32(open(SF2, 'rb').read(1 << 16)) ^ 0x4E394203   # the region's identity
+# Starts first: the pre-loop middle keeps its length as long as possible,
+# loops give way (match-aligned cuts), one-shots in between.
+ATTEMPTS = [(1.0, 0.50, 1.0), (0.8, 0.40, 0.8), (0.7, 0.30, 0.7),
+            (0.6, 0.25, 0.6), (0.5, 0.20, 0.55), (0.4, 0.16, 0.5), (0.3, 0.13, 0.45)]
+for caps in ATTEMPTS:
+    records = {}
+    for prog in range(128):
+        rr = program_record(prog, ver, caps)
+        if rr is not None: records[prog] = rr
+    total = 8 + 128 * 8 + sum(len(r) for r in records.values())
+    print(f'mid={caps[0]}s loop={caps[1]}s shot={caps[2]}s: {total/1024:.0f} KB')
+    if total <= REGION_BYTES: break
+flb = bytearray()
+flb += struct.pack('<II', 0x4647394E, ver)         # 'N9GF'
+dir_off = len(flb)
+flb += b'\0' * (128 * 8)
 for prog in range(128):
     if prog in records:
         rec = records[prog]
-        struct.pack_into('<II', bnk, dir_off + prog * 8, len(bnk), len(rec))
-        bnk += rec
-BNK_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'apps_sd', 'GM.BNK')
-open(BNK_PATH, 'wb').write(bnk)
-print(f'GM.BNK: {len(records)}/128 programs, {len(bnk)/1024/1024:.2f} MB '
-      f'({len(trimmed)} trimmed to fit a slot: {trimmed})')
+        struct.pack_into('<II', flb, dir_off + prog * 8, len(flb), len(rec))
+        flb += rec
+FLB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'apps_sd', 'GM.FLB')
+open(FLB_PATH, 'wb').write(flb)
+print(f'GM.FLB: {len(records)}/128 programs, {len(flb)/1024:.0f} KB (region {REGION_BYTES//1024} KB)')
 
 with open(OUT_H, 'w') as out:
     out.write('// n9_gm_pcm.h — the baked flash part of GM: the DRUM MAP only (the\n'

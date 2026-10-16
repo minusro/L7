@@ -1,11 +1,10 @@
-// n9_gm_cache.h — the GM melodic samples: full-quality records on the card
-// (/N9/GM.BNK, tools/sf2_gm_bank.py) cached into a 960 KB flash region above
-// the app image (nine slots of 104 KB, one per program in use). A program
-// plays its synth patch until its record is cached; the cache survives
-// reboots (slots are validated against the bank's version) but not an app
-// switch (the switcher's buffer shares the region - the next boot reloads).
-// Writing a slot silences the audio for a second or two: flash can't be
-// read while it's erased/written.
+// n9_gm_cache.h — the GM melodic bank: the whole thing (all programs,
+// starts-accurate quality ladder) lives in a 960 KB flash region above the
+// app image, loaded ONCE at boot from the card's /N9/GM.FLB
+// (tools/sf2_gm_bank.py). Runtime never writes flash, so preset and project
+// switches play on uninterrupted. The region survives reboots; an app
+// switch wipes it (the switcher's buffer shares the space) and the next
+// boot reloads it with a progress message.
 #pragma once
 #include <stdint.h>
 
@@ -23,6 +22,4 @@ static_assert(sizeof(GmCacheHdr) == 128, "the SD records are written to this lay
 
 void gmCacheInit();                      // boot: bank directory in, flash slots scanned
 const GmCacheHdr *gmCacheFor(uint8_t prog);   // the cached record, or null
-// Commits one needed program per call (the tracks' GM programs are polled;
-// a change settles ~0.7 s before flashing unless immediate). true: worked.
-bool gmCacheService(bool immediate = false);
+bool gmCacheService(bool immediate = false);   // (a no-op now: boot loads everything)

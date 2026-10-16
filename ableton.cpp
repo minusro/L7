@@ -409,7 +409,10 @@ FLASHMEM int exportProject(int p, void (*progress)(int done, int total)) {
   SD.sdfs.mkdir(path);
 
   // The samples its scenes play, copied (a range across a loop's end: the
-  // doubled file too, "A077x2.wav").
+  // doubled file too, "A077x2.wav"); those just recorded cut down to size and
+  // named first (exported straight from playing, the clock only just
+  // stopped: still the size of the recording space, its number for a name).
+  trimSamples();
   static uint32_t doubled[64];
   int doubledCount = 0;
   clearSampleMarks();

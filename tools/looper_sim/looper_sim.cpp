@@ -153,6 +153,7 @@ static void tempoByHand(float b) {
 static void volumeByHand(int v) { setMasterVolume(v); projectMasterChanged(); }   // (as app.cpp: the loaded project keeps it)
 
 #include <map>
+#include <dirent.h>
 static std::map<std::string, uint32_t> dropStages;   // what loop() was doing when tracks ran dry
 static std::map<std::string, uint32_t> dropPhases;   // where the recording was (measurement below)
 static uint32_t snags = 0;                            // separate dropouts (blocks with drops after one without)
@@ -2147,6 +2148,46 @@ int main(int argc, char **argv) {
     folderSize = sizeOf(simRoot + "/L7/EXPORTS/._L7 C0" + std::to_string(first) + " Project");
     snprintf(m, sizeof m, "the folder's Mac icon: Icon<CR> empty (%ld), ._Icon<CR> %ld bytes, the folder's ._ file %ld bytes", iconSize, forkSize, folderSize);
     check(iconSize == 0 && forkSize == 0xEE2 + 62577 && folderSize == 0xEE2, m);
+  }
+
+  printf("exported straight from playing (the export's own stop, nothing served after it): a new recording copied at its own size, named\n");
+  {
+    lastAction = "export from playing";
+    int t = 0;                                     // (an empty track, or the top one emptied)
+    for (int i = 0; i < NUM_TRACKS; i++) if (tracks[i].state == TrackState::Empty) t = i;
+    if (tracks[t].state != TrackState::Empty) clearTrack(t);
+    for (int i = 0; i < 20; i++) block();
+    {
+      recordTrack(t, 3.5, 1, "  (recorded, the clock running on)");
+      const uint32_t id = tracks[t].sample;
+      transportStop();
+      const int p = projectCurrent(), n = exportProject(p);
+      SampleDetails sd;
+      const std::string want = sampleDetails(id, sd) ? std::string(sd.name) + ".wav" : "?";
+      char dir[160];
+      snprintf(dir, sizeof dir, "%s/L7/EXPORTS/%s %c%02d Project/Samples/Imported", simRoot.c_str(), APP_NAME, 'A' + p, n);
+      long biggest = 0;
+      int files = 0, numbered = 0, found = 0;      // (a recording space file's name: "0016.wav")
+      if (DIR *d = opendir(dir)) {
+        while (dirent *e = readdir(d)) {
+          std::string f = e->d_name;
+          if (f.size() < 5 || f.substr(f.size() - 4) != ".wav") continue;
+          files++;
+          numbered += f.size() == 8 && isdigit((unsigned char)f[0]);
+          found += f == want;
+          FILE *h = fopen((std::string(dir) + "/" + f).c_str(), "rb");
+          if (h) { fseek(h, 0, SEEK_END); biggest = std::max(biggest, ftell(h)); fclose(h); }
+        }
+        closedir(d);
+      }
+      char m[200];
+      const long space = WAV_DATA_OFFSET + (long)MAX_REC_FRAMES * 4;
+      snprintf(m, sizeof m, "exported (L7 %c%02d): %d samples, the new one among them (%s: %d), the biggest %ld bytes (not the recording space's %ld), %d by a number",
+               'A' + p, n, files, want.c_str(), found, biggest, space, numbered);
+      check(n > 0 && found == 1 && biggest < space / 4 && numbered == 0, m);
+      clearTrack(t);
+      for (int i = 0; i < 20; i++) block();
+    }
   }
 
   printf("a card from before the folders: moved into them at boot\n");
