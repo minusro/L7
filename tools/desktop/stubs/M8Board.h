@@ -88,6 +88,7 @@ public:
   int batteryPercent() { return battery; }
   bool batteryCharging() const { return charging; }
   void batteryLog() {}
+  void chargeGuard() {}
   HardwareSerial *midiOutBegin() { return &midi; }
   HardwareSerial *midiInBegin() { return &midi; }
   bool powerButtonPressed() { return false; }

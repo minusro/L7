@@ -84,6 +84,29 @@ marked. Remake it after changing that set:
 python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 2 Project/L7 Test 2 Project.als" ableton_template.h
 ```
 
+## Demo video (`tools/demo`)
+
+A 60-second demo of the main features, rendered from the real app: the sketch
+(setup(), loop(), the engine, the UI) built against the desktop app's stand-ins
+with `demo.cpp` as the host, in virtual time (no window, no SDL; the audio
+"interrupt" runs whenever a block is due). A script presses the keys (a new
+project, four parts recorded and layered, the filter, a loop range, a mute
+swipe, scenes, a resampling, a tempo change), and a "performer" plays
+synthesized parts (drums, bass, chords, a lead in A minor) into the line
+input in time with the clock, so what's recorded is what's heard. It writes
+the screen 30 times a second and the output's audio; `compose.py` lays the
+screen out 4x with the caption and the M8's keys (lit while held) and encodes
+`tools/demo/L7 demo.mp4` (1080p, needs ffmpeg, numpy, Pillow).
+
+```sh
+tools/demo/build.sh            # builds, runs, composes (~30 s)
+python3 tools/demo/compose.py <out-dir> --stills 12,30 <dir>   # frames to check
+```
+
+The script steps on transport beats (`untilBeat()`), so it keeps in time with
+the music; navigation goes an arrow at a time to a row and cell (`go()`),
+never past an edge (that would open the menu).
+
 ## UI preview (`tools/ui_preview`)
 
 Renders the screen on the PC with the firmware's own drawing code (ui*.cpp,
