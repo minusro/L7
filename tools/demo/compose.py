@@ -61,7 +61,7 @@ def base():
     return img
 
 
-# The keys as on the M8: the arrows on the left, SHIFT / START over B / A on the right.
+# The keys: the arrows on the left, B / A over SHIFT / START on the right.
 KEY = 74
 KEYS_Y = 650
 
@@ -72,8 +72,8 @@ def key_boxes():
     arrows = {UP: (x0 + KEY + gap, KEYS_Y), LEFT: (x0, KEYS_Y + KEY + gap),
               DOWN: (x0 + KEY + gap, KEYS_Y + KEY + gap), RIGHT: (x0 + 2 * (KEY + gap), KEYS_Y + KEY + gap)}
     rx = x0 + 3 * (KEY + gap) + 34
-    right = {SHIFT: (rx, KEYS_Y), PLAY: (rx + KEY + gap, KEYS_Y),
-             OPT: (rx, KEYS_Y + KEY + gap), EDIT: (rx + KEY + gap, KEYS_Y + KEY + gap)}
+    right = {OPT: (rx, KEYS_Y), EDIT: (rx + KEY + gap, KEYS_Y),
+             SHIFT: (rx, KEYS_Y + KEY + gap), PLAY: (rx + KEY + gap, KEYS_Y + KEY + gap)}
     return {**arrows, **right}
 
 

@@ -86,14 +86,17 @@ python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 2 Project/L7
 
 ## Demo video (`tools/demo`)
 
-A 60-second demo of the main features, rendered from the real app: the sketch
+A demo of the main features (about 100 s), rendered from the real app: the sketch
 (setup(), loop(), the engine, the UI) built against the desktop app's stand-ins
 with `demo.cpp` as the host, in virtual time (no window, no SDL; the audio
 "interrupt" runs whenever a block is due). A script presses the keys (a new
-project, four parts recorded and layered, the filter, a loop range, a mute
-swipe, scenes, a resampling, a tempo change), and a "performer" plays
-synthesized parts (drums, bass, chords, a lead in A minor) into the line
-input in time with the clock, so what's recorded is what's heard. It writes
+project, four parts recorded and layered as 1-, 2- and 4-bar loops, the
+filter, a loop range, a mute swipe, scenes, a resampling and a layer over it,
+the export to Ableton Live), and a "performer" plays a synthesized lo-fi hip hop
+beat at 85 BPM (swung drums with vinyl crackle, bass, electric piano, a horn
+line, a pluck) into the line input in time with the clock, so what's recorded
+is what's heard. The card starts with a session whose tempo last set by hand is
+85 (the new project takes it). It writes
 the screen 30 times a second and the output's audio; `compose.py` lays the
 screen out 4x with the caption and the M8's keys (lit while held) and encodes
 `tools/demo/L7 demo.mp4` (1080p, needs ffmpeg, numpy, Pillow).

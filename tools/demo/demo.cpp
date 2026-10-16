@@ -98,37 +98,55 @@ void interrupts() {
   if (irqDepth > 0 && --irqDepth == 0) due();
 }
 
-// ---- The performer: parts in A minor at the clock's tempo, each a list of
-// notes over two bars (start and length in 16ths), played into the line
-// input over the bars the script gives it.
-enum Part { DRUMS, BASS, CHORDS, LEAD, PARTS };
-enum Voice { KICK, SNARE, HAT, OPENHAT, BASSV, PAD, LEADV };
-struct Note { int at, len, voice, midi; float gain; };
+// ---- The performer: a lo-fi hip hop beat (85 BPM, swung), its parts as
+// notes over one, two or four bars (start and length in 16ths; the odd 16ths
+// played late: the swing), played into the line input over the beats the
+// script gives it, in time with the clock. The loops: drums 1 bar, bass 2,
+// keys 4 (Dm9 | G13 | Dm9 | Cmaj9 over the bass's D | G), horn 2, pluck 1.
+enum Part { DRUMS, BASS, KEYS, LEAD, PLUCK, PARTS };
+enum Voice { KICK, SNARE, GHOST, HAT, VINYL, BASSV, EPIANO, HORN, PLUCKV };
+struct Note { float at, len; int voice, midi; float gain; };
 static std::vector<Note> parts[PARTS];
+static const int PART_BEATS[PARTS] = {4, 8, 16, 8, 4};
 struct Playing { int part; double from, to; };   // (transport beats)
 static std::vector<Playing> playing;
+static constexpr float SWING = 0.28f;            // (of a 16th: the odd ones that late)
+
+static float hum(int i) { return ((i * 2654435761u) >> 24) / 255.0f - 0.5f; }   // (a nudge: -0.5..0.5)
+static float swung(float s16, int i) { return s16 + (((int)s16) % 2 ? SWING : 0) + 0.06f * hum(i); }
 
 static void writeParts() {
-  auto &d = parts[DRUMS];
+  auto &d = parts[DRUMS];                          // (one bar)
+  int n = 0;
+  for (int st : {0, 3, 10}) d.push_back({swung(st, n++), 4, KICK, 0, st ? 0.85f : 1.0f});
+  for (int st : {4, 12}) d.push_back({swung(st, n++), 4, SNARE, 0, 1.0f});
+  d.push_back({swung(15, n++), 1, GHOST, 0, 0.5f});
+  for (int st = 0; st < 16; st += 2) d.push_back({swung(st, n++), 1, HAT, 0, st % 4 ? 0.55f : 0.9f});
+  for (int st : {7, 13}) d.push_back({swung(st, n++), 1, HAT, 0, 0.3f});
+  d.push_back({0, 16, VINYL, 0, 1.0f});           // (the record's crackle, under it all)
+  auto &b = parts[BASS];                           // (two bars: D | G)
+  const int roots[2] = {38, 31};
   for (int bar = 0; bar < 2; bar++) {
-    const int o = bar * 16;
-    for (int s : {0, 7, 10}) d.push_back({o + s, 4, KICK, 0, 1.0f});
-    if (bar == 1) d.push_back({o + 13, 2, KICK, 0, 0.7f});
-    for (int s : {4, 12}) d.push_back({o + s, 4, SNARE, 0, 1.0f});
-    for (int s = 0; s < 16; s += 2) d.push_back({o + s, 1, s == 14 && bar == 1 ? OPENHAT : HAT, 0, s % 4 ? 0.7f : 1.0f});
-    for (int s : {3, 11}) d.push_back({o + s, 1, HAT, 0, 0.35f});
+    const int o = 16 * bar, r = roots[bar];
+    b.push_back({swung(o, 100 + bar), 5, BASSV, r, 1.0f});
+    b.push_back({swung(o + 6, 110 + bar), 2, BASSV, r, 0.75f});
+    b.push_back({swung(o + 10, 120 + bar), 2, BASSV, r + 7, 0.7f});
+    b.push_back({swung(o + 14, 130 + bar), 1.6f, BASSV, r + 12, 0.6f});
   }
-  auto &b = parts[BASS];                         // A1 / F1 G1
-  for (int s : {0, 3, 6, 8, 11, 14}) b.push_back({s, s == 6 || s == 14 ? 2 : 3, BASSV, s == 8 ? 45 : 33, 1.0f});
-  for (int s : {0, 3, 6, 8, 11}) b.push_back({16 + s, s == 6 ? 2 : 3, BASSV, 29, 1.0f});
-  b.push_back({16 + 14, 2, BASSV, 31, 1.0f});
-  auto &c = parts[CHORDS];                       // Am | F (add9)
-  for (int n : {57, 60, 64, 71}) c.push_back({0, 15, PAD, n, n == 71 ? 0.5f : 1.0f});
-  for (int n : {53, 57, 60, 67}) c.push_back({16, 15, PAD, n, n == 67 ? 0.5f : 1.0f});
-  auto &l = parts[LEAD];                         // a hook
-  const int mel[][3] = {{0, 3, 76}, {3, 3, 74}, {6, 2, 72}, {8, 4, 69}, {12, 2, 72}, {14, 2, 74},
-                        {16, 3, 72}, {19, 3, 69}, {22, 2, 67}, {24, 6, 69}};
-  for (auto &m : mel) l.push_back({m[0], m[1], LEADV, m[2], 1.0f});
+  auto &k = parts[KEYS];                           // (four bars)
+  const int chords[4][4] = {{53, 57, 60, 64}, {53, 59, 64, 69}, {53, 57, 60, 64}, {52, 55, 59, 62}};
+  for (int bar = 0; bar < 4; bar++)
+    for (int hit = 0; hit < 2; hit++)
+      for (int v = 0; v < 4; v++)
+        k.push_back({swung(16 * bar + (hit ? 10 : 0), 200 + 2 * bar + hit) + v * 0.12f, hit ? 5.6f : 7.4f, EPIANO, chords[bar][v],
+                     (v == 3 ? 0.7f : 1.0f) * (hit ? 0.75f : 1.0f)});
+  auto &l = parts[LEAD];                            // (two bars: a horn line)
+  const float mel[][3] = {{2, 2, 69}, {4, 3, 72}, {7, 1, 74}, {8, 4, 76}, {12, 2, 74}, {14, 2, 72},
+                          {16, 6, 71}, {22, 2, 67}, {24, 4, 69}, {28, 3.5f, 64}};
+  for (int i = 0; i < 10; i++) l.push_back({swung(mel[i][0], 300 + i), mel[i][1], HORN, (int)mel[i][2], 1.0f});
+  auto &p = parts[PLUCK];                           // (one bar: A C D F, over all of it)
+  const int arp[8] = {69, 72, 74, 77, 74, 72, 76, 74};
+  for (int i = 0; i < 8; i++) p.push_back({swung(2 * i, 400 + i), 2, PLUCKV, arp[i] + 12, i % 2 ? 0.75f : 1.0f});
 }
 
 static double hz(int midi) { return 440.0 * std::pow(2.0, (midi - 69) / 12.0); }
@@ -141,50 +159,63 @@ static float noise(uint32_t n) {                  // (white, from an index: the 
 static void voice(const Note &n, int id, double t, double dur, float &l, float &r) {
   const double TAU = 2 * M_PI;
   float s = 0, pan = 0;
+  const uint32_t k = id * 104729u + (uint32_t)(t * SR);
   switch (n.voice) {
     case KICK: {
-      double ph = 45 * t + 90 / 28.0 * (1 - std::exp(-28 * t));
-      s = (float)(std::sin(TAU * ph) * std::exp(-7 * t) + 0.3 * std::exp(-400 * t) * noise(id * 7919 + (int)(t * SR))) * 0.95f;
+      double ph = 50 * t + 70 / 22.0 * (1 - std::exp(-22 * t));
+      s = (float)std::tanh(1.6 * std::sin(TAU * ph) * std::exp(-5.5 * t)) * 0.9f;
+      s += 0.12f * (float)std::exp(-250 * t) * noise(k);
       break;
     }
-    case SNARE: {
-      float nz = noise(id * 104729 + (int)(t * SR)) - 0.5f * noise(id * 104729 + (int)(t * SR) - 1);
-      s = (float)(0.55 * nz * std::exp(-16 * t) + 0.45 * std::sin(TAU * 185 * t) * std::exp(-28 * t));
+    case SNARE: case GHOST: {
+      float nz = 0.5f * (noise(k) + noise(k + 1));   // (a little dark)
+      s = (float)(0.5 * nz * std::exp(-11 * t) + 0.35 * std::sin(TAU * 190 * t) * std::exp(-24 * t) + 0.08 * nz * std::exp(-3 * t));
       break;
     }
-    case HAT: case OPENHAT: {
-      const uint32_t k = id * 15485863 + (int)(t * SR);
-      float nz = noise(k) - noise(k - 1);          // (differenced: bright)
-      s = (float)(0.22 * nz * std::exp(-(n.voice == HAT ? 55 : 7) * t));
-      pan = 0.3f;
+    case HAT: {
+      float nz = noise(k) - noise(k - 1);
+      s = (float)(0.12 * nz * std::exp(-60 * t));
+      pan = 0.35f;
+      break;
+    }
+    case VINYL: {                                   // (hiss, and now and then a pop)
+      const uint32_t i = (uint32_t)(t * SR);
+      s = 0.012f * noise(i * 7 + 3);
+      for (int back = 0; back < 40; back++) {
+        const uint32_t j = i - back;
+        if (((j * 2654435761u) >> 20) % 2600 == 0) s += 0.22f * std::exp(-back / 6.0f) * noise(j);
+      }
       break;
     }
     case BASSV: {
-      const double f = hz(n.midi), env = std::min(1.0, t / 0.004) * (t < dur ? 0.8 + 0.2 * std::exp(-6 * t) : 0.8 * std::exp(-(t - dur) / 0.03));
-      double v = 0;
-      for (int k = 1; k <= 7; k++) v += std::sin(TAU * k * f * t) / k * std::exp(-0.35 * (k - 1) * (1 + 3 * t));
-      s = (float)(0.55 * v * env);
+      const double f = hz(n.midi), env = std::min(1.0, t / 0.008) * (t < dur ? 0.75 + 0.25 * std::exp(-5 * t) : 0.75 * std::exp(-(t - dur) / 0.05));
+      s = (float)((std::sin(TAU * f * t) + 0.35 * std::sin(TAU * 2 * f * t) + 0.12 * std::sin(TAU * 3 * f * t)) * 0.62 * env);
       break;
     }
-    case PAD: {
-      const double f = hz(n.midi), env = std::min(1.0, t / 0.12) * (t < dur ? 1.0 : std::exp(-(t - dur) / 0.25));
-      double a = 0, b = 0;
-      for (int k = 1; k <= 5; k += 2) {          // (triangles, detuned left and right)
-        const double w = 1.0 / (k * k) * (k % 4 == 1 ? 1 : -1);
-        a += w * std::sin(TAU * k * f * 1.004 * t);
-        b += w * std::sin(TAU * k * f * 0.996 * t + 1.3);
-      }
-      l += (float)(0.16 * a * env * n.gain);
-      r += (float)(0.16 * b * env * n.gain);
+    case EPIANO: {                                  // (FM, a tine; a tremolo across the stereo; a tape wobble)
+      const double f = hz(n.midi) * (1 + 0.0022 * std::sin(TAU * 0.6 * t));
+      const double env = std::min(1.0, t / 0.004) * std::exp(-0.9 * t) * (t < dur ? 1.0 : std::exp(-(t - dur) / 0.18));
+      const double idx = 1.4 * std::exp(-5 * t) + 0.2, tine = 0.5 * std::exp(-28 * t);
+      const double v = std::sin(TAU * f * t + idx * std::sin(TAU * f * t) + tine * std::sin(TAU * 14 * f * t));
+      const double trem = 0.18 * std::sin(TAU * 4.2 * t);
+      l += (float)(0.17 * v * env * (1 + trem) * n.gain);
+      r += (float)(0.17 * v * env * (1 - trem) * n.gain);
       return;
     }
-    case LEADV: {
-      const double vib = t > 0.15 ? 0.006 * std::sin(TAU * 5.5 * t) : 0;
-      const double f = hz(n.midi) * (1 + vib), env = std::min(1.0, t / 0.01) * (t < dur ? 1.0 : std::exp(-(t - dur) / 0.06));
+    case HORN: {                                    // (soft, breathy, a slow vibrato)
+      const double vib = t > 0.18 ? 0.007 * std::sin(TAU * 5 * t) * std::min(1.0, (t - 0.18) / 0.3) : 0;
+      const double f = hz(n.midi) * (1 + vib), env = std::min(1.0, t / 0.06) * (t < dur ? 1.0 : std::exp(-(t - dur) / 0.08));
+      const double v = std::sin(TAU * f * t) + 0.32 * std::sin(TAU * 2 * f * t) + 0.12 * std::sin(TAU * 3 * f * t);
+      s = (float)(0.3 * v * env + 0.03 * noise(k) * std::exp(-25 * t));
+      pan = -0.3f;
+      break;
+    }
+    case PLUCKV: {                                  // (a nylon-ish pluck)
+      const double f = hz(n.midi);
       double v = 0;
-      for (int k = 1; k <= 9; k += 2) v += std::sin(TAU * k * f * t) / k * std::exp(-0.25 * (k - 1));
-      s = (float)(0.28 * v * env);
-      pan = -0.25f;
+      for (int h = 1; h <= 8; h++) v += std::sin(TAU * h * f * t) / h * std::exp(-(1.5 + 1.1 * h) * t);
+      s = (float)(0.3 * v * std::min(1.0, t / 0.002) * (t < dur + 0.4 ? 1.0 : std::exp(-(t - dur - 0.4) / 0.1)));
+      pan = 0.4f;
       break;
     }
   }
@@ -193,28 +224,29 @@ static void voice(const Note &n, int id, double t, double dur, float &l, float &
   r += s * (1 + std::min(0.0f, pan));
 }
 
-// The performer's sample at transport beat p (with the line input's latency: heard
-// that much later, as a real one would be).
+// The performer's sample at transport beat p (with the line input's latency:
+// heard that much later, as a real one would be).
 static void perform(double p, double secPerBeat, float &l, float &r) {
   l = r = 0;
   for (const auto &pl : playing) {
     if (p < pl.from || p >= pl.to + 2) continue;   // (and its tails a little past)
     const double inPart = p - pl.from;
     const auto &notes = parts[pl.part];
-    for (int rep = 0; rep * 8.0 <= inPart; rep++) {   // (the two bars over and over)
+    const double len = PART_BEATS[pl.part];
+    for (int rep = 0; rep * len <= inPart; rep++) {   // (its bars over and over)
       for (size_t i = 0; i < notes.size(); i++) {
         const Note &n = notes[i];
-        const double start = rep * 8.0 + n.at / 4.0;
+        const double start = rep * len + n.at / 4.0;
         if (pl.from + start >= pl.to) continue;
-        const double t = (inPart - start) * secPerBeat;
-        if (t < 0 || t > n.len / 4.0 * secPerBeat + 1.2) continue;
-        voice(n, (int)(rep * 100 + i), t, n.len / 4.0 * secPerBeat, l, r);
-        if (n.voice == LEADV) {                   // (an echo, three 16ths on)
+        const double t = (inPart - start) * secPerBeat, dur = n.len / 4.0 * secPerBeat;
+        if (t < 0 || t > dur + (n.voice == VINYL ? 0 : 1.6)) continue;
+        voice(n, (int)(rep * 1000 + i), t, dur, l, r);
+        if (n.voice == HORN || n.voice == PLUCKV) {   // (an echo, three 16ths on)
           const double te = t - 0.75 * secPerBeat;
           float el = 0, er = 0;
-          if (te >= 0) voice(n, (int)(rep * 100 + i), te, n.len / 4.0 * secPerBeat, el, er);
-          l += 0.15f * er;
-          r += 0.35f * el;
+          if (te >= 0) voice(n, (int)(rep * 1000 + i), te, dur, el, er);
+          l += 0.18f * er;
+          r += 0.3f * el;
         }
       }
     }
@@ -312,99 +344,144 @@ static void go(int row, int cell) {
 }
 
 using namespace m8;
+// The menu's selection to its list item `item` (an arrow at a time).
+static void goMenuItem(int item) {
+  auto st = std::make_shared<std::pair<int, double>>(0, 0.0);
+  script.push_back([=] {
+    if (st->first == 1) {
+      if (nowUs - st->second < 0.08e6) return false;
+      board.heldKeys = 0;
+      st->first = 0;
+      st->second = nowUs;
+      return false;
+    }
+    if (nowUs - st->second < 0.1e6) return false;
+    if (menuSlot() < 0 && menuListItem() == item) return true;
+    board.heldKeys = menuSlot() >= 0 || menuListItem() < item ? m8::BTN_DOWN : m8::BTN_UP;
+    st->first = 1;
+    st->second = nowUs;
+    return false;
+  });
+}
 static void writeScript() {
   const uint8_t A = BTN_EDIT, B = BTN_OPT, SH = BTN_SHIFT, UP = BTN_UP, DN = BTN_DOWN, LT = BTN_LEFT, RT = BTN_RIGHT, ST = BTN_PLAY;
   wait(0.4);
   say("Pick a project", "12 slots, each with its own scenes and tempo");
   wait(1.1);
   press(A);                                         // a new project, into the looper
-  wait(0.8);
+  wait(0.5);
   // Drums: the clock starts with the recording, on bar 1.
   say("Record a loop", "A on an empty track: the clock starts, recording on bar 1");
-  play(DRUMS, 0, 8);
+  play(DRUMS, 0, 4);
   press(A);
-  untilBeat(6);
+  untilBeat(2);
   say("Record a loop", "A again: it ends on the bar line and plays on, no gap");
-  press(A);                                         // (on to the next free track)
+  press(A);                                         // (one bar; on to the next free track)
   untilBeat(9);
-  say("Layer it", "bass on the next track, recorded on the next bar line");
+  say("Layer it", "a 2-bar bassline, recorded from the next bar line");
   play(BASS, 12, 8);
   untilBeat(11);
   press(A);
   untilBeat(18);
   press(A);
-  untilBeat(19.2);
-  say("Layer it", "chords...");
-  play(CHORDS, 20, 8);
+  untilBeat(21);
+  say("Layer it", "4 bars of electric piano...");
+  play(KEYS, 24, 16);
+  untilBeat(23);
   press(A);
-  untilBeat(26);
+  untilBeat(38);
   press(A);
-  untilBeat(27.2);
-  say("Layer it", "...and a lead");
-  play(LEAD, 28, 8);
+  untilBeat(41);
+  say("Layer it", "...and a 2-bar horn line");
+  play(LEAD, 44, 8);
+  untilBeat(43);
   press(A);
-  untilBeat(34);
+  untilBeat(50);
   press(A);
-  untilBeat(36.5);
-  // The filter on the drums.
-  say("Filter", "B + arrows: a lowpass swept down and back");
-  go(NUM_TRACKS - 1, FILTER_CELL);                  // (track 1's filter)
-  keys(B); wait(0.15);
-  keys(B | LT); wait(1.25);
-  keys(B); wait(1.2);
-  keys(B | RT); wait(1.25);
-  keys(B); wait(0.3);
-  keys(0); wait(0.5);
-  // The lead's range: a beat of it, then the whole loop again.
-  say("Loop range", "B + DOWN: the lead cut to a single beat");
-  go(NUM_TRACKS - 4, WAVE_CELL);                    // (track 4's waveform)
+  untilBeat(53);
+  say("All four parts", "loops of 1, 2 and 4 bars, each on its own track, in time");
+  untilBeat(57);
+  // The filter on the keys.
+  say("Filter", "B + arrows: a lowpass swept down on the keys...");
+  go(NUM_TRACKS - 3, FILTER_CELL);                  // (track 3's filter)
+  keys(B); wait(0.2);
+  keys(B | LT); wait(1.4);
+  keys(B); wait(2.2);
+  say("Filter", "...and opened up again");
+  keys(B | RT); wait(1.4);
+  keys(B); wait(0.4);
+  keys(0); wait(1.6);
+  // The drums' range: a beat of them, then the whole loop again.
+  say("Loop range", "B + DOWN on the waveform: the drums cut to one beat");
+  go(NUM_TRACKS - 1, WAVE_CELL);                    // (track 1's waveform)
   keys(B); wait(0.15);
   for (int i = 0; i < 4; i++) { keys(B | DN); wait(0.09); keys(B); wait(0.12); }
-  wait(1.6);
-  say("Loop range", "B twice: the whole loop back");
+  wait(2.6);
   keys(0); wait(0.25);
+  say("Loop range", "B twice: the whole loop back");
   press(B, 0.06); press(B, 0.06);
-  wait(1.0);
+  wait(2.2);
   // Mutes: a swipe.
   say("Mute", "A mutes; held, UP / DOWN swipe it across the tracks");
+  go(NUM_TRACKS - 4, WAVE_CELL);                    // (track 4)
   keys(A); wait(0.3);
-  keys(A | DN); wait(0.1); keys(A); wait(0.25);
-  keys(A | DN); wait(0.1); keys(A); wait(0.25);
-  keys(0); wait(1.4);
+  keys(A | DN); wait(0.1); keys(A); wait(0.3);
+  keys(A | DN); wait(0.1); keys(A); wait(0.3);
+  keys(0); wait(2.4);
   // Scenes.
   say("Scenes", "SHIFT + B twice: a copy of the scene to change");
   keys(SH); wait(0.1);
   keys(SH | B); wait(0.06); keys(SH); wait(0.08);
   keys(SH | B); wait(0.06); keys(SH); wait(0.15);
-  keys(0); wait(0.4);
+  keys(0); wait(0.8);
   say("Scenes", "the copy with everything back in");
-  keys(A); wait(0.25);
-  keys(A | UP); wait(0.1); keys(A); wait(0.25);
+  keys(A); wait(0.3);
+  keys(A | UP); wait(0.1); keys(A); wait(0.3);
   keys(A | UP); wait(0.1); keys(A); wait(0.2);
-  keys(0); wait(1.6);
+  keys(0); wait(3.0);
   say("Scenes", "SHIFT + UP / DOWN: back and forth, on the next beat");
-  keys(SH); wait(0.1); keys(SH | DN); wait(0.09); keys(SH); wait(0.5); keys(0); wait(2.0);
-  keys(SH); wait(0.1); keys(SH | UP); wait(0.09); keys(SH); wait(0.5); keys(0); wait(1.6);
+  keys(SH); wait(0.1); keys(SH | DN); wait(0.09); keys(SH); wait(0.6); keys(0); wait(3.2);
+  keys(SH); wait(0.1); keys(SH | UP); wait(0.09); keys(SH); wait(0.6); keys(0); wait(2.4);
   // Resampling into a new scene.
   say("Resample", "B + A on an empty track: what you hear, recorded");
   go(NUM_TRACKS - 5, WAVE_CELL);                    // (track 5: empty)
   keys(B); wait(0.12); keys(B | A); wait(0.1); keys(B); wait(0.06); keys(0);
   script.push_back([] { return recording.mode == Recording::Running; });
-  wait(2.6);
+  wait(3.6);
   press(A);                                         // (stops at the end of that bar)
   script.push_back([] { return recording.mode == Recording::Idle; });
   say("Resample", "...into a scene of its own, on track 1");
-  wait(2.0);
-  // The tempo.
-  say("Tempo", "faster: every loop stretched to it, pitch kept");
-  go(STATUS_ROW, TEMPO_CELL);
-  keys(B); wait(0.15);
-  keys(B | UP); wait(1.1);
-  keys(B); wait(0.3);
-  keys(0); wait(3.6);
+  wait(2.6);
+  // A new layer over it.
+  say("Keep going", "a 1-bar pluck over the resampling");
+  script.push_back([] { return beatNow() - std::floor(beatNow() / 4) * 4 >= 2.8; });   // (late in a bar: from the next one)
+  auto from = std::make_shared<double>(0);
+  script.push_back([=] {
+    *from = std::floor(beatNow() / 4) * 4 + 4;
+    playing.push_back({PLUCK, *from, *from + 4});
+    return true;
+  });
+  press(A);
+  script.push_back([=] { return beatNow() >= *from + 2; });
+  press(A);                                         // (one bar)
+  script.push_back([] { return recording.mode == Recording::Idle; });
+  wait(3.0);
+  // Export.
+  say("Export to Live", "the project as an Ableton Live Set, every scene and clip");
+  go(STATUS_ROW, SCENE_CELL);
+  keys(LT); wait(0.1); keys(0);                     // (off the row's first cell: the menu)
+  script.push_back([] { return menuOpen(); });
+  wait(0.4);
+  goMenuItem(MENU_EXPORT);
+  wait(0.4);
+  press(A);
+  wait(2.1);
+  keys(RT); wait(0.1); keys(0);                     // (back to the looper)
+  wait(1.4);
   say("L7", "record, layer, resample. On the M8.");
-  press(ST);                                        // (stopped)
   wait(2.4);
+  press(ST);                                        // (stopped)
+  wait(2.0);
   // (the end: the last step done)
 }
 
@@ -413,6 +490,14 @@ int main(int argc, char **argv) {
   simRoot = out + "/card";
   std::string cmd = "rm -rf '" + simRoot + "' && mkdir -p '" + simRoot + "'";
   if (system(cmd.c_str()) != 0) return 1;
+  {                                                 // (the tempo last set by hand: 85, the new project's)
+    std::string data = simRoot + "/L7/DATA";
+    std::string mk = "mkdir -p '" + data + "'";
+    if (system(mk.c_str()) != 0) return 1;
+    FILE *f = fopen((data + "/SESSION.DAT").c_str(), "w");
+    fputs("bpm=85.00\nnewbpm=85.00\n", f);
+    fclose(f);
+  }
   framesOut = fopen((out + "/frames.raw").c_str(), "wb");
   metaOut = fopen((out + "/frames.txt").c_str(), "w");
   FILE *log = freopen((out + "/serial.log").c_str(), "w", stdout);
@@ -425,7 +510,7 @@ int main(int argc, char **argv) {
   splashing = false;
   board.heldKeys = 0;
   size_t step = 0;
-  const double END_US = 75e6;                       // (a ceiling)
+  const double END_US = 130e6;                      // (a ceiling)
   while (nowUs < END_US && step < script.size()) {
     while (step < script.size() && script[step]()) step++;
     loop();
