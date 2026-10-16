@@ -59,6 +59,13 @@ static void audRetrig(uint8_t pitch, uint8_t vel) {
   audNote = pitch;
 }
 
+// An A tap on a note deletes it (with the rest of the selection); the next
+// A tap restores them, as long as only SHIFT or PLAY came in between.
+static ClipNote undoNotes[CLIP_MAX_NOTES];
+static uint8_t undoCount = 0, undoT = 0, undoS = 0;
+static bool restoreArmed = false;
+static bool aTapOnNote = false;
+
 static int noteAtCursor() {
   return clipFindAt(editClip(), nav.notePitch, nav.notePage * 16 + nav.noteStep);
 }
@@ -384,6 +391,7 @@ bool inputService() {
   if (pressed & BTN_EDIT) editUsed = (now & ~BTN_EDIT) != 0;
   if ((now & BTN_OPT) && (pressed & ~BTN_OPT)) optUsed = true;
   if ((now & BTN_EDIT) && (pressed & ~BTN_EDIT)) editUsed = true;
+  if (pressed & ~(BTN_EDIT | BTN_SHIFT | BTN_PLAY)) restoreArmed = false;
 
   // A pending edge switch: another key cancels, its arrow's release (or a
   // 600 ms hold) fires it.
@@ -447,6 +455,7 @@ bool inputService() {
       // A on an empty cell makes a note; on a note it selects (A+arrows edit).
       Clip &c = editClip();
       int i = noteAtCursor();
+      aTapOnNote = i >= 0;
       selClear();
       if (i >= 0) { selAdd((uint8_t)i); audPlay(c.notes[i].pitch, c.notes[i].vel); }
       else if (c.count < CLIP_MAX_NOTES) {
@@ -521,6 +530,40 @@ bool inputService() {
 
   if (audNote >= 0 && (!(now & (BTN_EDIT | BTN_OPT)) || nav.screen != SCR_NOTE || nav.menu))
     audStop();
+
+  // An A let go cleanly in the editor: delete the selection, or bring the
+  // last deletion back (only SHIFT and PLAY may have come between the taps).
+  if ((released & BTN_EDIT) && !editUsed && !nav.menu && nav.screen == SCR_NOTE) {
+    if (restoreArmed && undoCount) {
+      Clip &c = clipAt(undoT, undoS);
+      selClear();
+      for (uint8_t i = 0; i < undoCount && c.count < CLIP_MAX_NOTES; i++) {
+        c.notes[c.count] = undoNotes[i];
+        selAdd(c.count);
+        c.count++;
+      }
+      c.used = 1;
+      clipRefreshBars(c);
+      undoCount = 0;
+      restoreArmed = false;
+      dirtyNow = true;
+    } else if (aTapOnNote) {
+      Clip &c = editClip();
+      undoCount = 0;
+      undoT = nav.gridT; undoS = nav.gridS;
+      for (int i = c.count - 1; i >= 0; i--) {
+        if (!selHas((uint8_t)i)) continue;
+        if (undoCount < CLIP_MAX_NOTES) undoNotes[undoCount++] = c.notes[i];
+        c.notes[i] = c.notes[c.count - 1];
+        c.count--;
+      }
+      selClear();
+      clipRefreshBars(c);
+      restoreArmed = undoCount > 0;
+      dirtyNow = true;
+    }
+    aTapOnNote = false;
+  }
 
   // Arrows, with repeat (SHIFT: fresh presses only).
   static uint32_t pressedAt[4], lastRep[4];
