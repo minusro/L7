@@ -93,25 +93,27 @@ with `demo.cpp` as the host, in virtual time (no window, no SDL; the audio
 project, four parts recorded and layered as 1-, 2- and 4-bar loops, the
 filter, a loop range, a mute swipe, scenes, a resampling and a layer over it,
 the export to Ableton Live), and a "performer" plays a synthesized beat into
-the line input in time with the clock, so what's recorded is what's heard. Five
-styles, a video each (`L7 demo - <style>.mp4`): lofi (85 BPM, swung, vinyl
-crackle, electric piano, horn), house (122: four on the floor, chord stabs, a
-vocal "ah", marimba), synthwave (100: gated snare, octave saw bass, pads, a
-saw lead, an arpeggio), boombap (90: organ, flute, vibraphone) and jazz (112,
-swung 8ths: ride and brushes, walking bass, piano, sax, vibraphone). Each
-style's parts and sounds are in `writeParts()` and `voice()`; the card starts
-with a session whose tempo last set by hand is the style's (the new project
-takes it). It writes
-the screen 30 times a second and the output's audio; `compose.py` lays the
-screen out for Instagram Stories (1080x1920, inside the Stories' safe zone:
-clear of the top 250 px and the bottom 340 px), the screen 3x at the top, the
-caption and the M8's keys (laid out as on the M8, lit while held) beneath it,
-and ends on the app's own splash played backwards, fading in over the last
-frames (needs ffmpeg, numpy, Pillow).
+the line input in time with the clock, so what's recorded is what's heard. The
+video is the house style (`L7 demo - house.mp4`: 122 BPM, four on the floor,
+chord stabs, a chorused supersaw pad, marimba); the script's other styles
+still render when named, a video each (`L7 demo - <style>.mp4`, the ones there
+from an earlier layout): lofi (85, swung, vinyl crackle, electric piano,
+kalimba), synthwave (100: gated snare, octave saw bass, pads, a saw lead, an
+arpeggio), boombap (90: organ, flute, vibraphone) and jazz (112, swung 8ths:
+ride and brushes, walking bass, piano, guitar, vibraphone). Each style's parts
+and sounds are in `writeParts()` and `voice()`; the card starts with a session
+whose tempo last set by hand is the style's (the new project takes it). It
+writes the screen 30 times a second and the output's audio; `compose.py` lays
+it out for Instagram Stories (1080x1920): the screen across the whole width
+(scaled by area, 3.375x, no bezel) under the Stories' top safe zone (250 px),
+the caption beneath it, and the M8's keys under that, laid out as on the M8,
+unlabelled, lit while held, big enough to reach into the bottom 340 px (where
+Stories put the reply bar); it ends on the app's own splash played backwards,
+fading in over the last frames (needs ffmpeg, numpy, Pillow).
 
 ```sh
-tools/demo/build.sh            # builds, runs, composes every style (~3 min)
-tools/demo/build.sh house jazz # just those
+tools/demo/build.sh            # builds, runs, composes the house video (~1.5 min)
+tools/demo/build.sh lofi jazz  # those styles instead
 python3 tools/demo/compose.py <out-dir> --stills 12,30 <dir>   # frames to check
 ```
 

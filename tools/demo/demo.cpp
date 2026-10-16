@@ -108,7 +108,7 @@ void interrupts() {
 enum Part { DRUMS, BASS, KEYS, LEAD, PLUCK, PARTS };
 enum Voice {
   KICK, SNARE, GHOST, HAT, VINYL, BASSV, EPIANO, HORN, PLUCKV,         // (lo-fi)
-  KICK909, CLAP, OHAT, SHAKER, SUBPLUCK, STAB, VOX, MARIMBA,           // (house)
+  KICK909, CLAP, OHAT, SHAKER, SUBPLUCK, STAB, SUPERSAW, MARIMBA,      // (house)
   GATEDSNARE, SAWBASS, PADSAW, SAWLEAD, ARPSQ,                         // (synthwave)
   BBKICK, BBSNARE, ORGAN, FLUTE, VIBES,                                // (boom bap)
   RIDE, BRUSH, FEATHER, UPRIGHT, PIANO, SAX, JAZZGTR,                  // (jazz)
@@ -127,7 +127,7 @@ struct Style {
 };
 static const Style STYLES[] = {
   {"lofi", 85, 0.28f, 0, 0.06f, "a 2-bar bassline", "4 bars of electric piano", "a 2-bar kalimba line", "a 1-bar pluck"},
-  {"house", 122, 0.1f, 0, 0.02f, "a 2-bar bassline", "4 bars of chord stabs", "a 2-bar vocal line", "a 1-bar marimba riff"},
+  {"house", 122, 0.1f, 0, 0.02f, "a 2-bar bassline", "4 bars of chord stabs", "a 2-bar chorused saw pad", "a 1-bar marimba riff"},
   {"synthwave", 100, 0, 0, 0.0f, "a 2-bar octave bass", "4 bars of pads", "a 2-bar saw lead", "a 1-bar arpeggio"},
   {"boombap", 90, 0.22f, 0, 0.05f, "a 2-bar sub bass", "4 bars of organ", "a 2-bar flute line", "a 1-bar vibraphone riff"},
   {"jazz", 112, 0, 0.67f, 0.05f, "a 2-bar walking bass", "4 bars of piano", "a 2-bar guitar line", "a 1-bar vibraphone riff"},
@@ -189,7 +189,9 @@ static void writeParts() {
     }
     static const int c[4][4] = {{60, 64, 67, 71}, {57, 60, 64, 67}, {59, 62, 64, 67}, {55, 57, 62, 67}};   // Am9 | Fmaj9 | Am11 | F6/9
     chords(c, {{3, 1.5f}, {6, 1.5f}, {10, 2.5f}}, STAB, 0.0f);
-    line(l, {{0, 6, 76}, {6, 2, 74}, {8, 8, 72}, {16, 8, 69}, {24, 4, 67}, {28, 4, 72}}, VOX, 300);
+    static const int pad[2][4] = {{64, 69, 72, 76}, {65, 69, 72, 76}};   // Am | Fmaj7, held
+    for (int bar = 0; bar < 2; bar++)
+      for (int i = 0; i < 4; i++) l.push_back({16.0f * bar, 15.0f, SUPERSAW, pad[bar][i], 1.0f});
     line(p, {{0, 2, 81}, {3, 2, 79}, {6, 2, 76}, {8, 2, 74}, {11, 2, 76}, {14, 2, 79}}, MARIMBA, 400);
   } else if (name == "synthwave") {
     drum({0, 8, 10}, 4, KICK909, 1.0f);
@@ -340,17 +342,22 @@ static void voice(const Note &n, int id, double t, double dur, float &l, float &
       r += (float)(0.16 * c * env * n.gain);
       return;
     }
-    case VOX: {                                     // (an "ah": the harmonics near 750 Hz louder)
-      const double vib = t > 0.2 ? 0.006 * std::sin(TAU * 5 * t) : 0;
-      const double f = hz(n.midi) * (1 + vib), env = std::min(1.0, t / 0.05) * (t < dur ? 1.0 : std::exp(-(t - dur) / 0.12));
-      double v = 0;
-      for (int h = 1; h <= 8; h++) {
-        const double fh = h * f, w = 0.35 / h + std::exp(-std::pow((fh - 750) / 260, 2)) + 0.5 * std::exp(-std::pow((fh - 1150) / 300, 2));
-        v += w * std::sin(TAU * fh * t);
+    case SUPERSAW: {                                // (seven saws a note, detuned and each drifting (a chorus), spread wide; slow in, slow out)
+      static const double DETUNE[7] = {0, -0.011, 0.011, -0.006, 0.006, -0.0025, 0.0025};
+      const double f = hz(n.midi), env = std::min(1.0, t / 0.18) * (t < dur ? 1.0 : std::exp(-(t - dur) / 0.35));
+      double a = 0, c = 0;
+      for (int o = 0; o < 7; o++) {
+        const double rate = 0.35 + 0.17 * o, drift = 0.0025;
+        const double ph = f * (1 + DETUNE[o]) * t + f * drift / (TAU * rate) * std::sin(TAU * rate * t + 1.3 * o) + 0.37 * o;
+        double v = 0;
+        for (int h = 1; h <= 14; h++) v += std::sin(TAU * h * ph) / h * std::exp(-0.14 * (h - 1));
+        const double left = o == 0 ? 0.5 : o % 2 ? 0.85 : 0.15;
+        a += v * left;
+        c += v * (1 - left);
       }
-      s = (float)(0.16 * v * env);
-      pan = -0.2f;
-      break;
+      l += (float)(0.06 * a * env * n.gain);
+      r += (float)(0.06 * c * env * n.gain);
+      return;
     }
     case MARIMBA: {
       const double f = hz(n.midi);
@@ -513,7 +520,7 @@ static void perform(double p, double secPerBeat, float &l, float &r) {
         const double t = (inPart - start) * secPerBeat, dur = n.len / 4.0 * secPerBeat;
         if (t < 0 || t > dur + (n.voice == VINYL ? 0 : 1.6)) continue;
         voice(n, (int)(rep * 1000 + i), t, dur, l, r);
-        if (n.voice == HORN || n.voice == PLUCKV || n.voice == VOX || n.voice == SAWLEAD || n.voice == ARPSQ || n.voice == FLUTE ||
+        if (n.voice == HORN || n.voice == PLUCKV || n.voice == SAWLEAD || n.voice == ARPSQ || n.voice == FLUTE ||
             n.voice == MARIMBA || n.voice == VIBES || n.voice == SAX || n.voice == KALIMBA || n.voice == JAZZGTR) {   // (an echo, three 16ths on)
           const double te = t - 0.75 * secPerBeat;
           float el = 0, er = 0;

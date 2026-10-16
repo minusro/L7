@@ -3,13 +3,13 @@
 # app's stand-ins, tools/desktop/stubs, with demo.cpp as the host: virtual time,
 # no window, no SDL), runs it, and composes the video with compose.py.
 #
-#   tools/demo/build.sh [styles...]     (default: all; the videos: tools/demo/L7 demo - <style>.mp4)
+#   tools/demo/build.sh [styles...]     (default: house; the videos: tools/demo/L7 demo - <style>.mp4)
 set -e
 here=$(cd "$(dirname "$0")" && pwd)
 root="$here/../.."
 src="${TMPDIR:-/tmp}/l7_demo_src"
 out="${TMPDIR:-/tmp}/l7_demo"
-styles="${*:-lofi house synthwave boombap jazz}"
+styles="${*:-house}"
 rm -rf "$src" && mkdir -p "$src" "$out"
 for f in "$root"/*.cpp "$root"/*.h; do
   case "$(basename "$f")" in M8Board.*|usb_drive.cpp|midi_usb.cpp|app_loader.cpp) ;; *) cp "$f" "$src/" ;; esac

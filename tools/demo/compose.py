@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Composes the L7 demo video from what demo.cpp wrote, portrait for
 Instagram Stories (1080x1920): the M8's screen (raw RGB565, 30 frames a
-second) scaled up 3x near the top, the caption and the M8's keys (lit while
-held) beneath it, all inside the Stories' safe zone (clear of the top 250 px
-and the bottom 340 px, where the app's own buttons go); the app's output as
-the sound.
+second) across the whole width under the Stories' top safe zone (the top
+250 px, the profile's bar), the caption and the M8's keys (lit while held,
+twice their old size, reaching down into the bottom 340 px) beneath it; the
+app's output as the sound.
 
   compose.py <demo-out-dir> <video.mp4>                (needs ffmpeg, numpy, Pillow)
   compose.py <demo-out-dir> --stills 5,12.5,30 <dir>   (PNGs of those moments, to check)
@@ -18,9 +18,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H, FPS = 1080, 1920, 30
 SAFE_TOP, SAFE_BOTTOM, MARGIN = 250, 340, 60       # (Stories: the profile's bar on top, the reply bar below)
-SW, SH, SCALE = 320, 240, 3
-SX, SY = (W - SW * SCALE) // 2, SAFE_TOP + 10      # the screen's place
-PANEL_Y = SY + SH * SCALE + 40                      # the caption and the keys from here down
+SW, SH = 320, 240
+SY, SCREEN_H = SAFE_TOP, W * SH // SW               # the screen's place: the whole width, 3.375x
+PANEL_Y = SY + SCREEN_H                             # the caption and the keys from here down
 BG = (12, 12, 14)
 INK = (236, 236, 236)
 DIM = (150, 150, 156)
@@ -39,7 +39,7 @@ def font(size, bold=False):
         return ImageFont.load_default()
 
 
-TITLE, SUB, KEYF, SMALL = font(84, True), font(50), font(38, True), font(23, True)
+TITLE, SUB = font(84, True), font(50)
 
 
 def wrap(draw, text, f, width):
@@ -56,24 +56,37 @@ def wrap(draw, text, f, width):
     return lines
 
 
-def base():
-    img = Image.new("RGB", (W, H), BG)
-    d = ImageDraw.Draw(img)
-    bez = 16                                        # (the M8's screen bezel)
-    d.rounded_rectangle((SX - bez, SY - bez, SX + SW * SCALE + bez, SY + SH * SCALE + bez), radius=20, fill=(28, 28, 32))
-    d.rounded_rectangle((SX - 3, SY - 3, SX + SW * SCALE + 3, SY + SH * SCALE + 3), radius=6, fill=(0, 0, 0))
-    return img
+def area_map(n_src, n_out):
+    """Scaling by area (n_out / n_src under 1 source pixel an output pixel):
+    each output pixel's two source pixels and the first one's share."""
+    s = n_out / n_src
+    x0 = np.arange(n_out) / s
+    a = np.floor(x0).astype(np.intp)
+    return a, np.minimum(a + 1, n_src - 1), np.clip((a + 1 - x0) * s, 0, 1).astype(np.float32)
+
+
+YA, YB, YW = area_map(SH, SCREEN_H)
+XA, XB, XW = area_map(SW, W)
+
+
+def scale_screen(rgb):
+    """The screen up to the video's width, its pixels even (blended at their edges, not 3 or 4 wide)."""
+    f = rgb.astype(np.float32)
+    f = f[YA] * YW[:, None, None] + f[YB] * (1 - YW)[:, None, None]
+    f = f[:, XA] * XW[None, :, None] + f[:, XB] * (1 - XW)[None, :, None]
+    return (f + 0.5).astype(np.uint8)
 
 
 # The keys under the caption, laid out as on the M8 (its face, in key pitches
 # from the top left key's corner): OPTION (B) and EDIT (A) top right, UP a
-# little lower, LEFT / DOWN / RIGHT under it, SHIFT / START below those.
-PITCH = 96
+# little lower, LEFT / DOWN / RIGHT under it, SHIFT / START below those. No
+# labels: the keys' places say which they are.
+PITCH = 192
 KEY = int(PITCH * 0.88)
 LAYOUT = {OPT: (2.18, 0), EDIT: (3.16, 0), UP: (1, 0.225), LEFT: (0, 1.17), DOWN: (1, 1.17), RIGHT: (2, 1.17),
           SHIFT: (1, 2.32), PLAY: (2, 2.32)}
 KEYS_W, KEYS_H = int(3.16 * PITCH) + KEY, int(2.32 * PITCH) + KEY
-KEYS_Y = H - SAFE_BOTTOM - KEYS_H - 12              # (their bottom just above the safe zone's edge)
+KEYS_Y = H - KEYS_H - 14                            # (their bottom near the frame's, under a caption of three lines)
 
 
 def key_boxes():
@@ -81,31 +94,23 @@ def key_boxes():
     return {bit: (int(x0 + c * PITCH), int(y0 + r * PITCH)) for bit, (c, r) in LAYOUT.items()}
 
 
-LABELS = {UP: "\u25B2", DOWN: "\u25BC", LEFT: "\u25C0", RIGHT: "\u25B6", SHIFT: "SHIFT", PLAY: "START", OPT: "B", EDIT: "A"}
-ARROW_FONT = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 34)
-
-
 def panel(caption, sub, keys, alpha):
     """The picture under the screen: the caption faded in by alpha (0-1), the keys."""
     img = Image.new("RGB", (W, H - PANEL_Y), BG)
     d = ImageDraw.Draw(img)
     mix = lambda c: tuple(int(BG[i] + (c[i] - BG[i]) * alpha) for i in range(3))
-    y = 0
+    y = 14
     for line in wrap(d, caption, TITLE, W - 2 * MARGIN):
         d.text((MARGIN, y), line, font=TITLE, fill=mix(ACCENT if caption == "L7" else INK))
-        y += 94
-    y += 10
+        y += 92
+    y += 6
     for line in wrap(d, sub, SUB, W - 2 * MARGIN):
         d.text((MARGIN, y), line, font=SUB, fill=mix(DIM if caption != "L7" else INK))
-        y += 62
+        y += 60
     for bit, (x, ky) in key_boxes().items():
         down = keys & bit
-        d.rounded_rectangle((x, ky, x + KEY, ky + KEY), radius=14, fill=ACCENT if down else KEY_FILL,
-                            outline=ACCENT if down else KEY_UP, width=4)
-        label = LABELS[bit]
-        f = ARROW_FONT if bit in (UP, DOWN, LEFT, RIGHT) else (KEYF if len(label) == 1 else SMALL)
-        tw = d.textlength(label, font=f)
-        d.text((x + (KEY - tw) / 2, ky + KEY / 2), label, font=f, anchor="lm", fill=(12, 12, 14) if down else DIM)
+        d.rounded_rectangle((x, ky, x + KEY, ky + KEY), radius=26, fill=ACCENT if down else KEY_FILL,
+                            outline=ACCENT if down else KEY_UP, width=5)
     return img
 
 
@@ -132,8 +137,9 @@ def splash_count(out):
 def compose(out):
     """The video's frames: the demo's, then its splash played backwards (the
     app's own animation, as it started), fading in over the last XF frames."""
-    bg = np.array(base())
+    bg = np.full((H, W, 3), BG, np.uint8)
     cache = {}
+    scaled = [None, None]                           # (the last screen and its scaling: most frames repeat it)
     last, since = None, 0
     n_splash = splash_count(out)
     splash, held = [], []                           # (the splash's screens; the frames held back for the fade)
@@ -141,7 +147,9 @@ def compose(out):
 
     def frame_of(rgb, pan):
         f = bg.copy()
-        f[SY:SY + SH * SCALE, SX:SX + SW * SCALE] = rgb.repeat(SCALE, 0).repeat(SCALE, 1)
+        if scaled[0] is None or not np.array_equal(scaled[0], rgb):
+            scaled[:] = rgb, scale_screen(rgb)
+        f[SY:SY + SCREEN_H] = scaled[1]
         f[PANEL_Y:, :] = pan
         return f
 
