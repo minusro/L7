@@ -111,7 +111,8 @@ enum Voice {
   KICK909, CLAP, OHAT, SHAKER, SUBPLUCK, STAB, VOX, MARIMBA,           // (house)
   GATEDSNARE, SAWBASS, PADSAW, SAWLEAD, ARPSQ,                         // (synthwave)
   BBKICK, BBSNARE, ORGAN, FLUTE, VIBES,                                // (boom bap)
-  RIDE, BRUSH, FEATHER, UPRIGHT, PIANO, SAX                            // (jazz)
+  RIDE, BRUSH, FEATHER, UPRIGHT, PIANO, SAX, JAZZGTR,                  // (jazz)
+  KALIMBA                                                              // (lofi's lead)
 };
 struct Note { float at, len; int voice, midi; float gain; };
 static std::vector<Note> parts[PARTS];
@@ -125,11 +126,11 @@ struct Style {
   const char *bass, *keys, *lead, *pluck;         // (the parts, as the captions name them)
 };
 static const Style STYLES[] = {
-  {"lofi", 85, 0.28f, 0, 0.06f, "a 2-bar bassline", "4 bars of electric piano", "a 2-bar horn line", "a 1-bar pluck"},
+  {"lofi", 85, 0.28f, 0, 0.06f, "a 2-bar bassline", "4 bars of electric piano", "a 2-bar kalimba line", "a 1-bar pluck"},
   {"house", 122, 0.1f, 0, 0.02f, "a 2-bar bassline", "4 bars of chord stabs", "a 2-bar vocal line", "a 1-bar marimba riff"},
   {"synthwave", 100, 0, 0, 0.0f, "a 2-bar octave bass", "4 bars of pads", "a 2-bar saw lead", "a 1-bar arpeggio"},
   {"boombap", 90, 0.22f, 0, 0.05f, "a 2-bar sub bass", "4 bars of organ", "a 2-bar flute line", "a 1-bar vibraphone riff"},
-  {"jazz", 112, 0, 0.67f, 0.05f, "a 2-bar walking bass", "4 bars of piano", "a 2-bar sax line", "a 1-bar vibraphone riff"},
+  {"jazz", 112, 0, 0.67f, 0.05f, "a 2-bar walking bass", "4 bars of piano", "a 2-bar guitar line", "a 1-bar vibraphone riff"},
 };
 static const Style *style = &STYLES[0];
 
@@ -173,7 +174,7 @@ static void writeParts() {
     }
     static const int c[4][4] = {{53, 57, 60, 64}, {53, 59, 64, 69}, {53, 57, 60, 64}, {52, 55, 59, 62}};   // Dm9 | G13 | Dm9 | Cmaj9
     chords(c, {{0, 7.4f}, {10, 5.6f}}, EPIANO, 0.12f);
-    line(l, {{2, 2, 69}, {4, 3, 72}, {7, 1, 74}, {8, 4, 76}, {12, 2, 74}, {14, 2, 72}, {16, 6, 71}, {22, 2, 67}, {24, 4, 69}, {28, 3.5f, 64}}, HORN, 300);
+    line(l, {{2, 2, 81}, {4, 3, 84}, {7, 1, 86}, {8, 4, 88}, {12, 2, 86}, {14, 2, 84}, {16, 6, 83}, {22, 2, 79}, {24, 4, 81}, {28, 3.5f, 76}}, KALIMBA, 300);
     line(p, {{0, 2, 81}, {2, 2, 84}, {4, 2, 86}, {6, 2, 89}, {8, 2, 86}, {10, 2, 84}, {12, 2, 88}, {14, 2, 86}}, PLUCKV, 400);
   } else if (name == "house") {
     drum({0, 4, 8, 12}, 4, KICK909, 1.0f);
@@ -225,7 +226,7 @@ static void writeParts() {
     line(b, {{0, 3.6f, 38}, {4, 3.6f, 41}, {8, 3.6f, 45}, {12, 3.6f, 48}, {16, 3.6f, 43}, {20, 3.6f, 47}, {24, 3.6f, 50}, {28, 3.6f, 49}}, UPRIGHT, 100);   // (Dm7 | G7, walked)
     static const int c[4][4] = {{53, 57, 60, 64}, {53, 59, 64, 69}, {53, 55, 60, 64}, {53, 56, 59, 62}};   // Dm9 | G13 | Dm11 | G7b9
     chords(c, {{0, 3}, {6, 2}}, PIANO, 0.03f);
-    line(l, {{0, 2, 74}, {2, 2, 77}, {4, 4, 81}, {8, 2, 79}, {10, 2, 77}, {12, 4, 76}, {16, 4, 71}, {20, 2, 74}, {22, 2, 77}, {24, 6, 76}, {30, 2, 74}}, SAX, 300);
+    line(l, {{0, 2, 74}, {2, 2, 77}, {4, 4, 81}, {8, 2, 79}, {10, 2, 77}, {12, 4, 76}, {16, 4, 71}, {20, 2, 74}, {22, 2, 77}, {24, 6, 76}, {30, 2, 74}}, JAZZGTR, 300);
     line(p, {{0, 3, 77}, {3, 3, 81}, {6, 2, 84}, {8, 4, 79}, {12, 4, 76}}, VIBES, 400);
   }
 }
@@ -464,6 +465,21 @@ static void voice(const Note &n, int id, double t, double dur, float &l, float &
       pan = 0.1f * (n.midi - 58) / 6.0f;
       break;
     }
+    case KALIMBA: {                                 // (a tine: its overtone inharmonic, soon gone)
+      const double f = hz(n.midi), env = std::min(1.0, t / 0.002) * std::exp(-2.2 * t) * (t < dur + 0.6 ? 1.0 : std::exp(-(t - dur - 0.6) / 0.15));
+      s = (float)(0.3 * (std::sin(TAU * f * t) + 0.3 * std::sin(TAU * 5.4 * f * t) * std::exp(-16 * t) + 0.12 * std::sin(TAU * 2 * f * t) * std::exp(-5 * t)) * env);
+      pan = -0.25f;
+      break;
+    }
+    case JAZZGTR: {                                 // (a clean archtop: warm, no vibrato)
+      const double f = hz(n.midi), env = std::min(1.0, t / 0.003) * std::exp(-1.4 * t) * (t < dur ? 1.0 : std::exp(-(t - dur) / 0.07));
+      static const double w[6] = {1, 0.5, 0.3, 0.15, 0.08, 0.04};
+      double v = 0;
+      for (int h = 1; h <= 6; h++) v += w[h - 1] * std::sin(TAU * h * f * t) * std::exp(-0.9 * h * t);
+      s = (float)(0.24 * v * env + 0.02 * noise(k) * std::exp(-80 * t));
+      pan = -0.25f;
+      break;
+    }
     case SAX: {
       const double vib = t > 0.2 ? 0.008 * std::sin(TAU * 5.4 * t) * std::min(1.0, (t - 0.2) / 0.25) : 0;
       const double f = hz(n.midi) * (1 + vib), env = std::min(1.0, t / 0.04) * (t < dur ? 1.0 : std::exp(-(t - dur) / 0.06));
@@ -498,7 +514,7 @@ static void perform(double p, double secPerBeat, float &l, float &r) {
         if (t < 0 || t > dur + (n.voice == VINYL ? 0 : 1.6)) continue;
         voice(n, (int)(rep * 1000 + i), t, dur, l, r);
         if (n.voice == HORN || n.voice == PLUCKV || n.voice == VOX || n.voice == SAWLEAD || n.voice == ARPSQ || n.voice == FLUTE ||
-            n.voice == MARIMBA || n.voice == VIBES || n.voice == SAX) {   // (an echo, three 16ths on)
+            n.voice == MARIMBA || n.voice == VIBES || n.voice == SAX || n.voice == KALIMBA || n.voice == JAZZGTR) {   // (an echo, three 16ths on)
           const double te = t - 0.75 * secPerBeat;
           float el = 0, er = 0;
           if (te >= 0) voice(n, (int)(rep * 1000 + i), te, dur, el, er);
@@ -620,6 +636,31 @@ static void goMenuItem(int item) {
     return false;
   });
 }
+// B held on a track's volume cell, UP tapped until its volume is `step` (of
+// VOLUME_MAX: 18 is 90 %).
+static void volumeTo(int t, int step) {
+  keys(BTN_OPT);
+  wait(0.2);
+  auto st = std::make_shared<std::pair<int, double>>(0, 0.0);
+  script.push_back([=] {
+    if (st->first == 1) {
+      if (nowUs - st->second < 0.09e6) return false;
+      board.heldKeys = BTN_OPT;
+      st->first = 0;
+      st->second = nowUs;
+      return false;
+    }
+    if (nowUs - st->second < 0.22e6) return false;
+    if (volumeStepOf(tracks[t].volume, headroomDbOf(tracks[t].overview)) >= step) return true;
+    board.heldKeys = BTN_OPT | BTN_UP;
+    st->first = 1;
+    st->second = nowUs;
+    return false;
+  });
+  wait(0.6);
+  keys(0);
+}
+
 static void writeScript() {
   const uint8_t A = BTN_EDIT, B = BTN_OPT, SH = BTN_SHIFT, UP = BTN_UP, DN = BTN_DOWN, LT = BTN_LEFT, RT = BTN_RIGHT, ST = BTN_PLAY;
   wait(0.4);
@@ -649,16 +690,24 @@ static void writeScript() {
   press(A);
   untilBeat(38 + 2 * g);
   press(A);
-  untilBeat(41 + 3 * g);
+  untilBeat(40.5 + 2 * g);
+  // The keys up a little.
+  say("Volume", "B + UP on track 3's volume cell: the chords up to 90%");
+  go(NUM_TRACKS - 3, MIX_CELL);                     // (track 3's volume)
+  volumeTo(NUM_TRACKS - 3, 18);
+  wait(0.4);
+  go(NUM_TRACKS - 4, WAVE_CELL);                    // (track 4, the next free one)
+  const double v = 4;                               // (a bar for it)
+  untilBeat(41 + 3 * g + v);
   say("Layer it", ("...and " + std::string(style->lead)));
-  play(LEAD, 44 + 3 * g, 8);
-  untilBeat(43 + 3 * g);
+  play(LEAD, 44 + 3 * g + v, 8);
+  untilBeat(43 + 3 * g + v);
   press(A);
-  untilBeat(50 + 3 * g);
+  untilBeat(50 + 3 * g + v);
   press(A);
-  untilBeat(53 + 3 * g);
+  untilBeat(53 + 3 * g + v);
   say("All four parts", "loops of 1, 2 and 4 bars, each on its own track, in time");
-  untilBeat(57 + 4 * g);
+  untilBeat(57 + 4 * g + v);
   // The filter on the keys.
   say("Filter", "B + arrows: a lowpass swept down on the chords...");
   go(NUM_TRACKS - 3, FILTER_CELL);                  // (track 3's filter)
@@ -724,8 +773,10 @@ static void writeScript() {
   press(A);                                         // (one bar)
   script.push_back([] { return recording.mode == Recording::Idle; });
   wait(3.0);
-  // Export.
+  // Export (stopped first: it stays stopped).
   say("Export to Live", "the project as an Ableton Live Set, every scene and clip");
+  press(ST);
+  wait(0.8);
   go(STATUS_ROW, SCENE_CELL);
   keys(LT); wait(0.1); keys(0);                     // (off the row's first cell: the menu)
   script.push_back([] { return menuOpen(); });
@@ -737,10 +788,8 @@ static void writeScript() {
   keys(RT); wait(0.1); keys(0);                     // (back to the looper)
   wait(1.4);
   say("L7", "record, layer, resample. On the M8.");
-  wait(2.4);
-  press(ST);                                        // (stopped)
-  wait(2.0);
-  // (the end: the last step done)
+  wait(1.6);
+  // (the end: the last step done; compose.py ends it with the splash, reversed)
 }
 
 int main(int argc, char **argv) {
@@ -769,6 +818,11 @@ int main(int argc, char **argv) {
   subCaption = "a live looper for the Dirtywave M8";
   setup();
   splashing = false;
+  {                                                 // (the splash's frames: compose.py plays them backwards at the end)
+    FILE *f = fopen((out + "/splash.txt").c_str(), "w");
+    fprintf(f, "%d\n", frames);
+    fclose(f);
+  }
   board.heldKeys = 0;
   size_t step = 0;
   const double END_US = 130e6;                      // (a ceiling)

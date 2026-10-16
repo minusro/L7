@@ -103,8 +103,11 @@ style's parts and sounds are in `writeParts()` and `voice()`; the card starts
 with a session whose tempo last set by hand is the style's (the new project
 takes it). It writes
 the screen 30 times a second and the output's audio; `compose.py` lays the
-screen out 4x with the caption and the M8's keys (lit while held) and encodes
-`tools/demo/L7 demo.mp4` (1080p, needs ffmpeg, numpy, Pillow).
+screen out for Instagram Stories (1080x1920, inside the Stories' safe zone:
+clear of the top 250 px and the bottom 340 px), the screen 3x at the top, the
+caption and the M8's keys (laid out as on the M8, lit while held) beneath it,
+and ends on the app's own splash played backwards, fading in over the last
+frames (needs ffmpeg, numpy, Pillow).
 
 ```sh
 tools/demo/build.sh            # builds, runs, composes every style (~3 min)

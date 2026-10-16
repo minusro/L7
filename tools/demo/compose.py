@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Composes the L7 demo video from what demo.cpp wrote: the M8's screen (raw
-RGB565, 30 frames a second) scaled up 4x on the left, the caption and the M8's
-keys (lit while held) on the right, the app's own output as the sound.
+"""Composes the L7 demo video from what demo.cpp wrote, portrait for
+Instagram Stories (1080x1920): the M8's screen (raw RGB565, 30 frames a
+second) scaled up 3x near the top, the caption and the M8's keys (lit while
+held) beneath it, all inside the Stories' safe zone (clear of the top 250 px
+and the bottom 340 px, where the app's own buttons go); the app's output as
+the sound.
 
   compose.py <demo-out-dir> <video.mp4>                (needs ffmpeg, numpy, Pillow)
   compose.py <demo-out-dir> --stills 5,12.5,30 <dir>   (PNGs of those moments, to check)
@@ -13,15 +16,16 @@ import sys
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-W, H, FPS = 1920, 1080, 30
-SW, SH, SCALE = 320, 240, 4
-SX, SY = 72, (H - SH * SCALE) // 2                  # the screen's place
-PANEL_X = SX + SW * SCALE + 72                      # the panel's left edge
+W, H, FPS = 1080, 1920, 30
+SAFE_TOP, SAFE_BOTTOM, MARGIN = 250, 340, 60       # (Stories: the profile's bar on top, the reply bar below)
+SW, SH, SCALE = 320, 240, 3
+SX, SY = (W - SW * SCALE) // 2, SAFE_TOP + 10      # the screen's place
+PANEL_Y = SY + SH * SCALE + 40                      # the caption and the keys from here down
 BG = (12, 12, 14)
 INK = (236, 236, 236)
-DIM = (128, 128, 134)
+DIM = (150, 150, 156)
 ACCENT = (0xB5, 0xE3, 0xC4)                         # (project A's colour, as the app's)
-KEY_UP, KEY_FILL = (44, 44, 50), (24, 24, 28)
+KEY_UP, KEY_FILL = (52, 52, 58), (24, 24, 28)
 
 EDIT, OPT, RIGHT, PLAY, SHIFT, DOWN, UP, LEFT = (1 << i for i in range(8))
 
@@ -35,7 +39,7 @@ def font(size, bold=False):
         return ImageFont.load_default()
 
 
-TITLE, SUB, KEYF, SMALL = font(76, True), font(36), font(26, True), font(21)
+TITLE, SUB, KEYF, SMALL = font(84, True), font(50), font(38, True), font(23, True)
 
 
 def wrap(draw, text, f, width):
@@ -55,55 +59,53 @@ def wrap(draw, text, f, width):
 def base():
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
-    bez = 18                                        # (the M8's screen bezel)
-    d.rounded_rectangle((SX - bez, SY - bez, SX + SW * SCALE + bez, SY + SH * SCALE + bez), radius=22, fill=(28, 28, 32))
+    bez = 16                                        # (the M8's screen bezel)
+    d.rounded_rectangle((SX - bez, SY - bez, SX + SW * SCALE + bez, SY + SH * SCALE + bez), radius=20, fill=(28, 28, 32))
     d.rounded_rectangle((SX - 3, SY - 3, SX + SW * SCALE + 3, SY + SH * SCALE + 3), radius=6, fill=(0, 0, 0))
     return img
 
 
-# The keys: the arrows on the left, B / A over SHIFT / START on the right.
-KEY = 74
-KEYS_Y = 650
+# The keys under the caption, laid out as on the M8 (its face, in key pitches
+# from the top left key's corner): OPTION (B) and EDIT (A) top right, UP a
+# little lower, LEFT / DOWN / RIGHT under it, SHIFT / START below those.
+PITCH = 96
+KEY = int(PITCH * 0.88)
+LAYOUT = {OPT: (2.18, 0), EDIT: (3.16, 0), UP: (1, 0.225), LEFT: (0, 1.17), DOWN: (1, 1.17), RIGHT: (2, 1.17),
+          SHIFT: (1, 2.32), PLAY: (2, 2.32)}
+KEYS_W, KEYS_H = int(3.16 * PITCH) + KEY, int(2.32 * PITCH) + KEY
+KEYS_Y = H - SAFE_BOTTOM - KEYS_H - 12              # (their bottom just above the safe zone's edge)
 
 
 def key_boxes():
-    x0 = PANEL_X
-    gap = 10
-    arrows = {UP: (x0 + KEY + gap, KEYS_Y), LEFT: (x0, KEYS_Y + KEY + gap),
-              DOWN: (x0 + KEY + gap, KEYS_Y + KEY + gap), RIGHT: (x0 + 2 * (KEY + gap), KEYS_Y + KEY + gap)}
-    rx = x0 + 3 * (KEY + gap) + 34
-    right = {OPT: (rx, KEYS_Y), EDIT: (rx + KEY + gap, KEYS_Y),
-             SHIFT: (rx, KEYS_Y + KEY + gap), PLAY: (rx + KEY + gap, KEYS_Y + KEY + gap)}
-    return {**arrows, **right}
+    x0, y0 = (W - KEYS_W) // 2, KEYS_Y - PANEL_Y
+    return {bit: (int(x0 + c * PITCH), int(y0 + r * PITCH)) for bit, (c, r) in LAYOUT.items()}
 
 
-LABELS = {UP: "▲", DOWN: "▼", LEFT: "◀", RIGHT: "▶", SHIFT: "SHIFT", PLAY: "START", OPT: "B", EDIT: "A"}
-ARROW_FONT = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 30)
+LABELS = {UP: "\u25B2", DOWN: "\u25BC", LEFT: "\u25C0", RIGHT: "\u25B6", SHIFT: "SHIFT", PLAY: "START", OPT: "B", EDIT: "A"}
+ARROW_FONT = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 34)
 
 
 def panel(caption, sub, keys, alpha):
-    """The panel's picture (the right side), the caption faded in by alpha (0-1)."""
-    img = Image.new("RGB", (W - PANEL_X, H), BG)
+    """The picture under the screen: the caption faded in by alpha (0-1), the keys."""
+    img = Image.new("RGB", (W, H - PANEL_Y), BG)
     d = ImageDraw.Draw(img)
     mix = lambda c: tuple(int(BG[i] + (c[i] - BG[i]) * alpha) for i in range(3))
-    y = 250
-    for line in wrap(d, caption, TITLE, W - PANEL_X - 60):
-        d.text((0, y), line, font=TITLE, fill=mix(ACCENT if caption == "L7" else INK))
-        y += 86
-    y += 14
-    for line in wrap(d, sub, SUB, W - PANEL_X - 70):
-        d.text((0, y), line, font=SUB, fill=mix(DIM if caption != "L7" else INK))
-        y += 46
+    y = 0
+    for line in wrap(d, caption, TITLE, W - 2 * MARGIN):
+        d.text((MARGIN, y), line, font=TITLE, fill=mix(ACCENT if caption == "L7" else INK))
+        y += 94
+    y += 10
+    for line in wrap(d, sub, SUB, W - 2 * MARGIN):
+        d.text((MARGIN, y), line, font=SUB, fill=mix(DIM if caption != "L7" else INK))
+        y += 62
     for bit, (x, ky) in key_boxes().items():
-        x -= PANEL_X
         down = keys & bit
         d.rounded_rectangle((x, ky, x + KEY, ky + KEY), radius=14, fill=ACCENT if down else KEY_FILL,
-                            outline=ACCENT if down else KEY_UP, width=3)
+                            outline=ACCENT if down else KEY_UP, width=4)
         label = LABELS[bit]
         f = ARROW_FONT if bit in (UP, DOWN, LEFT, RIGHT) else (KEYF if len(label) == 1 else SMALL)
         tw = d.textlength(label, font=f)
         d.text((x + (KEY - tw) / 2, ky + KEY / 2), label, font=f, anchor="lm", fill=(12, 12, 14) if down else DIM)
-    d.text((0, KEYS_Y + 2 * KEY + 40), "the M8's keys, as pressed", font=SMALL, fill=(70, 70, 76))
     return img
 
 
@@ -117,11 +119,35 @@ def frames(out):
         yield int(keys), caption, sub, rgb
 
 
+XF = 18                                             # (the end: the splash, backwards, fading in over this many frames)
+
+
+def splash_count(out):
+    try:
+        return int(open(os.path.join(out, "splash.txt")).read().split()[0])
+    except (OSError, ValueError, IndexError):
+        return 0
+
+
 def compose(out):
+    """The video's frames: the demo's, then its splash played backwards (the
+    app's own animation, as it started), fading in over the last XF frames."""
     bg = np.array(base())
     cache = {}
     last, since = None, 0
-    for keys, caption, sub, rgb in frames(out):
+    n_splash = splash_count(out)
+    splash, held = [], []                           # (the splash's screens; the frames held back for the fade)
+    panel_now = None
+
+    def frame_of(rgb, pan):
+        f = bg.copy()
+        f[SY:SY + SH * SCALE, SX:SX + SW * SCALE] = rgb.repeat(SCALE, 0).repeat(SCALE, 1)
+        f[PANEL_Y:, :] = pan
+        return f
+
+    for i, (keys, caption, sub, rgb) in enumerate(frames(out)):
+        if i < n_splash:
+            splash.append(rgb)
         if (caption, sub) != last:
             last, since = (caption, sub), 0
         since += 1
@@ -131,10 +157,26 @@ def compose(out):
             if len(cache) > 400:
                 cache.clear()
             cache[k] = np.array(panel(caption, sub, keys, alpha))
-        frame = bg.copy()
-        frame[SY:SY + SH * SCALE, SX:SX + SW * SCALE] = rgb.repeat(SCALE, 0).repeat(SCALE, 1)
-        frame[:, PANEL_X:] = cache[k]
-        yield frame
+        panel_now = cache[(caption, sub, keys, round(alpha, 2))]
+        held.append(frame_of(rgb, panel_now))
+        if len(held) > XF:
+            yield held.pop(0)
+    end_panel = np.array(panel(last[0], last[1], 0, 1.0)) if last else panel_now
+    backwards = splash[::-1]
+    for i, rgb in enumerate(backwards):
+        f = frame_of(rgb, end_panel)
+        if i < len(held):                           # (fading in over the last frames)
+            a = (i + 1) / (len(held) + 1)
+            f = (held[i].astype(np.float32) * (1 - a) + f.astype(np.float32) * a).astype(np.uint8)
+        yield f
+    for f in held[len(backwards):]:
+        yield f
+
+
+def total_frames(out):
+    n = len(open(os.path.join(out, "frames.txt")).read().splitlines())
+    s = splash_count(out)
+    return n + s - min(XF, n) if s else n
 
 
 def main():
@@ -151,12 +193,11 @@ def main():
                 break
         return
     video = sys.argv[2]
-    n = len(open(os.path.join(out, "frames.txt")).read().splitlines())
-    dur = n / FPS
+    dur = total_frames(out) / FPS
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "%dx%d" % (W, H), "-r", str(FPS),
            "-i", "-", "-i", os.path.join(out, "audio.wav"),
-           "-vf", "fade=t=in:st=0:d=0.4,fade=t=out:st=%.2f:d=1.2" % (dur - 1.2),
-           "-af", "loudnorm=I=-15:TP=-1.0:LRA=11,afade=t=out:st=%.2f:d=1.2" % (dur - 1.2),
+           "-vf", "fade=t=in:st=0:d=0.4,fade=t=out:st=%.2f:d=0.6" % (dur - 0.6),
+           "-af", "apad,loudnorm=I=-15:TP=-1.0:LRA=11,afade=t=out:st=%.2f:d=1.2" % (dur - 1.2),
            "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p",
            "-c:a", "aac", "-b:a", "256k", "-t", "%.3f" % dur, "-movflags", "+faststart", video]
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
