@@ -180,10 +180,15 @@ static void drawGrid() {
       int span = c.bars * 16;
       for (uint8_t i = 0; i < c.count; i++) {
         const ClipNote &n = c.notes[i];
-        int nx = x + 3 + n.start * 70 / span;
-        int nw = n.len * 70 / span; if (nw < 2) nw = 2;
         int ny = y + 42 - clampP(n.pitch) * 38 / 72;
-        rct(nx, ny, nw, 2, n.vel ? LIGHT : DIM);
+        int e = n.start + n.len;
+        for (int seg = 0; seg < 2; seg++) {      // a note over the loop point wraps
+          int a = seg ? 0 : n.start, b = seg ? e - span : (e > span ? span : e);
+          if (seg && e <= span) break;
+          int nx = x + 3 + a * 70 / span;
+          int nw = (b - a) * 70 / span; if (nw < 2) nw = 2;
+          rct(nx, ny, nw, 2, n.vel ? LIGHT : DIM);
+        }
       }
       for (int b = 1; b < c.bars; b++) {         // bar crossings, on the outline
         int bx = x + 3 + b * 16 * 70 / span;
@@ -272,18 +277,23 @@ static void drawNote() {
   for (int sgrid = 0; sgrid <= 16; sgrid += 4)   // beat lines
     rct(X0 + sgrid * SW, Y0, 1, 13 * RH, BLACK[0] ? DIM : DIM);
   // the notes of this page, on their rows
+  int span = c.bars * 16;
   for (uint8_t i = 0; i < c.count; i++) {
     const ClipNote &n = c.notes[i];
-    int s0 = (int)n.start - nav.notePage * 16;
-    int s1 = s0 + n.len;
-    if (s1 <= 0 || s0 >= 16) continue;
     int r = -1;
     for (int k = 0; k < 13; k++) if (rows[k] == n.pitch) { r = k; break; }
     if (r < 0) continue;
-    int xa = X0 + (s0 < 0 ? 0 : s0) * SW, xb = X0 + (s1 > 16 ? 16 : s1) * SW;
     bool selN = nav.sel[i >> 5] & (1u << (i & 31));
     uint16_t ink = selN ? ACCENT : n.vel ? LIGHT : DIM;
-    rct(xa + 1, Y0 + r * RH + 3, xb - xa - 2, RH - 7, ink);
+    int e = n.start + n.len;
+    for (int seg = 0; seg < 2; seg++) {          // a note over the loop point wraps
+      if (seg && e <= span) break;
+      int a = seg ? 0 : n.start, b = seg ? e - span : (e > span ? span : e);
+      int s0 = a - nav.notePage * 16, s1 = b - nav.notePage * 16;
+      if (s1 <= 0 || s0 >= 16) continue;
+      int xa = X0 + (s0 < 0 ? 0 : s0) * SW, xb = X0 + (s1 > 16 ? 16 : s1) * SW;
+      rct(xa + 1, Y0 + r * RH + 3, xb - xa - 2, RH - 7, ink);
+    }
   }
   // playhead
   if (clipPlaying[nav.gridT] == (int8_t)nav.gridS && synth.seqOn()) {
