@@ -648,7 +648,7 @@ void N9Synth::fireStep(uint8_t step) {
       int8_t p = clipPending[t];
       clipPending[t] = -1;
       if (p == CLIP_STOP) clipPlaying[t] = -1;
-      else { clipPlaying[t] = p; clipLaunchAt[t] = abs; }
+      else clipPlaying[t] = p;
     }
     int8_t s = clipPlaying[t];
     if (s < 0) continue;
