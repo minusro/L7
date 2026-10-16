@@ -117,11 +117,9 @@ static void rowNormalize() {
 
 // ---- clip launching (GRID) --------------------------------------------------
 
-// Instant: a running track keeps its phase (the new clip picks up where the
-// old left off); a silent track starts the clip from its top, and the clock
-// if it wasn't running.
+// Instant, and every clip rides the global clock (its position is the
+// clock modulo its length), so a switch keeps the phase by construction.
 static void clipPlayNow(uint8_t t, uint8_t s) {
-  if (clipPlaying[t] < 0) synth.launchFresh(t);
   clipPlaying[t] = (int8_t)s;
   if (!synth.seqOn()) synth.seqToggle();
 }

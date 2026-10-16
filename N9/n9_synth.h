@@ -30,8 +30,7 @@ public:
   // the grid cursor's clip through the current engine.
   void seqToggle();                                // start from 1.1.1 / stop
   void seqShiftPlay();                             // running: back to 1.1.1; stopped: resume
-  void launchFresh(uint8_t t) { _freshMask |= 1 << t; }   // the clip starts from its top now
-  int32_t clipLocalStep(uint8_t t);                // the playing clip's position (overdub)
+  int32_t clipLocalStep(uint8_t t);                // the playing clip's clock position
   void pcmPanic() { _pcmPanic = true; }            // all voices off (a flash slot rewrite)
   bool seqOn() const { return _seqOn; }
   uint8_t seqStepN() const { return _seqStep; }
@@ -97,7 +96,6 @@ private:
   volatile bool _seqOn = false, _seqStartReq = false, _seqStopReq = false;
   volatile bool _pcmPanic = false;
   volatile bool _seqResumeReq = false, _seqResetReq = false;
-  volatile uint8_t _freshMask = 0;
   float _metEnv = 0, _metPh = 0, _metHz = 1046;    // the metronome's blip
   volatile uint8_t _seqStep = 0;
   volatile uint16_t _seqBar = 0;

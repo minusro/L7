@@ -90,7 +90,6 @@ static inline float pcoef(uint8_t v) { return 1.0f - expf(-1.0f / (pms(v) * 44.1
 static inline float decay(float ms);
 static void applyLiveParams(N9Synth::Voice &v, bool snap);
 static void applyTrackLayer(N9Synth::Voice &v, bool snap);
-uint32_t clipLaunchAtOf(uint8_t t);
 void fxSetMod();   // n9_fx.cpp: the LFO onto the insert params
 
 enum OscType : uint8_t {
@@ -625,15 +624,13 @@ int32_t N9Synth::clipLocalStep(uint8_t t) {
   if (s < 0) return -1;
   const Clip &c = clipAt(t, (uint8_t)s);
   uint32_t abs = (uint32_t)_seqBar * 16 + _seqStep;
-  return (int32_t)((abs - clipLaunchAtOf(t)) % (uint32_t)(c.bars * 16));
+  return (int32_t)(abs % (uint32_t)(c.bars * 16));   // clips ride the clock
 }
 
 // Offs due this step first; on a bar line each track's pending launch or
 // stop is taken (the grid's A, quantised to the bar); then every playing
 // clip's notes that start on this step fire. Each clip loops its own bars
 // from the bar it was launched on (polymeter between tracks is free).
-static uint32_t clipLaunchAt[9];                 // abs sixteenth of each launch (interrupt only)
-uint32_t clipLaunchAtOf(uint8_t t) { return clipLaunchAt[t]; }   // (a benign loop-side read)
 void N9Synth::fireStep(uint8_t step) {
   for (int i = 0; i < _seqNoteCount;) {
     if (--_seqNotes[i].left == 0) { noteOffNow(_seqNotes[i].track, _seqNotes[i].pitch); _seqNotes[i] = _seqNotes[--_seqNoteCount]; }
@@ -643,11 +640,6 @@ void N9Synth::fireStep(uint8_t step) {
   uint32_t abs = (uint32_t)_seqBar * 16 + step;
   if (metroOn && (step & 3) == 0) {              // a blip per beat, higher on the bar
     _metEnv = 1.0f; _metPh = 0; _metHz = step == 0 ? 1568.0f : 1046.0f;
-  }
-  if (_freshMask) {                              // clips launched from their tops, now
-    for (uint8_t t = 0; t < 9; t++)
-      if (_freshMask & (1 << t)) clipLaunchAt[t] = abs;
-    _freshMask = 0;
   }
   bool barLine = step == 0 || clipTakeNow;       // takeNow: a project came in on the beat
   clipTakeNow = 0;
@@ -661,7 +653,7 @@ void N9Synth::fireStep(uint8_t step) {
     int8_t s = clipPlaying[t];
     if (s < 0) continue;
     const Clip &c = clipAt(t, (uint8_t)s);
-    uint16_t local = (abs - clipLaunchAt[t]) % (c.bars * 16);
+    uint16_t local = abs % (c.bars * 16);        // every clip rides the clock
     uint8_t n = c.count;
     for (uint8_t i = 0; i < n && i < CLIP_MAX_NOTES; i++) {
       const ClipNote &cn = c.notes[i];
@@ -706,14 +698,12 @@ void N9Synth::update() {
   if (_seqStartReq) {
     _seqStartReq = false; _seqOn = true;
     _seqStep = 0; _seqBar = 0; _seqAcc = 0;
-    for (int t = 0; t < 9; t++) clipLaunchAt[t] = 0;   // still-armed clips: from their tops
     fireStep(0);
   }
   if (_seqResumeReq) { _seqResumeReq = false; _seqOn = true; }
   if (_seqResetReq) {
     _seqResetReq = false;
     _seqStep = 0; _seqBar = 0; _seqAcc = 0;
-    for (int t = 0; t < 9; t++) clipLaunchAt[t] = 0;
     fireStep(0);
   }
   if (_seqOn) {
