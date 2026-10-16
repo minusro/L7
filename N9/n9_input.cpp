@@ -281,18 +281,14 @@ static void notePaste() {
   clipRefreshBars(c);
 }
 
-static void selMove(int d) {                     // B+LEFT/RIGHT on a note
+static void selMove(int d) {                     // B+LEFT/RIGHT: wraps round the clip
   Clip &c = editClip();
-  for (uint8_t i = 0; i < c.count; i++) {
-    if (!selHas(i)) continue;
-    int st = c.notes[i].start + d;
-    if (st < 0 || st + c.notes[i].len > CLIP_MAX_BARS * 16) return;   // the block stays whole
-  }
+  int span = c.bars * 16;
   for (uint8_t i = 0; i < c.count; i++)
-    if (selHas(i)) c.notes[i].start = (uint8_t)(c.notes[i].start + d);
+    if (selHas(i)) c.notes[i].start = (uint8_t)((c.notes[i].start + d + span) % span);
   clipRefreshBars(c);
-  int pos = clamp(nav.notePage * 16 + nav.noteStep + d, 0, CLIP_MAX_BARS * 16 - 1);
-  nav.notePage = pos / 16; nav.noteStep = pos % 16;
+  int pos = (nav.notePage * 16 + nav.noteStep + d + span) % span;
+  nav.notePage = (uint8_t)(pos / 16); nav.noteStep = (uint8_t)(pos % 16);
 }
 
 static void selTranspose(int dir) {              // B+UP/DOWN: in scale
