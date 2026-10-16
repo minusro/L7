@@ -534,8 +534,19 @@ static void perform(double p, double secPerBeat, float &l, float &r) {
 }
 
 // ---- Audio: the engine a block at a time, the performer as its input.
+// The export, the script's last act: pressed with the clock running, it stops
+// the clock, exports (taking card time: 4 MB a second read or written, a slow
+// card's, so its progress shows), and
+// starts the clock again; that start not heard (silence to the end) and
+// stopped by the script.
 static std::vector<int16_t> outAudio;
+static int exportPhase = 0;                       // (1: pressed; 2: its stop seen; 3: started again, silence)
+static void exportCardTime(size_t bytes, bool) {
+  if ((exportPhase == 1 || exportPhase == 2) && !transport.running) advance(bytes / 4.0);
+}
 static void audioBlock() {
+  if (exportPhase == 1 && !transport.running) exportPhase = 2;
+  if (exportPhase == 2 && transport.running) exportPhase = 3;
   static audio_block_t inL, inR, outL, outR;
   const uint32_t spb = transport.spb;
   const double secPerBeat = spb / SR, lat = inputLatency() / (double)spb;
@@ -556,8 +567,8 @@ static void audioBlock() {
   engine.simOut[1] = &outR;
   engine.update();
   for (int k = 0; k < AUDIO_BLOCK_SAMPLES; k++) {
-    outAudio.push_back(outL.data[k]);
-    outAudio.push_back(outR.data[k]);
+    outAudio.push_back(exportPhase == 3 ? 0 : outL.data[k]);
+    outAudio.push_back(exportPhase == 3 ? 0 : outR.data[k]);
   }
 }
 
@@ -715,9 +726,9 @@ static void writeScript() {
   untilBeat(53 + 3 * g + v);
   say("All four parts", "loops of 1, 2 and 4 bars, each on its own track, in time");
   untilBeat(57 + 4 * g + v);
-  // The filter on the keys.
-  say("Filter", "B + arrows: a lowpass swept down on the chords...");
-  go(NUM_TRACKS - 3, FILTER_CELL);                  // (track 3's filter)
+  // The filter on the pad (the lead).
+  say("Filter", "B + arrows: a lowpass swept down on the pad...");
+  go(NUM_TRACKS - 4, FILTER_CELL);                  // (track 4's filter)
   keys(B); wait(0.2);
   keys(B | LT); wait(1.4);
   keys(B); wait(2.2);
@@ -780,18 +791,19 @@ static void writeScript() {
   press(A);                                         // (one bar)
   script.push_back([] { return recording.mode == Recording::Idle; });
   wait(3.0);
-  // Export (stopped first: it stays stopped).
+  // Export, still playing: the export stops the clock (and silence from then on).
   say("Export to Live", "the project as an Ableton Live Set, every scene and clip");
-  press(ST);
-  wait(0.8);
   go(STATUS_ROW, SCENE_CELL);
   keys(LT); wait(0.1); keys(0);                     // (off the row's first cell: the menu)
   script.push_back([] { return menuOpen(); });
   wait(0.4);
   goMenuItem(MENU_EXPORT);
   wait(0.4);
+  script.push_back([] { exportPhase = 1; return true; });
   press(A);
-  wait(2.1);
+  script.push_back([] { return exportPhase == 3; });
+  script.push_back([] { transportStop(); return true; });
+  wait(2.6);
   keys(RT); wait(0.1); keys(0);                     // (back to the looper)
   wait(1.4);
   say("L7", "record, layer, resample. On the M8.");
@@ -805,6 +817,7 @@ int main(int argc, char **argv) {
     for (const auto &st : STYLES)
       if (!strcmp(st.name, argv[2])) style = &st;
   simRoot = out + "/card";
+  simSdLatency = exportCardTime;
   std::string cmd = "rm -rf '" + simRoot + "' && mkdir -p '" + simRoot + "'";
   if (system(cmd.c_str()) != 0) return 1;
   {                                                 // (the tempo last set by hand: 85, the new project's)

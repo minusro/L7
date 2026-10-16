@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Composes the L7 demo video from what demo.cpp wrote, portrait for
 Instagram Stories (1080x1920): the M8's screen (raw RGB565, 30 frames a
-second) across the whole width under the Stories' top safe zone (the top
-250 px, the profile's bar), the caption and the M8's keys (lit while held,
-twice their old size, reaching down into the bottom 340 px) beneath it; the
-app's output as the sound.
+second) across the whole width near the top (60 px into the Stories' top
+safe zone of 250 px, still clear of the profile's row), the caption and the
+M8's keys (lit while held, twice their old size, reaching down into the bottom
+340 px) beneath it; the app's output as the sound.
 
   compose.py <demo-out-dir> <video.mp4>                (needs ffmpeg, numpy, Pillow)
   compose.py <demo-out-dir> --stills 5,12.5,30 <dir>   (PNGs of those moments, to check)
@@ -19,7 +19,7 @@ from PIL import Image, ImageDraw, ImageFont
 W, H, FPS = 1080, 1920, 30
 SAFE_TOP, SAFE_BOTTOM, MARGIN = 250, 340, 60       # (Stories: the profile's bar on top, the reply bar below)
 SW, SH = 320, 240
-SY, SCREEN_H = SAFE_TOP, W * SH // SW               # the screen's place: the whole width, 3.375x
+SY, SCREEN_H = SAFE_TOP - 60, W * SH // SW          # the screen's place: the whole width, 3.375x
 PANEL_Y = SY + SCREEN_H                             # the caption and the keys from here down
 BG = (12, 12, 14)
 INK = (236, 236, 236)
@@ -40,6 +40,8 @@ def font(size, bold=False):
 
 
 TITLE, SUB = font(84, True), font(50)
+TITLE_Y, TITLE_STEP, SUB_GAP, SUB_STEP = 40, 92, 6, 60   # (the caption's lines, from the screen's bottom)
+CAPTION_H = TITLE_Y + TITLE_STEP + SUB_GAP + 2 * SUB_STEP + 4   # (a title line, two of subtitle)
 
 
 def wrap(draw, text, f, width):
@@ -86,7 +88,7 @@ KEY = int(PITCH * 0.88)
 LAYOUT = {OPT: (2.18, 0), EDIT: (3.16, 0), UP: (1, 0.225), LEFT: (0, 1.17), DOWN: (1, 1.17), RIGHT: (2, 1.17),
           SHIFT: (1, 2.32), PLAY: (2, 2.32)}
 KEYS_W, KEYS_H = int(3.16 * PITCH) + KEY, int(2.32 * PITCH) + KEY
-KEYS_Y = H - KEYS_H - 14                            # (their bottom near the frame's, under a caption of three lines)
+KEYS_Y = PANEL_Y + CAPTION_H                        # (under a caption of three lines)
 
 
 def key_boxes():
@@ -99,14 +101,14 @@ def panel(caption, sub, keys, alpha):
     img = Image.new("RGB", (W, H - PANEL_Y), BG)
     d = ImageDraw.Draw(img)
     mix = lambda c: tuple(int(BG[i] + (c[i] - BG[i]) * alpha) for i in range(3))
-    y = 14
+    y = TITLE_Y
     for line in wrap(d, caption, TITLE, W - 2 * MARGIN):
         d.text((MARGIN, y), line, font=TITLE, fill=mix(ACCENT if caption == "L7" else INK))
-        y += 92
-    y += 6
+        y += TITLE_STEP
+    y += SUB_GAP
     for line in wrap(d, sub, SUB, W - 2 * MARGIN):
         d.text((MARGIN, y), line, font=SUB, fill=mix(DIM if caption != "L7" else INK))
-        y += 60
+        y += SUB_STEP
     for bit, (x, ky) in key_boxes().items():
         down = keys & bit
         d.rounded_rectangle((x, ky, x + KEY, ky + KEY), radius=26, fill=ACCENT if down else KEY_FILL,
@@ -124,7 +126,8 @@ def frames(out):
         yield int(keys), caption, sub, rgb
 
 
-XF = 18                                             # (the end: the splash, backwards, fading in over this many frames)
+XF = 30                                             # (the end: the splash, backwards, fading in over this many frames)
+CREDITS_Y = 150                                     # (the splash's credits line, under the logo, from here down: left out)
 
 
 def splash_count(out):
@@ -136,7 +139,8 @@ def splash_count(out):
 
 def compose(out):
     """The video's frames: the demo's, then its splash played backwards (the
-    app's own animation, as it started), fading in over the last XF frames."""
+    app's own animation, as it started, without its credits line): its first
+    frame fading in over the demo's last XF, then the rest."""
     bg = np.full((H, W, 3), BG, np.uint8)
     cache = {}
     scaled = [None, None]                           # (the last screen and its scaling: most frames repeat it)
@@ -155,6 +159,8 @@ def compose(out):
 
     for i, (keys, caption, sub, rgb) in enumerate(frames(out)):
         if i < n_splash:
+            rgb = rgb.copy()
+            rgb[CREDITS_Y:] = rgb[SH - 1, 0]
             splash.append(rgb)
         if (caption, sub) != last:
             last, since = (caption, sub), 0
@@ -171,20 +177,22 @@ def compose(out):
             yield held.pop(0)
     end_panel = np.array(panel(last[0], last[1], 0, 1.0)) if last else panel_now
     backwards = splash[::-1]
-    for i, rgb in enumerate(backwards):
-        f = frame_of(rgb, end_panel)
-        if i < len(held):                           # (fading in over the last frames)
-            a = (i + 1) / (len(held) + 1)
-            f = (held[i].astype(np.float32) * (1 - a) + f.astype(np.float32) * a).astype(np.uint8)
-        yield f
-    for f in held[len(backwards):]:
-        yield f
+    if not backwards:
+        yield from held
+        return
+    first = frame_of(backwards[0], end_panel).astype(np.float32)
+    for i, h in enumerate(held):                    # (fading in, eased, over the last frames)
+        a = (i + 1) / (len(held) + 1)
+        a = a * a * (3 - 2 * a)
+        yield (h.astype(np.float32) * (1 - a) + first * a).astype(np.uint8)
+    for rgb in backwards[1:]:
+        yield frame_of(rgb, end_panel)
 
 
 def total_frames(out):
     n = len(open(os.path.join(out, "frames.txt")).read().splitlines())
     s = splash_count(out)
-    return n + s - min(XF, n) if s else n
+    return n + s - 1 if s else n
 
 
 def main():

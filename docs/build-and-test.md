@@ -92,7 +92,10 @@ with `demo.cpp` as the host, in virtual time (no window, no SDL; the audio
 "interrupt" runs whenever a block is due). A script presses the keys (a new
 project, four parts recorded and layered as 1-, 2- and 4-bar loops, the
 filter, a loop range, a mute swipe, scenes, a resampling and a layer over it,
-the export to Ableton Live), and a "performer" plays a synthesized beat into
+the export to Ableton Live, pressed while playing: the export stops the clock,
+its progress shown (the card stand-in taking a slow card's time during it, 4 MB
+a second), and the app's start of the clock after it silenced and stopped, so
+it's quiet to the end), and a "performer" plays a synthesized beat into
 the line input in time with the clock, so what's recorded is what's heard. The
 video is the house style (`L7 demo - house.mp4`: 122 BPM, four on the floor,
 chord stabs, a chorused supersaw pad, marimba); the script's other styles
@@ -105,11 +108,12 @@ and sounds are in `writeParts()` and `voice()`; the card starts with a session
 whose tempo last set by hand is the style's (the new project takes it). It
 writes the screen 30 times a second and the output's audio; `compose.py` lays
 it out for Instagram Stories (1080x1920): the screen across the whole width
-(scaled by area, 3.375x, no bezel) under the Stories' top safe zone (250 px),
-the caption beneath it, and the M8's keys under that, laid out as on the M8,
+(scaled by area, 3.375x, no bezel) near the top (60 px into the Stories' top
+safe zone of 250 px, still clear of the profile's row), the caption beneath it, and the M8's keys under that, laid out as on the M8,
 unlabelled, lit while held, big enough to reach into the bottom 340 px (where
-Stories put the reply bar); it ends on the app's own splash played backwards,
-fading in over the last frames (needs ffmpeg, numpy, Pillow).
+Stories put the reply bar); it ends on the app's own splash played backwards
+without its credits line, its first frame fading in over the last second
+(needs ffmpeg, numpy, Pillow).
 
 ```sh
 tools/demo/build.sh            # builds, runs, composes the house video (~1.5 min)
