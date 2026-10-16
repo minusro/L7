@@ -347,13 +347,14 @@ static void boxFinish() {                        // B released: take the box
   for (uint8_t i = 0; i < c.count; i++) {
     const ClipNote &n = c.notes[i];
     if (n.pitch < p0 || n.pitch > p1) continue;
-    bool body = !(n.start > s1 || n.start + n.len - 1 < s0);
-    bool tail = n.start + n.len > span && (int)(n.start + n.len - span - 1) >= (int)s0 && 0 <= (int)s1;
+    int len = clipEffLen(c, i);
+    bool body = !(n.start > s1 || n.start + len - 1 < s0);
+    bool tail = n.start + len > span && (int)(n.start + len - span - 1) >= (int)s0 && 0 <= (int)s1;
     if (!body && !tail) continue;
     selAdd(i);
     // the endpoint nearest the finishing corner, if inside the box
     for (int e = 0; e < 2; e++) {
-      int es = e ? (n.start + n.len - 1) % span : n.start;
+      int es = e ? (n.start + len - 1) % span : n.start;
       if (es < s0 || es > s1) continue;
       uint32_t dd = (uint32_t)abs(es - (int)nav.boxStep1) * 2 + (uint32_t)abs((int)n.pitch - (int)nav.boxPitch1);
       if (dd < bestD) { bestD = dd; best = i; nav.noteStep = es % 16; nav.notePage = es / 16; nav.notePitch = n.pitch; }
@@ -708,7 +709,7 @@ bool inputService() {
         int ni = noteAtCursor();
         int espan = editBars() * 16, span = c.bars * 16;
         if (!nav.boxOpen && ni >= 0) {           // skip over the note's extent (wrapping)
-          pos = dx > 0 ? (c.notes[ni].start + c.notes[ni].len) % span
+          pos = dx > 0 ? (c.notes[ni].start + clipEffLen(c, (uint8_t)ni)) % span
                        : (c.notes[ni].start - 1 + span) % span;
         } else pos = (pos + dx + espan) % espan;
         nav.notePage = (uint8_t)(pos / 16);

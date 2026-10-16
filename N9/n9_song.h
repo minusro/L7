@@ -66,6 +66,11 @@ extern uint8_t masterVol;
 Clip &clipAt(uint8_t t, uint8_t s);
 // The note covering (pitch, step), or -1.
 int clipFindAt(const Clip &c, uint8_t pitch, uint8_t step);
+// A note's audible length: the written one, cut short where the same pitch
+// starts again (cyclically over the clip's bars). Drawing, editing and
+// playback all use this; the written length stays, so removing the blocker
+// gives the tail back.
+uint8_t clipEffLen(const Clip &c, uint8_t i);
 // Adds a step-long note at (pitch, step), or removes the one covering it.
 void clipToggle(Clip &c, uint8_t pitch, uint8_t step, uint8_t vel);
 // Recomputes the bar count from the notes (after a length edit).

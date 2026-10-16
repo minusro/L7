@@ -181,7 +181,7 @@ static void drawGrid() {
       for (uint8_t i = 0; i < c.count; i++) {
         const ClipNote &n = c.notes[i];
         int ny = y + 42 - clampP(n.pitch) * 38 / 72;
-        int e = n.start + n.len;
+        int e = n.start + clipEffLen(c, i);
         for (int seg = 0; seg < 2; seg++) {      // a note over the loop point wraps
           int a = seg ? 0 : n.start, b = seg ? e - span : (e > span ? span : e);
           if (seg && e <= span) break;
@@ -287,7 +287,7 @@ static void drawNote() {
     uint16_t ink = selN ? ACCENT : LIGHT;
     // velocity as the fill's brightness, inside a full-colour block outline
     uint16_t fill = blend565(ink, BG, (uint8_t)(40 + (int)n.vel * 215 / 127));
-    int e = n.start + n.len;
+    int e = n.start + clipEffLen(c, i);
     for (int seg = 0; seg < 2; seg++) {          // a note over the loop point wraps
       if (seg && e <= span) break;
       int a = seg ? 0 : n.start, b = seg ? e - span : (e > span ? span : e);

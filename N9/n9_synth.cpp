@@ -659,7 +659,7 @@ void N9Synth::fireStep(uint8_t step) {
       const ClipNote &cn = c.notes[i];
       if (cn.start == local && _seqNoteCount < 32) {
         noteOnNow(t, cn.pitch, cn.vel);
-        _seqNotes[_seqNoteCount++] = {t, cn.pitch, cn.len};
+        _seqNotes[_seqNoteCount++] = {t, cn.pitch, clipEffLen(c, i)};
       }
     }
   }

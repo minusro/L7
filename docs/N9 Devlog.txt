@@ -71,6 +71,11 @@ The status bar (top of the GRID screen and bottom of the INST screen):
 - key and scale control
 
 
+# 16oc26
+
+-
+
+
 # Backlog
 
 - 
