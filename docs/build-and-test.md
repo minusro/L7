@@ -107,13 +107,13 @@ ride and brushes, walking bass, piano, guitar, vibraphone). Each style's parts
 and sounds are in `writeParts()` and `voice()`; the card starts with a session
 whose tempo last set by hand is the style's (the new project takes it). It
 writes the screen 30 times a second and the output's audio; `compose.py` lays
-it out for Instagram Stories (1080x1920): the screen across the whole width
-(scaled by area, 3.375x, no bezel) near the top (60 px into the Stories' top
-safe zone of 250 px, still clear of the profile's row), the caption beneath it, and the M8's keys under that, laid out as on the M8,
-unlabelled, lit while held, their bottom 90 px above the frame's (into the
-bottom 340 px, where Stories put the reply bar, as little as fits); it ends on the app's own splash played backwards
-without its credits line, its first frame fading in over the last second
-(needs ffmpeg, numpy, Pillow).
+it out for Instagram Stories (1080x1920), from the bottom up: the M8's keys,
+laid out as on the M8, unlabelled, lit while held, their bottom 90 px above the
+frame's (Stories put the reply bar at the bottom; the top safe zone matters
+less), the caption above them, and the screen above that, across the whole
+width (scaled by area, 3.375x, no bezel). It ends on the app's own splash
+played backwards without its credits line, its first frame fading in over the
+last second (needs ffmpeg, numpy, Pillow).
 
 ```sh
 tools/demo/build.sh            # builds, runs, composes the house video (~1.5 min)

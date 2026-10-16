@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Composes the L7 demo video from what demo.cpp wrote, portrait for
 Instagram Stories (1080x1920): the M8's screen (raw RGB565, 30 frames a
-second) across the whole width near the top (60 px into the Stories' top
-safe zone of 250 px, still clear of the profile's row: the bottom's matters
-more), the caption and the M8's keys (lit while held, their bottom 90 px above
-the frame's) beneath it; the app's output as the sound.
+second) across the whole width, the caption and the M8's keys (lit while held)
+beneath it, laid out from the bottom up: the keys' bottom 90 px above the
+frame's (the Stories' reply bar's side; their top safe zone matters less, the
+screen reaching into it); the app's output as the sound.
 
   compose.py <demo-out-dir> <video.mp4>                (needs ffmpeg, numpy, Pillow)
   compose.py <demo-out-dir> --stills 5,12.5,30 <dir>   (PNGs of those moments, to check)
@@ -17,10 +17,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 W, H, FPS = 1080, 1920, 30
-SAFE_TOP, SAFE_BOTTOM, MARGIN = 250, 340, 60       # (Stories: the profile's bar on top, the reply bar below)
+MARGIN = 60
 SW, SH = 320, 240
-SY, SCREEN_H = SAFE_TOP - 60, W * SH // SW          # the screen's place: the whole width, 3.375x
-PANEL_Y = SY + SCREEN_H                             # the caption and the keys from here down
+SCREEN_H = W * SH // SW                             # (the screen across the whole width, 3.375x)
 BG = (12, 12, 14)
 INK = (236, 236, 236)
 DIM = (150, 150, 156)
@@ -40,7 +39,8 @@ def font(size, bold=False):
 
 
 TITLE, SUB = font(84, True), font(50)
-TITLE_Y, TITLE_STEP, SUB_GAP, SUB_STEP = 40, 92, 6, 60   # (the caption's lines, from the screen's bottom)
+TITLE_Y, TITLE_STEP, SUB_GAP, SUB_STEP = 80, 92, 6, 60   # (the caption's lines, from the screen's bottom)
+CAPTION_H = TITLE_Y + TITLE_STEP + SUB_GAP + 2 * SUB_STEP   # (a title line, two of subtitle)
 
 
 def wrap(draw, text, f, width):
@@ -82,12 +82,14 @@ def scale_screen(rgb):
 # from the top left key's corner): OPTION (B) and EDIT (A) top right, UP a
 # little lower, LEFT / DOWN / RIGHT under it, SHIFT / START below those. No
 # labels: the keys' places say which they are.
-PITCH = 154
+PITCH = 169
 KEY = int(PITCH * 0.88)
 LAYOUT = {OPT: (2.18, 0), EDIT: (3.16, 0), UP: (1, 0.225), LEFT: (0, 1.17), DOWN: (1, 1.17), RIGHT: (2, 1.17),
           SHIFT: (1, 2.32), PLAY: (2, 2.32)}
 KEYS_W, KEYS_H = int(3.16 * PITCH) + KEY, int(2.32 * PITCH) + KEY
-KEYS_Y = H - 90 - KEYS_H                            # (their bottom 90 px above the frame's; ~75 px under a caption of three lines)
+KEYS_Y = H - 90 - KEYS_H                            # (their bottom 90 px above the frame's)
+PANEL_Y = KEYS_Y - 80 - CAPTION_H                   # the caption from here down (80 px over the keys)
+SY = PANEL_Y - SCREEN_H                             # the screen's place, right above it
 
 
 def key_boxes():
@@ -110,7 +112,7 @@ def panel(caption, sub, keys, alpha):
         y += SUB_STEP
     for bit, (x, ky) in key_boxes().items():
         down = keys & bit
-        d.rounded_rectangle((x, ky, x + KEY, ky + KEY), radius=21, fill=ACCENT if down else KEY_FILL,
+        d.rounded_rectangle((x, ky, x + KEY, ky + KEY), radius=23, fill=ACCENT if down else KEY_FILL,
                             outline=ACCENT if down else KEY_UP, width=4)
     return img
 
