@@ -35,6 +35,26 @@ static void selAdd(uint8_t i) { nav.sel[i >> 5] |= 1u << (i & 31); }
 static void selClear() { nav.sel[0] = nav.sel[1] = nav.sel[2] = nav.sel[3] = 0; }
 static bool selAny() { return nav.sel[0] | nav.sel[1] | nav.sel[2] | nav.sel[3]; }
 
+// While a note is created or manipulated (A or B held), it sounds on the
+// track; it retriggers as the edit changes pitch or velocity and stops when
+// the modifier lifts.
+static int audNote = -1;
+static void audStop() {
+  if (audNote >= 0) synth.noteOff((uint8_t)audNote);
+  audNote = -1;
+}
+static void audPlay(uint8_t pitch, uint8_t vel) {
+  if (audNote == pitch) return;
+  audStop();
+  synth.noteOn(pitch, vel ? vel : 100);
+  audNote = pitch;
+}
+static void audRetrig(uint8_t pitch, uint8_t vel) {
+  audStop();
+  synth.noteOn(pitch, vel ? vel : 100);
+  audNote = pitch;
+}
+
 static int noteAtCursor() {
   return clipFindAt(editClip(), nav.notePitch, nav.notePage * 16 + nav.noteStep);
 }
@@ -404,7 +424,7 @@ bool inputService() {
       Clip &c = editClip();
       int i = noteAtCursor();
       selClear();
-      if (i >= 0) selAdd((uint8_t)i);
+      if (i >= 0) { selAdd((uint8_t)i); audPlay(c.notes[i].pitch, c.notes[i].vel); }
       else if (c.count < CLIP_MAX_NOTES) {
         ClipNote &n = c.notes[c.count];
         n.pitch = nav.notePitch; n.vel = 100;
@@ -413,6 +433,7 @@ bool inputService() {
         c.used = 1;
         clipRefreshBars(c);
         selAdd(c.count - 1);
+        audPlay(n.pitch, n.vel);
       }
       dirtyNow = true;
     } else if (nav.screen == SCR_INST && nav.instRow == 3) {
@@ -443,7 +464,12 @@ bool inputService() {
 
   // B pressed in the editor over an empty cell: a selection box opens.
   if ((pressed & BTN_OPT) && !shift && !edit && !nav.menu && nav.screen == SCR_NOTE) {
-    if (noteAtCursor() < 0) {
+    int ni = noteAtCursor();
+    if (ni >= 0) {
+      const Clip &c = editClip();
+      audPlay(c.notes[ni].pitch, c.notes[ni].vel);
+    }
+    if (ni < 0) {
       nav.boxOpen = true;
       nav.boxStep0 = nav.boxStep1 = nav.notePage * 16 + nav.noteStep;
       nav.boxPitch0 = nav.boxPitch1 = nav.notePitch;
@@ -468,6 +494,9 @@ bool inputService() {
       optTapAt = ms;
     }
   }
+
+  if (audNote >= 0 && (!(now & (BTN_EDIT | BTN_OPT)) || nav.screen != SCR_NOTE || nav.menu))
+    audStop();
 
   // Arrows, with repeat (SHIFT: fresh presses only).
   static uint32_t pressedAt[4], lastRep[4];
@@ -570,6 +599,10 @@ bool inputService() {
         if (selAny() || noteAtCursor() >= 0) {
           if (!selAny()) selFollowCursor();
           if (dx) selMove(dx); else selTranspose(-dy);
+          if (!dx) {
+            int ni = noteAtCursor();
+            if (ni >= 0) audRetrig(editClip().notes[ni].pitch, editClip().notes[ni].vel);
+          }
           optUsed = true;
           dirty = true;
           continue;
@@ -578,6 +611,10 @@ bool inputService() {
       if (edit && (selAny() || noteAtCursor() >= 0)) {   // A+arrows: length / velocity
         if (!selAny()) selFollowCursor();
         if (dx) selLength(dx); else selVelocity(-dy);
+        if (!dx) {
+          int ni = noteAtCursor();
+          if (ni >= 0) audRetrig(editClip().notes[ni].pitch, editClip().notes[ni].vel);
+        }
         editUsed = true;
         dirty = true;
         continue;
