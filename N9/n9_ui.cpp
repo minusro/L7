@@ -284,7 +284,9 @@ static void drawNote() {
     for (int k = 0; k < 13; k++) if (rows[k] == n.pitch) { r = k; break; }
     if (r < 0) continue;
     bool selN = nav.sel[i >> 5] & (1u << (i & 31));
-    uint16_t ink = selN ? ACCENT : n.vel ? LIGHT : DIM;
+    uint16_t ink = selN ? ACCENT : LIGHT;
+    // velocity as the fill's brightness, inside a full-colour block outline
+    uint16_t fill = blend565(ink, BG, (uint8_t)(40 + (int)n.vel * 215 / 127));
     int e = n.start + n.len;
     for (int seg = 0; seg < 2; seg++) {          // a note over the loop point wraps
       if (seg && e <= span) break;
@@ -292,7 +294,9 @@ static void drawNote() {
       int s0 = a - nav.notePage * 16, s1 = b - nav.notePage * 16;
       if (s1 <= 0 || s0 >= 16) continue;
       int xa = X0 + (s0 < 0 ? 0 : s0) * SW, xb = X0 + (s1 > 16 ? 16 : s1) * SW;
-      rct(xa + 1, Y0 + r * RH + 3, xb - xa - 2, RH - 7, ink);
+      int nx = xa + 1, ny = Y0 + r * RH + 3, nw = xb - xa - 2, nh = RH - 7;
+      frm(nx, ny, nw, nh, ink);
+      rct(nx + 2, ny + 2, nw - 4, nh - 4, fill);
     }
   }
   // playhead
