@@ -31,6 +31,9 @@ static int clamp(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; 
 // ---- selection helpers (NOTE) ----------------------------------------------
 
 static Clip &editClip() { return clipAt(nav.gridT, nav.gridS); }
+// Auto clips open all 16 bars to the editor (playback stays at the filled
+// span); fixed clips edit what they play.
+static int editBars() { const Clip &c = editClip(); return c.barsFixed ? c.bars : CLIP_MAX_BARS; }
 static bool selHas(uint8_t i) { return nav.sel[i >> 5] & (1u << (i & 31)); }
 static void selAdd(uint8_t i) { nav.sel[i >> 5] |= 1u << (i & 31); }
 static void selClear() { nav.sel[0] = nav.sel[1] = nav.sel[2] = nav.sel[3] = 0; }
@@ -547,7 +550,7 @@ bool inputService() {
       if (nav.menu) { nav.menu = false; dirty = true; continue; }
       if (dy) { edgeSwitch(dy < 0 ? BTN_UP : BTN_DOWN); dirty = true; }
       else if (nav.screen == SCR_NOTE) {
-        nav.notePage = (uint8_t)clamp(nav.notePage + dx, 0, editClip().bars - 1);
+        nav.notePage = (uint8_t)clamp(nav.notePage + dx, 0, editBars() - 1);
         dirty = true;
       } else { edgeSwitch(dx < 0 ? BTN_LEFT : BTN_RIGHT); dirty = true; }
       continue;
@@ -646,7 +649,7 @@ bool inputService() {
         if (!nav.boxOpen && ni >= 0) {           // skip over the note's extent
           pos = dx > 0 ? c.notes[ni].start + c.notes[ni].len : c.notes[ni].start - 1;
         } else pos += dx;
-        pos = clamp(pos, 0, c.bars * 16 - 1);
+        pos = clamp(pos, 0, editBars() * 16 - 1);
         nav.notePage = (uint8_t)(pos / 16);
         nav.noteStep = (uint8_t)(pos % 16);
       } else {
