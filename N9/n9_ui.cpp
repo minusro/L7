@@ -210,25 +210,36 @@ static void drawNote() {
   snprintf(hdr, sizeof hdr, "T%d S%d  BAR %d/%d  %u.%u", nav.selTrack + 1, nav.gridS + 1,
            nav.notePage + 1, c.bars, synth.seqBarN() + 1, stp / 4 + 1);
   txt(4, 2, hdr, DIM);
-  const int X0 = 8, SW = 19, Y0 = 16, RH = 17;
-  int top = EDIT_TOP_PITCH + 12 * nav.noteOct;
-  for (int r = 0; r < 13; r++) {                 // rows: the scale shaded
-    int p = top - r, y = Y0 + r * RH;
-    if (!scaleHas((uint8_t)p)) continue;
-    rct(X0, y, 16 * SW, RH - 1, p % 12 == projKey ? DARK : BG);
-    if (p % 12 == projKey) {}
-    else frm(X0, y, 16 * SW, RH - 1, 0x0841);    // a whisper of a row
+  // Only in-scale rows show: 13 pitches walking down from the window's top.
+  // The roll sits against the right edge; the cursor row's name goes left.
+  const int SW = 17, X0 = 318 - 16 * SW, Y0 = 16, RH = 17;
+  int rows[13];
+  int p = nav.noteTop;
+  while (p > 24 && !scaleHas((uint8_t)p)) p--;
+  for (int r = 0; r < 13; r++) {
+    rows[r] = p;
+    int q = p - 1;
+    while (q > 24 && !scaleHas((uint8_t)q)) q--;
+    p = (q >= 24 && scaleHas((uint8_t)q)) ? q : p;
+  }
+  static const bool BLACK[12] = {false, true, false, true, false, false, true, false, true, false, true, false};
+  int curRow = -1;
+  for (int r = 0; r < 13; r++) {
+    int y = Y0 + r * RH;
+    rct(X0, y, 16 * SW, RH - 1, BLACK[rows[r] % 12] ? BG : DARK);
+    if (rows[r] == nav.notePitch) curRow = r;
   }
   for (int sgrid = 0; sgrid <= 16; sgrid += 4)   // beat lines
-    rct(X0 + sgrid * SW, Y0, 1, 13 * RH, DARK);
-  // the notes of this page
+    rct(X0 + sgrid * SW, Y0, 1, 13 * RH, BLACK[0] ? DIM : DIM);
+  // the notes of this page, on their rows
   for (uint8_t i = 0; i < c.count; i++) {
     const ClipNote &n = c.notes[i];
     int s0 = (int)n.start - nav.notePage * 16;
     int s1 = s0 + n.len;
     if (s1 <= 0 || s0 >= 16) continue;
-    int r = top - n.pitch;
-    if (r < 0 || r > 12) continue;
+    int r = -1;
+    for (int k = 0; k < 13; k++) if (rows[k] == n.pitch) { r = k; break; }
+    if (r < 0) continue;
     int xa = X0 + (s0 < 0 ? 0 : s0) * SW, xb = X0 + (s1 > 16 ? 16 : s1) * SW;
     bool selN = nav.sel[i >> 5] & (1u << (i & 31));
     uint16_t ink = selN ? ACCENT : n.vel ? LIGHT : DIM;
@@ -240,18 +251,23 @@ static void drawNote() {
     if (lp >= 0 && lp / 16 == nav.notePage)
       rct(X0 + (lp % 16) * SW, Y0, 2, 13 * RH, ACCENT);
   }
-  // cursor + the selection box
-  int cr = top - nav.notePitch;
-  if (cr >= 0 && cr <= 12)
-    frm(X0 + nav.noteStep * SW, Y0 + cr * RH, SW, RH - 1, INK);
+  // the cursor, its row's name to the left, and the selection box
+  if (curRow >= 0) {
+    char nm[8];
+    snprintf(nm, sizeof nm, "%s%d", KEY_NAMES[nav.notePitch % 12], nav.notePitch / 12 - 1);
+    txt(4, Y0 + curRow * RH + 4, nm, INK);
+    frm(X0 + nav.noteStep * SW, Y0 + curRow * RH, SW, RH - 1, INK);
+  }
   if (nav.boxOpen) {
     int a0 = (int)(nav.boxStep0 < nav.boxStep1 ? nav.boxStep0 : nav.boxStep1) - nav.notePage * 16;
     int a1 = (int)(nav.boxStep0 < nav.boxStep1 ? nav.boxStep1 : nav.boxStep0) - nav.notePage * 16;
     int pTop = nav.boxPitch0 > nav.boxPitch1 ? nav.boxPitch0 : nav.boxPitch1;
     int pBot = nav.boxPitch0 > nav.boxPitch1 ? nav.boxPitch1 : nav.boxPitch0;
-    int r0 = top - pTop, r1 = top - pBot;
+    int r0 = 12, r1 = 0;
+    for (int k = 0; k < 13; k++) {               // rows the box's pitch range covers
+      if (rows[k] <= pTop && rows[k] >= pBot) { if (k < r0) r0 = k; if (k > r1) r1 = k; }
+    }
     if (a0 < 0) a0 = 0; if (a1 > 15) a1 = 15;
-    if (r0 < 0) r0 = 0; if (r1 > 12) r1 = 12;
     if (a0 <= a1 && r0 <= r1)
       dotFrame(X0 + a0 * SW, Y0 + r0 * RH, (a1 - a0 + 1) * SW, (r1 - r0 + 1) * RH - 1, INK);
   }

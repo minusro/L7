@@ -26,7 +26,7 @@ struct NavState {
   // selection: a bit per clip note, plus the B-drag box while it's open.
   uint8_t notePage = 0, noteStep = 0;
   uint8_t notePitch = 60;
-  int8_t noteOct = 0;
+  uint8_t noteTop = 72;                // the top visible row (in-scale pitch)
   uint32_t sel[4] = {0, 0, 0, 0};      // selected notes of the shown clip
   bool boxOpen = false;                // B dragging a selection box
   uint8_t boxStep0 = 0, boxPitch0 = 0; // its anchor (absolute step, pitch)

@@ -47,10 +47,20 @@ static void selFollowCursor() {
   if (i >= 0) selAdd((uint8_t)i);
 }
 
+static int scaleStep(int p, int dir);
+
+// The 13 visible rows are in-scale pitches; the window slides to keep the
+// cursor inside.
+static int scaleDistance(int hi, int lo) {       // in-scale steps from lo up to hi
+  int n = 0;
+  for (int p = lo + 1; p <= hi; p++) if (scaleHas((uint8_t)p)) n++;
+  return n;
+}
 static void pitchWindowFollow() {
-  int top = EDIT_TOP_PITCH + 12 * nav.noteOct;
-  while (nav.notePitch > top) { nav.noteOct++; top += 12; }
-  while (nav.notePitch < top - 12) { nav.noteOct--; top -= 12; }
+  if (!scaleHas(nav.noteTop)) { int p = scaleStep(nav.noteTop, -1); nav.noteTop = (uint8_t)(p ? p : 24); }
+  if (nav.notePitch > nav.noteTop) nav.noteTop = nav.notePitch;
+  while (scaleDistance(nav.noteTop, nav.notePitch) > 12)
+    nav.noteTop = (uint8_t)scaleStep(nav.noteTop, -1);
 }
 
 // The next in-scale pitch from p in direction dir (0 if none in range).
@@ -123,6 +133,9 @@ static bool statusB(uint8_t cell, int arrow) {
   if (cell == ST_KEY) {
     if (arrow == A_LEFT || arrow == A_RIGHT) projKey = (projKey + (arrow == A_RIGHT ? 1 : 11)) % 12;
     else projScale = (projScale + (arrow == A_UP ? 1 : SCALE_COUNT - 1)) % SCALE_COUNT;
+    nav.notePitch = scaleSnap(nav.notePitch);
+    nav.noteTop = scaleSnap(nav.noteTop);
+    pitchWindowFollow();
     return true;
   }
   return false;
@@ -471,7 +484,11 @@ bool inputService() {
 
     if (opt && edit) {                           // B+A+arrows: track / clip stepping
       if (!fresh) continue;
-      if (dx) { nav.selTrack = (uint8_t)((nav.selTrack + dx + NT) % NT); dirty = true; }
+      if (dx) {
+        nav.selTrack = (uint8_t)((nav.selTrack + dx + NT) % NT);
+        nav.gridT = nav.selTrack;
+        dirty = true;
+      }
       else { clipStepPlay(nav.selTrack, -dy); dirty = true; }   // UP = previous
       continue;
     }
@@ -541,7 +558,7 @@ bool inputService() {
           int t = nav.gridT + dx;
           if (t < 0 || t >= (int)NT) {           // off the side: the menu
             if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
-          } else { nav.gridT = (uint8_t)t; dirty = true; }
+          } else { nav.gridT = (uint8_t)t; nav.selTrack = (uint8_t)t; dirty = true; }
         }
       }
       continue;
