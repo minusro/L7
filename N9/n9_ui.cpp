@@ -185,13 +185,18 @@ static void drawGrid() {
         int ny = y + 42 - clampP(n.pitch) * 38 / 72;
         rct(nx, ny, nw, 2, n.vel ? LIGHT : DIM);
       }
-      if (playing) {                             // the playhead
-        int lp = (int)synth.clipLocalStep(t);
-        if (lp >= 0) rct(x + 3 + lp * 70 / span, y + 3, 2, 42, ACCENT);
+      for (int b = 1; b < c.bars; b++) {         // bar crossings, on the outline
+        int bx = x + 3 + b * 16 * 70 / span;
+        rct(bx, y, 2, 2, DIM);
+        rct(bx, y + 46, 2, 2, DIM);
       }
-      char bl[4];
-      snprintf(bl, sizeof bl, c.barsFixed ? "%d" : "A", c.bars);
-      txt(x + 70 - txtW(bl), y + 4, bl, c.barsFixed ? LIGHT : DARK);
+      int lp = playing ? (int)synth.clipLocalStep(t) : -1;
+      if (lp >= 0) rct(x + 3 + lp * 70 / span, y + 3, 2, 42, ACCENT);   // the playhead
+      if (!c.barsFixed) {                        // the auto mark rides under it
+        int ax = lp >= 0 ? x + 3 + lp * 70 / span : x + 4;
+        if (ax > x + 66) ax = x + 66;
+        txt(ax, y + 36, "A", DIM);
+      }
       if (nav.gridRow > 0 && nav.gridT == t && nav.gridS == sc) frm(x - 2, y - 2, 80, 52, INK);
     }
 }
