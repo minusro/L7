@@ -38,7 +38,7 @@ uint8_t gmProgram[9];
 uint8_t drumMachine[9];
 TrackLayer trackL[9];
 volatile float lfoVal[9];
-static float lfoPhase[9], lfoEnvLvl[9], lfoNoiseV[9];
+static float lfoPhase[9], lfoEnvLvl[9], lfoNoiseV[9], lfoPitchPf[9];
 bool overdubOn = false;
 bool metroOn = false;
 static void lfoEnvRetrig(uint8_t t);
@@ -531,6 +531,7 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
       v->pcmLen = gs.len; v->pcmLoopS = gs.loopS; v->pcmLoopE = gs.loopE;
       v->pcmPos = 0;
       v->pcmRate = (gs.rateQ / 256.0f) * exp2f((note - zone->root) / 12.0f + zone->cents / 1200.0f);
+      v->minc = v->pcmRate;                  // the base the pitch LFO scales
       v->velN *= gs.gain / 64.0f;            // the soundfont's balance between samples
       v->eAc = pcoef(2);
       applyLiveParams(*v, true);
@@ -558,6 +559,7 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
     v->pcmLen = gs.len; v->pcmLoopS = 0; v->pcmLoopE = 0;
     v->pcmPos = 0;
     v->pcmRate = (gs.rateQ / 256.0f) * (dh.rate256 / 256.0f);
+    v->minc = v->pcmRate;
     v->eAc = pcoef(0);
     v->eRc = pcoef(20);
     v->vel = v->velN * (gs.gain / 64.0f) * (dh.gain / 64.0f) * (engParams[track][E_GMDRUM][7] / 80.0f);
@@ -571,6 +573,7 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
     v->velN = vel / 127.0f;
     v->cat1 = ds.type;
     v->inc = ds.f * exp2f((cp[0] - 50) / 60.0f) / 44100.0f;
+    v->tinc = v->inc;
     v->minc = v->inc * (ds.type == DM_SNARE ? 1.83f : 1.4471f);
     float dsc = exp2f((cp[1] - 50) / 30.0f);
     v->eDc = decay(ds.decMs * dsc);
@@ -755,6 +758,9 @@ void N9Synth::update() {
     }
     lfoVal[t] = v * amt;
   }
+  for (int t = 0; t < NT; t++)                   // PIT: +-2 semitones at full amount
+    lfoPitchPf[t] = trackL[t].lfoDest == LD_PIT && trackL[t].lfoAmt
+                        ? exp2f(lfoVal[t] * (2.0f / 12.0f)) : 1.0f;
   fxSetMod();                                      // the LFO onto FX X/Y/wet (n9_fx)
 
   audio_block_t *l = allocate();
@@ -775,6 +781,12 @@ void N9Synth::update() {
     float idxC = d.osc == O_FM ? decay(d.idxDecMs) : 1.0f;
     // (the 303's and PROPHET's filter decays are per-voice now: v.fdC)
     float amp = v.vel * 0.12f;
+    {
+      float pf = lfoPitchPf[v.track];
+      if (v.pcm) v.pcmRate = v.minc * pf;        // (minc holds the rate's base)
+      else if (v.engine != E_303 && !(d.osc == O_GM && v.vibAmt > 0.001f))
+        v.inc = v.tinc * pf;
+    }
     if (v.engine < E_MI_FIRST || v.engine == E_GM)
       applyLiveParams(v, false);                 // live cell edits + the LFO, eased
     applyTrackLayer(v, false);                   // the INST filter + MOD ADSR layer
@@ -791,7 +803,7 @@ void N9Synth::update() {
     } else if (d.osc == O_GM && v.vibAmt > 0.001f) {   // vibrato, fading in
       v.lfoPh += v.lfoInc; if (v.lfoPh >= 1.0f) v.lfoPh -= 1.0f;
       v.env2 += v.e2Ac * (1.0f - v.env2);
-      float pf = exp2f(mgShape(0, v.lfoPh) * v.vibAmt * v.env2 / 12.0f);
+      float pf = exp2f(mgShape(0, v.lfoPh) * v.vibAmt * v.env2 / 12.0f) * lfoPitchPf[v.track];
       v.inc = v.tinc * pf;
       v.minc = v.tinc * v.inc3 * pf;
     }

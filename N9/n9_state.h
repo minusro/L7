@@ -82,7 +82,8 @@ extern uint8_t engParams[9][ENGINE_COUNT][8];
 enum : uint8_t { LFO_SINE, LFO_NOISE, LFO_SQUARE, LFO_UP, LFO_DOWN, LFO_ENV, LFO_SHAPES };
 // LFO destinations, in the spec's order.
 enum : uint8_t { LD_SYN1, LD_SYN2, LD_SYN3, LD_SYN4, LD_CUT, LD_RES, LD_FENV,
-                 LD_VOL, LD_PAN, LD_AX, LD_AY, LD_AWET, LD_BX, LD_BY, LD_BWET, LD_COUNT };
+                 LD_VOL, LD_PAN, LD_AX, LD_AY, LD_AWET, LD_BX, LD_BY, LD_BWET,
+                 LD_PIT, LD_COUNT };   // PIT appended: saved projects keep their values
 struct TrackLayer {
   uint8_t cut = 99, res = 10, ftype = 0, fenv = 50;   // filter (fenv 50 = none)
   uint8_t a = 0, d = 50, s = 99, r = 40;              // the MOD ADSR

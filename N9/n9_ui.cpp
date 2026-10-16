@@ -131,7 +131,7 @@ static void paramCell(int x, int y, int w, int h, const char *name, const char *
 static const char *const FTYPE_NAMES[3] = {"LP", "HP", "BP"};
 static const char *const SHAPE_NAMES[LFO_SHAPES] = {"SIN", "NSE", "SQR", "UP", "DWN", "ENV"};
 static const char *const DEST_NAMES[LD_COUNT] = {"S1", "S2", "S3", "S4", "CUT", "RES", "ENV",
-                                                 "VOL", "PAN", "AX", "AY", "AW", "BX", "BY", "BW"};
+                                                 "VOL", "PAN", "AX", "AY", "AW", "BX", "BY", "BW", "PIT"};
 
 // The status bar: six cells, GRID's top row and INST's bottom. sel: the
 // stood-on cell (-1: the cursor is elsewhere).
