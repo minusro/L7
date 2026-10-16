@@ -16,6 +16,7 @@ volatile int8_t clipPlaying[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
 volatile int8_t clipPending[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
 Clip clipClipboard;
 bool clipClipFull = false;
+bool clipClipPlaying = false;
 ClipNote noteClipboard[CLIP_MAX_NOTES];
 uint8_t noteClipCount = 0;
 volatile uint8_t clipFreeze = 0, clipTakeNow = 0;

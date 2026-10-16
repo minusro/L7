@@ -95,9 +95,8 @@ static void apply(const ProjectBlob &b) {
       memcpy(trackFx[t][s].p, b.tfxP[t][s], 8);
       fxSetTrackType(t, s, b.tfxType[t][s]);
     }
-  for (int t = 0; t < 9; t++)                      // armed clips: from their tops,
-    if (b.playing[t] >= 0 && b.playing[t] < 8) clipPending[t] = b.playing[t];
-  clipTakeNow = 1;                                 // on this beat, not the bar line
+  for (int t = 0; t < 9; t++)                      // the saved playing state, as it was
+    if (b.playing[t] >= 0 && b.playing[t] < 8) clipPlaying[t] = b.playing[t];
   clipFreeze = 0;
 }
 

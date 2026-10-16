@@ -42,6 +42,7 @@ extern volatile uint8_t clipFreeze, clipTakeNow;
 // SHIFT+A on the grid: a non-empty clip cuts here, an empty one pastes.
 extern Clip clipClipboard;
 extern bool clipClipFull;
+extern bool clipClipPlaying;   // the cut clip was playing: the paste resumes it
 
 // SHIFT+A in the editor: the selected notes, starts relative to the first.
 extern ClipNote noteClipboard[CLIP_MAX_NOTES];

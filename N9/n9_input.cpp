@@ -497,11 +497,13 @@ bool inputService() {
       if (c.count) {
         clipClipboard = c;
         clipClipFull = true;
-        if (clipPlaying[nav.gridT] == (int8_t)nav.gridS) clipPlaying[nav.gridT] = -1;
+        clipClipPlaying = clipPlaying[nav.gridT] == (int8_t)nav.gridS;
+        if (clipClipPlaying) clipPlaying[nav.gridT] = -1;
         c = Clip{};
       } else if (clipClipFull) {
         c = clipClipboard;
         c.used = 1;
+        if (clipClipPlaying) clipPlayNow(nav.gridT, nav.gridS);   // it was playing: on it goes
       }
       dirtyNow = true;
     } else if (nav.screen == SCR_NOTE) {
