@@ -10,6 +10,7 @@
 #include "M8Board.h"
 #include "n9_apps.h"
 #include "n9_fx.h"
+#include "n9_gm_pcm.h"
 #include "n9_project.h"
 #include "n9_song.h"
 #include "n9_state.h"
@@ -68,25 +69,47 @@ static void selFollowCursor() {
 }
 
 static int scaleStep(int p, int dir);
+bool rollRowHas(int p);
 
 // The 13 visible rows are in-scale pitches; the window slides to keep the
 // cursor inside.
-static int scaleDistance(int hi, int lo) {       // in-scale steps from lo up to hi
+static int scaleDistance(int hi, int lo) {       // rows from lo up to hi
   int n = 0;
-  for (int p = lo + 1; p <= hi; p++) if (scaleHas((uint8_t)p)) n++;
+  for (int p = lo + 1; p <= hi; p++) if (rollRowHas(p)) n++;
   return n;
 }
 static void pitchWindowFollow() {
-  if (!scaleHas(nav.noteTop)) { int p = scaleStep(nav.noteTop, -1); nav.noteTop = (uint8_t)(p ? p : 24); }
+  if (!rollRowHas(nav.noteTop)) { int p = scaleStep(nav.noteTop, -1); if (!p) p = scaleStep(nav.noteTop, 1); nav.noteTop = (uint8_t)(p ? p : nav.notePitch); }
   if (nav.notePitch > nav.noteTop) nav.noteTop = nav.notePitch;
   while (scaleDistance(nav.noteTop, nav.notePitch) > 12)
     nav.noteTop = (uint8_t)scaleStep(nav.noteTop, -1);
 }
 
-// The next in-scale pitch from p in direction dir (0 if none in range).
+// The roll's row space: melodic tracks fold to the scale; drum tracks show
+// one row per playable sound (DRUMS: the 12 slots of one octave, GM DRUM:
+// the mapped hits), unfolded.
+bool rollRowHas(int p) {
+  uint8_t e = trackEngine[nav.selTrack];
+  if (e == E_DM) return p >= 60 && p <= 71;
+  if (e == E_GMDRUM) return p >= 27 && p <= 87 && GM_DRUMMAP[p].smp >= 0;
+  return p >= 24 && p <= 96 && scaleHas((uint8_t)p);
+}
+
+// The next row from p in direction dir (0 if none).
 static int scaleStep(int p, int dir) {
-  do p += dir; while (p >= 24 && p <= 96 && !scaleHas((uint8_t)p));
-  return (p < 24 || p > 96) ? 0 : p;
+  do p += dir; while (p >= 24 && p <= 96 && !rollRowHas(p));
+  return (p < 24 || p > 96 || !rollRowHas(p)) ? 0 : p;
+}
+
+// The cursor and window land on valid rows (the track or its engine changed).
+static void rowNormalize() {
+  if (!rollRowHas(nav.notePitch)) {
+    int p = scaleStep(nav.notePitch, -1);
+    if (!p) p = scaleStep(nav.notePitch, 1);
+    if (!p) p = 60;
+    nav.notePitch = (uint8_t)p;
+    nav.noteTop = (uint8_t)p;
+  }
 }
 
 // ---- clip launching (GRID) --------------------------------------------------
@@ -352,6 +375,7 @@ bool inputService() {
 
   bool shift = now & BTN_SHIFT, opt = now & BTN_OPT, edit = now & BTN_EDIT;
   bool dirtyNow = false;
+  if (nav.screen == SCR_NOTE && !nav.menu) { rowNormalize(); pitchWindowFollow(); }
 
   // Chord bookkeeping: a B or A used in any combo doesn't fire its tap action.
   static bool optUsed = false, editUsed = false;

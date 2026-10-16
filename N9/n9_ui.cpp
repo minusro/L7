@@ -203,8 +203,40 @@ static void dotFrame(int x, int y, int w, int h, uint16_t c) {
   for (int i = 0; i < h; i += 4) { rct(x, y + i, 2, 2, c); rct(x + w - 2, y + i, 2, 2, c); }
 }
 
+bool rollRowHas(int p);   // n9_input.cpp: the roll's row space per track
+
+// Row labels: drum tracks name the sound, melodic tracks the note + octave.
+static const char *const DM_ROW[12] = {"KICK", "CHAT", "SNR", "OHAT", "CLAP", "LTOM",
+                                       "CRSH", "MTOM", "RIDE", "HTOM", "CYM", "RIM"};
+static const char *gmdRowName(int p) {
+  switch (p) {
+    case 27: return "HI Q";  case 29: return "SCR+";  case 30: return "SCR-";
+    case 31: return "STIX";  case 32: return "CLK";   case 34: return "MBEL";
+    case 35: return "BD 2";  case 36: return "BD 1";  case 37: return "SSTK";
+    case 38: return "SNR1";  case 39: return "CLAP";  case 40: return "SNR2";
+    case 41: return "TOM1";  case 42: return "CHAT";  case 43: return "TOM2";
+    case 44: return "PHAT";  case 45: return "TOM3";  case 46: return "OHAT";
+    case 47: return "TOM4";  case 48: return "TOM5";  case 49: return "CRSH";
+    case 50: return "TOM6";  case 51: return "RIDE";  case 52: return "CHIN";
+    case 53: return "BELL";  case 54: return "TAMB";  case 55: return "SPL";
+    case 56: return "COWB";  case 57: return "CRS2";  case 58: return "JNG-";
+    case 59: return "RID2";  case 60: return "BNGH";  case 61: return "BNGL";
+    case 62: return "CONM";  case 63: return "CONH";  case 64: return "CONL";
+    case 65: return "TIMH";  case 66: return "TIML";  case 67: return "AGOH";
+    case 68: return "AGOL";  case 69: return "CABA";  case 70: return "MARA";
+    case 71: return "WHIS";  case 72: return "WHIL";  case 73: return "GUIS";
+    case 74: return "GUIL";  case 75: return "CLAV";  case 76: return "WBLH";
+    case 77: return "WBLL";  case 78: return "CUIM";  case 79: return "CUIO";
+    case 80: return "TRIM";  case 81: return "TRIO";  case 82: return "SHKR";
+    case 83: return "JBEL";  case 85: return "CAST";  case 86: return "SURM";
+    case 87: return "SURO";  default: return "?";
+  }
+}
+
 static void drawNote() {
   const Clip &c = clipAt(nav.gridT, nav.gridS);
+  uint8_t eng = trackEngine[nav.selTrack];
+  bool drumTrack = eng == E_GMDRUM || eng == E_DM;
   char hdr[36];
   uint8_t stp = synth.seqStepN();
   snprintf(hdr, sizeof hdr, "T%d S%d  BAR %d/%d  %u.%u", nav.selTrack + 1, nav.gridS + 1,
@@ -215,18 +247,21 @@ static void drawNote() {
   const int SW = 17, X0 = 318 - 16 * SW, Y0 = 16, RH = 17;
   int rows[13];
   int p = nav.noteTop;
-  while (p > 24 && !scaleHas((uint8_t)p)) p--;
-  for (int r = 0; r < 13; r++) {
-    rows[r] = p;
+  while (p > 24 && !rollRowHas(p)) p--;
+  rows[0] = rollRowHas(p) ? p : -1;
+  for (int r = 1; r < 13; r++) {
     int q = p - 1;
-    while (q > 24 && !scaleHas((uint8_t)q)) q--;
-    p = (q >= 24 && scaleHas((uint8_t)q)) ? q : p;
+    while (q >= 24 && !rollRowHas(q)) q--;
+    if (q >= 24 && rollRowHas(q)) { rows[r] = q; p = q; }
+    else rows[r] = -1;                           // fewer sounds than rows: blank
   }
   static const bool BLACK[12] = {false, true, false, true, false, false, true, false, true, false, true, false};
   int curRow = -1;
   for (int r = 0; r < 13; r++) {
+    if (rows[r] < 0) continue;
     int y = Y0 + r * RH;
-    rct(X0, y, 16 * SW, RH - 1, BLACK[rows[r] % 12] ? BG : DARK);
+    bool darkRow = drumTrack ? (r & 1) : BLACK[rows[r] % 12];
+    rct(X0, y, 16 * SW, RH - 1, darkRow ? BG : DARK);
     if (rows[r] == nav.notePitch) curRow = r;
   }
   for (int sgrid = 0; sgrid <= 16; sgrid += 4)   // beat lines
@@ -254,7 +289,9 @@ static void drawNote() {
   // the cursor, its row's name to the left, and the selection box
   if (curRow >= 0) {
     char nm[8];
-    snprintf(nm, sizeof nm, "%s%d", KEY_NAMES[nav.notePitch % 12], nav.notePitch / 12 - 1);
+    if (eng == E_DM) snprintf(nm, sizeof nm, "%s", DM_ROW[nav.notePitch % 12]);
+    else if (eng == E_GMDRUM) snprintf(nm, sizeof nm, "%s", gmdRowName(nav.notePitch));
+    else snprintf(nm, sizeof nm, "%s%d", KEY_NAMES[nav.notePitch % 12], nav.notePitch / 12 - 1);
     txt(4, Y0 + curRow * RH + 4, nm, INK);
     frm(X0 + nav.noteStep * SW, Y0 + curRow * RH, SW, RH - 1, INK);
   }

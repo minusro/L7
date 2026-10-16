@@ -12,6 +12,65 @@ N9 / ©️2026 Daniel Stanciu  / minusro@gmail.com
 - help
 
 
+# 15oct26
+
+Let's reorganize the ui.
+First, we'll only be using 4 tracks and 4 scenes for now.
+Make the UI style as minimalist as possible.
+Splash screen just says N4, no animation for now.
+
+There are three main vertical screens with top/down edge wrapping navigation (or using Shift+Up/Down):
+
+1. GRID: has status bar at the top and a 4x4 grid of clips
+	- left/right navigation (or Shift+L/R) goes to the menu. the menu can be exited on any of the 4 screen edges (or with shift + any arrow) to the GRID page
+	- A on a stopped clip plays it and stops any other playing clip on that track. the switch is done instantly from where the previous pattern left off
+	- A on a playing clip stops it
+	- B+A+Up/Down plays the previous/next clip on that track. if nothing is playing, Up plays the last clip, and Down plays the first
+	- Shift+A cuts a nonempty pattern to clipboard or pastes a copy of the clipboard into an empty pattern (one with no notes)
+	- B+Up/Down doubles/halves the number of bars in the clip. Allowed lengths in bars: Auto, 1, 2, 4, 8, 16 bars. Auto lengthens the clip to fit all notes (up to 16 bars)
+	- B+Play toggles overdubbing (if the clock is running, received midi notes are written in the selected track's playing clip)
+	- B on a clip opens it in the piano roll editor when releasing if nothing else was pressed in the meantime
+	- the clip's notes are drawn in the grid cell. the playing clip cell also has a playhead
+
+2. NOTE: the piano roll editor
+	- left/right navigation (or Shift+L/R) navigates between bars
+	- B+Arrows starting B press on an empty step cell creates a selection box (a dotted outline). releasing B selects all notes that intersect the selection box and places the cell cursor on the selected note with the start or endpoint closest to the selection finishing corner (only if that point is inside the selection box)
+	- Arrows clear the selection and only select the note that is over the cursor. if on a note, Right will select the first cell to the right of the note end and Left will select the first to the left of the note start
+	- A on empty cell creates a note
+	- Shift+A cuts/pastes the selected notes
+	- B+L/R over a note moves the selected notes in 1/16 bar increments
+	- B+Up/Down over a note increments/decrements the selected notes (respecting the selected scale)
+	- A+L/R over a note lengthens/shortens the selected notes in 1/16 bar increments
+	- A+Up/Down over a note increases/decreases the selected notes' velocities in steps from 0 (muted) to 16 (full velocity)
+
+3. INST: the instrument editor with the same status bar
+	- Arrows select a control
+	- B + Up/Down increments/decrements the selected parameter by 10
+	- B + Left/Right decrements/increments the selected parameter by 1
+	- double tapping B resets the control to its default value
+	- left/right edge navigation (or Shift+L/R) navigates with wrapping between the parameter pages
+	- the parameter pages are: SYN, MOD, FX
+	- SYN has the main synth source parameters (first row of 4 knobs) and the filter parameters as the second row (cutoff, resonance, type, envelope amount). for now let's have normal LP, HP and BP filter options
+	- MOD has the volume (and filter if mod env is not 0) envelope ADSR as the first knob row and an LFO as the second (speed, amount, shape, destination). shapes: sine, noise, square, ramp up, ramp down, envelope (this one is one shot) destinations: the 4 synth parameters, the cutoff, resonance and envelope amount as well as track volume and panning and the two effects' parameters X, Y and Dry/Wet.
+	- FX has the two insert effects (A & B), each has a row of 4 knobs: effect type, two parameters X & Y and the Dry/Wet/Send control we already have
+	- whatever instrument page you're on, there is a synth selection box the the top of the screen, above the tabs
+
+Global shortcuts:
+- Arrows: cell navigation (and screen navigation when crossing screen boundaries)
+- Shift+Arrows: screen navigation
+- Play: stop clock if running. start clock from 1.1.1 if not running
+- Shift+Play: reset clock to 1.1.1 if running. start clock from where it was stopped if not running
+- B+A+L/R: selects previous/next track, wrapping around.
+
+The status bar (top of the GRID screen and bottom of the INST screen):
+- tap tempo button
+- tempo control
+- metronome button
+- overdub button
+- play button
+- key and scale control
+
+
 # Backlog
 
 - 
@@ -24,5 +83,10 @@ N9 / ©️2026 Daniel Stanciu  / minusro@gmail.com
 
 # Doodles
 
+MENU		SYNTH 1		SYNTH 2		SYNTH 3		...
+MENU		NOTES	
+MENU		GRID		MIXER		MFX
+
+N4
 
 
