@@ -331,14 +331,17 @@ static void boxFinish() {                        // B released: take the box
   selClear();
   int best = -1;
   uint32_t bestD = ~0u;
+  int span = c.bars * 16;
   for (uint8_t i = 0; i < c.count; i++) {
     const ClipNote &n = c.notes[i];
     if (n.pitch < p0 || n.pitch > p1) continue;
-    if (n.start > s1 || n.start + n.len - 1 < s0) continue;
+    bool body = !(n.start > s1 || n.start + n.len - 1 < s0);
+    bool tail = n.start + n.len > span && (int)(n.start + n.len - span - 1) >= (int)s0 && 0 <= (int)s1;
+    if (!body && !tail) continue;
     selAdd(i);
     // the endpoint nearest the finishing corner, if inside the box
     for (int e = 0; e < 2; e++) {
-      int es = e ? n.start + n.len - 1 : n.start;
+      int es = e ? (n.start + n.len - 1) % span : n.start;
       if (es < s0 || es > s1) continue;
       uint32_t dd = (uint32_t)abs(es - (int)nav.boxStep1) * 2 + (uint32_t)abs((int)n.pitch - (int)nav.boxPitch1);
       if (dd < bestD) { bestD = dd; best = i; nav.noteStep = es % 16; nav.notePage = es / 16; nav.notePitch = n.pitch; }
@@ -548,7 +551,8 @@ bool inputService() {
       if (nav.menu) { nav.menu = false; dirty = true; continue; }
       if (dy) { edgeSwitch(dy < 0 ? BTN_UP : BTN_DOWN); dirty = true; }
       else if (nav.screen == SCR_NOTE) {
-        nav.notePage = (uint8_t)clamp(nav.notePage + dx, 0, editBars() - 1);
+        int n = editBars();
+        nav.notePage = (uint8_t)((nav.notePage + dx + n) % n);
         dirty = true;
       } else { edgeSwitch(dx < 0 ? BTN_LEFT : BTN_RIGHT); dirty = true; }
       continue;
@@ -644,10 +648,11 @@ bool inputService() {
       if (dx) {
         int pos = nav.notePage * 16 + nav.noteStep;
         int ni = noteAtCursor();
-        if (!nav.boxOpen && ni >= 0) {           // skip over the note's extent
-          pos = dx > 0 ? c.notes[ni].start + c.notes[ni].len : c.notes[ni].start - 1;
-        } else pos += dx;
-        pos = clamp(pos, 0, editBars() * 16 - 1);
+        int espan = editBars() * 16, span = c.bars * 16;
+        if (!nav.boxOpen && ni >= 0) {           // skip over the note's extent (wrapping)
+          pos = dx > 0 ? (c.notes[ni].start + c.notes[ni].len) % span
+                       : (c.notes[ni].start - 1 + span) % span;
+        } else pos = (pos + dx + espan) % espan;
         nav.notePage = (uint8_t)(pos / 16);
         nav.noteStep = (uint8_t)(pos % 16);
       } else {

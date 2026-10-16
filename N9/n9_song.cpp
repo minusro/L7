@@ -61,9 +61,12 @@ uint8_t scaleSnap(uint8_t pitch) {
 Clip &clipAt(uint8_t t, uint8_t s) { return clips[t][s]; }
 
 int clipFindAt(const Clip &c, uint8_t pitch, uint8_t step) {
+  int span = c.bars * 16;
   for (int i = 0; i < c.count; i++) {
     const ClipNote &n = c.notes[i];
-    if (n.pitch == pitch && step >= n.start && step < n.start + n.len) return i;
+    if (n.pitch != pitch) continue;
+    if (step >= n.start && step < n.start + n.len) return i;
+    if (n.start + n.len > span && step < n.start + n.len - span) return i;   // its wrapped tail
   }
   return -1;
 }
