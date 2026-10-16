@@ -730,10 +730,12 @@ static void writeScript() {
   say("Filter", "B + arrows: a lowpass swept down on the pad...");
   go(NUM_TRACKS - 4, FILTER_CELL);                  // (track 4's filter)
   keys(B); wait(0.2);
-  keys(B | LT); wait(1.4);
+  keys(B | LT);                                     // (held: down to about a third, 11 of FILTER_MAX's 32)
+  script.push_back([] { return tracks[NUM_TRACKS - 4].filterHi <= 11; });
   keys(B); wait(2.2);
   say("Filter", "...and opened up again");
-  keys(B | RT); wait(1.4);
+  keys(B | RT);                                     // (held: open again)
+  script.push_back([] { return tracks[NUM_TRACKS - 4].filterHi >= FILTER_MAX; });
   keys(B); wait(0.4);
   keys(0); wait(1.6);
   // The drums' range: a beat of them, then the whole loop again.
