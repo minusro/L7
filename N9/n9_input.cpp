@@ -373,7 +373,13 @@ static void edgeSwitch(uint8_t bit) {
 // ---- the main service --------------------------------------------------------
 
 bool inputService() {
-  uint8_t now = board.keys();
+  // A and B trade places (2026-10-16): the physical A acts as the modifier
+  // "B" grammar and vice versa. Swapped once here; everything below keeps
+  // its logical names.
+  uint8_t raw = board.keys();
+  uint8_t now = raw & ~(BTN_EDIT | BTN_OPT);
+  if (raw & BTN_EDIT) now |= BTN_OPT;
+  if (raw & BTN_OPT) now |= BTN_EDIT;
   static uint8_t prev = 0;
   uint8_t pressed = now & ~prev;
   uint8_t released = prev & ~now;
