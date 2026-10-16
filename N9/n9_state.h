@@ -1,97 +1,98 @@
-// n9_state.h — N9's shared state: the screen stack position and each screen's
-// cursor. Mock content stays in n9_ui.cpp; only what the keys move lives here.
+// n9_state.h — N4's shared state: the three-screen stack (GRID, NOTE, INST,
+// wrapping), each screen's cursor, the selected track, and the per-track
+// instrument layer the INST pages edit. The 2026-10-16 reorganisation: four
+// tracks, four scenes, minimalist UI.
 #pragma once
 #include <stdint.h>
 
 #include "n9_ui.h"   // Screen
 
+// Four tracks and four scenes for now (the engine underneath still carries
+// nine and eight; only these are shown and played).
+constexpr uint8_t NT = 4, NS = 4;
+
 struct NavState {
-  uint8_t screen = SCR_GRID;     // the clip grid is home
+  uint8_t screen = SCR_GRID;
 
-  // FX: rows 0 delay params, 1 reverb params, 2 send A, 3 send B;
-  // col 0..3 on the param rows, 0..8 on the send rows (clamped on a row change).
-  uint8_t fxRow = 0, fxCol = 0;
+  uint8_t selTrack = 0;          // the selected track (B+A+LEFT/RIGHT, wraps);
+                                 // MIDI, overdub and INST act on it
 
-  uint8_t mixSel = 2;            // mixer strip
+  // GRID: row 0 is the status bar (its cell in statusSel), rows 1..4 the
+  // clip grid (gridT = column = track, gridS = scene).
+  uint8_t gridRow = 1, gridT = 0, gridS = 0, statusSel = 4;
 
-  // MOD: rows 0..3 the sources, 4 the parameter cells (col 0..3). The cells
-  // edit the source row last stood on (modSrc).
-  uint8_t modRow = 0, modCell = 3, modSrc = 0;
+  // NOTE: the bar page shown, the cursor cell (step within the bar, pitch),
+  // the 13-row pitch window (top = EDIT_TOP_PITCH + 12 * noteOct), and the
+  // selection: a bit per clip note, plus the B-drag box while it's open.
+  uint8_t notePage = 0, noteStep = 0;
+  uint8_t notePitch = 60;
+  int8_t noteOct = 0;
+  uint32_t sel[4] = {0, 0, 0, 0};      // selected notes of the shown clip
+  bool boxOpen = false;                // B dragging a selection box
+  uint8_t boxStep0 = 0, boxPitch0 = 0; // its anchor (absolute step, pitch)
+  uint8_t boxStep1 = 0, boxPitch1 = 0; // its moving corner
 
-  // INST: row 0 holds two cells — the engine selector (instTop 0, left,
-  // a quarter of the row) and the preset cell (1, engines with banks) —
-  // rows 1..2 the parameter cells (col 0..3).
-  uint8_t instRow = 0, instCol = 0, instTop = 0;
+  // INST: page 0 SYN, 1 MOD, 2 FX; cursor row 0 = the synth selector, rows
+  // 1..2 the page's two knob rows (col 0..3); the status bar is row 3.
+  uint8_t instPage = 0, instRow = 0, instCol = 0;
 
-  // TFX: rows 0/1 the two slot selectors, rows 2/3 the eight cells of the
-  // slot last stood on (tfxSlot); MFX: row 0 the selector, 1/2 its cells.
-  uint8_t tfxRow = 0, tfxCol = 0, tfxSlot = 0;
-  uint8_t mfxRow = 0, mfxCol = 0;
+  bool menu = false;             // past the grid's left/right edge: the menu
+  uint8_t menuSel = 0;
+  uint8_t menuCardCol = 0;
 
-  uint8_t gridT = 2, gridS = 1;  // clip grid cursor: its track is the selected
-                                 // track; row 8 is the stop-button row
-
-  // Piano roll cursor: the bar page shown, the step within it, and the
-  // cursor's absolute pitch; the 13-row window slides by octaves (editOct).
-  uint8_t editPage = 0, editStep = 8;
-  uint8_t editPitch = 60;
-  int8_t editOct = 0;                  // window top = 60 + 12 * editOct
-  bool scaleShow = false;              // B held on the grid: the key/scale overlay
-
-  // A SHIFT tap (pressed and let go alone) moves the cursor between the
-  // screen's content and the status row; cells there: 0 scene, 1 clock,
-  // 2 tempo, 3 the action button.
-  bool statusFocus = false;
-  uint8_t statusSel = 0;
-
-  bool menu = false;                   // past the left edge: the menu
-  uint8_t menuSel = 0;                 // its item: cards 0-11, the list 12-15
-  uint8_t menuCardCol = 0;             // the card column last stood on (UP from the list returns to it)
-
-  // An arrow held past an edge: its line shows on that edge (light its first
-  // 50 ms, then grey, L7's grammar) and the switch fires when it's let go,
-  // or after 600 ms held. 0: none pending.
+  // An arrow held past an edge: its line shows on that edge and the switch
+  // fires on release or after 600 ms held (L7's grammar). 0: none pending.
   uint8_t edgePending = 0;
   uint32_t edgeAt = 0;
 };
 
 extern NavState nav;
-inline uint8_t &curEngine();   // defined below NavState
 
-// The grid cursor's scene (the editor's, the status row's): the stop row
-// counts as the last scene for everything that needs a clip.
-inline uint8_t gridScene() { return nav.gridS > 7 ? 7 : nav.gridS; }
+// The status bar's cells (GRID's top row, INST's bottom).
+enum { ST_TAP, ST_TEMPO, ST_METRO, ST_OD, ST_PLAY, ST_KEY, ST_COUNT };
 
-// The engine lineup (user-trimmed 2026-10-13): Prophet-5, 303, Juno, then
-// every Mutable Instruments model as its own engine (n9_mi.h). The M1 and
-// Microwave emulations are parked (code kept, selector entries gone) until
-// their real sample/wavetable data is in.
+// Transport extras.
+extern bool overdubOn;           // B+PLAY (or the status bar): MIDI records
+extern bool metroOn;             // the status bar's metronome
+
+// The engine lineup (the selector on INST's top row).
 constexpr uint8_t E_PRO5 = 0, E_303 = 1, E_JUNO = 2, E_MI_FIRST = 3;
-constexpr uint8_t E_GM = 27;         // General MIDI, after the Mutable models
-constexpr uint8_t E_GMDRUM = 28;     // the GM drum kit (SC-88 samples, GM drum map)
-constexpr uint8_t E_DM = 29;         // DRUMS: synthesized 606/707/808/909
+constexpr uint8_t E_GM = 27;
+constexpr uint8_t E_GMDRUM = 28;
+constexpr uint8_t E_DM = 29;
+constexpr uint8_t E_M1 = 253, E_MWAVE = 254;   // parked (code kept, no selector entry)
 constexpr uint8_t ENGINE_COUNT = 3 + 24 + 3;
 const char *engineName(uint8_t e);   // n9_synth.cpp
 
-// The GM engine's program per track (0-127, n9_gm_bank.h): the INST preset
-// cell steps it, MIDI program change sets the selected track's.
 extern uint8_t gmProgram[9];
-// The DRUMS engine's machine per track: 0 606, 1 707, 2 808, 3 909.
 extern uint8_t drumMachine[9];
 
-// The INST screen's eight parameter cells, live per engine (0-99); names and
-// defaults per engine kind (n9_synth.cpp). A "-" name is an empty cell.
 struct ParamInfo { const char *name; uint8_t def; };
 const ParamInfo *engineParams(uint8_t e);
-
-// Per track: its engine and, per engine, its eight cells (edits are kept
-// when stepping engines or tracks). The selected track (the grid cursor)
-// is what MIDI, the sequencer and the INST/MOD/TFX screens act on.
 extern uint8_t trackEngine[9];
-void paramsInit();             // every track's cells to their engine defaults (n9_synth.cpp)
-extern uint8_t engParams[9][ENGINE_COUNT][8];
-// Parked engines: sentinel ids no selector position reaches.
-constexpr uint8_t E_MWAVE = 254, E_M1 = 253;
+void paramsInit();
 
-inline uint8_t &curEngine() { return trackEngine[nav.gridT]; }
-inline uint8_t *curParams(uint8_t engine) { return engParams[nav.gridT][engine]; }
+// The per-engine source cells (SYN row 1 edits cells 0..3 of the current
+// engine; the other four keep their defaults).
+extern uint8_t engParams[9][ENGINE_COUNT][8];
+
+// The INST layer on top of every pool voice: a state-variable filter
+// (type 0 LP, 1 HP, 2 BP), the MOD ADSR (volume, and the cutoff by fenv),
+// and one LFO per track.
+enum : uint8_t { LFO_SINE, LFO_NOISE, LFO_SQUARE, LFO_UP, LFO_DOWN, LFO_ENV, LFO_SHAPES };
+// LFO destinations, in the spec's order.
+enum : uint8_t { LD_SYN1, LD_SYN2, LD_SYN3, LD_SYN4, LD_CUT, LD_RES, LD_FENV,
+                 LD_VOL, LD_PAN, LD_AX, LD_AY, LD_AWET, LD_BX, LD_BY, LD_BWET, LD_COUNT };
+struct TrackLayer {
+  uint8_t cut = 99, res = 10, ftype = 0, fenv = 50;   // filter (fenv 50 = none)
+  uint8_t a = 0, d = 50, s = 99, r = 40;              // the MOD ADSR
+  uint8_t lfoRate = 40, lfoAmt = 0, lfoShape = 0, lfoDest = 0;
+};
+extern TrackLayer trackL[9];
+void trackLayerInit();
+
+// The LFO's block-rate value per track (-1..1 scaled by amount), applied
+// where its destination lives; written by the audio interrupt.
+extern volatile float lfoVal[9];
+
+inline uint8_t &curEngine() { return trackEngine[nav.selTrack]; }

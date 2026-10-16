@@ -114,48 +114,7 @@ static int tagI(int x, int y, const char *s, uint16_t bg = INK, uint16_t ink = B
   return w;
 }
 
-// ---- Shared chrome --------------------------------------------------------
-
-// The screen title row (y 0-21): inverted name tag, dim context text after.
-static void title(const char *name, const char *context) {
-  int w = tagI(4, 2, name);
-  if (context) txt(4 + w + 8, 6, context, DIM);
-}
-
-// Status row (y 214-239): screen-stack dots, scene, clock, tempo, action button.
-// With the status row focused (a SHIFT tap, nav.statusFocus) the stood-on
-// cell gets a light frame; B+arrows there edit it (the scene, the tempo).
-static void statusRow(uint8_t screenIx) {
-  char scene[4], clock[16], bpm[8];
-  snprintf(scene, sizeof scene, "%d", gridScene() + 1);
-  uint8_t stp = synth.seqStepN();
-  snprintf(clock, sizeof clock, "%u.%u.%u", synth.seqBarN() + 1, stp / 4 + 1, stp % 4 + 1);
-  snprintf(bpm, sizeof bpm, "%d.0", (int)(synth.seqBpm() + 0.5f));
-  for (int k = 0; k < SCR_COUNT; k++) rct(4, 215 + k * 3, 2, 2, k == screenIx ? ACCENT : DARK);
-  int w = tagI(12, 218, "SCN");
-  txt(12 + w + 4, 222, scene, LIGHT);
-  // Play icon + clock, roughly centred as L7's clock cell.
-  const int px0 = 128, py0 = 218, hh[5] = {10, 8, 6, 4, 2};
-  for (int i = 0; i < 5; i++) rct(px0 + i * 2, py0 + (10 - hh[i]) / 2, 2, hh[i], synth.seqOn() ? ACCENT : DIM);
-  txt(px0 + 14, 218, clock, LIGHT);
-  int bx = 292 - txtW(bpm) - txtW("BPM") - 12;
-  txt(bx, 222, bpm, DIM);
-  tagI(292 - txtW("BPM") - 8, 218, "BPM");
-  // Action button: accent, left corners cut, a plus for now.
-  rct(294, 214, 26, 26, ACCENT);
-  rct(294, 214, PX, PX, BG); rct(294, 238, PX, PX, BG);
-  rct(304, 222, 6, 2, BG); rct(306, 220, 2, 6, BG);
-  if (nav.statusFocus) {
-    int cx, cw;
-    switch (nav.statusSel) {
-      case 0:  cx = 8;   cw = 12 + w + 4 + txtW(scene) + 6 - 8; break;
-      case 1:  cx = 122; cw = px0 + 14 + txtW(clock) + 6 - 122; break;
-      case 2:  cx = bx - 6; cw = 292 - bx + 8; break;
-      default: cx = 294; cw = 26; break;
-    }
-    frm(cx, 214, cw, 26, LIGHT);
-  }
-}
+// ---- Shared chrome ----------------------------------------------------------
 
 // A parameter cell: name dim, value white, amount bar under (amt < 0: none);
 // selected = frame + dark ground.
@@ -169,332 +128,218 @@ static void paramCell(int x, int y, int w, int h, const char *name, const char *
   }
 }
 
-// ---- 2 · Send effects -------------------------------------------
+static const char *const FTYPE_NAMES[3] = {"LP", "HP", "BP"};
+static const char *const SHAPE_NAMES[LFO_SHAPES] = {"SIN", "NSE", "SQR", "UP", "DWN", "ENV"};
+static const char *const DEST_NAMES[LD_COUNT] = {"S1", "S2", "S3", "S4", "CUT", "RES", "ENV",
+                                                 "VOL", "PAN", "AX", "AY", "AW", "BX", "BY", "BW"};
 
-static void sendRow(int y, const char *label, const float *levels, int selTrack) {
-  txt(4, y + 8, label, DIM);
-  for (int t = 0; t < 9; t++) {
-    int x = 64 + t * 28, bh = rnd(18 * levels[t]);
-    bool sel = t == selTrack;
-    frm(x, y, 20, 22, sel ? LIGHT : DARK);
-    rct(x + 4, y + 18 - bh, 12, bh + 2 - PX, sel ? ACCENT : (levels[t] > 0 ? LIGHT : DARK));
-  }
-}
-
-static void drawFx() {
-  title("FX", "SENDS");
-  struct { const char *n, *v; float a; } d[] = {{"TIME", "3/16", 0.45f}, {"FDBK", "52", 0.52f}, {"HP", "160", 0.25f}, {"MIX", "100", 1.0f}},
-                                         r[] = {{"SIZE", "72", 0.72f}, {"DAMP", "45", 0.45f}, {"PRE", "20", 0.2f}, {"MIX", "100", 1.0f}};
-  txt(6, 26, "DELAY", LIGHT);
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 38, 76, 42, d[i].n, d[i].v, d[i].a, nav.fxRow == 0 && nav.fxCol == i);
-  txt(6, 88, "REVERB", LIGHT);
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 100, 76, 42, r[i].n, r[i].v, r[i].a, nav.fxRow == 1 && nav.fxCol == i);
-  txt(6, 150, "SENDS", LIGHT);
-  const float a[9] = {0.3f, 0, 0.7f, 0.2f, 0, 0.5f, 0.1f, 0, 0},
-              b[9] = {0.5f, 0.2f, 0.4f, 0, 0.6f, 0.3f, 0, 0.2f, 0};
-  sendRow(162, "A DEL", a, nav.fxRow == 2 ? nav.fxCol : -1);
-  sendRow(188, "B REV", b, nav.fxRow == 3 ? nav.fxCol : -1);
-}
-
-// ---- 3 · Mixer -------------------------------------------------------------
-
-static void drawMix() {
-  title("MIX", "A = MUTE");
-  for (int t = 0; t < 10; t++) {
-    bool master = t == 9;
-    int x = t * 32;
-    bool sel = nav.mixSel == t;
-    if (sel) { rct(x, 24, 30, 186, DARK); frm(x, 24, 30, 186, LIGHT); }
-    uint16_t ground = sel ? BG : DARK;
-    rct(x + 3, 32, 24, 2, ground);                 // pan line (the master has none)
-    if (!master) rct(x + 13 + ((trackPan[t] - 50) * 9) / 50, 30, 4, 6, trackMute[t] ? DIM : LIGHT);
-    const int fy = 44, fh = 136;
-    rct(x + 5, fy, 8, fh, ground);                 // volume
-    uint8_t vol = master ? masterVol : trackVol[t];
-    int lh = fh * vol / 99;
-    rct(x + 5, fy + fh - lh, 8, lh, (!master && trackMute[t]) ? DIM : LIGHT);
-    if (master) {                                  // stereo meter pair
-      rct(x + 17, fy, 4, fh, ground); rct(x + 23, fy, 4, fh, ground);
-      int mhL = fh * synth.masterPeakL() / 255, mhR = fh * synth.masterPeakR() / 255;
-      if (mhL) rct(x + 17, fy + fh - mhL, 4, mhL, INK);
-      if (mhR) rct(x + 23, fy + fh - mhR, 4, mhR, INK);
-    } else {
-      rct(x + 19, fy, 4, fh, ground);
-      int mh = fh * synth.trackPeak(t) / 255;
-      if (mh) rct(x + 19, fy + fh - mh, 4, mh, INK);
+// The status bar: six cells, GRID's top row and INST's bottom. sel: the
+// stood-on cell (-1: the cursor is elsewhere).
+static const int ST_X[7] = {0, 44, 108, 152, 192, 236, 320};
+static void statusBar(int y, int sel) {
+  char buf[16];
+  for (int c = 0; c < ST_COUNT; c++) {
+    int x = ST_X[c], w = ST_X[c + 1] - x;
+    const char *txt1 = "";
+    uint16_t ink = DIM;
+    switch (c) {
+      case ST_TAP:   txt1 = "TAP"; ink = LIGHT; break;
+      case ST_TEMPO: snprintf(buf, sizeof buf, "%d", (int)(synth.seqBpm() + 0.5f)); txt1 = buf; ink = INK; break;
+      case ST_METRO: txt1 = "MET"; ink = metroOn ? ACCENT : DIM; break;
+      case ST_OD:    txt1 = "OD"; ink = overdubOn ? ACCENT : DIM; break;
+      case ST_PLAY:  txt1 = ""; break;
+      case ST_KEY:   snprintf(buf, sizeof buf, "%s %s", KEY_NAMES[projKey], SCALE_NAMES[projScale]); txt1 = buf; ink = LIGHT; break;
     }
-    int bx = x + 9, by = 188;                      // badge
-    char num[2] = {master ? 'M' : (char)('1' + t), 0};
-    if (!master && trackMute[t]) { frm(bx, by, 13, 17, DIM); txt(bx + 4, by + 4, num, DIM); }
-    else { rct(bx, by, 13, 17, ACCENT); txt(bx + 4, by + 4, num, BG); }
+    if (c == ST_PLAY) {                          // the play triangle
+      uint16_t pc = synth.seqOn() ? ACCENT : DIM;
+      int cx = x + w / 2 - 4, cy = y + 7;
+      for (int k = 0; k < 6; k++) rct(cx + k, cy + k / 2, 1, 12 - k, pc);
+    } else {
+      txt(x + (w - txtW(txt1)) / 2, y + 8, txt1, ink);
+    }
+    if (sel == c) frm(x + 2, y + 2, w - 4, 22, INK);
   }
 }
 
-// ---- 4 · Track modulation ---------------------------------------------------
-// Four selectable sources per track, two destination slots each.
+static int clampP(int p) { p -= 24; return p < 0 ? 0 : p > 72 ? 72 : p; }
 
-static void drawMod() {
-  char ctx[24];
-  snprintf(ctx, sizeof ctx, "TRACK %d  %s", nav.gridT + 1, engineName(curEngine()));
-  title("MOD", ctx);
-  static const char *const SRC_NAMES[4] = {"LFO1", "LFO2", "ENV", "VEL"};
-  struct { const char *src, *d1, *a1, *d2, *a2; } rows[] = {
-      {"1 LFO1", "CUTOFF", "+42", "PITCH", "-12"},
-      {"2 LFO2", "SHAPE", "+20", "-", ""},
-      {"3 ENV", "LEVEL", "+64", "RES", "+8"},
-      {"4 VEL", "LEVEL", "+50", "-", ""},
-  };
-  for (int i = 0; i < 4; i++) {
-    int y = 26 + i * 17;
-    bool sel = nav.modRow == i;
-    if (sel) { rct(4, y, 312, 16, DARK); frm(4, y, 312, 16, LIGHT); }
-    txt(10, y + 3, rows[i].src, sel ? INK : DIM);
-    txt(80, y + 3, rows[i].d1, sel ? LIGHT : DIM);
-    txt(146, y + 3, rows[i].a1, sel ? ACCENT : DIM);
-    txt(200, y + 3, rows[i].d2, sel ? LIGHT : DIM);
-    txt(266, y + 3, rows[i].a2, sel ? ACCENT : DIM);
-  }
-  txt(6, 98, SRC_NAMES[nav.modSrc], LIGHT);
-  struct { const char *n, *v; float a; } p[] = {{"SHAPE", "TRI", -1}, {"RATE", "1/8", 0.4f}, {"SYNC", "ON", -1}, {"DEPTH", "+42", 0.66f}};
-  for (int i = 0; i < 4; i++) paramCell(4 + i * 79, 110, 76, 42, p[i].n, p[i].v, p[i].a, nav.modRow == 4 && nav.modCell == i);
-  // LFO shape preview: a triangle wave in the accent colour.
-  frm(4, 158, 180, 48, DARK);
-  rct(8, 181, 172, 2, DARK);
-  for (int i = 0; i < 86; i++) {
-    float ph = (i % 43) / 43.0f, v = ph < 0.5f ? ph * 2 : 2 - ph * 2;
-    rct(8 + i * 2, 198 - rnd(v * 16) * 2, 2, 2, ACCENT);
-  }
-  txt(196, 164, "RETRIG ON", DIM);
-  txt(196, 178, "FADE 0", DIM);
-  txt(196, 192, "MODE FREE", DIM);
-}
-
-// ---- 5 · Track FX -----------------------------------------------------------
-// Two selectable FX slots per track; the types and values are mock.
-
-static void fxSelectorRow(int y, char label, const FxSlot &sl, bool selFrame, bool marker) {
-  if (marker) rct(0, y + 8, 2, 6, ACCENT);         // whose cells are shown below
-  if (selFrame) frm(4, y, 312, 22, LIGHT);
-  char lb[2] = {label, 0};
-  txt(8, y + 6, lb, DIM);
-  txt(20, y + 6, "<", DIM);
-  txt(32, y + 6, FX_TYPE_NAMES[sl.type], sl.type ? INK : DIM);
-  txt(32 + txtW(FX_TYPE_NAMES[sl.type]) + 10, y + 6, ">", DIM);
-  if (fxIsSend(sl.type)) txt(272, y + 6, "SEND", DIM);
-}
-
-static void fxCells(int y0, const FxSlot &sl, bool asSend, int rowBase, uint8_t row, uint8_t col) {
-  const ParamInfo *fp = fxParams(sl.type, asSend);
-  for (int i = 0; i < 8; i++) {
-    int rr = i / 4, cc = i % 4;
-    char val[8];
-    bool empty = fp[i].name[0] == '-';
-    uint8_t v = (asSend && i < 7) ? sendFx[fxSendIndex(sl.type)].p[i] : sl.p[i];
-    if (!empty) snprintf(val, sizeof val, "%d", v);
-    paramCell(4 + cc * 79, y0 + rr * 46, 76, 42, fp[i].name, empty ? "" : val,
-              empty ? -1.0f : v / 99.0f, (int)row == rowBase + rr && col == cc);
-  }
-}
-
-static void drawTfx() {
-  char ctx[12];
-  snprintf(ctx, sizeof ctx, "TRACK %d", nav.gridT + 1);
-  title("TFX", ctx);
-  fxSelectorRow(26, '1', trackFx[nav.gridT][0], nav.tfxRow == 0, nav.tfxSlot == 0);
-  fxSelectorRow(52, '2', trackFx[nav.gridT][1], nav.tfxRow == 1, nav.tfxSlot == 1);
-  const FxSlot &sl = trackFx[nav.gridT][nav.tfxSlot];
-  fxCells(80, sl, fxIsSend(sl.type), 2, nav.tfxRow, nav.tfxCol);
-}
-
-static void drawMfx() {
-  title("MFX", "MASTER, THEN VOLUME + CLIP");
-  fxSelectorRow(26, 'M', masterFx, nav.mfxRow == 0, false);
-  fxCells(54, masterFx, false, 1, nav.mfxRow, nav.mfxCol);
-}
-
-// ---- 6 · Track instrument ---------------------------------------------------
-
-static void drawInst() {
-  char ctx[12], cnt[8];
-  snprintf(ctx, sizeof ctx, "TRACK %d", nav.gridT + 1);
-  title("INST", ctx);
-  const char *name = engineName(curEngine());
-  (void)cnt;
-  // The engine selector (left, a quarter of the row) and the preset cell
-  // (engines with banks; the rest of the row). B + LEFT/RIGHT steps
-  // whichever is selected; the frames reach two blocks below the row.
-  if (nav.instRow == 0) frm(nav.instTop == 0 ? 4 : 112, 26, nav.instTop == 0 ? 104 : 204, 22, LIGHT);
-  txt(8, 32, "<", DIM);
-  txt(20, 32, name, INK);
-  txt(20 + txtW(name) + 6, 32, ">", DIM);
-  if (curEngine() == E_GM) {                     // the preset cell: GM's 128 programs
-    char pn[20];
-    snprintf(pn, sizeof pn, "%03d %s", gmProgram[nav.gridT] + 1, GM_NAMES[gmProgram[nav.gridT] & 127]);
-    txt(118, 32, pn, INK);
-  } else if (curEngine() == E_DM) {              // DRUMS: the machine
-    static const char *const MACH[4] = {"606", "707", "808", "909"};
-    txt(118, 32, MACH[drumMachine[nav.gridT] & 3], INK);
-  } else if (curEngine() == E_GMDRUM) {
-    txt(118, 32, "STANDARD KIT", DIM);
-  } else {
-    txt(118, 32, "-", DIM);                      // (the other engines: no banks yet)
-  }
-  rct(4, 50, 312, 2, DARK);
-  const ParamInfo *pi = engineParams(curEngine());
-  for (int i = 0; i < 8; i++) {
-    int row = i / 4, col = i % 4;
-    char val[8];
-    bool empty = pi[i].name[0] == '-';
-    if (!empty) snprintf(val, sizeof val, "%d", engParams[nav.gridT][curEngine()][i]);
-    paramCell(4 + col * 79, 54 + row * 48, 76, 44, pi[i].name, empty ? "" : val,
-              empty ? -1.0f : engParams[nav.gridT][curEngine()][i] / 99.0f,
-              nav.instRow == row + 1 && nav.instCol == col);
-  }
-  // ADSR preview in the accent colour.
-  frm(4, 152, 180, 54, DARK);
-  const int base = 198, top = 160;
-  for (int i = 0; i < 8; i++)  rct(8 + i * 2, base - rnd(i / 8.0f * (base - top)), 2, 2, ACCENT);          // attack
-  for (int i = 0; i < 24; i++) rct(24 + i * 2, top + rnd(i / 24.0f * 16), 2, 2, ACCENT);                   // decay
-  rct(72, top + 16, 60, 2, ACCENT);                                                                        // sustain
-  for (int i = 0; i < 22; i++) rct(132 + i * 2, top + 16 + rnd(i / 22.0f * (base - top - 16)), 2, 2, ACCENT); // release
-  txt(196, 160, "VOICES 32", DIM);
-  txt(196, 174, "MIDI CH 1", DIM);
-  txt(196, 188, "OUT A+B", DIM);
-}
-
-// ---- 7 · Clip grid ----------------------------------------------------------
+// ---- GRID --------------------------------------------------------------------
 
 static void drawGrid() {
-  // No title tag: the header row is the tracks; the dot column places the screen.
-  // Cells: playing = accent fill, pending (launch or stop, taken on the next
-  // bar line) = dark accent fill, a clip at rest = light fill, empty = a dark
-  // frame. Under the eight scene rows, the stop row: a small square a track,
-  // lit while the track plays, accented while its stop waits for the bar.
-  const int SEL_T = nav.gridT;
-  bool playing = synth.seqOn();
-  for (int t = 0; t < 9; t++) {
-    int x = 16 + t * 33 + 9;
-    char num[2] = {(char)('1' + t), 0};
-    bool any = false;
-    for (int s2 = 0; s2 < 8; s2++) any |= clips[t][s2].used != 0;
-    if (playing && clipPlaying[t] >= 0) { rct(x, 2, 13, 17, ACCENT); txt(x + 4, 6, num, BG); }
-    else txt(x + 4, 6, num, any ? DIM : DARK);
-    if (t == SEL_T) frm(x - 2, 0, 17, 21, LIGHT);
-  }
-  rct(0, 22, 320, 2, DARK);
-  if (nav.scaleShow) {                           // B held: the project's key and scale
-    char ks[20];
-    snprintf(ks, sizeof ks, "%s %s", KEY_NAMES[projKey], SCALE_NAMES[projScale]);
-    tagI((320 - (txtW(ks) + 8)) / 2, 2, ks);
-  }
-  for (int sc = 0; sc < 8; sc++) {
-    int y = 27 + sc * 21;
-    char num[2] = {(char)('1' + sc), 0};
-    txt(4, y + 4, num, DIM);
-    for (int t = 0; t < 9; t++) {
-      int x = 16 + t * 33;
+  statusBar(0, nav.gridRow == 0 ? nav.statusSel : -1);
+  rct(2 + nav.selTrack * 80, 27, 76, 2, ACCENT);   // the selected track
+  for (int t = 0; t < NT; t++)
+    for (int sc = 0; sc < NS; sc++) {
+      int x = 2 + t * 80, y = 31 + sc * 52;
       const Clip &c = clips[t][sc];
-      bool isPlaying = playing && clipPlaying[t] == sc;
-      bool isPending = clipPending[t] == sc;
-      if (isPending) rct(x + 2, y, 29, 17, ACCENT_DARK);
-      else if (isPlaying) rct(x + 2, y, 29, 17, ACCENT);
-      else if (c.used) rct(x + 2, y, 29, 17, LIGHT);
-      else frm(x + 2, y, 29, 17, DARK);
-      if (c.used && !c.count)                    // an empty clip: hollow middle
-        rct(x + 2 + PX, y + PX, 29 - 2 * PX, 17 - 2 * PX, isPending ? ACCENT_DARK : isPlaying ? ACCENT : BG);
-      if (t == nav.gridT && sc == nav.gridS) frm(x, y - 2, 33, 21, INK);
+      bool armed = clipPlaying[t] == sc;
+      bool playing = armed && synth.seqOn();
+      uint16_t f = playing ? ACCENT : armed ? ACCENT_DARK : c.count ? LIGHT : DARK;
+      frm(x, y, 76, 48, f);
+      // the notes, tiny
+      int span = c.bars * 16;
+      for (uint8_t i = 0; i < c.count; i++) {
+        const ClipNote &n = c.notes[i];
+        int nx = x + 3 + n.start * 70 / span;
+        int nw = n.len * 70 / span; if (nw < 2) nw = 2;
+        int ny = y + 42 - clampP(n.pitch) * 38 / 72;
+        rct(nx, ny, nw, 2, n.vel ? LIGHT : DIM);
+      }
+      if (playing) {                             // the playhead
+        int lp = (int)synth.clipLocalStep(t);
+        if (lp >= 0) rct(x + 3 + lp * 70 / span, y + 3, 2, 42, ACCENT);
+      }
+      char bl[4];
+      snprintf(bl, sizeof bl, c.barsFixed ? "%d" : "A", c.bars);
+      txt(x + 70 - txtW(bl), y + 4, bl, c.barsFixed ? LIGHT : DARK);
+      if (nav.gridRow > 0 && nav.gridT == t && nav.gridS == sc) frm(x - 2, y - 2, 80, 52, INK);
     }
-  }
-  const int sy = 197;                            // the stop row
-  for (int t = 0; t < 9; t++) {
-    int x = 16 + t * 33;
-    bool active = playing && clipPlaying[t] >= 0;
-    bool stopping = clipPending[t] == CLIP_STOP;
-    frm(x + 2, sy, 29, 12, DARK);
-    rct(x + 2 + 12, sy + 3, 6, 6, stopping ? ACCENT : active ? LIGHT : DIM);
-    if (t == nav.gridT && nav.gridS == 8) frm(x, sy - 2, 33, 16, INK);
-  }
 }
 
-// ---- 8 · Clip editor --------------------------------------------------------
+// ---- NOTE (the piano roll) ---------------------------------------------------
 
-static bool inLoopRange(int b, int clipBars, int loopStart, int loopLen) {
-  for (int k = 0; k < loopLen; k++) if ((loopStart + k) % clipBars == b) return true;
-  return false;
+static void dotFrame(int x, int y, int w, int h, uint16_t c) {
+  for (int i = 0; i < w; i += 4) { rct(x + i, y, 2, 2, c); rct(x + i, y + h - 2, 2, 2, c); }
+  for (int i = 0; i < h; i += 4) { rct(x, y + i, 2, 2, c); rct(x + w - 2, y + i, 2, 2, c); }
 }
 
-static void drawEdit() {
-  char ctx[8];
-  snprintf(ctx, sizeof ctx, "T%d S%d", nav.gridT + 1, gridScene() + 1);
-  title("EDIT", ctx);
-  const Clip &c = clipAt(nav.gridT, gridScene());
-  // Bar strip: the clip's bars filled, the shown page framed white, the
-  // playing bar's slot underlined in accent; the brace spans the loop
-  // (the whole clip for now).
-  uint16_t localPlay = 0;
-  bool playingHere = synth.seqOn();
-  if (playingHere) localPlay = (uint16_t)(((uint32_t)synth.seqBarN() * 16 + synth.seqStepN()) % (c.bars * 16));
-  for (int b = 0; b < 16; b++) {
-    int x = 76 + b * 14;
-    if (b < c.bars) {
-      rct(x, 8, 12, 10, LIGHT);
-      rct(x, 4, b + 1 < c.bars ? 14 : 12, 2, ACCENT);        // the loop brace
-      if (playingHere && localPlay / 16 == b) rct(x, 20, 12, 2, ACCENT);
-    } else frm(x, 8, 12, 10, DARK);
+static void drawNote() {
+  const Clip &c = clipAt(nav.gridT, nav.gridS);
+  char hdr[36];
+  uint8_t stp = synth.seqStepN();
+  snprintf(hdr, sizeof hdr, "T%d S%d  BAR %d/%d  %u.%u", nav.selTrack + 1, nav.gridS + 1,
+           nav.notePage + 1, c.bars, synth.seqBarN() + 1, stp / 4 + 1);
+  txt(4, 2, hdr, DIM);
+  const int X0 = 8, SW = 19, Y0 = 16, RH = 17;
+  int top = EDIT_TOP_PITCH + 12 * nav.noteOct;
+  for (int r = 0; r < 13; r++) {                 // rows: the scale shaded
+    int p = top - r, y = Y0 + r * RH;
+    if (!scaleHas((uint8_t)p)) continue;
+    rct(X0, y, 16 * SW, RH - 1, p % 12 == projKey ? DARK : BG);
+    if (p % 12 == projKey) {}
+    else frm(X0, y, 16 * SW, RH - 1, 0x0841);    // a whisper of a row
   }
-  frm(76 + nav.editPage * 14 - 2, 6, 16, 14, INK);
-  const int ROWS = 13, rowH = 12, top = 24, left = 14, stepW = 19;
-  const int topPitch = EDIT_TOP_PITCH + 12 * nav.editOct;
-  // Pitches top to bottom, chromatic, the window top an octave multiple of
-  // C4. The strip marks the project's scale: in-scale rows wide and dim,
-  // the rest short and dark; a dark line above each C row.
-  for (int r = 0; r < ROWS; r++) {
-    int y = top + r * rowH;
-    if (scaleHas((uint8_t)(topPitch - r))) rct(0, y + 1, 10, rowH - 2, DIM);
-    else rct(0, y + 1, 6, rowH - 2, DARK);
-    if ((topPitch - r) % 12 == 0) rct(0, y - 1, 320, 2, DARK);
-  }
-  rct(0, top + ROWS * rowH, 320, 2, DARK);
-  for (int s = 0; s <= 16; s += 4) rct(left + s * stepW, top, 2, ROWS * rowH, DARK);   // beat lines
-  // The note under the cursor is the selected one; on an empty cell the
-  // cursor itself shows as a frame. Notes are windowed to the page and the
-  // octave view (a note running past the page edge is drawn to the edge).
-  int curAbs = nav.editPage * 16 + nav.editStep;
-  int SEL = clipFindAt(c, nav.editPitch, (uint8_t)curAbs);
-  int pageStart = nav.editPage * 16;
-  for (int i = 0; i < c.count; i++) {
+  for (int sgrid = 0; sgrid <= 16; sgrid += 4)   // beat lines
+    rct(X0 + sgrid * SW, Y0, 1, 13 * RH, DARK);
+  // the notes of this page
+  for (uint8_t i = 0; i < c.count; i++) {
     const ClipNote &n = c.notes[i];
-    int row = topPitch - n.pitch;
-    if (row < 0 || row >= ROWS) continue;
-    int s0 = n.start - pageStart, s1 = s0 + n.len;
+    int s0 = (int)n.start - nav.notePage * 16;
+    int s1 = s0 + n.len;
     if (s1 <= 0 || s0 >= 16) continue;
-    int d0 = s0 < 0 ? 0 : s0, d1 = s1 > 16 ? 16 : s1;
-    int x = left + d0 * stepW + 2, y = top + row * rowH + 2;
-    rct(x, y, (d1 - d0) * stepW - 4, rowH - 4, i == SEL ? INK : LIGHT);
-    if (i == SEL) frm(x - 2, y - 2, (d1 - d0) * stepW, rowH, ACCENT);
+    int r = top - n.pitch;
+    if (r < 0 || r > 12) continue;
+    int xa = X0 + (s0 < 0 ? 0 : s0) * SW, xb = X0 + (s1 > 16 ? 16 : s1) * SW;
+    bool selN = nav.sel[i >> 5] & (1u << (i & 31));
+    uint16_t ink = selN ? ACCENT : n.vel ? LIGHT : DIM;
+    rct(xa + 1, Y0 + r * RH + 3, xb - xa - 2, RH - 7, ink);
   }
-  int curRow = topPitch - nav.editPitch;
-  if (SEL < 0 && curRow >= 0 && curRow < ROWS)
-    frm(left + nav.editStep * stepW, top + curRow * rowH, stepW, rowH, INK);
-  if (playingHere && localPlay / 16 == nav.editPage)
-    rct(left + (localPlay % 16) * stepW, top - 2, 2, ROWS * rowH + 4, ACCENT);   // playhead
-  int vy = top + ROWS * rowH + 6;                               // velocity lane
-  txt(2, vy + 6, "V", DIM);
-  for (int i = 0; i < c.count; i++) {
-    int s0 = c.notes[i].start - pageStart;
-    if (s0 < 0 || s0 >= 16) continue;
-    int bh = rnd(20.0f * c.notes[i].vel / 127.0f);
-    rct(left + s0 * stepW + 2, vy + 22 - bh, 8, bh, i == SEL ? INK : DIM);
+  // playhead
+  if (clipPlaying[nav.gridT] == (int8_t)nav.gridS && synth.seqOn()) {
+    int lp = (int)synth.clipLocalStep(nav.gridT);
+    if (lp >= 0 && lp / 16 == nav.notePage)
+      rct(X0 + (lp % 16) * SW, Y0, 2, 13 * RH, ACCENT);
+  }
+  // cursor + the selection box
+  int cr = top - nav.notePitch;
+  if (cr >= 0 && cr <= 12)
+    frm(X0 + nav.noteStep * SW, Y0 + cr * RH, SW, RH - 1, INK);
+  if (nav.boxOpen) {
+    int a0 = (int)(nav.boxStep0 < nav.boxStep1 ? nav.boxStep0 : nav.boxStep1) - nav.notePage * 16;
+    int a1 = (int)(nav.boxStep0 < nav.boxStep1 ? nav.boxStep1 : nav.boxStep0) - nav.notePage * 16;
+    int pTop = nav.boxPitch0 > nav.boxPitch1 ? nav.boxPitch0 : nav.boxPitch1;
+    int pBot = nav.boxPitch0 > nav.boxPitch1 ? nav.boxPitch1 : nav.boxPitch0;
+    int r0 = top - pTop, r1 = top - pBot;
+    if (a0 < 0) a0 = 0; if (a1 > 15) a1 = 15;
+    if (r0 < 0) r0 = 0; if (r1 > 12) r1 = 12;
+    if (a0 <= a1 && r0 <= r1)
+      dotFrame(X0 + a0 * SW, Y0 + r0 * RH, (a1 - a0 + 1) * SW, (r1 - r0 + 1) * RH - 1, INK);
   }
 }
 
-// The frame goes out SYNCHRONOUSLY. The DMA path (updateScreenAsync) is dead
-// on this panel: tried twice - at bring-up the first frame stalled with
-// asyncUpdateActive() stuck, and again 2026-10-15, when even a watchdog
-// fallback wedged the app (a stuck transfer poisons the synchronous send
-// too). The frame cost is tamed by the SPI clock instead (the stock
-// firmware runs this panel at 70 MHz; N9 asks for 60).
-static void uiSend() { board.tft().updateScreen(); }
+// ---- INST --------------------------------------------------------------------
+
+static void instCellView(uint8_t pg, uint8_t row, uint8_t col, const char *&name, char *val, size_t vn, float &amt) {
+  uint8_t t = nav.selTrack;
+  const TrackLayer &tl = trackL[t];
+  amt = -1;
+  if (pg == 0) {
+    if (row == 1) {
+      const ParamInfo *pi = engineParams(curEngine());
+      name = pi[col].name;
+      if (name[0] == '-') { val[0] = 0; return; }
+      uint8_t v = engParams[t][curEngine()][col];
+      snprintf(val, vn, "%d", v); amt = v / 99.0f;
+      return;
+    }
+    static const char *const N[4] = {"CUT", "RES", "TYPE", "ENV"};
+    name = N[col];
+    uint8_t v[4] = {tl.cut, tl.res, tl.ftype, tl.fenv};
+    if (col == 2) { snprintf(val, vn, "%s", FTYPE_NAMES[tl.ftype]); return; }
+    snprintf(val, vn, "%d", v[col]); amt = v[col] / 99.0f;
+    return;
+  }
+  if (pg == 1) {
+    if (row == 1) {
+      static const char *const N[4] = {"ATK", "DEC", "SUS", "REL"};
+      name = N[col];
+      uint8_t v[4] = {tl.a, tl.d, tl.s, tl.r};
+      snprintf(val, vn, "%d", v[col]); amt = v[col] / 99.0f;
+      return;
+    }
+    static const char *const N[4] = {"RATE", "AMT", "SHAPE", "DEST"};
+    name = N[col];
+    if (col == 2) { snprintf(val, vn, "%s", SHAPE_NAMES[tl.lfoShape]); return; }
+    if (col == 3) { snprintf(val, vn, "%s", DEST_NAMES[tl.lfoDest]); return; }
+    uint8_t v = col ? tl.lfoAmt : tl.lfoRate;
+    snprintf(val, vn, "%d", v); amt = v / 99.0f;
+    return;
+  }
+  uint8_t slot = row - 1;
+  const FxSlot &sl = trackFx[t][slot];
+  static const char *const N[4] = {"TYPE", "X", "Y", "WET"};
+  name = N[col];
+  if (col == 0) { snprintf(val, vn, "%s", FX_TYPE_NAMES[sl.type]); return; }
+  bool send = fxIsSend(sl.type);
+  uint8_t v = (send && col < 3) ? sendFx[fxSendIndex(sl.type)].p[col - 1] : sl.p[col == 3 ? 7 : col - 1];
+  snprintf(val, vn, "%d", v); amt = v / 99.0f;
+}
+
+static void drawInst() {
+  // the synth selector, above the tabs
+  const char *name = engineName(curEngine());
+  if (nav.instRow == 0) frm(2, 0, 316, 24, INK);
+  txt(8, 8, "<", DIM);
+  txt(20, 8, name, INK);
+  txt(20 + txtW(name) + 6, 8, ">", DIM);
+  if (curEngine() == E_GM) {
+    char pn[20];
+    snprintf(pn, sizeof pn, "%03d %s", gmProgram[nav.selTrack] + 1, GM_NAMES[gmProgram[nav.selTrack] & 127]);
+    txt(314 - txtW(pn), 8, pn, DIM);
+  } else if (curEngine() == E_DM) {
+    static const char *const MACH[4] = {"606", "707", "808", "909"};
+    txt(314 - txtW(MACH[drumMachine[nav.selTrack] & 3]), 8, MACH[drumMachine[nav.selTrack] & 3], DIM);
+  }
+  static const char *const TABS[3] = {"SYN", "MOD", "FX"};
+  int tx = 4;
+  for (int p = 0; p < 3; p++) {
+    if (p == nav.instPage) tx += tagI(tx, 28, TABS[p]) + 8;
+    else { txt(tx + 4, 32, TABS[p], DIM); tx += txtW(TABS[p]) + 16; }
+  }
+  char tnum[8];
+  snprintf(tnum, sizeof tnum, "T%d", nav.selTrack + 1);
+  txt(314 - txtW(tnum), 32, tnum, ACCENT);
+  for (int row = 0; row < 2; row++)
+    for (int col = 0; col < 4; col++) {
+      const char *nm = "";
+      char val[16];
+      float amt;
+      instCellView(nav.instPage, row + 1, col, nm, val, sizeof val, amt);
+      paramCell(4 + col * 79, 52 + row * 56, 76, 50, nm, val, amt,
+                nav.instRow == row + 1 && nav.instCol == col);
+    }
+  statusBar(214, nav.instRow == 3 ? nav.statusSel : -1);
+}
 
 void uiMessage(const char *l1, const char *l2) {
   rct(0, 0, 320, 240, BG);
@@ -519,11 +364,11 @@ static void drawN9Mark(int x, int y, float s, uint16_t c, int shiftN = 0, int sh
     rct(xn + off, y + p, lu(6, s), 1, c);                       // N: left stem,
     rct(xn + lu(15, s), y + p, lu(6, s), 1, c);                 //   middle dead vertical,
     rct(xn + off + lu(16, s), y + p, lu(6, s), 1, c);           //   right stem
-    rct(x9 + off + lu(38, s), y + p, lu(7, s), 1, c);           // 9: its stem,
-    if (p < lu(3, s) || (p >= lu(10, s) && p < lu(13, s)))
-      rct(x9 + off + lu(26, s), y + p, lu(12, s), 1, c);        // bowl top/bottom,
-    else if (p < lu(10, s))
-      rct(x9 + off + lu(26, s), y + p, lu(7, s), 1, c);         // bowl wall
+    rct(x9 + off + lu(38, s), y + p, lu(7, s), 1, c);           // 4: its stem,
+    if (p >= lu(13, s) && p < lu(16, s))
+      rct(x9 + off + lu(24, s), y + p, lu(21, s), 1, c);        // the bar,
+    else if (p < lu(13, s))
+      rct(x9 + off + lu(24, s), y + p, lu(7, s), 1, c);         // the left arm
   }
 }
 
@@ -680,91 +525,24 @@ void uiStorageDraw(uint8_t state, const char *msg) {
   board.tft().updateScreen();
 }
 
-// ---- Splash (L7's ui_splash.cpp, the N9 mark) --------------------------------
-// The logo fades in from black (0-0.5 s) while the N slides in from the left
-// and the 9 from the right (cubic ease-out, in place at 1 s); its colour then
-// goes once round the hues (OKLCH, 0.5-2.5 s, eased in and out); the
-// copyright line fades in and rises 8 px (1.5-2.5 s). The fade out (1 s)
-// starts once the start-up is done and not before 3.5 s; a key pressed during
-// the intro skips to the end. Every frame is drawn whole into the frame
-// buffer and sent (~25 fps), so none of L7's partial-redraw bookkeeping.
-
-// OKLCH to RGB565 (L7's): a chroma out of sRGB's reach comes down to fit.
-FLASHMEM static uint16_t oklch565(float L, float C, float hDeg) {
-  float h = hDeg * (float)M_PI / 180, r = 0, g = 0, b = 0;
-  for (int i = 0; i < 12; i++, C *= 0.9f) {
-    float a = C * cosf(h), bb = C * sinf(h);
-    float l = L + 0.3963377774f * a + 0.2158037573f * bb, m = L - 0.1055613458f * a - 0.0638541728f * bb,
-          s = L - 0.0894841775f * a - 1.2914855480f * bb;
-    l = l * l * l; m = m * m * m; s = s * s * s;
-    r = 4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s;
-    g = -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s;
-    b = -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s;
-    if (r >= -0.001f && r <= 1.001f && g >= -0.001f && g <= 1.001f && b >= -0.001f && b <= 1.001f) break;
-  }
-  auto gamma = [](float c) {
-    c = constrain(c, 0.0f, 1.0f);
-    return (uint8_t)lroundf(255 * (c <= 0.0031308f ? 12.92f * c : 1.055f * powf(c, 1 / 2.4f) - 0.055f));
-  };
-  return rgb565(gamma(r), gamma(g), gamma(b));
-}
-static uint16_t hueCycle(float phase) { return oklch565(0.8238f, 0.1641f, 164.76f + 360 * phase); }
+// ---- Splash: static. Just the N4 mark, no animation (2026-10-16). ----------
 
 static constexpr float SPL_SCALE = 2.5f;
-static constexpr int SPL_W = 145, SPL_H = 65;    // 45 units at 2.5 plus the slant's 32
-static constexpr int SPL_X = (320 - SPL_W) / 2 + 12, SPL_Y = (240 - (SPL_H + 22 + 10)) / 2 + 16;
-static const char SPL_LINE[] = "\xA9 2026 DANIEL STANCIU";
-
-static uint32_t splAt = 0, splOutAt = 0;
-static bool splSkipped = false;
-
-void splashTick() {
-  uint32_t ms = millis() - splAt;
-  uint16_t logo;
-  if (ms < 500) {
-    logo = blend565(LOGO_COLOR, BG, (uint8_t)(255 * ms / 500));
-  } else {
-    float t = min(1.0f, (ms - 500) / 2000.0f), e = t * t * (3 - 2 * t);
-    logo = t >= 1 ? LOGO_COLOR : hueCycle(e);
-  }
-  uint8_t out = !splOutAt ? 255 : (uint8_t)(255 - 255 * min(millis() - splOutAt, 1000ul) / 1000);
-  logo = blend565(logo, BG, out);
-  float left = 1 - min(1.0f, ms / 1000.0f);       // of the slide
-  int shift = (int)lroundf(600 * left * left * left);
-  uint32_t into = ms < 1500 ? 0 : min(ms - 1500, 500ul);
-  uint8_t textOut = !splOutAt ? 255 : (uint8_t)(255 - 255 * min(millis() - splOutAt, 250ul) / 250);
-  uint16_t text = blend565(blend565(SPLASH_TEXT, BG, (uint8_t)(255 * into / 500)), BG, textOut);
-  float rise = 1 - min(1.0f, (ms < 1500 ? 0 : ms - 1500) / 1000.0f);
-  int ty = 214 + (int)lroundf(8 * rise * rise * rise);
-  rct(0, 0, 320, 240, BG);
-  drawN9Mark(SPL_X, SPL_Y, SPL_SCALE, logo, -shift, shift);
-  txt((320 - txtW(SPL_LINE)) / 2, ty, SPL_LINE, text);
-  board.tft().updateScreen();
-}
+static constexpr int SPL_W = 145, SPL_H = 65;
+static constexpr int SPL_X = (320 - SPL_W) / 2 + 12, SPL_Y = (240 - SPL_H) / 2;
 
 void splashShow() {
-  splAt = millis();
-  splOutAt = 0;
-  splSkipped = false;
-  splashTick();
+  rct(0, 0, 320, 240, BG);
+  drawN9Mark(SPL_X, SPL_Y, SPL_SCALE, LOGO_COLOR);
+  board.tft().updateScreen();
 }
+void splashTick() {}
+void splashIntro() {}
+void splashHide() {}
 
-void splashIntro() {                              // the intro played through (2.5 s)
-  while (millis() - splAt < 2500) {
-    if (board.keys()) { splSkipped = true; splAt = millis() - 2500; break; }
-    splashTick();
-    board.chargeGuard();
-  }
-  splashTick();
-}
-
-void splashHide() {                               // waits out 3.5 s (unless skipped), fades
-  while (!splSkipped && millis() - splAt < 3500) { splashTick(); board.chargeGuard(); }
-  splOutAt = millis();
-  while (millis() - splOutAt < 1000) splashTick();
-  splashTick();
-  while (board.keys()) {}                         // a skip's press: not the app's
-}
+// The frame goes out SYNCHRONOUSLY (the DMA path is dead on this panel —
+// see the git history; the SPI clock carries the frame rate instead).
+static void uiSend() { board.tft().updateScreen(); }
 
 // ---- Entry -----------------------------------------------------------------
 
@@ -774,16 +552,10 @@ void drawScreen(uint8_t ix) {
     drawMenuScr();
   } else {
     switch (ix) {
-      case SCR_MFX:  drawMfx();  break;
-      case SCR_FX:   drawFx();   break;
-      case SCR_MIX:  drawMix();  break;
-      case SCR_MOD:  drawMod();  break;
-      case SCR_TFX:  drawTfx();  break;
-      case SCR_INST: drawInst(); break;
       case SCR_GRID: drawGrid(); break;
-      case SCR_EDIT: drawEdit(); break;
+      case SCR_NOTE: drawNote(); break;
+      default:       drawInst(); break;
     }
-    statusRow(ix);
   }
   if (nav.edgePending) {
     // An arrow held off an edge: its line, the edge's whole length, a block

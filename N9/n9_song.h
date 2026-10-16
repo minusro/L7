@@ -16,7 +16,9 @@ constexpr uint8_t EDIT_TOP_PITCH = 60;
 struct ClipNote { uint8_t pitch, vel, start, len; };
 // used: the slot holds a clip (A on an empty slot creates one; it may still
 // have no notes). Adding a note in the editor marks the slot used too.
-struct Clip { uint8_t used; uint8_t count; uint8_t bars = 1; ClipNote notes[CLIP_MAX_NOTES]; };
+// barsFixed: 0 = Auto (bars follow the notes, up to 16), else 1/2/4/8/16
+// (B+UP/DOWN on the grid steps the ladder).
+struct Clip { uint8_t used; uint8_t count; uint8_t bars = 1; uint8_t barsFixed = 0; ClipNote notes[CLIP_MAX_NOTES]; };
 
 // The clips live in RAM2 (DMAMEM: no startup init there - songInit() does it);
 // the sequencer reads them at step rate only, so the slower RAM is free.
@@ -37,9 +39,13 @@ extern volatile int8_t clipPending[9];
 // project came in on the beat).
 extern volatile uint8_t clipFreeze, clipTakeNow;
 
-// SHIFT+A on the grid: a used slot cuts here, an empty one pastes.
+// SHIFT+A on the grid: a non-empty clip cuts here, an empty one pastes.
 extern Clip clipClipboard;
 extern bool clipClipFull;
+
+// SHIFT+A in the editor: the selected notes, starts relative to the first.
+extern ClipNote noteClipboard[CLIP_MAX_NOTES];
+extern uint8_t noteClipCount;
 
 // The project's key (0 = C .. 11 = B) and scale. The piano roll only
 // navigates in-scale rows and MIDI input snaps to the scale; notes already

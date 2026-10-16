@@ -1,6 +1,8 @@
 // n9_fx.cpp — see n9_fx.h.
 #include "n9_fx.h"
 
+#include "n9_state.h"
+
 #include <Arduino.h>
 #include <math.h>
 
@@ -145,9 +147,37 @@ void fxSlotsInit() {
   resetState(stMaster, masterLine, 27648, masterFx);
 }
 
+// The track LFO onto the inserts (X = p0, Y = p1, wet = p7): per-block
+// offsets in cell units, set by the synth (fxSetMod) and added to the
+// smoothing targets while an insert runs (fxCurT names whose).
+static float fxModAdd[9][2][3];
+static int fxCurT = -1, fxCurSlot = 0;
+void fxSetMod() {
+  extern volatile float lfoVal[9];
+  extern TrackLayer trackL[9];
+  memset(fxModAdd, 0, sizeof fxModAdd);
+  for (int t = 0; t < 9; t++) {
+    uint8_t d = trackL[t].lfoDest;
+    if (d < LD_AX || d > LD_BWET) continue;
+    uint8_t slot = d >= LD_BX ? 1 : 0;
+    uint8_t k = (d - LD_AX) % 3;
+    fxModAdd[t][slot][k] = lfoVal[t] * 0.495f;     // +-49 cells on the 0..1 scale
+  }
+}
+
 // ---- The processor: every type, eight smoothed params, wet at 7 ----------
 static void processSlot(const FxSlot &sl, FxState &t, float *l, float *r, int n, bool pureWet) {
-  for (int i = 0; i < 8; i++) t.sp[i] += 0.12f * (sl.p[i] / 99.0f - t.sp[i]);
+  for (int i = 0; i < 8; i++) {
+    float target = sl.p[i] / 99.0f;
+    if (fxCurT >= 0) {
+      const float *m = fxModAdd[fxCurT][fxCurSlot];
+      if (i == 0) target += m[0];
+      else if (i == 1) target += m[1];
+      else if (i == 7) target += m[2];
+      if (target < 0) target = 0; else if (target > 1) target = 1;
+    }
+    t.sp[i] += 0.12f * (target - t.sp[i]);
+  }
   float p0 = t.sp[0], p1 = t.sp[1], p2 = t.sp[2], p3 = t.sp[3], p4 = t.sp[4];
   float wet = pureWet ? 1.0f : t.sp[7];
   float dry = pureWet ? 0.0f : 1.0f - wet;
@@ -351,7 +381,9 @@ static void runInsert(uint8_t t, uint8_t k, float *x, int n) {
   // mono: the stereo processor runs on a pair and the result folds down
   static float tmp[128];
   for (int i = 0; i < n; i++) tmp[i] = x[i];
+  fxCurT = t; fxCurSlot = k;
   processSlot(trackFx[t][k], stTrack[t][k], tmp, x, n, false);
+  fxCurT = -1;
   for (int i = 0; i < n; i++) x[i] = (tmp[i] + x[i]) * 0.5f;
 }
 

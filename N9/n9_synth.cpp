@@ -36,6 +36,15 @@ const char *engineName(uint8_t e) {
 
 uint8_t gmProgram[9];
 uint8_t drumMachine[9];
+TrackLayer trackL[9];
+volatile float lfoVal[9];
+static float lfoPhase[9], lfoEnvLvl[9], lfoNoiseV[9];
+bool overdubOn = false;
+bool metroOn = false;
+static void lfoEnvRetrig(uint8_t t);
+void trackLayerInit() {
+  for (int t = 0; t < 9; t++) { trackL[t] = TrackLayer(); lfoPhase[t] = lfoEnvLvl[t] = 0; lfoVal[t] = 0; }
+}
 
 // The INST cells per engine kind.
 static const ParamInfo PROPHET_P[8] = {{"DETUNE", 20}, {"CUTOFF", 60}, {"RES", 25}, {"ENV", 50},
@@ -80,6 +89,9 @@ static inline float pcoef(uint8_t v) { return 1.0f - expf(-1.0f / (pms(v) * 44.1
 
 static inline float decay(float ms);
 static void applyLiveParams(N9Synth::Voice &v, bool snap);
+static void applyTrackLayer(N9Synth::Voice &v, bool snap);
+uint32_t clipLaunchAtOf(uint8_t t);
+void fxSetMod();   // n9_fx.cpp: the LFO onto the insert params
 
 enum OscType : uint8_t {
   O_SAW,     // naive saw through the one-pole lowpass
@@ -269,8 +281,15 @@ static inline float decay(float ms) { return expf(-1.0f / (ms * 44.1f)); }
 // The analog engines' cells applied to a voice: snapped at noteOn, then,
 // while it sounds and its engine is on screen, eased toward the cells every
 // block (~20 ms) so edits land on held notes without zipper noise.
+static float lfoCellF(uint8_t t, uint8_t dest);
 static void applyLiveParams(N9Synth::Voice &v, bool snap) {
-  const uint8_t *p = engParams[v.track][v.engine];
+  const uint8_t *praw = engParams[v.track][v.engine];
+  uint8_t pbuf[8];
+  for (int i = 0; i < 8; i++) {
+    float x = praw[i] + (i < 4 ? lfoCellF(v.track, LD_SYN1 + i) : 0.0f);
+    pbuf[i] = (uint8_t)(x < 0 ? 0 : x > 99 ? 99 : x);
+  }
+  const uint8_t *p = pbuf;
   auto set = [snap](float &f, float target) { if (snap) f = target; else f += 0.14f * (target - f); };
   if (v.engine == E_PRO5) {
     set(v.minc, v.inc * (1.0f + 0.012f * p[0] / 99.0f));
@@ -321,6 +340,38 @@ static void applyLiveParams(N9Synth::Voice &v, bool snap) {
     v.vibAmt = 0.4f * ofs(gp.vib, p[6]) / 99.0f;
     set(v.vel, v.velN * (gp.lvl / 99.0f) * (p[7] / 80.0f));
   }
+}
+
+static void lfoEnvRetrig(uint8_t t) { lfoEnvLvl[t] = 1.0f; }
+
+// The LFO's offset for a destination, in cell units (+-49 at full amount).
+static float lfoCellF(uint8_t t, uint8_t dest) {
+  return trackL[t].lfoDest == dest ? lfoVal[t] * 49.0f : 0.0f;
+}
+#define lfoCell lfoCellF
+
+// The INST layer on every pool voice: a Chamberlin SVF (LP/HP/BP) swept by
+// the MOD ADSR (which also shapes the volume). Neutral settings bypass it.
+static void applyTrackLayer(N9Synth::Voice &v, bool snap) {
+  const TrackLayer &tl = trackL[v.track];
+  auto set = [snap](float &f, float target) { if (snap) f = target; else f += 0.14f * (target - f); };
+  float cut = tl.cut + lfoCell(v.track, LD_CUT);
+  float res = tl.res + lfoCell(v.track, LD_RES);
+  float fev = tl.fenv + lfoCell(v.track, LD_FENV);
+  if (cut < 0) cut = 0; if (cut > 99) cut = 99;
+  if (res < 0) res = 0; if (res > 99) res = 99;
+  if (fev < 0) fev = 0; if (fev > 99) fev = 99;
+  bool lfoOnFilter = tl.lfoAmt > 0 && tl.lfoDest >= LD_CUT && tl.lfoDest <= LD_FENV;
+  v.tBypass = !lfoOnFilter && tl.ftype == 0 && tl.cut >= 98 && tl.res <= 12 &&
+              tl.fenv > 44 && tl.fenv < 56;
+  v.tType = tl.ftype;
+  float c = cut / 99.0f;
+  set(v.tCutB, 0.002f + 0.30f * c * c);
+  set(v.tResQ, 1.6f - 1.45f * (res / 99.0f));      // SVF damping: high res = low q
+  set(v.tFenv, (fev - 50.0f) / 50.0f * 0.25f);     // bipolar sweep
+  v.tAc = pcoef(tl.a); v.tDc = pcoef(tl.d);
+  set(v.tSus, tl.s / 99.0f);
+  v.tRc = pcoef(tl.r);
 }
 
 // polyBLEP residual: subtracts the saw's step discontinuity alias
@@ -407,6 +458,9 @@ void N9Synth::noteOnNow(uint8_t track, uint8_t note, uint8_t vel) {
   v->rng = _ageCounter * 2654435761u + note * 7919u + 1;
   v->pcm = nullptr;
   v->dmT = 0;
+  v->tf1 = v->tf2 = 0; v->tEnv = 0; v->tSeg = 0;
+  applyTrackLayer(*v, true);
+  if (trackL[track].lfoShape == LFO_ENV) lfoEnvRetrig(track);
   if (engine == E_M1) {                  // cache the program into the voice
     const M1Program &pr = M1_BANK[m1Prog];
     float velN = vel / 127.0f;
@@ -554,8 +608,21 @@ void N9Synth::noteOffNow(uint8_t track, uint8_t note) {
 }
 
 void N9Synth::seqToggle() {
-  if (_seqOn) _seqStopReq = true;
-  else _seqStartReq = true;
+  if (_seqOn) _seqStopReq = true;                  // stop, position kept
+  else _seqStartReq = true;                        // start from 1.1.1
+}
+
+void N9Synth::seqShiftPlay() {
+  if (_seqOn) _seqResetReq = true;                 // back to 1.1.1, still running
+  else _seqResumeReq = true;                       // on from where it stopped
+}
+
+int32_t N9Synth::clipLocalStep(uint8_t t) {
+  int8_t s = clipPlaying[t];
+  if (s < 0) return -1;
+  const Clip &c = clipAt(t, (uint8_t)s);
+  uint32_t abs = (uint32_t)_seqBar * 16 + _seqStep;
+  return (int32_t)((abs - clipLaunchAtOf(t)) % (uint32_t)(c.bars * 16));
 }
 
 // Offs due this step first; on a bar line each track's pending launch or
@@ -563,6 +630,7 @@ void N9Synth::seqToggle() {
 // clip's notes that start on this step fire. Each clip loops its own bars
 // from the bar it was launched on (polymeter between tracks is free).
 static uint32_t clipLaunchAt[9];                 // abs sixteenth of each launch (interrupt only)
+uint32_t clipLaunchAtOf(uint8_t t) { return clipLaunchAt[t]; }   // (a benign loop-side read)
 void N9Synth::fireStep(uint8_t step) {
   for (int i = 0; i < _seqNoteCount;) {
     if (--_seqNotes[i].left == 0) { noteOffNow(_seqNotes[i].track, _seqNotes[i].pitch); _seqNotes[i] = _seqNotes[--_seqNoteCount]; }
@@ -570,9 +638,17 @@ void N9Synth::fireStep(uint8_t step) {
   }
   if (clipFreeze) return;                        // a project load is swapping the clips
   uint32_t abs = (uint32_t)_seqBar * 16 + step;
+  if (metroOn && (step & 3) == 0) {              // a blip per beat, higher on the bar
+    _metEnv = 1.0f; _metPh = 0; _metHz = step == 0 ? 1568.0f : 1046.0f;
+  }
+  if (_freshMask) {                              // clips launched from their tops, now
+    for (uint8_t t = 0; t < 9; t++)
+      if (_freshMask & (1 << t)) clipLaunchAt[t] = abs;
+    _freshMask = 0;
+  }
   bool barLine = step == 0 || clipTakeNow;       // takeNow: a project came in on the beat
   clipTakeNow = 0;
-  for (uint8_t t = 0; t < 9; t++) {
+  for (uint8_t t = 0; t < NT; t++) {
     if (barLine && clipPending[t] != -1) {
       int8_t p = clipPending[t];
       clipPending[t] = -1;
@@ -609,8 +685,8 @@ void N9Synth::update() {
   while (evr != evw) {
     Ev e = evq[evr];
     evr = (evr + 1) & 31;
-    if (e.on) noteOnNow(nav.gridT, e.note, e.vel);   // MIDI plays the selected track
-    else noteOffNow(nav.gridT, e.note);
+    if (e.on) noteOnNow(nav.selTrack, e.note, e.vel);   // MIDI plays the selected track
+    else noteOffNow(nav.selTrack, e.note);
   }
 
   if (_pcmPanic) {                       // a flash slot is about to be rewritten
@@ -630,6 +706,13 @@ void N9Synth::update() {
     for (int t = 0; t < 9; t++) clipLaunchAt[t] = 0;   // still-armed clips: from their tops
     fireStep(0);
   }
+  if (_seqResumeReq) { _seqResumeReq = false; _seqOn = true; }
+  if (_seqResetReq) {
+    _seqResetReq = false;
+    _seqStep = 0; _seqBar = 0; _seqAcc = 0;
+    for (int t = 0; t < 9; t++) clipLaunchAt[t] = 0;
+    fireStep(0);
+  }
   if (_seqOn) {
     float spp = 44100.0f * 60.0f / (_seqBpm * 4.0f);
     _seqAcc += AUDIO_BLOCK_SAMPLES;
@@ -641,6 +724,38 @@ void N9Synth::update() {
       fireStep(st);
     }
   }
+
+  // One LFO per track, block rate; LFO_ENV is a one-shot retriggered by the
+  // track's notes (noteOnNow sets lfoEnvLvl to 1).
+  for (int t = 0; t < NT; t++) {
+    const TrackLayer &tl = trackL[t];
+    float amt = tl.lfoAmt / 99.0f;
+    if (amt < 0.005f) { lfoVal[t] = 0; continue; }
+    float hz = 0.05f * expf(0.055f * tl.lfoRate);
+    float v = 0;
+    switch (tl.lfoShape) {
+      case LFO_SINE:   lfoPhase[t] += hz * (AUDIO_BLOCK_SAMPLES / 44100.0f);
+                       if (lfoPhase[t] >= 1) lfoPhase[t] -= 1;
+                       v = sinT(lfoPhase[t]); break;
+      case LFO_NOISE:  lfoPhase[t] += hz * (AUDIO_BLOCK_SAMPLES / 44100.0f);
+                       if (lfoPhase[t] >= 1) { lfoPhase[t] -= 1; lfoNoiseV[t] = (float)((int32_t)(micros() * 2654435761u)) * 4.6566e-10f; }
+                       v = lfoNoiseV[t]; break;
+      case LFO_SQUARE: lfoPhase[t] += hz * (AUDIO_BLOCK_SAMPLES / 44100.0f);
+                       if (lfoPhase[t] >= 1) lfoPhase[t] -= 1;
+                       v = lfoPhase[t] < 0.5f ? 1.0f : -1.0f; break;
+      case LFO_UP:     lfoPhase[t] += hz * (AUDIO_BLOCK_SAMPLES / 44100.0f);
+                       if (lfoPhase[t] >= 1) lfoPhase[t] -= 1;
+                       v = 2.0f * lfoPhase[t] - 1.0f; break;
+      case LFO_DOWN:   lfoPhase[t] += hz * (AUDIO_BLOCK_SAMPLES / 44100.0f);
+                       if (lfoPhase[t] >= 1) lfoPhase[t] -= 1;
+                       v = 1.0f - 2.0f * lfoPhase[t]; break;
+      default:         lfoEnvLvl[t] *= 1.0f - hz * (AUDIO_BLOCK_SAMPLES / 44100.0f) * 4.0f;
+                       if (lfoEnvLvl[t] < 0) lfoEnvLvl[t] = 0;
+                       v = lfoEnvLvl[t]; break;
+    }
+    lfoVal[t] = v * amt;
+  }
+  fxSetMod();                                      // the LFO onto FX X/Y/wet (n9_fx)
 
   audio_block_t *l = allocate();
   audio_block_t *r = allocate();
@@ -660,8 +775,9 @@ void N9Synth::update() {
     float idxC = d.osc == O_FM ? decay(d.idxDecMs) : 1.0f;
     // (the 303's and PROPHET's filter decays are per-voice now: v.fdC)
     float amp = v.vel * 0.12f;
-    if (v.track == nav.gridT && v.engine == curEngine() && (v.engine < E_MI_FIRST || v.engine == E_GM))
-      applyLiveParams(v, false);                 // live cell edits, eased
+    if (v.engine < E_MI_FIRST || v.engine == E_GM)
+      applyLiveParams(v, false);                 // live cell edits + the LFO, eased
+    applyTrackLayer(v, false);                   // the INST filter + MOD ADSR layer
     float i1 = v.inc, i2 = v.minc, fmgVal = 0;
     if (d.osc == O_M1) {                         // pitch EG and the MGs, at block rate
       if (v.state == RELEASE) v.penv += v.pRc * (v.pRelL - v.penv);
@@ -940,9 +1056,24 @@ void N9Synth::update() {
       }
       if (d.osc != O_M1 && d.osc != O_DM && !(d.osc == O_GM && v.pcm))
         { v.phase += v.inc; if (v.phase >= 1.0f) v.phase -= 1.0f; }
-      tbus[v.track][i] += (d.osc == O_M1 || d.osc == O_DM) ? s * amp : s * v.env * amp;
+      // The INST layer: the MOD ADSR, and the SVF when it isn't neutral.
+      if (v.state == RELEASE) v.tEnv += v.tRc * (0.0f - v.tEnv);
+      else if (v.tSeg == 0) { v.tEnv += v.tAc * (1.0f - v.tEnv + 0.001f); if (v.tEnv >= 1.0f) { v.tEnv = 1.0f; v.tSeg = 1; } }
+      else v.tEnv += v.tDc * (v.tSus - v.tEnv);
+      if (!v.tBypass) {
+        float fc = v.tCutB + v.tFenv * v.tEnv;
+        if (fc < 0.0015f) fc = 0.0015f; else if (fc > 0.32f) fc = 0.32f;
+        float f = 2.0f * sinT(fc * 0.5f);
+        v.tf1 += f * v.tf2;                        // lp
+        float hp = s - v.tf1 - v.tResQ * v.tf2;
+        v.tf2 += f * hp;                           // bp
+        s = v.tType == 1 ? hp : v.tType == 2 ? v.tf2 : v.tf1;
+      }
+      float layered = s * v.tEnv;
+      tbus[v.track][i] += (d.osc == O_M1 || d.osc == O_DM) ? layered * amp : layered * v.env * amp;
     }
-    bool quiet = v.env < 0.002f && (!v.dual || v.env2 < 0.002f);
+    bool quiet = (v.env < 0.002f && (!v.dual || v.env2 < 0.002f)) ||
+                 (v.state == RELEASE && v.tEnv < 0.002f);
     if (quiet && v.state != ATTACK) { v.state = IDLE; active--; }
   }
   miRender(tbus, AUDIO_BLOCK_SAMPLES);
@@ -951,10 +1082,14 @@ void N9Synth::update() {
   static float outL[AUDIO_BLOCK_SAMPLES], outR[AUDIO_BLOCK_SAMPLES];
   memset(outL, 0, sizeof outL); memset(outR, 0, sizeof outR);
   fxBeginBlock(AUDIO_BLOCK_SAMPLES);
-  for (uint8_t t = 0; t < 9; t++) {
-    float g = trackMute[t] ? 0.0f : (trackVol[t] / 80.0f) * (trackVol[t] / 80.0f);
+  for (uint8_t t = 0; t < NT; t++) {
+    float vol = trackVol[t] + lfoCellF(t, LD_VOL);
+    if (vol < 0) vol = 0; if (vol > 99) vol = 99;
+    float g = trackMute[t] ? 0.0f : (vol / 80.0f) * (vol / 80.0f);
     fxTrackChain(t, tbus[t], AUDIO_BLOCK_SAMPLES, g);   // inserts + post-fader send taps
-    float pn = (trackPan[t] - 50) / 50.0f;              // the strip: volume, pan, meter
+    float pan = trackPan[t] + lfoCellF(t, LD_PAN);
+    if (pan < 0) pan = 0; if (pan > 99) pan = 99;
+    float pn = (pan - 50) / 50.0f;                      // volume, pan, meter
     float gl = g * sqrtf(0.5f * (1.0f - pn)), gr = g * sqrtf(0.5f * (1.0f + pn));
     float pk = 0;
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
@@ -967,6 +1102,15 @@ void N9Synth::update() {
   }
   fxRenderSends(outL, outR, AUDIO_BLOCK_SAMPLES);       // the three send effects return here
   fxProcessMaster(outL, outR, AUDIO_BLOCK_SAMPLES);     // the master's stereo effect
+  if (metroOn && _seqOn && _metEnv > 0.001f) {          // the metronome's blip
+    float minc = _metHz / 44100.0f;
+    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+      float b = sinT(_metPh) * _metEnv * 0.30f;
+      _metPh += minc; if (_metPh >= 1.0f) _metPh -= 1.0f;
+      _metEnv *= 0.9985f;
+      outL[i] += b; outR[i] += b;
+    }
+  }
   float gm = (masterVol / 80.0f) * (masterVol / 80.0f); // master volume, then the clipper
   float pkl = 0, pkr = 0;
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
@@ -1014,24 +1158,61 @@ void mwSetProgram(uint8_t p) {
 
 // A MIDI program change goes to the current engine's bank.
 static void setPreset(uint8_t p) {
-  if (curEngine() == E_GM) gmProgram[nav.gridT] = p & 127;
-  else if (curEngine() == E_DM) drumMachine[nav.gridT] = p & 3;
+  if (curEngine() == E_GM) gmProgram[nav.selTrack] = p & 127;
+  else if (curEngine() == E_DM) drumMachine[nav.selTrack] = p & 3;
   else if (curEngine() == E_MWAVE) mwSetProgram(p);
   else m1SetProgram(p);
 }
 
 // Drum tracks take notes as played: the scale would wreck their maps.
 static uint8_t snapIn(uint8_t n) {
-  uint8_t e = trackEngine[nav.gridT];
+  uint8_t e = trackEngine[nav.selTrack];
   return (e == E_GMDRUM || e == E_DM) ? n : scaleSnap(n);
+}
+
+// Overdub (B+PLAY): while the clock runs, incoming notes land in the
+// selected track's playing clip - the start on the 16th they arrived, the
+// length set by the note-off (wrapping the clip).
+struct OdNote { uint8_t note, vel; int16_t start; int8_t scene; };
+static OdNote odPend[8];
+static uint8_t odCount = 0;
+static void overdubNoteOn(uint8_t note, uint8_t vel) {
+  uint8_t t = nav.selTrack;
+  if (!overdubOn || !synth.seqOn() || clipPlaying[t] < 0 || odCount >= 8) return;
+  int32_t local = synth.clipLocalStep(t);
+  if (local < 0) return;
+  odPend[odCount++] = {note, vel, (int16_t)local, clipPlaying[t]};
+}
+static void overdubNoteOff(uint8_t note) {
+  uint8_t t = nav.selTrack;
+  for (uint8_t i = 0; i < odCount; i++) {
+    if (odPend[i].note != note) continue;
+    OdNote od = odPend[i];
+    odPend[i] = odPend[--odCount];
+    if (clipPlaying[t] != od.scene) return;        // the clip changed under it
+    Clip &c = clipAt(t, (uint8_t)od.scene);
+    if (c.count >= CLIP_MAX_NOTES) return;
+    int32_t now = synth.clipLocalStep(t);
+    if (now < 0) return;
+    int32_t len = now - od.start;
+    if (len <= 0) len += c.bars * 16;
+    if (len < 1) len = 1;
+    if (len > c.bars * 16) len = c.bars * 16;
+    ClipNote &n = c.notes[c.count];                // fields first, the count last
+    n.pitch = od.note; n.vel = od.vel; n.start = (uint8_t)od.start; n.len = (uint8_t)len;
+    c.count++;
+    c.used = 1;
+    clipRefreshBars(c);
+    return;
+  }
 }
 
 void synthServiceMidi() {
   while (usbMIDI.read()) {
     if (usbMIDI.getChannel() != 1) continue;
     uint8_t type = usbMIDI.getType();
-    if (type == usbMIDI.NoteOn && usbMIDI.getData2() > 0) synth.noteOn(snapIn(usbMIDI.getData1()), usbMIDI.getData2());
-    else if (type == usbMIDI.NoteOff || type == usbMIDI.NoteOn) synth.noteOff(snapIn(usbMIDI.getData1()));
+    if (type == usbMIDI.NoteOn && usbMIDI.getData2() > 0) { uint8_t nn = snapIn(usbMIDI.getData1()); synth.noteOn(nn, usbMIDI.getData2()); overdubNoteOn(nn, usbMIDI.getData2()); }
+    else if (type == usbMIDI.NoteOff || type == usbMIDI.NoteOn) { uint8_t nn = snapIn(usbMIDI.getData1()); synth.noteOff(nn); overdubNoteOff(nn); }
     else if (type == usbMIDI.ProgramChange) setPreset(usbMIDI.getData1());
   }
   if (!midiSerial) return;
@@ -1043,8 +1224,9 @@ void synthServiceMidi() {
     if (status == 0xC0) { setPreset(b); continue; }   // channel 1 program change
     if (status == 0x90 || status == 0x80) {       // channel 1 only
       if (d1 == 255) { d1 = b; continue; }
-      if (status == 0x90 && b > 0) synth.noteOn(snapIn(d1), b);
-      else synth.noteOff(snapIn(d1));
+      uint8_t nn = snapIn(d1);
+      if (status == 0x90 && b > 0) { synth.noteOn(nn, b); overdubNoteOn(nn, b); }
+      else { synth.noteOff(nn); overdubNoteOff(nn); }
       d1 = 255;                                   // (running status kept)
     }
   }

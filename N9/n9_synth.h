@@ -29,6 +29,9 @@ public:
   // The transport: a sixteenth-step clock in the audio interrupt, playing
   // the grid cursor's clip through the current engine.
   void seqToggle();                                // start from 1.1.1 / stop
+  void seqShiftPlay();                             // running: back to 1.1.1; stopped: resume
+  void launchFresh(uint8_t t) { _freshMask |= 1 << t; }   // the clip starts from its top now
+  int32_t clipLocalStep(uint8_t t);                // the playing clip's position (overdub)
   void pcmPanic() { _pcmPanic = true; }            // all voices off (a flash slot rewrite)
   bool seqOn() const { return _seqOn; }
   uint8_t seqStepN() const { return _seqStep; }
@@ -79,6 +82,12 @@ public:
     uint32_t pcmLen = 0, pcmLoopS = 0, pcmLoopE = 0;   // loopE 0: one-shot
     float pcmPos = 0, pcmRate = 0;
     uint32_t dmT = 0;                // DRUMS: a sample counter (the clap's bursts)
+    // The INST layer (every pool voice): SVF + the MOD ADSR, eased per block.
+    float tf1 = 0, tf2 = 0, tEnv = 0;
+    uint8_t tSeg = 0, tType = 0;
+    bool tBypass = true;
+    float tAc = 0, tDc = 0, tSus = 1, tRc = 0;
+    float tCutB = 0.3f, tResQ = 0.2f, tFenv = 0;
   };
 private:
   void noteOnNow(uint8_t track, uint8_t note, uint8_t vel);   // audio side
@@ -87,6 +96,9 @@ private:
 
   volatile bool _seqOn = false, _seqStartReq = false, _seqStopReq = false;
   volatile bool _pcmPanic = false;
+  volatile bool _seqResumeReq = false, _seqResetReq = false;
+  volatile uint8_t _freshMask = 0;
+  float _metEnv = 0, _metPh = 0, _metHz = 1046;    // the metronome's blip
   volatile uint8_t _seqStep = 0;
   volatile uint16_t _seqBar = 0;
   float _seqAcc = 0, _seqBpm = 132.0f;

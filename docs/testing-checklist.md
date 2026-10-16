@@ -6,6 +6,24 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **N4: the whole reorganised UI (2026-10-16).** Three wrapping screens
+  (GRID / NOTE / INST), 4 tracks x 4 scenes, minimalist. Check against the
+  spec: GRID - A plays/stops instantly (phase kept on switch), B tap opens
+  the editor, SHIFT+A clip cut/paste, B+U/D the bar ladder (Auto/1/2/4/8/16),
+  B+PLAY overdub (MIDI lands in the selected track's playing clip),
+  B+A+L/R track select, B+A+U/D clip stepping, cells show mini notes +
+  playhead. NOTE - B-drag selection box (dotted), cursor skips note extents,
+  A creates/selects, A+arrows length/velocity (0-16 steps), B+arrows
+  move/transpose in scale, SHIFT+A note cut/paste, SHIFT+L/R bars. INST -
+  selector above SYN/MOD/FX tabs, B+arrows +-1/+-10, B double-tap resets,
+  edge wrap between pages; SYN row 2 = the new per-voice SVF (LP/HP/BP +
+  env), MOD = ADSR + LFO (6 shapes, 15 destinations incl FX X/Y/wet),
+  FX = type/X/Y/wet per slot. Status bar (GRID top, INST bottom): TAP tempo,
+  tempo, metronome, OD, play triangle, key/scale. PLAY stop/start-1.1.1,
+  SHIFT+PLAY reset/resume. Splash: static N4. Menu exits on any edge.
+  KNOWN GAPS: the MI (plaits) tracks bypass the new filter/ADSR layer; the
+  old mixer/sends/master-FX screens are gone (values live on); projects are
+  N9P5 (older files skipped). The N4 mark's 4 glyph: judge by eye.
 - [ ] **N9: storage mode retry (DMA card mode) + the DMA screen send.**
   Storage mode now re-begins the card in DMA_SDIO for the MSC session (L7's
   proven mode; FIFO was the one untested difference) and back to FIFO on

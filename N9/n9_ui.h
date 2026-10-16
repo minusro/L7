@@ -8,15 +8,14 @@
 
 extern m8::Board board;
 
-// The screen stack, top to bottom (SHIFT+UP towards 0, SHIFT+DOWN towards the
-// end): master FX slots, send effects, mixer, track modulation, track FX,
-// track instrument, clip grid, clip editor.
-enum Screen : uint8_t { SCR_MFX, SCR_FX, SCR_MIX, SCR_MOD, SCR_TFX, SCR_INST, SCR_GRID, SCR_EDIT, SCR_COUNT };
+// The three screens, top to bottom, wrapping: the clip grid (home), the
+// piano roll, the instrument pages.
+enum Screen : uint8_t { SCR_GRID, SCR_NOTE, SCR_INST, SCR_COUNT };
 
-// The menu (past the left edge): L7's layout — twelve project cards (rows of
-// four) and the list under them. Only STORAGE MODE is live for now.
+// The menu (past the grid's left/right edge): L7's layout — twelve project
+// cards (rows of four) and the list under them. Only STORAGE MODE is live.
 constexpr int MENU_CARDS = 12, MENU_LIST = 4, MENU_ITEMS = MENU_CARDS + MENU_LIST, MENU_COLS = 4;
-constexpr int MENU_STORAGE = 1;   // the list's live item (12 + this in menuSel)
+constexpr int MENU_STORAGE = 1;
 
 void drawScreen(uint8_t ix);   // clears, draws screen ix, sends the frame
 void uiMessage(const char *l1, const char *l2);   // two centred lines, sent at once

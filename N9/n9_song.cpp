@@ -16,6 +16,8 @@ volatile int8_t clipPlaying[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
 volatile int8_t clipPending[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
 Clip clipClipboard;
 bool clipClipFull = false;
+ClipNote noteClipboard[CLIP_MAX_NOTES];
+uint8_t noteClipCount = 0;
 volatile uint8_t clipFreeze = 0, clipTakeNow = 0;
 
 const char *const KEY_NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
@@ -83,11 +85,14 @@ void clipToggle(Clip &c, uint8_t pitch, uint8_t step, uint8_t vel) {
 }
 
 void clipRefreshBars(Clip &c) {
-  int last = 0;
-  for (int i = 0; i < c.count; i++) {
-    int end = c.notes[i].start + c.notes[i].len;
-    if (end > last) last = end;
+  if (c.barsFixed) { c.bars = c.barsFixed; return; }
+  uint8_t top = 0;
+  for (uint8_t i = 0; i < c.count; i++) {
+    uint8_t e = c.notes[i].start + c.notes[i].len;
+    if (e > top) top = e;
   }
-  uint8_t bars = (uint8_t)((last + 15) / 16);
-  c.bars = bars < 1 ? 1 : bars > CLIP_MAX_BARS ? CLIP_MAX_BARS : bars;
+  uint8_t bars = (top + 15) / 16;
+  if (bars < 1) bars = 1;
+  if (bars > CLIP_MAX_BARS) bars = CLIP_MAX_BARS;
+  c.bars = bars;
 }

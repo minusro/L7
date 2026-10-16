@@ -1,117 +1,313 @@
-// n9_input.cpp — see n9_input.h.
+// n9_input.cpp — N4's keys (the 2026-10-16 reorganisation). Three wrapping
+// screens: GRID (status bar + 4x4 clips), NOTE (the piano roll with a
+// selection), INST (SYN/MOD/FX pages under the synth selector, status bar
+// below). Edge crossings use L7's pending lines (n9_ui draws them); SHIFT +
+// arrows switch at once. PLAY stops/starts from 1.1.1, SHIFT+PLAY resets or
+// resumes, B+PLAY toggles overdub, B+A+LEFT/RIGHT picks the track,
+// B+A+UP/DOWN steps the track's playing clip. SHIFT+B+A still switches apps.
 #include "n9_input.h"
 
 #include "M8Board.h"
+#include "n9_apps.h"
+#include "n9_fx.h"
+#include "n9_project.h"
+#include "n9_song.h"
 #include "n9_state.h"
 #include "n9_synth.h"
-#include "n9_mi.h"
-#include "n9_fx.h"
-#include "n9_song.h"
-#include "n9_apps.h"
 #include "n9_usb_drive.h"
-#include "n9_project.h"
 
 using namespace m8;
 
 NavState nav;
 
-static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;   // L7's (input.cpp)
+static constexpr uint32_t REPEAT_DELAY_MS = 200, REPEAT_PERIOD_MS = 50;
 
 enum { A_UP, A_DOWN, A_LEFT, A_RIGHT };
 static const uint8_t ARROW_BIT[4] = {BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT};
 
-template <typename T> static bool to(T &field, int v) {
-  if ((int)field == v) return false;
-  field = (T)v;
-  return true;
-}
 static int clamp(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
 
-// One cursor step on the current screen; dx/dy in cells (dy positive = down).
-static bool move(int dx, int dy) {
-  switch (nav.screen) {
-    case SCR_FX: {
-      bool c = false;
-      if (dy) {
-        c = to(nav.fxRow, clamp(nav.fxRow + dy, 0, 3));
-        if (nav.fxRow < 2) c |= to(nav.fxCol, clamp(nav.fxCol, 0, 3));   // back on a param row
-      }
-      if (dx) c |= to(nav.fxCol, clamp(nav.fxCol + dx, 0, nav.fxRow < 2 ? 3 : 8));
-      return c;
-    }
-    case SCR_MIX:
-      return dx ? to(nav.mixSel, clamp(nav.mixSel + dx, 0, 9)) : false;   // 9 = master
-    case SCR_MOD: {
-      bool c = false;
-      if (dy) {
-        c = to(nav.modRow, clamp(nav.modRow + dy, 0, 4));
-        if (nav.modRow < 4) c |= to(nav.modSrc, nav.modRow);   // the cells edit the row stood on
-      }
-      if (dx && nav.modRow == 4) c |= to(nav.modCell, clamp(nav.modCell + dx, 0, 3));
-      return c;
-    }
-    case SCR_INST: {
-      bool c = false;
-      if (dy) c = to(nav.instRow, clamp(nav.instRow + dy, 0, 2));
-      if (dx) {
-        if (nav.instRow > 0) c |= to(nav.instCol, clamp(nav.instCol + dx, 0, 3));
-        else c |= to(nav.instTop, clamp(nav.instTop + dx, 0, 1));
-      }
-      return c;
-    }
-    case SCR_TFX: {
-      bool c = false;
-      if (dy) {
-        c = to(nav.tfxRow, clamp(nav.tfxRow + dy, 0, 3));
-        if (nav.tfxRow < 2) c |= to(nav.tfxSlot, nav.tfxRow);   // the cells follow this slot
-      }
-      if (dx && nav.tfxRow >= 2) c |= to(nav.tfxCol, clamp(nav.tfxCol + dx, 0, 3));
-      return c;
-    }
-    case SCR_MFX: {
-      bool c = false;
-      if (dy) c = to(nav.mfxRow, clamp(nav.mfxRow + dy, 0, 2));
-      if (dx && nav.mfxRow >= 1) c |= to(nav.mfxCol, clamp(nav.mfxCol + dx, 0, 3));
-      return c;
-    }
-    case SCR_GRID: {
-      bool c = false;
-      if (dx) c = to(nav.gridT, clamp(nav.gridT + dx, 0, 8));
-      if (dy) c |= to(nav.gridS, clamp(nav.gridS + dy, 0, 8));   // 8: the stop row
-      return c;
-    }
-    case SCR_EDIT: {
-      bool c = false;
-      if (dx) {                                  // steps run across bar pages
-        int pos = clamp(nav.editPage * 16 + nav.editStep + dx, 0, CLIP_MAX_BARS * 16 - 1);
-        c = to(nav.editPage, pos / 16);
-        c |= to(nav.editStep, pos % 16);
-      }
-      if (dy) {                                  // pitches skip out-of-scale notes,
-        int p = nav.editPitch;                   //   the window slides by octaves
-        do p -= dy; while (p >= 24 && p <= 96 && !scaleHas((uint8_t)p));
-        if (p >= 24 && p <= 96) {
-          c |= to(nav.editPitch, p);
-          int top = EDIT_TOP_PITCH + 12 * nav.editOct;
-          while (p > top) { nav.editOct++; top += 12; c = true; }
-          while (p < top - 12) { nav.editOct--; top -= 12; c = true; }
-        }
-      }
-      return c;
-    }
+// ---- selection helpers (NOTE) ----------------------------------------------
+
+static Clip &editClip() { return clipAt(nav.gridT, nav.gridS); }
+static bool selHas(uint8_t i) { return nav.sel[i >> 5] & (1u << (i & 31)); }
+static void selAdd(uint8_t i) { nav.sel[i >> 5] |= 1u << (i & 31); }
+static void selClear() { nav.sel[0] = nav.sel[1] = nav.sel[2] = nav.sel[3] = 0; }
+static bool selAny() { return nav.sel[0] | nav.sel[1] | nav.sel[2] | nav.sel[3]; }
+
+static int noteAtCursor() {
+  return clipFindAt(editClip(), nav.notePitch, nav.notePage * 16 + nav.noteStep);
+}
+
+// The cursor moved by hand: the selection follows the cell (the note under
+// it, or nothing).
+static void selFollowCursor() {
+  selClear();
+  int i = noteAtCursor();
+  if (i >= 0) selAdd((uint8_t)i);
+}
+
+static void pitchWindowFollow() {
+  int top = EDIT_TOP_PITCH + 12 * nav.noteOct;
+  while (nav.notePitch > top) { nav.noteOct++; top += 12; }
+  while (nav.notePitch < top - 12) { nav.noteOct--; top -= 12; }
+}
+
+// The next in-scale pitch from p in direction dir (0 if none in range).
+static int scaleStep(int p, int dir) {
+  do p += dir; while (p >= 24 && p <= 96 && !scaleHas((uint8_t)p));
+  return (p < 24 || p > 96) ? 0 : p;
+}
+
+// ---- clip launching (GRID) --------------------------------------------------
+
+// Instant: a running track keeps its phase (the new clip picks up where the
+// old left off); a silent track starts the clip from its top, and the clock
+// if it wasn't running.
+static void clipPlayNow(uint8_t t, uint8_t s) {
+  if (clipPlaying[t] < 0) synth.launchFresh(t);
+  clipPlaying[t] = (int8_t)s;
+  if (!synth.seqOn()) synth.seqToggle();
+}
+
+static void clipStepPlay(uint8_t t, int dir) {   // B+A+UP/DOWN
+  int8_t s = clipPlaying[t];
+  int to = s < 0 ? (dir < 0 ? NS - 1 : 0) : clamp(s + dir, 0, NS - 1);
+  clipPlayNow(t, (uint8_t)to);
+}
+
+// ---- the grid's bar-length ladder -------------------------------------------
+
+static const uint8_t BAR_LADDER[6] = {0, 1, 2, 4, 8, 16};   // 0 = Auto
+static void clipBarsStep(Clip &c, int dir) {
+  int ix = 0;
+  for (int i = 0; i < 6; i++) if (BAR_LADDER[i] == c.barsFixed) ix = i;
+  ix = clamp(ix + dir, 0, 5);
+  c.barsFixed = BAR_LADDER[ix];
+  clipRefreshBars(c);
+}
+
+// ---- tap tempo ---------------------------------------------------------------
+
+static void tapTempo() {
+  static uint32_t taps[4];
+  static uint8_t n = 0;
+  uint32_t now = millis();
+  if (n && now - taps[n - 1] > 2500) n = 0;      // a stale run starts over
+  if (n == 4) { taps[0] = taps[1]; taps[1] = taps[2]; taps[2] = taps[3]; n = 3; }
+  taps[n++] = now;
+  if (n < 2) return;
+  float avg = (taps[n - 1] - taps[0]) / (float)(n - 1);
+  int bpm = (int)(60000.0f / avg + 0.5f);
+  synth.setSeqBpm((float)clamp(bpm, 40, 240));
+}
+
+// ---- the status bar (GRID top, INST bottom) ---------------------------------
+
+static bool statusA(uint8_t cell) {
+  switch (cell) {
+    case ST_TAP:   tapTempo(); return true;
+    case ST_METRO: metroOn = !metroOn; return true;
+    case ST_OD:    overdubOn = !overdubOn; return true;
+    case ST_PLAY:  synth.seqToggle(); return true;
   }
   return false;
 }
 
-// The edge switch itself: LEFT into the menu, RIGHT (on the menu) back out,
-// UP/DOWN along the screen stack.
-static void edgeSwitch(uint8_t bit) {
-  if (nav.menu) { if (bit == BTN_RIGHT) nav.menu = false; }
-  else if (bit == BTN_LEFT) nav.menu = true;
-  else if (bit == BTN_UP && nav.screen > 0) nav.screen--;
-  else if (bit == BTN_DOWN && nav.screen < SCR_COUNT - 1) nav.screen++;
-  nav.edgePending = 0;
+static bool statusB(uint8_t cell, int arrow) {
+  if (cell == ST_TEMPO) {
+    int d = arrow == A_LEFT ? -1 : arrow == A_RIGHT ? 1 : arrow == A_UP ? 10 : -10;
+    synth.setSeqBpm((float)clamp((int)synth.seqBpm() + d, 40, 240));
+    return true;
+  }
+  if (cell == ST_KEY) {
+    if (arrow == A_LEFT || arrow == A_RIGHT) projKey = (projKey + (arrow == A_RIGHT ? 1 : 11)) % 12;
+    else projScale = (projScale + (arrow == A_UP ? 1 : SCALE_COUNT - 1)) % SCALE_COUNT;
+    return true;
+  }
+  return false;
 }
+
+// ---- INST page cells ---------------------------------------------------------
+
+// The selected cell's storage, range and default. page/row/col from nav.
+struct CellRef { uint8_t *v; uint8_t max; uint8_t def; bool fxType; uint8_t fxSlot; };
+static CellRef instCell() {
+  uint8_t t = nav.selTrack, pg = nav.instPage, row = nav.instRow, col = nav.instCol;
+  TrackLayer &tl = trackL[t];
+  if (pg == 0) {
+    if (row == 1) {
+      static uint8_t dummy = 0;
+      const ParamInfo *pi = engineParams(curEngine());
+      if (pi[col].name[0] == '-') { dummy = 0; return {&dummy, 0, 0, false, 0}; }
+      return {&engParams[t][curEngine()][col], 99, pi[col].def, false, 0};
+    }
+    uint8_t *v[4] = {&tl.cut, &tl.res, &tl.ftype, &tl.fenv};
+    uint8_t mx[4] = {99, 99, 2, 99}, df[4] = {99, 10, 0, 50};
+    return {v[col], mx[col], df[col], false, 0};
+  }
+  if (pg == 1) {
+    if (row == 1) {
+      uint8_t *v[4] = {&tl.a, &tl.d, &tl.s, &tl.r};
+      uint8_t df[4] = {0, 50, 99, 40};
+      return {v[col], 99, df[col], false, 0};
+    }
+    uint8_t *v[4] = {&tl.lfoRate, &tl.lfoAmt, &tl.lfoShape, &tl.lfoDest};
+    uint8_t mx[4] = {99, 99, LFO_SHAPES - 1, LD_COUNT - 1}, df[4] = {40, 0, 0, 0};
+    return {v[col], mx[col], df[col], false, 0};
+  }
+  uint8_t slot = row - 1;                        // FX: row 1 = A, row 2 = B
+  FxSlot &sl = trackFx[t][slot];
+  if (col == 0) return {&sl.type, 0, FXT_NONE, true, slot};
+  bool send = fxIsSend(sl.type);
+  uint8_t *x = (send && col < 3) ? &sendFx[fxSendIndex(sl.type)].p[col - 1] : &sl.p[col == 3 ? 7 : col - 1];
+  uint8_t df = fxParams(sl.type, false)[col == 3 ? 7 : col - 1].def;
+  return {x, 99, df, false, 0};
+}
+
+static void instCellStep(int d) {                // B+arrows on a cell
+  CellRef c = instCell();
+  if (c.fxType) {
+    if (d == 1 || d == -1)
+      fxSetTrackType(nav.selTrack, c.fxSlot, fxStepTrackType(trackFx[nav.selTrack][c.fxSlot].type, d));
+    return;
+  }
+  if (c.max == 0) return;
+  *c.v = (uint8_t)clamp(*c.v + d, 0, c.max);
+}
+
+static void instCellReset() {                    // a B double tap
+  CellRef c = instCell();
+  if (c.fxType) { fxSetTrackType(nav.selTrack, c.fxSlot, FXT_NONE); return; }
+  if (c.max) *c.v = c.def;
+}
+
+// ---- NOTE editing ------------------------------------------------------------
+
+static void notesForEach(void (*fn)(Clip &, uint8_t));
+
+static void noteCut() {                          // SHIFT+A: cut (or the cursor's note)
+  Clip &c = editClip();
+  if (!selAny()) selFollowCursor();
+  if (!selAny()) return;
+  uint8_t base = 255;
+  noteClipCount = 0;
+  for (uint8_t i = 0; i < c.count; i++)
+    if (selHas(i) && c.notes[i].start < base) base = c.notes[i].start;
+  for (int i = c.count - 1; i >= 0; i--) {
+    if (!selHas((uint8_t)i)) continue;
+    if (noteClipCount < CLIP_MAX_NOTES) {
+      noteClipboard[noteClipCount] = c.notes[i];
+      noteClipboard[noteClipCount].start -= base;
+      noteClipCount++;
+    }
+    c.notes[i] = c.notes[c.count - 1];           // (the swap reorders: selection goes)
+    c.count--;
+  }
+  selClear();
+  clipRefreshBars(c);
+}
+
+static void notePaste() {
+  Clip &c = editClip();
+  uint8_t at = nav.notePage * 16 + nav.noteStep;
+  selClear();
+  for (uint8_t i = 0; i < noteClipCount && c.count < CLIP_MAX_NOTES; i++) {
+    int st = at + noteClipboard[i].start;
+    if (st >= CLIP_MAX_BARS * 16) continue;
+    ClipNote &n = c.notes[c.count];
+    n = noteClipboard[i];
+    n.start = (uint8_t)st;
+    selAdd(c.count);
+    c.count++;
+  }
+  c.used = 1;
+  clipRefreshBars(c);
+}
+
+static void selMove(int d) {                     // B+LEFT/RIGHT on a note
+  Clip &c = editClip();
+  for (uint8_t i = 0; i < c.count; i++) {
+    if (!selHas(i)) continue;
+    int st = c.notes[i].start + d;
+    if (st < 0 || st + c.notes[i].len > CLIP_MAX_BARS * 16) return;   // the block stays whole
+  }
+  for (uint8_t i = 0; i < c.count; i++)
+    if (selHas(i)) c.notes[i].start = (uint8_t)(c.notes[i].start + d);
+  clipRefreshBars(c);
+  int pos = clamp(nav.notePage * 16 + nav.noteStep + d, 0, CLIP_MAX_BARS * 16 - 1);
+  nav.notePage = pos / 16; nav.noteStep = pos % 16;
+}
+
+static void selTranspose(int dir) {              // B+UP/DOWN: in scale
+  Clip &c = editClip();
+  for (uint8_t i = 0; i < c.count; i++) {
+    if (!selHas(i)) continue;
+    if (!scaleStep(c.notes[i].pitch, dir)) return;
+  }
+  for (uint8_t i = 0; i < c.count; i++)
+    if (selHas(i)) c.notes[i].pitch = (uint8_t)scaleStep(c.notes[i].pitch, dir);
+  int p = scaleStep(nav.notePitch, dir);
+  if (p) { nav.notePitch = (uint8_t)p; pitchWindowFollow(); }
+}
+
+static void selLength(int d) {                   // A+LEFT/RIGHT
+  Clip &c = editClip();
+  for (uint8_t i = 0; i < c.count; i++)
+    if (selHas(i))
+      c.notes[i].len = (uint8_t)clamp(c.notes[i].len + d, 1, CLIP_MAX_BARS * 16 - c.notes[i].start);
+  clipRefreshBars(c);
+}
+
+static void selVelocity(int d) {                 // A+UP/DOWN: 17 steps, 0 = muted
+  Clip &c = editClip();
+  for (uint8_t i = 0; i < c.count; i++) {
+    if (!selHas(i)) continue;
+    int step = (c.notes[i].vel + 4) / 8;
+    step = clamp(step + d, 0, 16);
+    c.notes[i].vel = step >= 16 ? 127 : (uint8_t)(step * 8);
+  }
+}
+
+static void boxFinish() {                        // B released: take the box
+  Clip &c = editClip();
+  uint8_t s0 = nav.boxStep0 < nav.boxStep1 ? nav.boxStep0 : nav.boxStep1;
+  uint8_t s1 = nav.boxStep0 < nav.boxStep1 ? nav.boxStep1 : nav.boxStep0;
+  uint8_t p0 = nav.boxPitch0 < nav.boxPitch1 ? nav.boxPitch0 : nav.boxPitch1;
+  uint8_t p1 = nav.boxPitch0 < nav.boxPitch1 ? nav.boxPitch1 : nav.boxPitch0;
+  selClear();
+  int best = -1;
+  uint32_t bestD = ~0u;
+  for (uint8_t i = 0; i < c.count; i++) {
+    const ClipNote &n = c.notes[i];
+    if (n.pitch < p0 || n.pitch > p1) continue;
+    if (n.start > s1 || n.start + n.len - 1 < s0) continue;
+    selAdd(i);
+    // the endpoint nearest the finishing corner, if inside the box
+    for (int e = 0; e < 2; e++) {
+      int es = e ? n.start + n.len - 1 : n.start;
+      if (es < s0 || es > s1) continue;
+      uint32_t dd = (uint32_t)abs(es - (int)nav.boxStep1) * 2 + (uint32_t)abs((int)n.pitch - (int)nav.boxPitch1);
+      if (dd < bestD) { bestD = dd; best = i; nav.noteStep = es % 16; nav.notePage = es / 16; nav.notePitch = n.pitch; }
+    }
+  }
+  if (best >= 0) pitchWindowFollow();
+  nav.boxOpen = false;
+}
+
+// ---- edges -------------------------------------------------------------------
+
+static void edgeSwitch(uint8_t bit) {
+  nav.edgePending = 0;
+  if (nav.menu) { nav.menu = false; return; }    // any edge leaves for the GRID
+  if (bit == BTN_UP) nav.screen = nav.screen == 0 ? SCR_COUNT - 1 : nav.screen - 1;
+  else if (bit == BTN_DOWN) nav.screen = (nav.screen + 1) % SCR_COUNT;
+  else if (nav.screen == SCR_GRID) nav.menu = true;
+  else if (nav.screen == SCR_INST)
+    nav.instPage = (nav.instPage + (bit == BTN_RIGHT ? 1 : 2)) % 3;
+}
+
+// ---- the main service --------------------------------------------------------
 
 bool inputService() {
   uint8_t now = board.keys();
@@ -121,21 +317,19 @@ bool inputService() {
   prev = now;
   uint32_t ms = millis();
 
-  bool shift = now & BTN_SHIFT, opt = now & BTN_OPT;
+  bool shift = now & BTN_SHIFT, opt = now & BTN_OPT, edit = now & BTN_EDIT;
   bool dirtyNow = false;
 
-  // A SHIFT tap (nothing else touched while it's down, nothing held when it
-  // came down) toggles the cursor between the content and the status row.
-  static bool shiftUsed = false;
-  if (pressed & BTN_SHIFT) shiftUsed = (now & ~BTN_SHIFT) != 0;
-  if ((now & BTN_SHIFT) && (pressed & ~BTN_SHIFT)) shiftUsed = true;
-  if ((released & BTN_SHIFT) && !shiftUsed && !nav.menu) {
-    nav.statusFocus = !nav.statusFocus;
-    dirtyNow = true;
-  }
+  // Chord bookkeeping: a B or A used in any combo doesn't fire its tap action.
+  static bool optUsed = false, editUsed = false;
+  static uint32_t optTapAt = 0;                  // the B double tap (INST reset)
+  if (pressed & BTN_OPT) optUsed = (now & ~BTN_OPT) != 0;
+  if (pressed & BTN_EDIT) editUsed = (now & ~BTN_EDIT) != 0;
+  if ((now & BTN_OPT) && (pressed & ~BTN_OPT)) optUsed = true;
+  if ((now & BTN_EDIT) && (pressed & ~BTN_EDIT)) editUsed = true;
 
-  // A pending edge switch: any other key cancels it; its own arrow let go
-  // (or held 600 ms) fires it. A hold-fired arrow stays dead until let go.
+  // A pending edge switch: another key cancels, its arrow's release (or a
+  // 600 ms hold) fires it.
   static uint8_t edgeDead = 0;
   edgeDead &= now;
   if (nav.edgePending && (pressed & ~nav.edgePending)) { nav.edgePending = 0; dirtyNow = true; }
@@ -145,238 +339,293 @@ bool inputService() {
     edgeSwitch(nav.edgePending);
     dirtyNow = true;
   }
-  static bool edgeLight = false;       // the line's first 50 ms are light grey:
-  bool lightNow = nav.edgePending && ms - nav.edgeAt < 50;   // one redraw at the turn
+  static bool edgeLight = false;
+  bool lightNow = nav.edgePending && ms - nav.edgeAt < 50;
   if (nav.edgePending && lightNow != edgeLight) dirtyNow = true;
   edgeLight = lightNow;
 
   if ((pressed & BTN_EDIT) && shift && opt) {    // SHIFT+B+A: switch to L7
-    appSwitchToL7();                             // (returns only on failure)
+    appSwitchToL7();
     dirtyNow = true;
   }
-  bool overlay = opt && !shift && !nav.menu && nav.screen == SCR_GRID;
-  if (overlay != nav.scaleShow) { nav.scaleShow = overlay; dirtyNow = true; }
-  if (pressed & BTN_PLAY) { synth.seqToggle(); dirtyNow = true; }   // start from 1.1.1 / stop
-  bool plainA = (pressed & BTN_EDIT) && !shift && !opt && !nav.menu && !nav.statusFocus;
+
+  // PLAY: stop / start from 1.1.1; SHIFT+PLAY: reset / resume; B+PLAY: overdub.
+  if (pressed & BTN_PLAY) {
+    if (opt) { overdubOn = !overdubOn; optUsed = true; }
+    else if (shift) synth.seqShiftPlay();
+    else synth.seqToggle();
+    dirtyNow = true;
+  }
+
+  // The menu's own buttons (cards, storage mode).
   if ((pressed & BTN_EDIT) && !opt && nav.menu) {
-    if (shift) {                                   // SHIFT+A on a card: cut its file
-      if (nav.menuSel < MENU_CARDS) {              // to the clipboard, or paste onto
-        if (projExists[nav.menuSel]) projectCut(nav.menuSel);   // an empty one
+    if (shift) {
+      if (nav.menuSel < MENU_CARDS) {
+        if (projExists[nav.menuSel]) projectCut(nav.menuSel);
         else projectPaste(nav.menuSel);
       }
-    } else if (nav.menuSel < MENU_CARDS) {         // a card, L7's grammar: the loaded
-      if (nav.menuSel == projCurrent) {            // one saves and closes the menu,
-        projectSaveCurrent();                      // a project loads (on the beat
-        nav.menu = false;                          // while playing), an empty slot
-      } else if (projExists[nav.menuSel]) {        // becomes a new project
-        projectRequestLoad(nav.menuSel);
-      } else {
-        projectNew(nav.menuSel);
-      }
+    } else if (nav.menuSel < MENU_CARDS) {
+      if (nav.menuSel == projCurrent) { projectSaveCurrent(); nav.menu = false; }
+      else if (projExists[nav.menuSel]) projectRequestLoad(nav.menuSel);
+      else projectNew(nav.menuSel);
     } else if (nav.menuSel == MENU_CARDS + MENU_STORAGE) {
-      projectSaveCurrent();                        // (blocks until a key or an eject)
+      projectSaveCurrent();
       usbDriveMode();
-      projectReloadCurrent();                      // the card's version wins now
+      projectReloadCurrent();
     }
     dirtyNow = true;
   }
-  if (plainA && nav.screen == SCR_MIX && nav.mixSel < 9) {
-    trackMute[nav.mixSel] = !trackMute[nav.mixSel];
-    dirtyNow = true;
-  }
-  if (plainA && nav.screen == SCR_GRID) {
-    uint8_t t = nav.gridT;
-    if (nav.gridS == 8) {                          // a stop cell: that track's clip
-      if (clipPlaying[t] >= 0 || clipPending[t] >= 0) clipPending[t] = CLIP_STOP;   // dies on the next bar
-    } else {
-      Clip &c = clipAt(t, nav.gridS);
-      if (!c.used) {                               // empty: a clip appears
-        c.count = 0; c.bars = 1; c.used = 1;
-      } else if (synth.seqOn() && clipPlaying[t] == (int8_t)nav.gridS && clipPending[t] == -1) {
-        nav.screen = SCR_EDIT;                     // running: into the editor
-      } else {                                     // stopped: plays from the next bar
-        clipPending[t] = (int8_t)nav.gridS;
-        if (!synth.seqOn()) synth.seqToggle();     // the clock starts; bar line 0 takes it
+
+  // GRID: plain A on the status bar or a clip cell.
+  if ((pressed & BTN_EDIT) && !shift && !opt && !nav.menu) {
+    if (nav.screen == SCR_GRID) {
+      if (nav.gridRow == 0) { if (statusA(nav.statusSel)) dirtyNow = true; }
+      else {
+        uint8_t t = nav.gridT, s = nav.gridS;
+        if (clipPlaying[t] == (int8_t)s) clipPlaying[t] = -1;   // playing: stop
+        else clipPlayNow(t, s);
+        dirtyNow = true;
       }
+    } else if (nav.screen == SCR_NOTE) {
+      // A on an empty cell makes a note; on a note it selects (A+arrows edit).
+      Clip &c = editClip();
+      int i = noteAtCursor();
+      selClear();
+      if (i >= 0) selAdd((uint8_t)i);
+      else if (c.count < CLIP_MAX_NOTES) {
+        ClipNote &n = c.notes[c.count];
+        n.pitch = nav.notePitch; n.vel = 100;
+        n.start = nav.notePage * 16 + nav.noteStep; n.len = 1;
+        c.count++;
+        c.used = 1;
+        clipRefreshBars(c);
+        selAdd(c.count - 1);
+      }
+      dirtyNow = true;
+    } else if (nav.screen == SCR_INST && nav.instRow == 3) {
+      if (statusA(nav.statusSel)) dirtyNow = true;
     }
-    dirtyNow = true;
   }
-  if ((pressed & BTN_EDIT) && shift && !opt && !nav.menu && !nav.statusFocus &&
-      nav.screen == SCR_GRID && nav.gridS < 8) {
-    // SHIFT+A: a used slot cuts to the clipboard, an empty one pastes.
-    Clip &c = clipAt(nav.gridT, nav.gridS);
-    if (c.used) {
-      clipClipboard = c;
-      clipClipFull = true;
-      if (clipPlaying[nav.gridT] == (int8_t)nav.gridS) clipPlaying[nav.gridT] = -1;   // silenced before the wipe
-      if (clipPending[nav.gridT] == (int8_t)nav.gridS) clipPending[nav.gridT] = -1;
-      c = Clip{};
-    } else if (clipClipFull) {
-      c = clipClipboard;
+
+  // SHIFT+A: the clipboards.
+  if ((pressed & BTN_EDIT) && shift && !opt && !nav.menu) {
+    if (nav.screen == SCR_GRID && nav.gridRow > 0) {
+      Clip &c = clipAt(nav.gridT, nav.gridS);
+      if (c.count) {
+        clipClipboard = c;
+        clipClipFull = true;
+        if (clipPlaying[nav.gridT] == (int8_t)nav.gridS) clipPlaying[nav.gridT] = -1;
+        c = Clip{};
+      } else if (clipClipFull) {
+        c = clipClipboard;
+        c.used = 1;
+      }
+      dirtyNow = true;
+    } else if (nav.screen == SCR_NOTE) {
+      if (selAny() || noteAtCursor() >= 0) noteCut();
+      else if (noteClipCount) notePaste();
+      dirtyNow = true;
     }
+  }
+
+  // B pressed in the editor over an empty cell: a selection box opens.
+  if ((pressed & BTN_OPT) && !shift && !edit && !nav.menu && nav.screen == SCR_NOTE) {
+    if (noteAtCursor() < 0) {
+      nav.boxOpen = true;
+      nav.boxStep0 = nav.boxStep1 = nav.notePage * 16 + nav.noteStep;
+      nav.boxPitch0 = nav.boxPitch1 = nav.notePitch;
+      dirtyNow = true;
+    }
+  }
+  if ((released & BTN_OPT) && nav.boxOpen) {     // released: the box selects
+    boxFinish();
     dirtyNow = true;
   }
-  if (plainA && nav.screen == SCR_EDIT) {
-    // A on the roll: add a step note at the cursor, or remove the one there.
-    clipToggle(clipAt(nav.gridT, gridScene()), nav.editPitch, nav.editPage * 16 + nav.editStep, 100);
-    dirtyNow = true;
+
+  // A B tap: on the GRID it opens the clip in the editor; on INST a double
+  // tap resets the selected cell.
+  if ((released & BTN_OPT) && !optUsed && !nav.menu) {
+    if (nav.screen == SCR_GRID && nav.gridRow > 0) {
+      nav.screen = SCR_NOTE;
+      nav.notePage = 0;
+      selClear();
+      dirtyNow = true;
+    } else if (nav.screen == SCR_INST && nav.instRow > 0 && nav.instRow < 3) {
+      if (ms - optTapAt < 350) { instCellReset(); dirtyNow = true; }
+      optTapAt = ms;
+    }
   }
+
+  // Arrows, with repeat (SHIFT: fresh presses only).
   static uint32_t pressedAt[4], lastRep[4];
   bool dirty = false;
-
   for (int i = 0; i < 4; i++) {
     uint8_t bit = ARROW_BIT[i];
-    bool fire = false;
-    if (pressed & bit) { pressedAt[i] = ms; lastRep[i] = 0; fire = true; }
+    bool fire = false, fresh = false;
+    if (pressed & bit) { pressedAt[i] = ms; lastRep[i] = 0; fire = fresh = true; }
     else if ((now & bit) && !shift && ms - pressedAt[i] >= REPEAT_DELAY_MS &&
              (lastRep[i] == 0 || ms - lastRep[i] >= REPEAT_PERIOD_MS)) { lastRep[i] = ms; fire = true; }
     if (!fire) continue;
+    int dx = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : 0;
+    int dy = i == A_UP ? -1 : i == A_DOWN ? 1 : 0;
 
-    if (shift) {                                   // the screen stack (fresh presses only)
-      if (nav.menu) continue;
-      if (i == A_UP && nav.screen > 0) { nav.screen--; dirty = true; }
-      if (i == A_DOWN && nav.screen < SCR_COUNT - 1) { nav.screen++; dirty = true; }
-    } else if (nav.menu) {                         // the menu: L7's walk — LEFT/RIGHT
-      if (opt) continue;                           // along a card row, UP/DOWN row to
-      if (i == A_LEFT || i == A_RIGHT) {           // row and on into the list; RIGHT
-        int d = i == A_RIGHT ? 1 : -1;             // off the right edge leaves
+    if (opt && edit) {                           // B+A+arrows: track / clip stepping
+      if (!fresh) continue;
+      if (dx) { nav.selTrack = (uint8_t)((nav.selTrack + dx + NT) % NT); dirty = true; }
+      else { clipStepPlay(nav.selTrack, -dy); dirty = true; }   // UP = previous
+      continue;
+    }
+
+    if (shift) {                                 // SHIFT+arrows: screens, at once
+      if (!fresh) continue;
+      if (nav.menu) { nav.menu = false; dirty = true; continue; }
+      if (dy) { edgeSwitch(dy < 0 ? BTN_UP : BTN_DOWN); dirty = true; }
+      else if (nav.screen == SCR_NOTE) {
+        nav.notePage = (uint8_t)clamp(nav.notePage + dx, 0, editClip().bars - 1);
+        dirty = true;
+      } else { edgeSwitch(dx < 0 ? BTN_LEFT : BTN_RIGHT); dirty = true; }
+      continue;
+    }
+
+    if (nav.menu) {                              // the menu's walk (unchanged)
+      if (opt) continue;
+      if (dx) {
         int col = nav.menuSel % MENU_COLS;
-        if (nav.menuSel < MENU_CARDS && col + d >= 0 && col + d < MENU_COLS) {
-          nav.menuSel += d;
+        if (nav.menuSel < MENU_CARDS && col + dx >= 0 && col + dx < MENU_COLS) {
+          nav.menuSel = (uint8_t)(nav.menuSel + dx);
           nav.menuCardCol = nav.menuSel % MENU_COLS;
           dirty = true;
-        } else if (d > 0 && !(edgeDead & bit) && !nav.edgePending) {
-          nav.edgePending = BTN_RIGHT;
-          nav.edgeAt = ms;
-          dirty = true;
+        } else if (!(edgeDead & bit) && !nav.edgePending) {
+          nav.edgePending = bit; nav.edgeAt = ms; dirty = true;
         }
       } else {
-        int d = i == A_DOWN ? 1 : -1;
         if (nav.menuSel < MENU_CARDS) {
           int row = nav.menuSel / MENU_COLS;
-          if (row + d >= 0 && row + d < MENU_CARDS / MENU_COLS) {
-            nav.menuSel += d * MENU_COLS;
+          if (row + dy >= 0 && row + dy < MENU_CARDS / MENU_COLS) {
+            nav.menuSel = (uint8_t)(nav.menuSel + dy * MENU_COLS);
             nav.menuCardCol = nav.menuSel % MENU_COLS;
             dirty = true;
-          } else if (d > 0) { nav.menuSel = MENU_CARDS; dirty = true; }   // into the list
-        } else if (d > 0) {
+          } else if (dy > 0) { nav.menuSel = MENU_CARDS; dirty = true; }
+          else if (!(edgeDead & bit) && !nav.edgePending) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
+        } else if (dy > 0) {
           if (nav.menuSel < MENU_ITEMS - 1) { nav.menuSel++; dirty = true; }
-        } else {                                   // back up: to the column it came from
+          else if (!(edgeDead & bit) && !nav.edgePending) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
+        } else {
           if (nav.menuSel > MENU_CARDS) nav.menuSel--;
-          else nav.menuSel = MENU_CARDS - MENU_COLS + nav.menuCardCol;
+          else nav.menuSel = (uint8_t)(MENU_CARDS - MENU_COLS + nav.menuCardCol);
           dirty = true;
         }
       }
-    } else if (nav.statusFocus) {                  // the status row has the cursor
-      if (opt) {                                   // B + arrows: the stood-on cell
-        if (nav.statusSel == 0 && (i == A_LEFT || i == A_RIGHT)) {       // the scene
-          dirty |= to(nav.gridS, clamp(nav.gridS + (i == A_RIGHT ? 1 : -1), 0, 7));
-        } else if (nav.statusSel == 2) {                                 // the tempo
-          int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
-          synth.setSeqBpm((float)clamp((int)synth.seqBpm() + d, 40, 240));
-          dirty = true;
-        }
-      } else if (i == A_LEFT || i == A_RIGHT) {
-        dirty |= to(nav.statusSel, clamp(nav.statusSel + (i == A_RIGHT ? 1 : -1), 0, 3));
+      continue;
+    }
+
+    if (nav.screen == SCR_GRID) {
+      if (opt) {                                 // B+UP/DOWN on a clip: the bar ladder
+        if (nav.gridRow > 0 && dy && fresh) { clipBarsStep(clipAt(nav.gridT, nav.gridS), -dy); dirty = true; }
+        else if (nav.gridRow == 0 && statusB(nav.statusSel, i)) dirty = true;
+        continue;
       }
-    } else if (opt) {                              // B + arrows on INST: step the engine,
-      if (nav.screen == SCR_INST) {                // the preset, or a parameter cell
-        if (nav.instRow == 0) {
-          if (nav.instTop == 0 && (i == A_LEFT || i == A_RIGHT)) {
-            curEngine() = (curEngine() + (i == A_RIGHT ? 1 : ENGINE_COUNT - 1)) % ENGINE_COUNT;
-            dirty = true;
-          } else if (nav.instTop == 1 && curEngine() == E_GM) {
-            // The preset cell: GM's 128 programs (UP/DOWN jumps a family of 8).
-            int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 8 : -8;
-            gmProgram[nav.gridT] = (uint8_t)((gmProgram[nav.gridT] + d + 128) & 127);
-            dirty = true;
-          } else if (nav.instTop == 1 && curEngine() == E_DM && (i == A_LEFT || i == A_RIGHT)) {
-            drumMachine[nav.gridT] = (uint8_t)((drumMachine[nav.gridT] + (i == A_RIGHT ? 1 : 3)) & 3);
-            dirty = true;
-          }                                        // (the other engines: no banks yet)
+      if (edit) continue;                        // (A held: nothing on the grid)
+      if (dy) {
+        int row = nav.gridRow + dy;
+        if (row < 0 || row > (int)NS) {          // off the top/bottom: the stack wraps
+          if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
+        } else { nav.gridRow = (uint8_t)row; if (row > 0) nav.gridS = (uint8_t)(row - 1); dirty = true; }
+      } else {
+        if (nav.gridRow == 0) {
+          int c = nav.statusSel + dx;
+          if (c < 0 || c >= ST_COUNT) {
+            if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
+          } else { nav.statusSel = (uint8_t)c; dirty = true; }
         } else {
-          int idx = (nav.instRow - 1) * 4 + nav.instCol;
-          if (engineParams(curEngine())[idx].name[0] != '-') {
-            int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
-            uint8_t &p = engParams[nav.gridT][curEngine()][idx];
-            p = (uint8_t)clamp(p + d, 0, 99);
-            dirty = true;
-          }
+          int t = nav.gridT + dx;
+          if (t < 0 || t >= (int)NT) {           // off the side: the menu
+            if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
+          } else { nav.gridT = (uint8_t)t; dirty = true; }
         }
-      } else if (nav.screen == SCR_GRID) {       // B + arrows: the project's key and scale
-        if (i == A_LEFT || i == A_RIGHT) projKey = (projKey + (i == A_RIGHT ? 1 : 11)) % 12;
-        else projScale = (projScale + (i == A_UP ? 1 : SCALE_COUNT - 1)) % SCALE_COUNT;
-        nav.editPitch = scaleSnap(nav.editPitch);   // keep the roll cursor legal
+      }
+      continue;
+    }
+
+    if (nav.screen == SCR_NOTE) {
+      Clip &c = editClip();
+      if (opt && !nav.boxOpen) {                 // B+arrows on a note: move / transpose
+        if (selAny() || noteAtCursor() >= 0) {
+          if (!selAny()) selFollowCursor();
+          if (dx) selMove(dx); else selTranspose(-dy);
+          optUsed = true;
+          dirty = true;
+          continue;
+        }
+      }
+      if (edit && (selAny() || noteAtCursor() >= 0)) {   // A+arrows: length / velocity
+        if (!selAny()) selFollowCursor();
+        if (dx) selLength(dx); else selVelocity(-dy);
+        editUsed = true;
         dirty = true;
-      } else if (nav.screen == SCR_EDIT) {       // B + arrows on a note: length / velocity
-        Clip &c = clipAt(nav.gridT, gridScene());
-        int ni = clipFindAt(c, nav.editPitch, nav.editPage * 16 + nav.editStep);
-        if (ni >= 0) {
-          ClipNote &cn = c.notes[ni];
-          if (i == A_LEFT || i == A_RIGHT) {
-            cn.len = (uint8_t)clamp(cn.len + (i == A_RIGHT ? 1 : -1), 1, CLIP_MAX_BARS * 16 - cn.start);
-            clipRefreshBars(c);
-          } else {
-            cn.vel = (uint8_t)clamp(cn.vel + (i == A_UP ? 10 : -10), 1, 127);
-          }
-          dirty = true;
-        }
-      } else if (nav.screen == SCR_MIX) {        // the strip: volume / pan
-        int t = nav.mixSel;
-        if (i == A_UP || i == A_DOWN) {
-          uint8_t &v = t == 9 ? masterVol : trackVol[t];
-          v = (uint8_t)clamp(v + (i == A_UP ? 2 : -2), 0, 99);
-          dirty = true;
-        } else if (t < 9) {
-          trackPan[t] = (uint8_t)clamp(trackPan[t] + (i == A_RIGHT ? 2 : -2), 0, 99);
-          dirty = true;
-        }
-      } else if (nav.screen == SCR_TFX) {
-        uint8_t slot = nav.tfxRow < 2 ? nav.tfxRow : nav.tfxSlot;
-        FxSlot &sl = trackFx[nav.gridT][slot];
-        if (nav.tfxRow < 2) {                    // a slot's type selector
-          if (i == A_LEFT || i == A_RIGHT)
-            { fxSetTrackType(nav.gridT, slot, fxStepTrackType(sl.type, i == A_RIGHT ? 1 : -1)); dirty = true; }
-        } else {
-          int idx = (nav.tfxRow - 2) * 4 + nav.tfxCol;
-          bool send = fxIsSend(sl.type);
-          if (fxParams(sl.type, send)[idx].name[0] != '-') {
-            int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
-            uint8_t &p = (send && idx < 7) ? sendFx[fxSendIndex(sl.type)].p[idx] : sl.p[idx];
-            p = (uint8_t)clamp(p + d, 0, 99);
-            dirty = true;
-          }
-        }
-      } else if (nav.screen == SCR_MFX) {
-        if (nav.mfxRow == 0) {
-          if (i == A_LEFT || i == A_RIGHT)
-            { fxSetMasterType(fxStepMasterType(masterFx.type, i == A_RIGHT ? 1 : -1)); dirty = true; }
-        } else {
-          int idx = (nav.mfxRow - 1) * 4 + nav.mfxCol;
-          if (fxParams(masterFx.type, false)[idx].name[0] != '-') {
-            int d = i == A_LEFT ? -1 : i == A_RIGHT ? 1 : i == A_UP ? 10 : -10;
-            masterFx.p[idx] = (uint8_t)clamp(masterFx.p[idx] + d, 0, 99);
-            dirty = true;
-          }
-        }
+        continue;
       }
+      // plain (or box-dragging) movement
+      if (dx) {
+        int pos = nav.notePage * 16 + nav.noteStep;
+        int ni = noteAtCursor();
+        if (!nav.boxOpen && ni >= 0) {           // skip over the note's extent
+          pos = dx > 0 ? c.notes[ni].start + c.notes[ni].len : c.notes[ni].start - 1;
+        } else pos += dx;
+        pos = clamp(pos, 0, c.bars * 16 - 1);
+        nav.notePage = (uint8_t)(pos / 16);
+        nav.noteStep = (uint8_t)(pos % 16);
+      } else {
+        int p = scaleStep(nav.notePitch, -dy);
+        if (p) { nav.notePitch = (uint8_t)p; pitchWindowFollow(); }
+      }
+      if (nav.boxOpen) { nav.boxStep1 = nav.notePage * 16 + nav.noteStep; nav.boxPitch1 = nav.notePitch; }
+      else selFollowCursor();
+      dirty = true;
+      continue;
+    }
+
+    // INST
+    if (opt) {
+      if (nav.instRow == 0) {                    // the synth selector
+        if (dx && fresh) {
+          curEngine() = (uint8_t)((curEngine() + dx + ENGINE_COUNT) % ENGINE_COUNT);
+          dirty = true;
+        } else if (dy && curEngine() == E_GM) {
+          gmProgram[nav.selTrack] = (uint8_t)((gmProgram[nav.selTrack] - dy + 128) & 127);
+          dirty = true;
+        } else if (dy && curEngine() == E_DM && fresh) {
+          drumMachine[nav.selTrack] = (uint8_t)((drumMachine[nav.selTrack] - dy + 4) & 3);
+          dirty = true;
+        }
+      } else if (nav.instRow == 3) {
+        if (statusB(nav.statusSel, i)) dirty = true;
+      } else {
+        instCellStep(dy ? -dy * 10 : dx);        // B+U/D +-10, B+L/R +-1
+        dirty = true;
+      }
+      optUsed = true;
+      continue;
+    }
+    if (edit) continue;
+    if (dy) {
+      int row = nav.instRow + dy;
+      if (row < 0 || row > 3) {
+        if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
+      } else { nav.instRow = (uint8_t)row; dirty = true; }
     } else {
-      bool moved = move(i == A_LEFT ? -1 : i == A_RIGHT ? 1 : 0, i == A_UP ? -1 : i == A_DOWN ? 1 : 0);
-      if (moved) {
-        dirty = true;
-        if (nav.edgePending) { nav.edgePending = 0; }
-      } else if (!(edgeDead & bit)) {
-        // Off the content's edge: arm the switch there (UP/DOWN along the
-        // screen stack, LEFT into the menu; RIGHT leads nowhere here).
-        uint8_t want = 0;
-        if (i == A_UP && nav.screen > 0) want = BTN_UP;
-        else if (i == A_DOWN && nav.screen < SCR_COUNT - 1) want = BTN_DOWN;
-        else if (i == A_LEFT) want = BTN_LEFT;
-        if (want && nav.edgePending != want) {
-          nav.edgePending = want;
-          nav.edgeAt = ms;
-          dirty = true;
-        }
+      if (nav.instRow == 0) {                    // the selector: sideways = the pages
+        if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
+      } else if (nav.instRow == 3) {
+        int cc = nav.statusSel + dx;
+        if (cc < 0 || cc >= ST_COUNT) {
+          if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
+        } else { nav.statusSel = (uint8_t)cc; dirty = true; }
+      } else {
+        int cc = nav.instCol + dx;
+        if (cc < 0 || cc > 3) {
+          if (fresh && !(edgeDead & bit) && nav.edgePending != bit) { nav.edgePending = bit; nav.edgeAt = ms; dirty = true; }
+        } else { nav.instCol = (uint8_t)cc; dirty = true; }
       }
     }
   }

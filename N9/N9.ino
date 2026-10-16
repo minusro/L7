@@ -60,6 +60,7 @@ void setup() {
   splashIntro();                                   // (blocking; any key skips)
   for (int i = 0; i < 6 && !codec.enable(); i++) delay(10);
   codec.volume(0.6f);
+  trackLayerInit();
   synthMidiBegin();
   splashTick();
   appsInit();                                      // the card's /N9 and /APPS folders
@@ -78,8 +79,11 @@ void loop() {
   synthServiceMidi();
   static uint8_t lastStep = 255;                 // the playhead and clock follow the transport
   if (synth.seqOn() && synth.seqStepN() != lastStep) { lastStep = synth.seqStepN(); dirty = true; }
-  static uint32_t meterAt = 0;                   // the mixer's meters tick on their own
-  if (nav.screen == SCR_MIX && millis() - meterAt >= 80) { meterAt = millis(); dirty = true; }
+  static uint32_t phAt = 0;                      // playheads move between steps too
+  if (synth.seqOn() && millis() - phAt >= 100 && (nav.screen == SCR_GRID || nav.screen == SCR_NOTE)) {
+    phAt = millis();
+    dirty = true;
+  }
   if (dirty) { drawScreen(nav.screen); dirty = false; }
 
   bool hp;

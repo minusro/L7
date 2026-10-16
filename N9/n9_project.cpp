@@ -19,7 +19,7 @@ static bool clipFileExists = false;
 static int8_t pendingLoad = -1;     // a load waiting for the next beat
 static uint32_t pendingBeat = 0;    // the beat it was asked on
 
-static constexpr uint32_t MAGIC = 0x3450394E;   // "N9P4" (clips stream after the blob, 128 notes each)
+static constexpr uint32_t MAGIC = 0x3550394E;   // "N9P5" (N4: the track layer, fixed bar lengths)
 
 struct ProjectBlob {
   uint32_t magic;
@@ -34,6 +34,8 @@ struct ProjectBlob {
   uint8_t sendP[3][8];
   uint8_t gmProg[9];
   uint8_t drumMach[9];
+  TrackLayer layer[9];
+  uint8_t metro, pad1, pad2, pad3;
   uint8_t params[9][ENGINE_COUNT][8];
 };   // (the clips stream into the file right after this blob)
 static DMAMEM ProjectBlob blob;
@@ -62,6 +64,8 @@ static void gather(ProjectBlob &b) {
   for (int i = 0; i < 3; i++) memcpy(b.sendP[i], sendFx[i].p, 8);
   memcpy((void *)b.gmProg, gmProgram, sizeof b.gmProg);
   memcpy((void *)b.drumMach, drumMachine, sizeof b.drumMach);
+  memcpy(b.layer, trackL, sizeof b.layer);
+  b.metro = metroOn;
   memcpy(b.params, engParams, sizeof b.params);
 }
 
@@ -73,6 +77,8 @@ static void apply(const ProjectBlob &b) {
     for (int s = 0; s < 2; s++) fxSetTrackType(t, s, FXT_NONE);
   memcpy(gmProgram, b.gmProg, sizeof gmProgram);
   memcpy(drumMachine, b.drumMach, sizeof drumMachine);
+  memcpy(trackL, b.layer, sizeof trackL);
+  metroOn = b.metro;
   memcpy(engParams, b.params, sizeof engParams);
   memcpy(trackEngine, b.engine, sizeof trackEngine);
   memcpy(trackVol, b.vol, sizeof trackVol);
@@ -177,6 +183,8 @@ void projectNew(uint8_t slot) {
   memset(trackEngine, 0, sizeof trackEngine);
   memset(gmProgram, 0, sizeof gmProgram);
   memset(drumMachine, 0, sizeof drumMachine);
+  trackLayerInit();
+  metroOn = false;
   paramsInit();
   fxSlotsInit();
   for (int t = 0; t < 9; t++) { trackVol[t] = 80; trackPan[t] = 50; trackMute[t] = false; }
