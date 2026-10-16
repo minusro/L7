@@ -167,7 +167,7 @@ static int clampP(int p) { p -= 24; return p < 0 ? 0 : p > 72 ? 72 : p; }
 
 static void drawGrid() {
   statusBar(0, nav.gridRow == 0 ? nav.statusSel : -1);
-  rct(2 + nav.selTrack * 80, 27, 76, 2, ACCENT);   // the selected track
+  rct(2 + nav.selTrack * 80, 236, 76, 4, ACCENT);  // the selected track, under its column
   for (int t = 0; t < NT; t++)
     for (int sc = 0; sc < NS; sc++) {
       int x = 2 + t * 80, y = 31 + sc * 52;
