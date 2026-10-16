@@ -110,8 +110,8 @@ writes the screen 30 times a second and the output's audio; `compose.py` lays
 it out for Instagram Stories (1080x1920): the screen across the whole width
 (scaled by area, 3.375x, no bezel) near the top (60 px into the Stories' top
 safe zone of 250 px, still clear of the profile's row), the caption beneath it, and the M8's keys under that, laid out as on the M8,
-unlabelled, lit while held, big enough to reach into the bottom 340 px (where
-Stories put the reply bar); it ends on the app's own splash played backwards
+unlabelled, lit while held, their bottom 90 px above the frame's (into the
+bottom 340 px, where Stories put the reply bar, as little as fits); it ends on the app's own splash played backwards
 without its credits line, its first frame fading in over the last second
 (needs ffmpeg, numpy, Pillow).
 

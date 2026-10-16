@@ -2,9 +2,9 @@
 """Composes the L7 demo video from what demo.cpp wrote, portrait for
 Instagram Stories (1080x1920): the M8's screen (raw RGB565, 30 frames a
 second) across the whole width near the top (60 px into the Stories' top
-safe zone of 250 px, still clear of the profile's row), the caption and the
-M8's keys (lit while held, twice their old size, reaching down into the bottom
-340 px) beneath it; the app's output as the sound.
+safe zone of 250 px, still clear of the profile's row: the bottom's matters
+more), the caption and the M8's keys (lit while held, their bottom 90 px above
+the frame's) beneath it; the app's output as the sound.
 
   compose.py <demo-out-dir> <video.mp4>                (needs ffmpeg, numpy, Pillow)
   compose.py <demo-out-dir> --stills 5,12.5,30 <dir>   (PNGs of those moments, to check)
@@ -41,7 +41,6 @@ def font(size, bold=False):
 
 TITLE, SUB = font(84, True), font(50)
 TITLE_Y, TITLE_STEP, SUB_GAP, SUB_STEP = 40, 92, 6, 60   # (the caption's lines, from the screen's bottom)
-CAPTION_H = TITLE_Y + TITLE_STEP + SUB_GAP + 2 * SUB_STEP + 4   # (a title line, two of subtitle)
 
 
 def wrap(draw, text, f, width):
@@ -83,12 +82,12 @@ def scale_screen(rgb):
 # from the top left key's corner): OPTION (B) and EDIT (A) top right, UP a
 # little lower, LEFT / DOWN / RIGHT under it, SHIFT / START below those. No
 # labels: the keys' places say which they are.
-PITCH = 192
+PITCH = 154
 KEY = int(PITCH * 0.88)
 LAYOUT = {OPT: (2.18, 0), EDIT: (3.16, 0), UP: (1, 0.225), LEFT: (0, 1.17), DOWN: (1, 1.17), RIGHT: (2, 1.17),
           SHIFT: (1, 2.32), PLAY: (2, 2.32)}
 KEYS_W, KEYS_H = int(3.16 * PITCH) + KEY, int(2.32 * PITCH) + KEY
-KEYS_Y = PANEL_Y + CAPTION_H                        # (under a caption of three lines)
+KEYS_Y = H - 90 - KEYS_H                            # (their bottom 90 px above the frame's; ~75 px under a caption of three lines)
 
 
 def key_boxes():
@@ -111,8 +110,8 @@ def panel(caption, sub, keys, alpha):
         y += SUB_STEP
     for bit, (x, ky) in key_boxes().items():
         down = keys & bit
-        d.rounded_rectangle((x, ky, x + KEY, ky + KEY), radius=26, fill=ACCENT if down else KEY_FILL,
-                            outline=ACCENT if down else KEY_UP, width=5)
+        d.rounded_rectangle((x, ky, x + KEY, ky + KEY), radius=21, fill=ACCENT if down else KEY_FILL,
+                            outline=ACCENT if down else KEY_UP, width=4)
     return img
 
 
