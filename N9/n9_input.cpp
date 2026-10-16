@@ -38,6 +38,11 @@ static bool selHas(uint8_t i) { return nav.sel[i >> 5] & (1u << (i & 31)); }
 static void selAdd(uint8_t i) { nav.sel[i >> 5] |= 1u << (i & 31); }
 static void selClear() { nav.sel[0] = nav.sel[1] = nav.sel[2] = nav.sel[3] = 0; }
 static bool selAny() { return nav.sel[0] | nav.sel[1] | nav.sel[2] | nav.sel[3]; }
+static int selCount() {
+  int n = 0;
+  for (int w = 0; w < 4; w++) n += __builtin_popcount(nav.sel[w]);
+  return n;
+}
 
 // While a note is created or manipulated (A or B held), it sounds on the
 // track; it retriggers as the edit changes pitch or velocity and stops when
@@ -462,6 +467,9 @@ bool inputService() {
       Clip &c = editClip();
       int i = noteAtCursor();
       aTapOnNote = i >= 0;
+      if (selCount() > 1) {                      // a marquee selection survives the press
+        if (i >= 0) audPlay(c.notes[i].pitch, c.notes[i].vel);
+      } else {
       selClear();
       if (i >= 0) { selAdd((uint8_t)i); audPlay(c.notes[i].pitch, c.notes[i].vel); }
       else if (c.count < CLIP_MAX_NOTES) {
@@ -473,6 +481,7 @@ bool inputService() {
         clipRefreshBars(c);
         selAdd(c.count - 1);
         audPlay(n.pitch, n.vel);
+      }
       }
       dirtyNow = true;
     } else if (nav.screen == SCR_INST && nav.instRow == 3) {
