@@ -1079,6 +1079,29 @@ void N9Synth::update() {
     if (quiet && v.state != ATTACK) { v.state = IDLE; active--; }
   }
   miRender(tbus, AUDIO_BLOCK_SAMPLES);
+  static float mif1[9], mif2[9];
+  for (int t = 0; t < NT; t++) {                 // the INST filter for Mutable tracks:
+    uint8_t e = trackEngine[t];                  // per track, on the bus (no per-voice
+    if (e < E_MI_FIRST || e >= E_GM) continue;   // hooks in plaits' pool; fenv is idle here)
+    const TrackLayer &tl = trackL[t];
+    bool lfoOnF = tl.lfoAmt > 0 && tl.lfoDest >= LD_CUT && tl.lfoDest <= LD_RES;
+    if (tl.ftype == 0 && tl.cut >= 98 && tl.res <= 12 && !lfoOnF) { mif1[t] = mif2[t] = 0; continue; }
+    float cut = tl.cut + lfoCellF(t, LD_CUT);
+    float res = tl.res + lfoCellF(t, LD_RES);
+    if (cut < 0) cut = 0; if (cut > 99) cut = 99;
+    if (res < 0) res = 0; if (res > 99) res = 99;
+    float cc = cut / 99.0f;
+    float fc = 0.002f + 0.30f * cc * cc;
+    float ff = 2.0f * sinT(fc * 0.5f);
+    float q = 1.6f - 1.45f * (res / 99.0f);
+    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+      float in = tbus[t][i];
+      mif1[t] += ff * mif2[t];
+      float hp = in - mif1[t] - q * mif2[t];
+      mif2[t] += ff * hp;
+      tbus[t][i] = tl.ftype == 1 ? hp : tl.ftype == 2 ? mif2[t] : mif1[t];
+    }
+  }
   _active = active + miActive();
 
   static float outL[AUDIO_BLOCK_SAMPLES], outR[AUDIO_BLOCK_SAMPLES];

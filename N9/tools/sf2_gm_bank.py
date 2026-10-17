@@ -366,19 +366,34 @@ import zlib
 drums_out = build_drums()
 print(f'drums baked: {len(samples)} samples, {len(blob)/1024:.0f} KB')
 
-ver = zlib.crc32(open(SF2, 'rb').read(1 << 16)) ^ 0x4E394203   # the region's identity
-# Starts first: the pre-loop middle keeps its length as long as possible,
-# loops give way (match-aligned cuts), one-shots in between.
-ATTEMPTS = [(1.0, 0.50, 1.0), (0.8, 0.40, 0.8), (0.7, 0.30, 0.7),
-            (0.6, 0.25, 0.6), (0.5, 0.20, 0.55), (0.4, 0.16, 0.5), (0.3, 0.13, 0.45)]
-for caps in ATTEMPTS:
-    records = {}
-    for prog in range(128):
-        rr = program_record(prog, ver, caps)
-        if rr is not None: records[prog] = rr
-    total = 8 + 128 * 8 + sum(len(r) for r in records.values())
-    print(f'mid={caps[0]}s loop={caps[1]}s shot={caps[2]}s: {total/1024:.0f} KB')
-    if total <= REGION_BYTES: break
+ver = zlib.crc32(open(SF2, 'rb').read(1 << 16)) ^ 0x4E394204   # the region's identity (v2: aligned records)
+# Loops are sacred: everyone starts at full loop length; when the region
+# overflows, only the largest programs step down a quality tier (shorter
+# middles first, then a match-cut loop), one at a time, until it all fits.
+LADDER = [(0.35, 99.0, 0.7), (0.30, 99.0, 0.6), (0.25, 0.6, 0.55), (0.20, 0.35, 0.5), (0.15, 0.2, 0.45)]
+budget = REGION_BYTES - 8 - 128 * 8 - 128 * 4
+tier = {}
+records = {}
+for prog in range(128):
+    rr = program_record(prog, ver, LADDER[0])
+    if rr is not None:
+        records[prog] = rr
+        tier[prog] = 0
+while sum(len(r) for r in records.values()) > budget:
+    worst, sz = -1, 0
+    for p, r in records.items():
+        if tier[p] < len(LADDER) - 1 and len(r) > sz: worst, sz = p, len(r)
+    if worst < 0: break
+    tier[worst] += 1
+    records[worst] = program_record(worst, ver, LADDER[tier[worst]])
+total = sum(len(r) for r in records.values())
+from collections import Counter
+tc = Counter(tier.values())
+print(f'region fill: {total/1024:.0f} KB of {budget/1024:.0f}; tiers: ' +
+      ', '.join(f'{tc[k]} at T{k}' for k in sorted(tc)))
+stepped = sorted((p for p, t in tier.items() if t), key=lambda p: -tier[p])
+if stepped: print('stepped down:', ', '.join(f'{p+1}(T{tier[p]})' for p in stepped))
+
 flb = bytearray()
 flb += struct.pack('<II', 0x4647394E, ver)         # 'N9GF'
 dir_off = len(flb)
@@ -386,6 +401,7 @@ flb += b'\0' * (128 * 8)
 for prog in range(128):
     if prog in records:
         rec = records[prog]
+        if len(flb) % 4: flb += b'\xff' * (4 - len(flb) % 4)   # records stay word-aligned
         struct.pack_into('<II', flb, dir_off + prog * 8, len(flb), len(rec))
         flb += rec
 FLB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'apps_sd', 'GM.FLB')

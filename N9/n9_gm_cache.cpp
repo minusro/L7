@@ -36,8 +36,11 @@ static bool regionOk = false;
 const GmCacheHdr *gmCacheFor(uint8_t prog) {
   if (!regionOk || prog > 127) return nullptr;
   const RegionHdr *rh = (const RegionHdr *)BASE;
-  if (!rh->dir[prog].size) return nullptr;
-  return (const GmCacheHdr *)(BASE + rh->dir[prog].off);
+  uint32_t off = rh->dir[prog].off;
+  if (!rh->dir[prog].size || (off & 3) || off + sizeof(GmCacheHdr) > REGION) return nullptr;
+  const GmCacheHdr *h = (const GmCacheHdr *)(BASE + off);
+  if (h->magic != 0x5047394Eu || h->prog != prog || h->nzones > 4 || h->nsmp > 4) return nullptr;
+  return h;
 }
 
 static bool regionValid() {
