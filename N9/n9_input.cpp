@@ -10,6 +10,7 @@
 #include "M8Board.h"
 #include "n9_apps.h"
 #include "n9_fx.h"
+#include "n9_gm_cache.h"
 #include "n9_gm_pcm.h"
 #include "n9_project.h"
 #include "n9_song.h"
@@ -746,8 +747,16 @@ bool inputService() {
             dirty = true;
           }
         } else if (curEngine() == E_GM) {
-          if (dx) { gmProgram[nav.selTrack] = (uint8_t)((gmProgram[nav.selTrack] + dx + 128) & 127); dirty = true; }
-          else { gmProgram[nav.selTrack] = (uint8_t)((gmProgram[nav.selTrack] - dy * 8 + 128) & 127); dirty = true; }
+          int n = gmAvailCount();
+          int d = dx ? dx : -dy * 8;
+          if (n) {                               // only the banked programs show
+            int ix = gmAvailIndexOf(gmProgram[nav.selTrack]);
+            if (ix < 0) ix = 0; else ix = (ix + d + 8 * n) % n;
+            gmProgram[nav.selTrack] = gmAvailAt(ix);
+          } else {
+            gmProgram[nav.selTrack] = (uint8_t)((gmProgram[nav.selTrack] + d + 256) & 127);
+          }
+          dirty = true;
         } else if (dx && fresh) {
           drumMachine[nav.selTrack] = (uint8_t)((drumMachine[nav.selTrack] + dx + 4) & 3);
           dirty = true;

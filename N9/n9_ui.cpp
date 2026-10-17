@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "n9_gm_bank.h"
+#include "n9_gm_cache.h"
 #include "n9_m1_bank.h"
 #include "n9_mw_bank.h"
 #include "n9_mi.h"
@@ -394,7 +395,10 @@ static void drawInst() {
   txt(20 + txtW(name) + 6, 8, ">", DIM);
   if (curEngine() == E_GM) {
     char pn[24];
-    snprintf(pn, sizeof pn, "%03d %s", gmProgram[nav.selTrack] + 1, GM_NAMES[gmProgram[nav.selTrack] & 127]);
+    uint8_t prog = gmProgram[nav.selTrack] & 127;
+    int ix = gmAvailIndexOf(prog);               // banked programs count 1..N
+    if (ix >= 0) snprintf(pn, sizeof pn, "%02d %s", ix + 1, GM_NAMES[prog]);
+    else snprintf(pn, sizeof pn, "-- %s", GM_NAMES[prog]);
     txt(142, 8, pn, nav.instTop == 1 ? INK : LIGHT);
   } else if (curEngine() == E_DM) {
     static const char *const MACH[4] = {"606", "707", "808", "909"};

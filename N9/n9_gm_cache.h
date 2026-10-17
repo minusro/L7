@@ -22,4 +22,10 @@ static_assert(sizeof(GmCacheHdr) == 128, "the SD records are written to this lay
 
 void gmCacheInit();                      // boot: bank directory in, flash slots scanned
 const GmCacheHdr *gmCacheFor(uint8_t prog);   // the cached record, or null
+
+// The banked programs, as a continuous 1..N list (the preset selector shows
+// only these; programs that fell back to synth patches are hidden).
+int gmAvailCount();
+uint8_t gmAvailAt(int i);
+int gmAvailIndexOf(uint8_t prog);        // -1: not banked
 bool gmCacheService(bool immediate = false);   // (a no-op now: boot loads everything)

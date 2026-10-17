@@ -32,6 +32,22 @@ struct RegionHdr {
 };
 
 static bool regionOk = false;
+static uint8_t availList[128];
+static int availN = 0;
+
+int gmAvailCount() { return availN; }
+uint8_t gmAvailAt(int i) { return availList[i < 0 ? 0 : i >= availN ? availN - 1 : i]; }
+int gmAvailIndexOf(uint8_t prog) {
+  for (int i = 0; i < availN; i++) if (availList[i] == prog) return i;
+  return -1;
+}
+static void availScan() {
+  availN = 0;
+  if (!regionOk) return;
+  const RegionHdr *rh = (const RegionHdr *)BASE;
+  for (int p = 0; p < 128; p++)
+    if (rh->dir[p].size) availList[availN++] = (uint8_t)p;
+}
 
 const GmCacheHdr *gmCacheFor(uint8_t prog) {
   if (!regionOk || prog > 127) return nullptr;
@@ -56,7 +72,8 @@ void gmCacheInit() {
   }
   if (regionValid()) {
     regionOk = true;
-    Serial.println("gm: the sample region held over");
+    availScan();
+    Serial.printf("gm: the sample region held over (%d programs)\n", availN);
     return;
   }
   FsFile f = appsSd().open("/N9/GM.FLB", O_RDONLY);
@@ -103,7 +120,8 @@ void gmCacheInit() {
   AudioInterrupts();
   f.close();
   regionOk = full && regionValid();
-  Serial.printf("gm: sample region %s\n", regionOk ? "loaded" : "LOAD FAILED");
+  availScan();
+  Serial.printf("gm: sample region %s (%d programs)\n", regionOk ? "loaded" : "LOAD FAILED", availN);
 }
 
 bool gmCacheService(bool) { return false; }      // nothing to do at runtime any more
