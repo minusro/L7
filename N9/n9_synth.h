@@ -86,7 +86,8 @@ public:
     uint8_t tSeg = 0, tType = 0;
     bool tBypass = true;
     float tAc = 0, tDc = 0, tSus = 1, tRc = 0;
-    float tCutB = 0.3f, tResQ = 0.2f, tFenv = 0;
+    float tCutB = 0.3f, tResQ = 2.0f, tFenv = 0;
+    float tA1 = 0, tA2 = 0, tA3 = 0;   // the trapezoidal SVF's block coefficients
   };
 private:
   void noteOnNow(uint8_t track, uint8_t note, uint8_t vel);   // audio side

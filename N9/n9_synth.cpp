@@ -366,11 +366,18 @@ static void applyTrackLayer(N9Synth::Voice &v, bool snap) {
   v.tType = tl.ftype;
   float c = cut / 99.0f;
   set(v.tCutB, 0.002f + 0.30f * c * c);
-  set(v.tResQ, 1.6f - 1.45f * (res / 99.0f));      // SVF damping: high res = low q
+  set(v.tResQ, 2.0f - 1.85f * (res / 99.0f));      // trapezoidal damping k
   set(v.tFenv, (fev - 50.0f) / 50.0f * 0.25f);     // bipolar sweep
   v.tAc = pcoef(tl.a); v.tDc = pcoef(tl.d);
   set(v.tSus, tl.s / 99.0f);
   v.tRc = pcoef(tl.r);
+  if (!(v.tf1 == v.tf1) || !(v.tf2 == v.tf2)) v.tf1 = v.tf2 = 0;   // a NaN never sticks
+  float fc = v.tCutB + v.tFenv * v.tEnv;           // the sweep, at block rate
+  if (fc < 0.0015f) fc = 0.0015f; else if (fc > 0.45f) fc = 0.45f;
+  float g = tanf(3.14159265f * fc);
+  v.tA1 = 1.0f / (1.0f + g * (g + v.tResQ));
+  v.tA2 = g * v.tA1;
+  v.tA3 = g * v.tA2;
 }
 
 // polyBLEP residual: subtracts the saw's step discontinuity alias
@@ -1062,14 +1069,13 @@ void N9Synth::update() {
       if (v.state == RELEASE) v.tEnv += v.tRc * (0.0f - v.tEnv);
       else if (v.tSeg == 0) { v.tEnv += v.tAc * (1.0f - v.tEnv + 0.001f); if (v.tEnv >= 1.0f) { v.tEnv = 1.0f; v.tSeg = 1; } }
       else v.tEnv += v.tDc * (v.tSus - v.tEnv);
-      if (!v.tBypass) {
-        float fc = v.tCutB + v.tFenv * v.tEnv;
-        if (fc < 0.0015f) fc = 0.0015f; else if (fc > 0.32f) fc = 0.32f;
-        float f = 2.0f * sinT(fc * 0.5f);
-        v.tf1 += f * v.tf2;                        // lp
-        float hp = s - v.tf1 - v.tResQ * v.tf2;
-        v.tf2 += f * hp;                           // bp
-        s = v.tType == 1 ? hp : v.tType == 2 ? v.tf2 : v.tf1;
+      if (!v.tBypass) {                        // trapezoidal SVF: stable anywhere
+        float v3 = s - v.tf2;
+        float v1 = v.tA1 * v.tf1 + v.tA2 * v3;
+        float v2 = v.tf2 + v.tA2 * v.tf1 + v.tA3 * v3;
+        v.tf1 = 2.0f * v1 - v.tf1;
+        v.tf2 = 2.0f * v2 - v.tf2;
+        s = v.tType == 1 ? s - v.tResQ * v1 - v2 : v.tType == 2 ? v1 * v.tResQ : v2;
       }
       float layered = s * v.tEnv;
       tbus[v.track][i] += (d.osc == O_M1 || d.osc == O_DM) ? layered * amp : layered * v.env * amp;
@@ -1092,14 +1098,19 @@ void N9Synth::update() {
     if (res < 0) res = 0; if (res > 99) res = 99;
     float cc = cut / 99.0f;
     float fc = 0.002f + 0.30f * cc * cc;
-    float ff = 2.0f * sinT(fc * 0.5f);
-    float q = 1.6f - 1.45f * (res / 99.0f);
+    if (fc > 0.45f) fc = 0.45f;
+    float g = tanf(3.14159265f * fc);
+    float k = 2.0f - 1.85f * (res / 99.0f);
+    float a1 = 1.0f / (1.0f + g * (g + k)), a2 = g * a1, a3 = g * a2;
+    if (!(mif1[t] == mif1[t]) || !(mif2[t] == mif2[t])) mif1[t] = mif2[t] = 0;
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
       float in = tbus[t][i];
-      mif1[t] += ff * mif2[t];
-      float hp = in - mif1[t] - q * mif2[t];
-      mif2[t] += ff * hp;
-      tbus[t][i] = tl.ftype == 1 ? hp : tl.ftype == 2 ? mif2[t] : mif1[t];
+      float v3 = in - mif2[t];
+      float v1 = a1 * mif1[t] + a2 * v3;
+      float v2 = mif2[t] + a2 * mif1[t] + a3 * v3;
+      mif1[t] = 2.0f * v1 - mif1[t];
+      mif2[t] = 2.0f * v2 - mif2[t];
+      tbus[t][i] = tl.ftype == 1 ? in - k * v1 - v2 : tl.ftype == 2 ? v1 * k : v2;
     }
   }
   _active = active + miActive();
