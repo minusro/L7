@@ -6,6 +6,16 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **K6 (the NEW app in K6/): the navigation prototype (2026-10-18).**
+  Flashed to the device; it REPLACES the running app and has NO app
+  switcher yet - getting back to L7 needs a reflash. Check: the K6 mark
+  splash, then GRID; SHIFT+arrows move across the 3x2 screen map with
+  wrapping (SONG GRID MIX / PROJ NOTE INST) and the top-left dot cluster
+  tracks it; plain arrows move each screen's own cursor (grid cells + the
+  scene column, song rows, mixer strips incl. master, roll steps, INST
+  tabs/cells, project cards + the three items). All content is MOCK - no
+  sound, no transport, no editing yet. Design doc:
+  docs/design/k6_mockup.html.
 - [ ] **K6: the rename (6 tracks x 6 scenes), the split selector, and the
   boot-loaded GM region.** The app shows a K6 mark (splash + menu corner -
   judge the K and 6 glyphs by eye); the grid is 6x6 (cells 48x30). INST's
