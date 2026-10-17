@@ -386,6 +386,16 @@ bool inputService() {
   uint8_t now = raw & ~(BTN_EDIT | BTN_OPT);
   if (raw & BTN_EDIT) now |= BTN_OPT;
   if (raw & BTN_OPT) now |= BTN_EDIT;
+  // ...and the piano roll flips them once more (2026-10-17), so its create/
+  // delete and box/adjust roles trade buttons there. The overdub chord
+  // (PLAY + the global modifier) stays screen-independent.
+  bool optOverdub = now & BTN_OPT;
+  if (nav.screen == SCR_NOTE && !nav.menu) {
+    uint8_t v = now & ~(BTN_EDIT | BTN_OPT);
+    if (now & BTN_EDIT) v |= BTN_OPT;
+    if (now & BTN_OPT) v |= BTN_EDIT;
+    now = v;
+  }
   static uint8_t prev = 0;
   uint8_t pressed = now & ~prev;
   uint8_t released = prev & ~now;
@@ -428,7 +438,7 @@ bool inputService() {
 
   // PLAY: stop / start from 1.1.1; SHIFT+PLAY: reset / resume; B+PLAY: overdub.
   if (pressed & BTN_PLAY) {
-    if (opt) { overdubOn = !overdubOn; optUsed = true; }
+    if (optOverdub) { overdubOn = !overdubOn; optUsed = editUsed = true; }
     else if (shift) synth.seqShiftPlay();
     else synth.seqToggle();
     dirtyNow = true;
