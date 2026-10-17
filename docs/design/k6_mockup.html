@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K6 Design</title>
+<style>
+  :root { --bg:#000; --dark:#2c2c2c; --dim:#707070; --light:#d0d0d0; --ink:#fff; --acc:rgb(48,230,170); }
+  body { background:#0a0a0a; color:var(--light); font-family:ui-monospace,Menlo,monospace; margin:0; padding:24px 16px; }
+  h1 { font-size:16px; color:var(--ink); letter-spacing:2px; }
+  h2 { font-size:13px; color:var(--acc); margin:28px 0 6px; letter-spacing:1px; }
+  p, li { font-size:12px; line-height:1.6; color:var(--light); max-width:720px; }
+  .dim { color:var(--dim); }
+  canvas { display:block; image-rendering:pixelated; border:1px solid #222; margin:8px 0 4px; }
+  .cap { font-size:11px; color:var(--dim); margin-bottom:18px; }
+  table { font-size:12px; border-collapse:collapse; }
+  td { padding:2px 14px 2px 0; vertical-align:top; }
+  td:first-child { color:var(--ink); white-space:nowrap; }
+</style>
+</head>
+<body>
+<h1>K6 — SIX-TRACK CLIP MACHINE</h1>
+<p class="dim">A fresh app for the M8 hardware (320x240, d-pad + SHIFT/PLAY/B/A).
+Clip grid + piano roll paradigm, UX designed for muscle memory: a spatial
+screen map, one edit grammar everywhere, explicit copy/paste verbs, sound on
+every edit. Reuses the proven engine layer (board, synth pool, FX, GM region).</p>
+
+<h2>THE SCREEN MAP</h2>
+<p>Six screens on a 3x2 spatial map, moved with SHIFT+arrows (wrapping).
+Vertical position means zoom: below GRID sits the selected clip's notes,
+below MIX the selected track's sound. The map position shows as a 3x2 dot
+cluster in every screen's top bar, so you always know where you are.</p>
+<canvas id="map" width="480" height="200"></canvas>
+<p class="cap">SONG / GRID / MIX across the top; PROJ / NOTE / INST beneath them.</p>
+
+<h2>THE GRAMMAR (every screen, no exceptions)</h2>
+<table>
+<tr><td>Arrows</td><td>move the cursor</td></tr>
+<tr><td>SHIFT + arrows</td><td>move across the screen map</td></tr>
+<tr><td>A tap</td><td>act: launch, toggle, place</td></tr>
+<tr><td>A held + arrows</td><td>edit the primary value (U/D coarse, L/R fine)</td></tr>
+<tr><td>B held + arrows</td><td>edit the secondary value</td></tr>
+<tr><td>B tap</td><td>zoom into the detail screen for the cursor's object</td></tr>
+<tr><td>B double tap</td><td>reset to default</td></tr>
+<tr><td>SHIFT + A</td><td>copy (the cursor's object to its clipboard)</td></tr>
+<tr><td>SHIFT + B</td><td>paste</td></tr>
+<tr><td>PLAY / SHIFT+PLAY</td><td>stop | start from 1.1.1 / reset | resume</td></tr>
+<tr><td>A + B + arrows</td><td>global: select track (L/R) / step the playing clip (U/D)</td></tr>
+</table>
+
+<h2>GRID (home)</h2>
+<canvas id="grid" width="640" height="480"></canvas>
+<p class="cap">6x6 clips + the scene column on the right; the top bar carries the map dots,
+clock, tempo and play state. The selected track underlines; playing cells
+show a playhead; the scene cells launch whole rows (clock-synced).</p>
+
+<h2>NOTE (below GRID)</h2>
+<canvas id="note" width="640" height="480"></canvas>
+<p class="cap">The piano roll: scale-only rows (drum tracks show one row per sound),
+velocity as fill brightness in a full-colour outline, marquee selection with
+B-drag, wrapped notes draw and select across the loop point.</p>
+
+<h2>SONG (left of GRID)</h2>
+<canvas id="song" width="640" height="480"></canvas>
+<p class="cap">The arranger: an ordered list of scene rows with repeat counts. A adds a
+row at the cursor; A-held+arrows changes scene/repeats; B-tap jumps the
+transport there. PLAY in SONG plays the arrangement; in GRID it plays the grid.</p>
+
+<h2>MIX (right of GRID)</h2>
+<canvas id="mix" width="640" height="480"></canvas>
+<p class="cap">Six strips + master: volume, pan, mute/solo, send level, live meters.
+A toggles mute, B-tap solos, A-held+U/D volume, +L/R pan.</p>
+
+<h2>INST (below MIX)</h2>
+<p class="dim">Carried from the proven design: engine selector (40%) + preset box,
+SYN / MOD / FX tab pages of two knob rows, B-double-tap resets a cell.</p>
+
+<h2>PROJ (below SONG)</h2>
+<p class="dim">Project cards (load/save/cut/paste), storage mode, key/scale, metronome,
+and app switching. The one "menu" screen, still grid-shaped.</p>
+
+<h2>DECIDED</h2>
+<ul>
+<li>Spatial 3x2 screen map with SHIFT+arrows; map dots always visible.</li>
+<li>Explicit clipboard verbs: SHIFT+A copy, SHIFT+B paste — no modal guessing.</li>
+<li>B-tap = universal "zoom into detail" (clip→roll, track→inst, song row→grid).</li>
+<li>Clips ride the global clock; launches and scene rows are clock-synced.</li>
+<li>Every edit sounds: auditioning on all note/value edits while held.</li>
+<li>Engine layer shared with the N9-era app: pool synths, FX chains, GM region.</li>
+</ul>
+<h2>OPEN</h2>
+<ul>
+<li>SONG: loop regions and end behaviour (stop vs loop whole song).</li>
+<li>Per-scene tempo? (lean no — one tempo per project).</li>
+<li>LIVE performance mods (retrigger, fills) — later screen or overlays.</li>
+</ul>
+
+<script>
+const C = { bg:'#000', dark:'#2c2c2c', dim:'#707070', light:'#d0d0d0', ink:'#fff', acc:'rgb(48,230,170)', accd:'rgb(24,120,72)' };
+function cv(id){ const c=document.getElementById(id).getContext('2d'); c.fillStyle=C.bg; c.fillRect(0,0,640,480); return c; }
+function r(c,x,y,w,h,col){ c.fillStyle=col; c.fillRect(x*2,y*2,w*2,h*2); }
+function f(c,x,y,w,h,col){ r(c,x,y,w,1,col); r(c,x,y+h-1,w,1,col); r(c,x,y,1,h,col); r(c,x+w-1,y,1,h,col); }
+function t(c,x,y,s,col,px=2){ c.fillStyle=col; c.font=(px*4)+'px ui-monospace,Menlo,monospace'; c.fillText(s,x*2,y*2+px*3.5); }
+
+// map
+{ const c=document.getElementById('map').getContext('2d');
+  c.fillStyle='#0a0a0a'; c.fillRect(0,0,480,200);
+  const names=[['SONG','GRID','MIX'],['PROJ','NOTE','INST']];
+  for(let row=0;row<2;row++) for(let col=0;col<3;col++){
+    const x=30+col*150, y=25+row*85;
+    c.fillStyle = (row===0&&col===1)?C.acc:C.dark; c.fillRect(x,y,120,65);
+    c.fillStyle = (row===0&&col===1)?'#000':C.light; c.font='16px ui-monospace'; c.fillText(names[row][col],x+28,y+38);
+  }
+}
+
+function topbar(c, mapR, mapC, title){
+  r(c,0,0,160,9,C.bg);
+  for(let rr=0;rr<2;rr++) for(let cc=0;cc<3;cc++) r(c,2+cc*3,2+rr*3,2,2,(rr===mapR&&cc===mapC)?C.acc:C.dark);
+  t(c,13,2,title,C.ink);
+  t(c,70,2,'4.2.3',C.light); t(c,95,2,'132',C.dim); r(c,112,2,4,5,C.acc);
+  t(c,125,2,'C MIN',C.dim);
+  r(c,0,10,160,1,C.dark);
+}
+
+// grid
+{ const c=cv('grid'); topbar(c,0,1,'GRID');
+  for(let tr=0;tr<6;tr++) for(let sc=0;sc<6;sc++){
+    const x=2+tr*24, y=14+sc*17;
+    const has=(tr*7+sc*3)%4!==1, playing=(sc===1&&tr<4);
+    f(c,x,y,22,15, playing?C.acc:has?C.light:C.dark);
+    if(has) for(let i=0;i<6;i++) r(c,x+2+i*3,y+3+((tr+i*sc)%4)*3,2,1,C.light);
+    if(playing) r(c,x+8,y+2,1,11,C.acc);
+  }
+  for(let sc=0;sc<6;sc++){ const y=14+sc*17; f(c,148,y,10,15, sc===1?C.acc:C.dark); t(c,151,y+5,String(sc+1), sc===1?C.acc:C.dim); }
+  f(c,25,29,26,19,C.ink);                         // cursor
+  r(c,2+2*24,117,22,2,C.acc);                     // selected track
+}
+
+// note
+{ const c=cv('note'); topbar(c,1,1,'NOTE');
+  t(c,2,13,'T3 S2  BAR 2/4',C.dim);
+  for(let row=0;row<11;row++){ const y=19+row*9;
+    r(c,22,y,136,8,(row%3===1)?C.bg:C.dark);
+  }
+  t(c,2,19+4*9,'D#3',C.ink);
+  for(let g=0;g<=16;g+=4) r(c,22+g*8.5,19,1,99,C.dim);
+  const notes=[[0,2,2,'l'],[4,4,4,'a'],[10,2,7,'l'],[13,3,1,'s']];
+  for(const [s,l,row,k] of notes){ const x=23+s*8.5, y=20+row*9;
+    f(c,x,y,l*8.5-1,6,k==='s'?C.acc:C.light);
+    r(c,x+1,y+1,l*8.5-3,4, k==='a'?C.light:k==='s'?C.accd:C.dark);
+  }
+  f(c,23+6*8.5,19+4*9,8,8,C.ink);
+  r(c,22+9*8.5,19,1,99,C.acc);                    // playhead
+}
+
+// song
+{ const c=cv('song'); topbar(c,0,0,'SONG');
+  t(c,4,14,'ROW  SCENE  REP',C.dim);
+  const rows=[[1,1,2],[2,1,2],[3,2,4],[4,3,1],[5,2,4]];
+  rows.forEach((rw,i)=>{ const y=22+i*12;
+    const playing=i===2;
+    if(playing) r(c,2,y-1,156,11,C.dark);
+    t(c,6,y,String(rw[0]).padStart(2,'0'), playing?C.acc:C.dim);
+    t(c,34,y,'SCENE '+rw[1], playing?C.ink:C.light);
+    t(c,90,y,'x'+rw[2], C.light);
+    if(playing){ r(c,120,y+1,20,3,C.dark); r(c,120,y+1,12,3,C.acc); }
+  });
+  f(c,2,33,156,12,C.ink);
+  t(c,4,100,'A ADD ROW   A+ARROWS SCENE/REPEATS   B JUMP',C.dim);
+}
+
+// mix
+{ const c=cv('mix'); topbar(c,0,2,'MIX');
+  for(let tr=0;tr<7;tr++){ const x=4+tr*22, master=tr===6;
+    t(c,x+5,13,master?'M':String(tr+1), master?C.ink:C.dim);
+    f(c,x,19,18,80,C.dark);
+    const v=[62,48,70,30,55,66,74][tr];
+    r(c,x+3,19+78-v*0.78,5,v*0.78,master?C.ink:C.light);     // fader
+    r(c,x+10,19+78-(v-8)*0.78,4,(v-8)*0.78,C.accd);          // meter
+    t(c,x+3,102,tr===3?'MUTE':'',C.acc);
+    r(c,x,110,18,1,C.dim); r(c,x+((v-30)/6),109,2,3,C.light); // pan
+  }
+  f(c,2,17,22,96,C.ink);
+}
+</script>
+</body>
+</html>
