@@ -366,26 +366,34 @@ import zlib
 drums_out = build_drums()
 print(f'drums baked: {len(samples)} samples, {len(blob)/1024:.0f} KB')
 
-ver = zlib.crc32(open(SF2, 'rb').read(1 << 16)) ^ 0x4E394204   # the region's identity (v2: aligned records)
-# Loops are sacred: everyone starts at full loop length; when the region
-# overflows, only the largest programs step down a quality tier (shorter
-# middles first, then a match-cut loop), one at a time, until it all fits.
-LADDER = [(0.35, 99.0, 0.7), (0.30, 99.0, 0.6), (0.25, 0.6, 0.55), (0.20, 0.35, 0.5), (0.15, 0.2, 0.45)]
+ver = zlib.crc32(open(SF2, 'rb').read(1 << 16)) ^ 0x4E394205   # the region's identity (v3: curated)
+# The 2026-10-17 curation: NOTHING is trimmed. The named exclusions leave
+# the bank, the locked keeps always stay, and beyond that whole programs are
+# removed largest-first until the region holds the rest at full quality -
+# never taking a family's (GM group of eight) last member.
+GM_EXCLUDE = {82, 116, 9, 26, 32, 19, 91, 30, 110}      # 1-based GM numbers
+GM_LOCK = {1, 2, 53, 54, 109}
+FULL = (None, 99.0, 10.0)
 budget = REGION_BYTES - 8 - 128 * 8 - 128 * 4
-tier = {}
 records = {}
 for prog in range(128):
-    rr = program_record(prog, ver, LADDER[0])
-    if rr is not None:
-        records[prog] = rr
-        tier[prog] = 0
+    if prog + 1 in GM_EXCLUDE: continue
+    rr = program_record(prog, ver, FULL)
+    if rr is not None: records[prog] = rr
+removed = []
+def famCount(p):
+    return sum(1 for q in records if q // 8 == p // 8)
 while sum(len(r) for r in records.values()) > budget:
-    worst, sz = -1, 0
+    pick = -1, 0
     for p, r in records.items():
-        if tier[p] < len(LADDER) - 1 and len(r) > sz: worst, sz = p, len(r)
-    if worst < 0: break
-    tier[worst] += 1
-    records[worst] = program_record(worst, ver, LADDER[tier[worst]])
+        if p + 1 in GM_LOCK: continue
+        if famCount(p) <= 1: continue              # the family keeps one voice
+        if len(r) > pick[1]: pick = p, len(r)
+    if pick[0] < 0: break
+    removed.append(pick[0])
+    del records[pick[0]]
+tier = {p: 0 for p in records}
+print(f'removed {len(removed)} more: ' + ', '.join(str(p + 1) for p in sorted(removed)))
 total = sum(len(r) for r in records.values())
 from collections import Counter
 tc = Counter(tier.values())
