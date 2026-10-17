@@ -692,10 +692,10 @@ bool inputService() {
 
     if (nav.screen == SCR_NOTE) {
       Clip &c = editClip();
-      if (opt && !nav.boxOpen) {                 // the box button + arrows: length / velocity
+      if (opt && !nav.boxOpen) {                 // the box button + arrows: move / transpose
         if (selAny() || noteAtCursor() >= 0) {
           if (!selAny()) selFollowCursor();
-          if (dx) selLength(dx); else selVelocity(-dy);
+          if (dx) selMove(dx); else selTranspose(-dy);
           if (!dx) {
             int ni = noteAtCursor();
             if (ni >= 0) audRetrig(editClip().notes[ni].pitch, editClip().notes[ni].vel);
@@ -705,9 +705,9 @@ bool inputService() {
           continue;
         }
       }
-      if (edit && (selAny() || noteAtCursor() >= 0)) {   // the note button + arrows: move / transpose
+      if (edit && (selAny() || noteAtCursor() >= 0)) {   // the note button + arrows: length / velocity
         if (!selAny()) selFollowCursor();
-        if (dx) selMove(dx); else selTranspose(-dy);
+        if (dx) selLength(dx); else selVelocity(-dy);
         if (!dx) {
           int ni = noteAtCursor();
           if (ni >= 0) audRetrig(editClip().notes[ni].pitch, editClip().notes[ni].vel);
