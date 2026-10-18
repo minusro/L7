@@ -6,6 +6,26 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **K6: INST editing + the full GRID/NOTE grammar (2026-10-18).** A is
+  EDIT, B is OPTION. INST: the split selector is live (A+L/R engine, A+U/D
+  jumps six; on the preset cell A+L/R walks the banked GM list 1..64, A+U/D
+  jumps eight, DRUMS steps the kit), cells edit with A+L/R +-1 / A+U/D
+  +-10, B+L/R turns the SYN/MOD/FX page, B double-tap resets a cell (FX
+  TYPE included). NOTE: the roll folds to the scale (drum tracks one row
+  per sound, named rows), velocity shows as fill brightness; A tap makes/
+  selects a note (clean release deletes, the next clean tap restores);
+  A+L/R length, A+U/D velocity (17 steps); B+L/R moves (wrapping the
+  clip), B+U/D transposes in scale; B on empty drags a dotted marquee,
+  released it selects (wrapped tails too); edits audition while held;
+  the cursor skips over note extents and walks all bars. GRID: launches
+  are INSTANT now (clips ride the clock, phase kept); A+U/D steps the bar
+  ladder (Auto/1/2/4/8/16); B tap zooms into the clip's roll. Clipboards:
+  SHIFT+A cut on full / paste on empty (clips, note selections, project
+  cards; a cut playing clip resumes on paste), SHIFT+B copies. MIX: A+U/D
+  volume, A+L/R pan, B tap SOLO (engine-side: soloed tracks silence the
+  rest). PROJ: A on KEY/SCALE steps the scale, A+L/R key / A+U/D scale,
+  METRONOME item toggles. Global: A+B+L/R track, A+B+U/D steps the playing
+  clip, B+PLAY overdub (OD shows in the top bar). SONG is still mock.
 - [ ] **K6 (the NEW app in K6/): the engine layer is in (2026-10-18).**
   On the device. The N9-era engine ported whole (32-voice pool synth, FX,
   Mutable engines, GM region, projects, storage mode, the L7 switch), with

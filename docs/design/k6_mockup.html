@@ -42,11 +42,14 @@ cluster in every screen's top bar, so you always know where you are.</p>
 <tr><td>B held + arrows</td><td>edit the secondary value</td></tr>
 <tr><td>B tap</td><td>zoom into the detail screen for the cursor's object</td></tr>
 <tr><td>B double tap</td><td>reset to default</td></tr>
-<tr><td>SHIFT + A</td><td>copy (the cursor's object to its clipboard)</td></tr>
-<tr><td>SHIFT + B</td><td>paste</td></tr>
+<tr><td>SHIFT + A</td><td>cut on full / paste on empty (L7's card grammar: clips, notes, project cards)</td></tr>
+<tr><td>SHIFT + B</td><td>copy to the clipboard without removing</td></tr>
 <tr><td>PLAY / SHIFT+PLAY</td><td>stop | start from 1.1.1 / reset | resume</td></tr>
+<tr><td>PLAY held + arrows</td><td>tempo, anywhere (U/D ±1, L/R ±0.1 BPM)</td></tr>
+<tr><td>B + PLAY</td><td>overdub on/off (MIDI records into the playing clip)</td></tr>
 <tr><td>A + B + arrows</td><td>global: select track (L/R) / step the playing clip (U/D)</td></tr>
 </table>
+<p class="dim">A is the EDIT key, B is OPTION.</p>
 
 <h2>GRID (home)</h2>
 <canvas id="grid" width="640" height="480"></canvas>
@@ -82,9 +85,9 @@ and app switching. The one "menu" screen, still grid-shaped.</p>
 <h2>DECIDED</h2>
 <ul>
 <li>Spatial 3x2 screen map with SHIFT+arrows; map dots always visible.</li>
-<li>Explicit clipboard verbs: SHIFT+A copy, SHIFT+B paste — no modal guessing.</li>
-<li>B-tap = universal "zoom into detail" (clip→roll, track→inst, song row→grid).</li>
-<li>Clips ride the global clock; launches and scene rows are clock-synced.</li>
+<li>Clipboard: SHIFT+A cut on full / paste on empty (L7's grammar), SHIFT+B copy.</li>
+<li>B-tap = universal "zoom into detail" (clip→roll, song row→grid); on MIX it solos.</li>
+<li>Clips ride the global clock, so launches are instant and keep phase.</li>
 <li>Every edit sounds: auditioning on all note/value edits while held.</li>
 <li>Engine layer shared with the N9-era app: pool synths, FX chains, GM region.</li>
 </ul>

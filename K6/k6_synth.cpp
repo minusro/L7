@@ -1123,7 +1123,10 @@ void K6Synth::update() {
   for (uint8_t t = 0; t < NT; t++) {
     float vol = trackVol[t] + lfoCellF(t, LD_VOL);
     if (vol < 0) vol = 0; if (vol > 99) vol = 99;
-    float g = trackMute[t] ? 0.0f : (vol / 80.0f) * (vol / 80.0f);
+    bool anySolo = false;
+    for (int k = 0; k < 9; k++) anySolo |= trackSolo[k];
+    bool silent = trackMute[t] || (anySolo && !trackSolo[t]);
+    float g = silent ? 0.0f : (vol / 80.0f) * (vol / 80.0f);
     fxTrackChain(t, tbus[t], AUDIO_BLOCK_SAMPLES, g);   // inserts + post-fader send taps
     float pan = trackPan[t] + lfoCellF(t, LD_PAN);
     if (pan < 0) pan = 0; if (pan > 99) pan = 99;

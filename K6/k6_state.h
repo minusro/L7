@@ -72,8 +72,12 @@ struct NavState {
   uint8_t songRow = 0;                 // the arranger cursor
   uint8_t mixT = 0;                    // the mixer strip (NT = master)
   uint8_t noteStep = 0, notePitch = 60, notePage = 0;
-  uint8_t noteTop = 71;                // the top visible roll row (12 chromatic rows)
-  uint8_t instPage = 0, instRow = 0, instCol = 0;
+  uint8_t noteTop = 71;                // the top visible roll row (in-scale pitch)
+  uint32_t sel[4] = {0, 0, 0, 0};      // selected notes of the edited clip
+  bool boxOpen = false;                // B dragging a selection box
+  uint8_t boxStep0 = 0, boxPitch0 = 0; // its anchor (absolute step, pitch)
+  uint8_t boxStep1 = 0, boxPitch1 = 0; // its moving corner
+  uint8_t instPage = 0, instRow = 0, instCol = 0, instTop = 0;   // instTop: 0 engine, 1 preset
   uint8_t projSel = 0;
 };
 

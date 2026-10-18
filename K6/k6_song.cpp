@@ -45,6 +45,7 @@ uint8_t projKey = 0, projScale = 0;
 uint8_t trackVol[9] = {80, 80, 80, 80, 80, 80, 80, 80, 80};
 uint8_t trackPan[9] = {50, 50, 50, 50, 50, 50, 50, 50, 50};
 bool trackMute[9];
+bool trackSolo[9];
 uint8_t masterVol = 80;
 
 bool scaleHas(uint8_t pitch) {

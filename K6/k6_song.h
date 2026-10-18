@@ -62,6 +62,7 @@ uint8_t scaleSnap(uint8_t pitch);         // nearest in-scale pitch, ties downwa
 // and the master volume (80 = unity), ahead of the soft clipper.
 extern uint8_t trackVol[9], trackPan[9];
 extern bool trackMute[9];
+extern bool trackSolo[9];   // any set: only soloed tracks sound (not saved)
 extern uint8_t masterVol;
 
 Clip &clipAt(uint8_t t, uint8_t s);
