@@ -3,3 +3,5 @@ apps_sd/
 # and mu-law transcodes are still copies). Rebuild: cd N9 && python3 tools/sc88_bank.py
 N9/n9_gm_pcm.cpp
 N9/n9_gm_pcm.h
+K6/k6_gm_pcm.cpp
+K6/k6_gm_pcm.h

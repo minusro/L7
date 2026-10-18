@@ -8,3 +8,5 @@ extern m8::Board board;
 
 void drawScreen();     // the current map screen, whole
 void splashShow();     // the static K6 mark
+void uiMessage(const char *l1, const char *l2);   // two centred lines, sent at once
+void uiStorageDraw(uint8_t state, const char *msg);   // the storage-mode screen

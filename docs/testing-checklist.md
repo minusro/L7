@@ -6,16 +6,25 @@ checked, or turn it into a fix.
 
 ## To check
 
-- [ ] **K6 (the NEW app in K6/): the navigation prototype (2026-10-18).**
-  Flashed to the device; it REPLACES the running app and has NO app
-  switcher yet - getting back to L7 needs a reflash. Check: the K6 mark
-  splash, then GRID; SHIFT+arrows move across the 3x2 screen map with
-  wrapping (SONG GRID MIX / PROJ NOTE INST) and the top-left dot cluster
-  tracks it; plain arrows move each screen's own cursor (grid cells + the
-  scene column, song rows, mixer strips incl. master, roll steps, INST
-  tabs/cells, project cards + the three items). All content is MOCK - no
-  sound, no transport, no editing yet. Design doc:
-  docs/design/k6_mockup.html.
+- [ ] **K6 (the NEW app in K6/): the engine layer is in (2026-10-18).**
+  On the device. The N9-era engine ported whole (32-voice pool synth, FX,
+  Mutable engines, GM region, projects, storage mode, the L7 switch), with
+  K6's own card layout: /K6/PROJECTS/A.K6P (format K6P1, no N9P reading)
+  and /K6/GM.FLB - COPY apps_sd/GM.FLB THERE via storage mode, or GM plays
+  synth patches. Check: SHIFT+arrows still walk the 3x2 map; on GRID, A on
+  an empty cell creates a clip, on a filled one launches/stops it on the
+  bar line (the scene column launches whole rows), launching also starts
+  the clock; on NOTE (below GRID), A toggles a step note at the cursor and
+  the roll shows the grid cursor's clip with a playhead; PLAY toggles the
+  transport, SHIFT+PLAY resume/reset, PLAY held + arrows set tempo
+  anywhere (U/D 1, L/R 0.1 BPM); on MIX, A mutes and the strips show real
+  volumes/meters; on PROJ, A loads/creates projects, STORAGE MODE and
+  SWITCH TO L7 work, KEY/SCALE steps the scale; the top bar's clock /
+  tempo / play / key are live. INST is read-only (real engine name,
+  params) and SONG is still mock; A/B held combos, B-tap zoom and
+  clipboards are not in yet. All tracks default to PRO5 (no engine
+  selection yet). Power-off saves the project. Getting BACK from L7 needs
+  a USB reflash (L7's switcher still targets N9.HEX).
 - [ ] **K6: the rename (6 tracks x 6 scenes), the split selector, and the
   boot-loaded GM region.** The app shows a K6 mark (splash + menu corner -
   judge the K and 6 glyphs by eye); the grid is 6x6 (cells 48x30). INST's
