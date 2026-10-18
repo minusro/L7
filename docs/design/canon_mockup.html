@@ -22,8 +22,8 @@
 </head>
 <body>
 <h1>CANON — GENERATIVE COUNTERPOINT INSTRUMENT</h1>
-<p class="dim">A desktop plugin (JUCE; VST3/AU instrument with MIDI out, plus an AU
-MIDI-FX build for Logic). A generative arpeggiator/sequencer with a built-in
+<p class="dim">A desktop plugin (JUCE; VST3/AU instrument with MIDI out, an AU
+MIDI-FX build for Logic, and a standalone app). A generative arpeggiator/sequencer with a built-in
 synth: easy to use, complex and evolving output, played live. Polyphony is
 counterpoint — independent lines, never chords. One screen, no pages.
 Implementation will live in its own repo; this doc is the UX contract.</p>
@@ -101,7 +101,11 @@ bar-quantized, snaps back on release.</p>
 happy accidents are never lost. Snapshots store knob state <i>and</i> material.</li>
 <li><b>A/B crossfader</b>: pick two snapshots, ride the fader between them —
 knobs and material interpolate. A performance arc in one gesture, and it can be
-ridden back and forth.</li>
+ridden back and forth. Material morphs per step: pitch interpolates in
+scale-degree space (stepping through in-key notes); gate, velocity and octave
+lerp. Rests are gate 0, so a note present in only one snapshot fades in as its
+lerped gate crosses audibility (pitch taken from the sounding side) —
+presence is just the gate lerp. Deterministic, no dice.</li>
 <li>Material strip is touchable: <b>tap a step to lock it against mutation</b>
 (random until good, then protected), drag to re-pitch. Per-step mutation locks
 is something no Turing-machine descendant has.</li>
@@ -129,6 +133,9 @@ host routing pain.</li>
 <ul>
 <li>Counterpoint from shared material: one line, three playheads + drums. Never chords.</li>
 <li>Déjà-vu locked randomness as the core; freeze + 8 snapshots; A/B crossfader morph.</li>
+<li>Crossfader material morph: per-step scale-degree glide + lane lerps; rests are
+gate 0, so presence rides the gate lerp — fully deterministic.</li>
+<li>Builds: VST3 + AU instrument with MIDI out, AU MIDI-FX for Logic, standalone app.</li>
 <li>Polymetry as one macro, not per-lane length boxes.</li>
 <li>Invisible drifting harmony lane with chord-tone weighting; register bands per voice.</li>
 <li>Material strip visible and touchable (tap-lock, drag re-pitch); drum material invisible.</li>
@@ -143,12 +150,9 @@ host routing pain.</li>
 
 <h2>OPEN</h2>
 <ul>
-<li>Material morph under the crossfader: how two different materials interpolate
-(per-step pitch glide through the scale + gate lerp + presence crossfade?). Needs a rule.</li>
 <li>Material length: 16 fixed, or 16/32 switch.</li>
 <li>The curated polymetry sequence and the LOOSE ratio list.</li>
 <li>Fill behavior details; drum lane count (4 enough?).</li>
-<li>Standalone app build alongside the plugin formats.</li>
 <li>Visual identity — this mockup borrows the house palette; the real skin is its own pass.</li>
 <li>Hardware controller mapping (a knob box wants this layout).</li>
 </ul>
