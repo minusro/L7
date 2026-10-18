@@ -114,3 +114,80 @@ void clipRefreshBars(Clip &c) {
   if (bars > CLIP_MAX_BARS) bars = CLIP_MAX_BARS;
   c.bars = bars;
 }
+
+// ---- the SONG arranger --------------------------------------------------------
+
+#include "k6_state.h"   // NT/NS
+#include "k6_synth.h"
+
+SongRow songRows[SONG_MAX];
+uint8_t songLen = 0;
+bool songOn = false;
+uint8_t songPos = 0;
+uint16_t songBarsLeft = 0;
+
+uint8_t songSceneSpan(uint8_t s) {
+  uint8_t span = 1;
+  for (int t = 0; t < NT; t++) {
+    const Clip &c = clipAt((uint8_t)t, s);
+    if (c.used && c.bars > span) span = c.bars;
+  }
+  return span;
+}
+
+uint16_t songRowBars(uint8_t i) {
+  if (i >= songLen) return 1;
+  uint16_t b = (uint16_t)songRows[i].rep * songSceneSpan(songRows[i].scene);
+  return b ? b : 1;
+}
+
+static void songSceneNow(uint8_t s) {            // instant, riding the clock
+  for (int t = 0; t < NT; t++) {
+    clipPending[t] = -1;                         // a queued switch is overtaken
+    clipPlaying[t] = clipAt((uint8_t)t, s).used ? (int8_t)s : -1;
+  }
+}
+
+void songQueueNext() {                           // pendings land on the next bar line
+  uint8_t next = songLen ? (uint8_t)((songPos + 1) % songLen) : 0;
+  uint8_t s = songRows[next].scene;
+  for (int t = 0; t < NT; t++)
+    clipPending[t] = clipAt((uint8_t)t, s).used ? (int8_t)s : CLIP_STOP;
+}
+
+void songLaunch(uint8_t row) {
+  if (!songLen) return;
+  if (row >= songLen) row = 0;
+  songSceneNow(songRows[row].scene);
+  songPos = row;
+  songBarsLeft = songRowBars(row);
+  songOn = true;
+  if (!synth.seqOn()) synth.seqToggle();
+  if (songBarsLeft == 1) songQueueNext();
+}
+
+void songStop() {
+  if (!songOn) return;
+  songOn = false;
+  for (int t = 0; t < NT; t++) clipPending[t] = -1;   // a queued row switch dies with it
+}
+
+bool songService() {
+  static uint16_t lastBar = 0xFFFF;
+  if (!synth.seqOn()) { lastBar = 0xFFFF; return false; }
+  uint16_t bar = synth.seqBarN();
+  if (bar == lastBar) return false;
+  bool fresh = lastBar == 0xFFFF;                // just started/resumed: no bar elapsed
+  lastBar = bar;
+  if (!songOn || !songLen || fresh) return songOn && fresh;
+  if (songBarsLeft > 1) {
+    songBarsLeft--;
+    if (songBarsLeft == 1) songQueueNext();
+    return true;
+  }
+  // the queued pendings took effect at this bar line: the next row is on
+  songPos = (uint8_t)((songPos + 1) % songLen);
+  songBarsLeft = songRowBars(songPos);
+  if (songBarsLeft == 1) songQueueNext();
+  return true;
+}

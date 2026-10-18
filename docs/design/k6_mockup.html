@@ -93,9 +93,19 @@ and app switching. The one "menu" screen, still grid-shaped.</p>
 </ul>
 <h2>OPEN</h2>
 <ul>
-<li>SONG: loop regions and end behaviour (stop vs loop whole song).</li>
 <li>Per-scene tempo? (lean no — one tempo per project).</li>
 <li>LIVE performance mods (retrigger, fills) — later screen or overlays.</li>
+</ul>
+<h2>SONG, DECIDED</h2>
+<ul>
+<li>The song loops whole (the last row flows back into the first).</li>
+<li>A repeat = the scene's span (its longest used clip); labels read in bars,
+so a 4-bar scene steps X4 X8 X12 ... Rows advance on bar lines, queued a bar
+ahead through the sequencer's own launch quantum.</li>
+<li>Verbs: A adds a row after the cursor, A+U/D scene, A+L/R repeats,
+B-tap jumps the transport there, B+U/D reorders, SHIFT+A cuts a row,
+SHIFT+B inserts the cut row back. PLAY on SONG plays the arrangement from
+the top; any manual launch on the grid leaves song mode.</li>
 </ul>
 
 <script>

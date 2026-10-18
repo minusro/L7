@@ -123,23 +123,45 @@ static void drawGrid() {
   rct(GX + nav.selTrack * SX, 234, GW, 4, ACCENT);
 }
 
-// ---- SONG (mock: the arranger engine is still to come) ----------------------
+// ---- SONG -------------------------------------------------------------------
 static void drawSong() {
   topBar("SONG");
-  txt(8, 28, "ROW  SCENE   REP", DIM);
-  static const uint8_t ROWS[5][2] = {{1, 2}, {1, 2}, {2, 4}, {3, 1}, {2, 4}};
-  for (int i = 0; i < 5; i++) {
-    int y = 44 + i * 24;
-    char b[12];
-    snprintf(b, sizeof b, "%02d", i + 1);
-    txt(8, y, b, DIM);
-    snprintf(b, sizeof b, "SCENE %d", ROWS[i][0]);
-    txt(60, y, b, LIGHT);
-    snprintf(b, sizeof b, "X%d", ROWS[i][1]);
-    txt(170, y, b, LIGHT);
-    if (nav.songRow == i) frm(4, y - 4, 312, 22, INK);
+  if (!songLen) {
+    txt(8, 44, "EMPTY SONG", LIGHT);
+    txt(8, 64, "A ADDS A SCENE ROW", DIM);
+    return;
   }
-  txt(8, 220, "MOCK - THE ARRANGER LANDS NEXT", DIM);
+  txt(8, 28, "ROW  SCENE   BARS", DIM);
+  constexpr int SHOWN = 8;
+  int top = nav.songRow > SHOWN - 1 ? nav.songRow - (SHOWN - 1) : 0;
+  if (top > songLen - SHOWN && songLen > SHOWN) top = songLen - SHOWN;
+  if (top < 0) top = 0;
+  for (int k = 0; k < SHOWN && top + k < songLen; k++) {
+    int i = top + k;
+    int y = 44 + k * 22;
+    bool playing = songOn && songPos == i;
+    uint16_t bars = songRowBars((uint8_t)i);
+    if (playing) rct(4, y - 4, 312, 20, DARK);
+    char b[14];
+    snprintf(b, sizeof b, "%02d", i + 1);
+    txt(8, y, b, playing ? ACCENT : DIM);
+    snprintf(b, sizeof b, "SCENE %d", songRows[i].scene + 1);
+    txt(60, y, b, playing ? INK : LIGHT);
+    snprintf(b, sizeof b, "X%d", bars);
+    txt(170, y, b, LIGHT);
+    if (playing && bars) {                       // bars done, of the row's whole
+      int w = (int)((bars - songBarsLeft) + 1) * 70 / bars;
+      rct(230, y + 2, 70, 6, BG);
+      rct(230, y + 2, w > 70 ? 70 : w, 6, ACCENT);
+    }
+    if (nav.songRow == i) frm(4, y - 4, 312, 20, INK);
+  }
+  if (songLen > SHOWN) {
+    char b[12];
+    snprintf(b, sizeof b, "%d/%d", nav.songRow + 1, songLen);
+    txt(280, 28, b, DIM);
+  }
+  txt(8, 226, "A ADD  A+ARR EDIT  B JUMP  B+U/D MOVE", DIM);
 }
 
 // ---- MIX --------------------------------------------------------------------

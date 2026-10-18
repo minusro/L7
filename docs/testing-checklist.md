@@ -6,6 +6,21 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **K6: the SONG arranger (2026-10-18).** Make a few clips, then on
+  SONG: A adds a row after the cursor (duplicating it), A+U/D sets the
+  scene, A+L/R the repeats - the label counts BARS in scene-span steps (a
+  4-bar scene reads X4 X8 X12...). PLAY on SONG starts the arrangement
+  from row 1; B-tap jumps the transport to the cursor's row (starts the
+  clock if stopped); rows advance seamlessly on bar lines (queued a bar
+  ahead) and the song LOOPS at the end. The playing row highlights with a
+  progress bar; the list scrolls past 8 rows (position top right). B+U/D
+  reorders rows, SHIFT+A cuts one, SHIFT+B inserts the cut row after the
+  cursor. Any manual launch on GRID (cell, scene column, A+B clip step)
+  leaves song mode and the grid plays on. Editing the SOUNDING row's
+  scene/repeats takes effect live (bars-left clamps down). Projects save
+  the song (format K6P2; today's earlier K6P1 files still load, with an
+  empty song). Check polymeter: a scene whose clips are 1/2/4 bars spans
+  4 bars per repeat and clips keep their phase across row changes.
 - [ ] **K6: INST editing + the full GRID/NOTE grammar (2026-10-18).** A is
   EDIT, B is OPTION. INST: the split selector is live (A+L/R engine, A+U/D
   jumps six; on the preset cell A+L/R walks the banked GM list 1..64, A+U/D

@@ -58,6 +58,7 @@ void setup() {
 void loop() {
   if (inputService()) dirty = true;
   if (projectService()) dirty = true;              // a beat-load came due
+  if (songService()) dirty = true;                 // the arranger's bar bookkeeping
   synthServiceMidi();
   static uint8_t lastStep = 255;                   // the playhead and clock follow the transport
   if (synth.seqOn() && synth.seqStepN() != lastStep) { lastStep = synth.seqStepN(); dirty = true; }

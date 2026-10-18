@@ -65,6 +65,25 @@ extern bool trackMute[9];
 extern bool trackSolo[9];   // any set: only soloed tracks sound (not saved)
 extern uint8_t masterVol;
 
+// The SONG arranger: an ordered list of scene rows. rep counts whole scene
+// spans (a span = the longest used clip's bars in that scene), shown in bars
+// (a 4-bar scene steps X4 X8 X12 ...). The song loops; any manual launch on
+// the grid leaves song mode. Rows advance on bar lines via clipPending (the
+// sequencer's own launch quantum), queued one bar ahead from loop().
+struct SongRow { uint8_t scene, rep; };
+constexpr uint8_t SONG_MAX = 32;
+extern SongRow songRows[SONG_MAX];
+extern uint8_t songLen;
+extern bool songOn;                  // the arrangement is driving the grid
+extern uint8_t songPos;              // the sounding row while songOn
+extern uint16_t songBarsLeft;        // bars left of it (incl. the current one)
+uint8_t songSceneSpan(uint8_t s);    // the scene's span in bars (min 1)
+uint16_t songRowBars(uint8_t i);     // rep * span
+void songLaunch(uint8_t row);        // jump there now (starts the clock if stopped)
+void songStop();                     // leave song mode (the grid plays on)
+void songQueueNext();                // queue the next row's scene for the bar line
+bool songService();                  // loop(): row bookkeeping (true: redraw)
+
 Clip &clipAt(uint8_t t, uint8_t s);
 // The note covering (pitch, step), or -1.
 int clipFindAt(const Clip &c, uint8_t pitch, uint8_t step);

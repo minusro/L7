@@ -19,7 +19,8 @@ static bool clipFileExists = false;
 static int8_t pendingLoad = -1;     // a load waiting for the next beat
 static uint32_t pendingBeat = 0;    // the beat it was asked on
 
-static constexpr uint32_t MAGIC = 0x3150364B;   // "K6P1" (K6's own format; no N9P reading)
+static constexpr uint32_t MAGIC = 0x3250364B;    // "K6P2" (the SONG arranger joined)
+static constexpr uint32_t MAGIC_V1 = 0x3150364B; // "K6P1" still loads (no song rows)
 
 struct ProjectBlob {
   uint32_t magic;
@@ -37,7 +38,8 @@ struct ProjectBlob {
   TrackLayer layer[9];
   uint8_t metro, pad1, pad2, pad3;
   uint8_t params[9][ENGINE_COUNT][8];
-};   // (the clips stream into the file right after this blob)
+};   // (K6P2: a SongBlob follows, then the clips stream in; K6P1: clips only)
+struct SongBlob { uint8_t n, pad; SongRow rows[SONG_MAX]; };
 static DMAMEM ProjectBlob blob;
 
 static void path(int slot, char *out, size_t n) {
@@ -71,6 +73,7 @@ static void gather(ProjectBlob &b) {
 
 static void apply(const ProjectBlob &b) {
   clipFreeze = 1;                                  // the sequencer off the clips
+  songOn = false;
   for (int t = 0; t < 9; t++) { clipPlaying[t] = -1; clipPending[t] = -1; }
   fxSetMasterType(FXT_NONE);
   for (int t = 0; t < 9; t++)
@@ -118,7 +121,10 @@ bool projectSaveCurrent() {
   gather(blob);
   FsFile f = appsSd().open(p, O_WRONLY | O_CREAT | O_TRUNC);
   if (!f) return false;
+  SongBlob sb = {songLen, 0, {}};
+  memcpy(sb.rows, songRows, sizeof sb.rows);
   bool ok = f.write(&blob, sizeof blob) == (int)sizeof blob;
+  ok &= f.write(&sb, sizeof sb) == (int)sizeof sb;
   ok &= f.write(clips, sizeof clips) == (int)sizeof clips;   // (loop() owns the clips: safe to stream live)
   f.close();
   if (ok) projExists[projCurrent] = true;
@@ -132,7 +138,11 @@ static bool doLoad(uint8_t slot) {
   path(slot, p, sizeof p);
   FsFile f = appsSd().open(p, O_RDONLY);
   if (!f) return false;
-  bool ok = f.read(&blob, sizeof blob) == (int)sizeof blob && blob.magic == MAGIC;
+  // K6P1 files carry no song block between the blob and the clips.
+  SongBlob sb = {0, 0, {}};
+  bool ok = f.read(&blob, sizeof blob) == (int)sizeof blob &&
+            (blob.magic == MAGIC || blob.magic == MAGIC_V1);
+  if (ok && blob.magic == MAGIC) ok = f.read(&sb, sizeof sb) == (int)sizeof sb;
   if (ok) {                                        // the clips stream in under the freeze
     clipFreeze = 1;
     for (int t = 0; t < 9; t++) { clipPlaying[t] = -1; clipPending[t] = -1; }
@@ -145,6 +155,8 @@ static bool doLoad(uint8_t slot) {
   f.close();
   if (!ok) { Serial.printf("project %c: bad file\n", 'A' + slot); return false; }
   apply(blob);
+  songLen = sb.n > SONG_MAX ? SONG_MAX : sb.n;
+  memcpy(songRows, sb.rows, sizeof songRows);
   projCurrent = slot;
   Serial.printf("project %c loaded\n", 'A' + slot);
   return true;
@@ -174,6 +186,9 @@ bool projectService() {
 void projectNew(uint8_t slot) {
   projectSaveCurrent();
   clipFreeze = 1;
+  songOn = false;
+  songLen = 0;
+  memset(songRows, 0, sizeof songRows);
   for (int t = 0; t < 9; t++) { clipPlaying[t] = -1; clipPending[t] = -1; }
   memset(clips, 0, sizeof clips);
   for (int t = 0; t < 9; t++)

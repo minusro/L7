@@ -145,6 +145,7 @@ static void rowNormalize() {
 // Instant, and every clip rides the global clock (its position is the clock
 // modulo its length), so a switch keeps the phase by construction.
 static void clipPlayNow(uint8_t t, uint8_t s) {
+  songStop();                                    // a hand on the grid leaves song mode
   clipPlaying[t] = (int8_t)s;
   if (!synth.seqOn()) synth.seqToggle();
 }
@@ -377,13 +378,55 @@ static void gridAct() {                          // A tap: launch/stop/create, i
   if (nav.gridT < NT) {
     Clip &c = clipAt(nav.gridT, nav.gridS);
     if (!c.used) { c.used = 1; if (!c.bars) c.bars = 1; return; }
+    songStop();
     if (clipPlaying[nav.gridT] == (int8_t)nav.gridS) clipPlaying[nav.gridT] = -1;
     else clipPlayNow(nav.gridT, nav.gridS);
   } else {
+    songStop();
     for (int t = 0; t < NT; t++)
       clipPlaying[t] = clipAt(t, nav.gridS).used ? (int8_t)nav.gridS : -1;
     if (!synth.seqOn()) synth.seqToggle();
   }
+}
+
+// ---- SONG rows ----------------------------------------------------------------
+
+static SongRow rowClipboard = {0, 1};
+static bool rowClipFull = false;
+
+static void songInsertAfter(uint8_t at, SongRow r) {
+  if (songLen >= SONG_MAX) return;
+  uint8_t to = songLen ? (uint8_t)(at + 1) : 0;
+  for (int i = songLen; i > to; i--) songRows[i] = songRows[i - 1];
+  songRows[to] = r;
+  songLen++;
+  if (songOn && songPos >= to) songPos++;        // the sounding row keeps its identity
+  nav.songRow = to;
+}
+
+static void songDeleteAt(uint8_t at) {
+  if (at >= songLen) return;
+  for (int i = at; i < songLen - 1; i++) songRows[i] = songRows[i + 1];
+  songLen--;
+  if (songOn) {
+    if (!songLen) songStop();
+    else if (songPos > at) songPos--;
+    else if (songPos == at && songPos >= songLen) songPos = 0;
+  }
+  if (nav.songRow >= songLen && nav.songRow) nav.songRow = (uint8_t)(songLen ? songLen - 1 : 0);
+}
+
+static void songMoveRow(uint8_t at, int dir) {   // B+U/D: reorder
+  int to = at + dir;
+  if (at >= songLen || to < 0 || to >= (int)songLen) return;
+  SongRow tmp = songRows[at];
+  songRows[at] = songRows[to];
+  songRows[to] = tmp;
+  if (songOn) {
+    if (songPos == at) songPos = (uint8_t)to;
+    else if (songPos == (uint8_t)to) songPos = at;
+  }
+  nav.songRow = (uint8_t)to;
 }
 
 static void gridCutPaste() {                     // SHIFT+A: L7's card grammar
@@ -473,7 +516,12 @@ bool inputService() {
     if (b) { overdubOn = !overdubOn; playUsed = true; bUsed = true; dirtyNow = true; }
     else if (shift) { synth.seqShiftPlay(); playUsed = true; dirtyNow = true; }
   }
-  if ((released & BTN_PLAY) && !playUsed) { synth.seqToggle(); dirtyNow = true; }
+  if ((released & BTN_PLAY) && !playUsed) {
+    // PLAY on SONG plays the arrangement from the top; elsewhere the grid.
+    if (scr == SCR_SONG && !synth.seqOn() && songLen) songLaunch(0);
+    else synth.seqToggle();
+    dirtyNow = true;
+  }
 
   // A tap (press side): act on the cursor's object.
   if ((pressed & BTN_A) && !shift && !b && !play) {
@@ -506,6 +554,10 @@ bool inputService() {
       case SCR_MIX:
         if (nav.mixT < NT) { trackMute[nav.mixT] = !trackMute[nav.mixT]; dirtyNow = true; }
         break;
+      case SCR_SONG:                               // A: a new row after the cursor
+        songInsertAfter(nav.songRow, songLen ? songRows[nav.songRow] : SongRow{0, 1});
+        dirtyNow = true;
+        break;
       case SCR_PROJ: projAct(); dirtyNow = true; break;
       default: break;
     }
@@ -518,6 +570,11 @@ bool inputService() {
       if (selAny() || noteAtCursor() >= 0) noteCut();
       else if (noteClipCount) notePaste();
       dirtyNow = true;
+    } else if (scr == SCR_SONG && songLen) {       // cut the cursor's row
+      rowClipboard = songRows[nav.songRow];
+      rowClipFull = true;
+      songDeleteAt(nav.songRow);
+      dirtyNow = true;
     } else if (scr == SCR_PROJ && nav.projSel < 12) {
       if (projExists[nav.projSel]) projectCut(nav.projSel);
       else projectPaste(nav.projSel);
@@ -526,10 +583,11 @@ bool inputService() {
     aUsed = true;
   }
 
-  // SHIFT+B: copy without removing.
+  // SHIFT+B: copy without removing (SONG: insert the cut/copied row back).
   if ((pressed & BTN_B) && shift && !a) {
     if (scr == SCR_GRID) { gridCopy(); dirtyNow = true; }
     else if (scr == SCR_NOTE) { noteCopy(); dirtyNow = true; }
+    else if (scr == SCR_SONG && rowClipFull) { songInsertAfter(nav.songRow, rowClipboard); dirtyNow = true; }
     bUsed = true;
   }
 
@@ -563,6 +621,8 @@ bool inputService() {
       dirtyNow = true;
     } else if (scr == SCR_MIX) {
       if (nav.mixT < NT) { trackSolo[nav.mixT] = !trackSolo[nav.mixT]; dirtyNow = true; }
+    } else if (scr == SCR_SONG) {
+      if (songLen) { songLaunch(nav.songRow); dirtyNow = true; }   // jump the transport here
     } else if (scr == SCR_INST && nav.instRow > 0) {
       if (ms - bTapAt < 350) { instCellReset(); dirtyNow = true; }
       bTapAt = ms;
@@ -727,7 +787,24 @@ bool inputService() {
         break;
 
       case SCR_SONG:
-        nav.songRow = (uint8_t)clamp(nav.songRow + dy, 0, 4);
+        if (!songLen) break;
+        if (a) {                                 // A held: scene (U/D) / repeats (L/R)
+          SongRow &r = songRows[nav.songRow];
+          if (dy) r.scene = (uint8_t)clamp(r.scene - dy, 0, NS - 1);
+          else r.rep = (uint8_t)clamp(r.rep + dx, 1, 16);
+          if (songOn && songPos == nav.songRow) {   // the sounding row: take it up live
+            if (songBarsLeft > songRowBars(songPos)) songBarsLeft = songRowBars(songPos);
+            if (songBarsLeft == 1) songQueueNext();
+          }
+          aUsed = true;
+          dirty = true;
+          break;
+        }
+        if (b) {                                 // B held + U/D: reorder
+          if (dy && fresh) { songMoveRow(nav.songRow, dy); bUsed = true; dirty = true; }
+          break;
+        }
+        nav.songRow = (uint8_t)clamp(nav.songRow + dy, 0, songLen - 1);
         dirty = true;
         break;
 
