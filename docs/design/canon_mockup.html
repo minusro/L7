@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canon Design</title>
+<style>
+  :root { --bg:#000; --dark:#2c2c2c; --dim:#707070; --light:#d0d0d0; --ink:#fff;
+          --v1:rgb(48,230,170); --v2:rgb(255,159,67); --v3:rgb(77,163,255); }
+  body { background:#0a0a0a; color:var(--light); font-family:ui-monospace,Menlo,monospace; margin:0; padding:24px 16px; }
+  h1 { font-size:16px; color:var(--ink); letter-spacing:2px; }
+  h2 { font-size:13px; color:var(--v1); margin:28px 0 6px; letter-spacing:1px; }
+  p, li { font-size:12px; line-height:1.6; color:var(--light); max-width:720px; }
+  .dim { color:var(--dim); }
+  canvas { display:block; border:1px solid #222; margin:8px 0 4px; }
+  .cap { font-size:11px; color:var(--dim); margin-bottom:18px; }
+  table { font-size:12px; border-collapse:collapse; }
+  td { padding:2px 14px 2px 0; vertical-align:top; }
+  td:first-child { color:var(--ink); white-space:nowrap; }
+  code { color:var(--ink); }
+</style>
+</head>
+<body>
+<h1>CANON — GENERATIVE COUNTERPOINT INSTRUMENT</h1>
+<p class="dim">A desktop plugin (JUCE; VST3/AU instrument with MIDI out, plus an AU
+MIDI-FX build for Logic). A generative arpeggiator/sequencer with a built-in
+synth: easy to use, complex and evolving output, played live. Polyphony is
+counterpoint — independent lines, never chords. One screen, no pages.
+Implementation will live in its own repo; this doc is the UX contract.</p>
+
+<h2>THE IDEA: ONE MATERIAL, THREE PLAYHEADS</h2>
+<p>The engine generates a single melodic line — the <b>material</b> — and three
+voices are <b>playheads</b> reading that same material, each with its own speed,
+direction, start offset, octave and scale-degree transpose. A half-speed voice
+an octave down is augmentation; an offset voice transposed down a fourth is a
+canon; reverse is retrograde. The classical counterpoint transformations, one
+knob each. When the generator mutates a note, every voice inherits the change
+at different times and registers: one mutation ripples through the texture as
+an evolving motif instead of as noise. Counterpoint comes from shared material,
+not from voice-leading rules.</p>
+
+<h2>THE SCREEN</h2>
+<canvas id="main" width="720" height="460"></canvas>
+<p class="cap">Header: key/scale, 8 snapshot slots with the A/B morph crossfader, drag-MIDI
+handle. Material strip: pitch dots + gate bars, padlocked steps, three colored
+playheads sweeping at their own speeds (the product identity — a screenshot
+explains the concept). Voice strips: mute, density, speed/direction, octave,
+phrase, send. Drum strip: mute, density, kick-bass couple, feel, send.
+Global row: DÉJÀ-VU (the hero knob), drift, mesh, polymetry, FILL, FREEZE.</p>
+
+<h2>THE ENGINE</h2>
+<canvas id="flow" width="720" height="210"></canvas>
+<p class="cap">Material → playheads → harmony quantize → per-voice engines; drums run their
+own rhythm material on the same mutation clock and skip the harmony stage.</p>
+<ul>
+<li><b>Déjà-vu</b> — the hero knob. A seeded stream feeds all lanes; the knob
+morphs pure random → looping with occasional mutations → fully locked loop.
+One knob is the whole learning curve, and it governs the melodic and drum
+material on one clock.</li>
+<li><b>Lanes</b> — pitch, gate, velocity, octave are separate lanes over the
+material's steps. A single <b>polymetry</b> macro progressively de-synchronizes
+the lane lengths along a curated sequence (16/16/16/16 → 15/16/13/16 → …), so
+even a fully locked loop keeps recombining — deterministic evolution, free.</li>
+<li><b>Harmony lane</b> — an invisible root that drifts on a very long loop
+(4–16 bars). Pitch quantization weights chord tones on strong beats, allows
+passing tones on weak ones; the <b>drift</b> knob sets how adventurous the root
+movement is. Nothing out-of-key can ever come out.</li>
+<li><b>Register bands</b> — each voice folds into its own octave band; lines
+never cross, the texture stays legible.</li>
+<li><b>Mesh</b> — each voice's fire probability dips just after another voice
+fires. Low = voices stack; high = call-and-response, hocket.</li>
+</ul>
+
+<h2>THE PHRASE KNOB (per voice)</h2>
+<p>The material stores a gate value per step (0…1; 0 is a rest), written and
+mutated by the generator. The knob morphs between ignoring and honoring it:</p>
+<table>
+<tr><td>effective gate</td><td><code>lerp(arp gate, stored gate, PHRASE)</code></td></tr>
+<tr><td>tie</td><td>the note extends into the next step when effective gate ≥ 1.0</td></tr>
+<tr><td>at 0</td><td>uniform retriggered arp notes</td></tr>
+<tr><td>turning up</td><td>the longest stored gates cross the tie threshold one at a
+time — notes merge into phrases progressively, never all at once</td></tr>
+<tr><td>at 1</td><td>full stored phrasing: a ½× playhead sings the material as long
+vocal lines while the 2× playhead runs it as filigree</td></tr>
+</table>
+<p class="dim">Deterministic and click-free. Per voice (bass arpy, lead legato is exactly
+the differentiation counterpoint wants); a global macro may offset all three.</p>
+
+<h2>DRUMS</h2>
+<p>A fourth voice group: four rhythm/velocity lanes (kick, snare, hat, perc), no
+pitch, its own material — mutating on the same déjà-vu clock. The drum material
+stays <b>invisible</b>: drums are knob-sculpted (density, couple, feel), not
+step-edited. Glue: one shared groove (swing + accent template) across drums and
+melody; a <b>kick↔bass couple</b> knob (at full, the bass voice fires only
+with/against the kick); a <b>FILL</b> button — momentary density + ratchet surge,
+bar-quantized, snaps back on release.</p>
+
+<h2>PERFORMANCE</h2>
+<ul>
+<li><b>Freeze</b> captures the current loop into one of 8 snapshot slots —
+happy accidents are never lost. Snapshots store knob state <i>and</i> material.</li>
+<li><b>A/B crossfader</b>: pick two snapshots, ride the fader between them —
+knobs and material interpolate. A performance arc in one gesture, and it can be
+ridden back and forth.</li>
+<li>Material strip is touchable: <b>tap a step to lock it against mutation</b>
+(random until good, then protected), drag to re-pitch. Per-step mutation locks
+is something no Turing-machine descendant has.</li>
+<li>All voice/global moves are bar-quantized so tweaks land musically; every
+control is MIDI-mappable and host-automatable.</li>
+<li>Playhead speeds are musical ratios (½, ¾, 1, 3/2, 2…); a <b>LOOSE</b>
+toggle (off by default) frees the ratios for Reich-style phasing.</li>
+</ul>
+
+<h2>SOUND &amp; MIDI</h2>
+<ul>
+<li>Per-voice synth engine, Plaits family (MIT): three melodic instances +
+percussion models for the drums — one synth family, sounds good immediately,
+macro-friendly (model / harmonics / timbre / morph). Not a destination page.</li>
+<li>One shared FX bus: tempo-synced delay + reverb, per-voice sends, two knobs.
+The delay is secretly structural — a dotted-eighth send is another pseudo-playhead.</li>
+<li>MIDI out: V1/V2/V3 on channels 1–3, drums on 10 — one instance drives three
+hardware synths and a drum machine.</li>
+<li><b>Drag-out MIDI</b>: drag the current frozen loop from the plugin window
+into the DAW as a multitrack MIDI file, one track per voice. Sidesteps all
+host routing pain.</li>
+</ul>
+
+<h2>DECIDED</h2>
+<ul>
+<li>Counterpoint from shared material: one line, three playheads + drums. Never chords.</li>
+<li>Déjà-vu locked randomness as the core; freeze + 8 snapshots; A/B crossfader morph.</li>
+<li>Polymetry as one macro, not per-lane length boxes.</li>
+<li>Invisible drifting harmony lane with chord-tone weighting; register bands per voice.</li>
+<li>Material strip visible and touchable (tap-lock, drag re-pitch); drum material invisible.</li>
+<li>Phrase knob per voice: gate lerp with tie threshold.</li>
+<li>Speeds locked to musical ratios; LOOSE toggle off by default.</li>
+<li>Per-voice Plaits-family engines; shared delay+reverb bus with sends.</li>
+<li>MIDI: voices on ch 1–3, drums ch 10; drag-out multitrack MIDI.</li>
+<li>Presets store the material itself, not seed + replay — freezes are bit-exact forever.</li>
+<li>Base rate: material step = 16th at 1×, global ÷2/×2.</li>
+<li>Name: <b>Canon</b>.</li>
+</ul>
+
+<h2>OPEN</h2>
+<ul>
+<li>Material morph under the crossfader: how two different materials interpolate
+(per-step pitch glide through the scale + gate lerp + presence crossfade?). Needs a rule.</li>
+<li>Material length: 16 fixed, or 16/32 switch.</li>
+<li>The curated polymetry sequence and the LOOSE ratio list.</li>
+<li>Fill behavior details; drum lane count (4 enough?).</li>
+<li>Standalone app build alongside the plugin formats.</li>
+<li>Visual identity — this mockup borrows the house palette; the real skin is its own pass.</li>
+<li>Hardware controller mapping (a knob box wants this layout).</li>
+</ul>
+
+<script>
+const C = { bg:'#111', panel:'#161616', hdr:'#0d0d0d', dark:'#2c2c2c', line:'#222',
+            dim:'#707070', light:'#d0d0d0', ink:'#fff',
+            v1:'rgb(48,230,170)', v2:'rgb(255,159,67)', v3:'rgb(77,163,255)', dr:'#d0d0d0' };
+const F = 'ui-monospace,Menlo,monospace';
+
+function ctx(id){ const c=document.getElementById(id).getContext('2d');
+  c.fillStyle=C.bg; c.fillRect(0,0,c.canvas.width,c.canvas.height); return c; }
+function rect(c,x,y,w,h,col){ c.fillStyle=col; c.fillRect(x,y,w,h); }
+function frame(c,x,y,w,h,col){ c.strokeStyle=col; c.lineWidth=1; c.strokeRect(x+.5,y+.5,w-1,h-1); }
+function txt(c,x,y,s,col,px=11,align='left'){ c.fillStyle=col; c.font=px+'px '+F; c.textAlign=align; c.fillText(s,x,y); c.textAlign='left'; }
+function knob(c,cx,cy,r,frac,col,label,val){
+  const a0=0.75*Math.PI, a2=2.25*Math.PI, a1=a0+frac*(a2-a0);
+  c.lineWidth=3; c.strokeStyle=C.dark;
+  c.beginPath(); c.arc(cx,cy,r,a0,a2); c.stroke();
+  c.strokeStyle=col;
+  c.beginPath(); c.arc(cx,cy,r,a0,a1); c.stroke();
+  c.beginPath(); c.moveTo(cx+Math.cos(a1)*(r-6),cy+Math.sin(a1)*(r-6));
+  c.lineTo(cx+Math.cos(a1)*(r+1),cy+Math.sin(a1)*(r+1)); c.stroke();
+  if(label) txt(c,cx,cy+r+13,label,C.dim,9,'center');
+  if(val) txt(c,cx,cy+4,val,C.light,10,'center');
+}
+function btn(c,x,y,w,h,label,col,on){
+  rect(c,x,y,w,h,on?col:C.panel); frame(c,x,y,w,h,on?col:C.dark);
+  txt(c,x+w/2,y+h/2+4,label,on?'#000':C.light,10,'center');
+}
+
+// ---- main screen ----
+{ const c=ctx('main');
+
+  // header
+  rect(c,0,0,720,38,C.hdr); rect(c,0,38,720,1,C.line);
+  txt(c,16,24,'CANON',C.ink,15); txt(c,92,24,'C MINOR',C.dim,11);
+  // snapshot slots
+  for(let i=0;i<8;i++){ const x=250+i*22;
+    const ab = i===1?'A':(i===5?'B':null);
+    const full = [0,1,3,5].includes(i);
+    rect(c,x,11,16,16, full?C.dark:'#141414');
+    frame(c,x,11,16,16, i===1?C.v1:(i===5?C.v3:C.line));
+    if(ab) txt(c,x+8,23,ab, i===1?C.v1:C.v3,10,'center');
+  }
+  // crossfader
+  rect(c,448,18,100,2,C.dark);
+  rect(c,448+30-3,12,6,14,C.light);
+  txt(c,448,34,'A',C.v1,9); txt(c,548,34,'B',C.v3,9,'right');
+  txt(c,704,24,'⠿ DRAG MIDI',C.dim,11,'right');
+
+  // material strip
+  const mx=16,my=48,mw=688,mh=110,colW=mw/16;
+  rect(c,mx,my,mw,mh,'#0e0e0e'); frame(c,mx,my,mw,mh,'#333');
+  for(let i=1;i<16;i++) rect(c,mx+i*colW,my,1,mh, i%4===0?'#2a2a2a':'#1a1a1a');
+  const steps=[
+    {p:6,g:.45},{p:4,g:.35},{p:2,g:.9,lock:1},{p:4,g:.25},
+    {g:0},{p:3,g:1},{p:3,g:.35,tied:1},{p:1,g:.5},
+    {p:5,g:.45,lock:1},{p:7,g:.6},{g:0},{p:2,g:.4},
+    {p:0,g:1},{p:0,g:.7,tied:1},{p:4,g:.3},{p:6,g:.55}
+  ];
+  steps.forEach((s,i)=>{ const x=mx+i*colW;
+    if(s.lock){ // padlock
+      c.strokeStyle=C.ink; c.lineWidth=1;
+      c.beginPath(); c.arc(x+colW/2,my+8,3,Math.PI,2*Math.PI); c.stroke();
+      rect(c,x+colW/2-4,my+8,8,6,C.ink);
+    }
+    if(s.g===0){ rect(c,x+colW/2-4,my+mh-10,8,2,'#333'); return; } // rest
+    const y=my+22+s.p*10;
+    const barW = s.g>=1 ? colW : 8+s.g*(colW-16);
+    rect(c,x+4,y,barW,8, s.tied?'#8a8a8a':C.light);
+    if(s.tied){ frame(c,x+4,y,8,8,C.light); }           // hollow-ish continuation
+    else rect(c,x+4,y,8,8,C.ink);                        // the note head
+  });
+  // playheads
+  function ph(stepPos,col,dirRight){ const x=mx+stepPos*colW;
+    rect(c,x,my,2,mh,col);
+    c.fillStyle=col; c.beginPath();
+    if(dirRight){ c.moveTo(x+2,my+3); c.lineTo(x+9,my+7); c.lineTo(x+2,my+11); }
+    else { c.moveTo(x,my+3); c.lineTo(x-7,my+7); c.lineTo(x,my+11); }
+    c.closePath(); c.fill();
+  }
+  ph(9.4,C.v1,true); ph(4.6,C.v2,true); ph(13.2,C.v3,false);
+
+  // voice strips
+  const rows=[
+    {col:C.v1,name:'V1',speed:'1× ▸',oct:'+0',dens:.7,phr:.25,send:.3,ch:'CH1'},
+    {col:C.v2,name:'V2',speed:'½× ▸',oct:'−1',dens:.5,phr:.8,send:.45,ch:'CH2'},
+    {col:C.v3,name:'V3',speed:'2× ◂',oct:'+1',dens:.35,phr:.55,send:.6,ch:'CH3'},
+    {col:C.dr,name:'DR',drums:1,dens:.6,couple:.65,feel:.4,send:.2,ch:'CH10'}
+  ];
+  rows.forEach((v,i)=>{ const y=170+i*44, h=38;
+    rect(c,16,y,688,h,C.panel); frame(c,16,y,688,h,C.line);
+    rect(c,16,y,5,h,v.col);
+    txt(c,32,y+24,v.name,v.col,13);
+    btn(c,62,y+10,42,18,'MUTE',C.dark,false);
+    knob(c,150,y+15,12,v.dens,v.col,'DENS');
+    if(!v.drums){
+      rect(c,195,y+8,58,22,'#101010'); frame(c,195,y+8,58,22,C.dark);
+      txt(c,224,y+23,v.speed,C.light,11,'center'); txt(c,224,y+37,'SPEED',C.dim,8,'center');
+      rect(c,268,y+8,36,22,'#101010'); frame(c,268,y+8,36,22,C.dark);
+      txt(c,286,y+23,v.oct,C.light,11,'center'); txt(c,286,y+37,'OCT',C.dim,8,'center');
+      knob(c,350,y+15,12,v.phr,v.col,'PHRASE');
+    } else {
+      knob(c,250,y+15,12,v.couple,v.col,'COUPLE');
+      knob(c,350,y+15,12,v.feel,v.col,'FEEL');
+    }
+    knob(c,410,y+15,12,v.send,v.col,'SEND');
+    txt(c,640,y+24,v.ch,C.dim,10);
+    rect(c,676,y+8,6,22,C.dark); rect(c,676,y+8+22*(1-v.dens),6,22*v.dens,v.col);
+  });
+
+  // global row
+  rect(c,0,358,720,102,C.hdr); rect(c,0,358,720,1,C.line);
+  knob(c,90,402,30,.72,C.v1,'DÉJÀ-VU','72%');
+  knob(c,185,402,16,.3,C.light,'DRIFT');
+  knob(c,255,402,16,.55,C.light,'MESH');
+  knob(c,325,402,16,.4,C.light,'POLYMETRY');
+  btn(c,390,388,62,28,'FILL',C.dark,false);
+  btn(c,468,388,82,28,'FREEZE',C.v1,true);
+  txt(c,704,398,'STEP = 16TH  ×1',C.dim,10,'right');
+  txt(c,704,414,'LOOSE: OFF',C.dim,10,'right');
+}
+
+// ---- engine flow ----
+{ const c=ctx('flow');
+  function box(x,y,w,h,title,lines,col){
+    rect(c,x,y,w,h,C.panel); frame(c,x,y,w,h,col||C.dark);
+    txt(c,x+w/2,y+15,title,col||C.ink,11,'center');
+    (lines||[]).forEach((s,i)=>txt(c,x+w/2,y+29+i*12,s,C.dim,9,'center'));
+  }
+  function arrow(x1,y1,x2,y2,col){
+    c.strokeStyle=col||C.dim; c.lineWidth=1;
+    c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
+    const a=Math.atan2(y2-y1,x2-x1);
+    c.fillStyle=col||C.dim; c.beginPath(); c.moveTo(x2,y2);
+    c.lineTo(x2-7*Math.cos(a-.4),y2-7*Math.sin(a-.4));
+    c.lineTo(x2-7*Math.cos(a+.4),y2-7*Math.sin(a+.4));
+    c.closePath(); c.fill();
+  }
+  box(20,25,130,90,'MATERIAL',['16 steps','pitch·gate·vel·oct','polymetric lanes','déjà-vu mutates'],C.ink);
+  box(20,135,130,55,'DRUM MATERIAL',['4 lanes · rhythm','same déjà-vu clock']);
+  box(195,20,105,38,'V1 PLAYHEAD',['1× fwd'],C.v1);
+  box(195,68,105,38,'V2 PLAYHEAD',['½× fwd −oct'],C.v2);
+  box(195,116,105,38,'V3 PLAYHEAD',['2× rev offset'],C.v3);
+  box(340,50,115,74,'HARMONY',['scale fold','drifting root','chord-tone weight']);
+  box(495,20,120,165,'ENGINES',['3× plaits voices','1× percussion','FX bus dly+vrb']);
+  arrow(150,55,195,39); arrow(150,70,195,87); arrow(150,85,195,135);
+  arrow(300,39,340,70); arrow(300,87,340,87); arrow(300,135,340,104);
+  arrow(455,87,495,87);
+  arrow(150,162,495,162);
+  arrow(615,60,655,60); txt(c,662,64,'AUDIO',C.light,10);
+  arrow(615,110,655,110); txt(c,662,114,'MIDI 1·2·3',C.light,10);
+  arrow(615,162,655,162); txt(c,662,166,'MIDI 10',C.light,10);
+}
+</script>
+</body>
+</html>
