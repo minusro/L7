@@ -99,7 +99,7 @@
 <ol>
   <li>Plug your source into the M8's line input. The input is always heard.</li>
   <li>Select an empty track and press <span class="key">A</span>; the recording is set going as you press it. If the clock is stopped, it starts and recording begins on bar 1. If it's running, recording starts on the next bar line. If you press within 0.1 seconds after a bar line, it starts on that bar line instead (counted from when you pressed, as long as you let go soon after).</li>
-  <li>Press <span class="key">A</span> again to stop. Loops are always whole bars. If you stop within 0.1 seconds after a bar line, the loop ends there; otherwise recording carries on to the end of that bar. The longest loop is 32 bars (16 bars below 60 BPM).</li>
+  <li>Press <span class="key">A</span> again to stop. Loops are always whole bars. If you stop within 0.1 seconds after a bar line, the loop ends there; otherwise recording carries on to the end of that bar. The longest loop is 32 bars.</li>
   <li>The loop starts playing as soon as it's done, with no gap.</li>
 </ol>
 <p>Pressing <span class="key">A</span> on another empty track while one records stops the first and queues the next one to start exactly where the first ends. In a new, empty project a metronome click plays until the first loop is complete.</p>
@@ -176,7 +176,7 @@
 <p>When you leave the menu by pressing <span class="key">A</span> on a card, coming back puts you on the loaded project's card.</p>
 
 <h2>Exporting to Ableton Live</h2>
-<p>Load the project, open the menu and choose <b>EXPORT ABLETON SET</b>. The clock stops and L7 writes a Live 11 project to the card, in <code>/L7/EXPORTS/L7 A01 Project/</code> (the project's letter, then the next free number, 01–99). The label then reads <b>SAVED AS L7 A001</b>, and the button stays off until you close the menu.</p>
+<p>Load the project, open the menu and choose <b>EXPORT ABLETON SET</b>. You can do it while playing, straight after recording too. The clock stops and L7 writes a Live 11 project to the card, in <code>/L7/EXPORTS/L7 A01 Project/</code> (the project's letter, then the next free number, 01–99), the label counting as it goes (<b>EXPORTING 3/7</b>). The label then reads <b>SAVED AS L7 A01</b>, and the button stays off until you close the menu. If the clock was running, it starts again from 1.1.1.</p>
 <ul>
   <li>7 audio tracks, coloured like the project, each with a highpass and a lowpass Auto Filter and a Utility.</li>
   <li>One scene per L7 scene that has clips, each with its L7 scene's tempo (Live switches to it when the scene launches), plus an empty one at the end. The current scene's clips are armed to play when the set opens.</li>
@@ -204,6 +204,7 @@
   <li>L7 saves as you go: tracks, scenes, tempo and the loaded project survive switching off.</li>
   <li>When an action can't run right now (for example paste with an empty clipboard), the action button turns grey and <span class="key">A</span> does nothing.</li>
   <li>The headphone output mutes the speaker automatically.</li>
+  <li>With the clock stopped you can swap the SD card: take it out and the screen asks for one (<b>INSERT AN SD CARD</b>); put one in and L7 reads its projects and recordings (a blank card gets a fresh <code>/L7</code> folder). Switched on without a card, it waits for one the same way.</li>
   <li>MIDI clock and start/stop go out on the M8's MIDI out.</li>
 </ul>
 
