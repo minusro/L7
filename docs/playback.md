@@ -5,8 +5,10 @@
 Each track has a ring of `RING_FRAMES` stereo frames. `loop()` fills it
 (`produce()`: one SD read of up to `CHUNK_FRAMES` = 16 KB) with the loop range's
 frames in playback order; the interrupt plays it at `playSpb / spb`
-(varispeed: tempo changes repitch; any ratio the 30–300 BPM range allows,
-1/8x–8x — high ratios need proportionally more card bandwidth). Counters `head` / `tail` run freely; ring index = n % size.
+(the playhead's speed; any ratio the 60–240 BPM range allows, 1/4x–4x — high
+ratios need proportionally more card bandwidth). The sound keeps its pitch:
+time-stretched (below), or resampled with the pitch following the tempo for a
+track with `stretch` off. Counters `head` / `tail` run freely; ring index = n % size.
 
 `serviceStreams()` refills the emptiest track first. Writes (recording, unit
 files, scenes) wait until every ring is topped up (`streamsTopped()`), so a

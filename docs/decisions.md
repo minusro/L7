@@ -3,7 +3,8 @@
 ## Agreed behaviour (don't change without asking)
 
 * LINE IN input, always monitored. Fixed 4/4. Stereo tracks streamed from SD.
-* Tempo changes repitch (varispeed); 30–240 BPM, with no per-loop speed
+* Tempo changes repitch (varispeed) — since replaced: tracks are time-stretched,
+  keeping their pitch (playback.md, Time stretching); 60–240 BPM, with no per-loop speed
   limit (was 50–200 % of the recorded tempo; dropped so the whole range is
   reachable).
 * Recordings are whole bars (any count up to 32), trimmed back to the bar

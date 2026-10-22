@@ -84,8 +84,8 @@ the right. The selected cell has a light frame; move it with the arrows. The
 ### Tempo and sync
 
 Select the tempo cell and hold **B**: LEFT / RIGHT ±0.1 BPM, UP / DOWN ±1
-(60–240 BPM); press **A** there to tap the tempo. Changing the tempo re-pitches
-the loops, like a turntable. L7 follows a MIDI clock (the MIDI in, or USB),
+(60–240 BPM); press **A** there to tap the tempo. Changing the tempo keeps the
+loops' pitch: they're time-stretched. L7 follows a MIDI clock (the MIDI in, or USB),
 sends its own, and can follow the beat of audio coming in (**SHIFT** + **A** on
 the tempo cell). Over USB the M8 is also an audio interface: the mix and each
 track on its own channels.
