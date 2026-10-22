@@ -386,6 +386,10 @@ checked, or turn it into a fix.
 
 ## Open problems
 
+- [ ] **UI preview crashes** (2026-10-23): `tools/ui_preview/ui_preview <dir>`
+  writes the splash PNGs, then segfaults (exit 139), the showcase too. The
+  README's pictures come from the demo renderer meanwhile.
+
 - [ ] **Snags on project load**: a capture of several loads (2026-10-12) heard
   nothing; the log had one tiny dropout on track 7 (112 + 256 samples, ~8 ms)
   during a scene write, then a stream read. Watch for it again.

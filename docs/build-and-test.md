@@ -125,6 +125,14 @@ The script steps on transport beats (`untilBeat()`), so it keeps in time with
 the music; navigation goes an arrow at a time to a row and cell (`go()`),
 never past an edge (that would open the menu).
 
+## README pictures (`tools/readme/make_images.py`)
+
+The README's screenshots, annotated screen, keys and GIF (`docs/readme/`) are
+taken from a run of the demo renderer (its `frames.raw`, the real app's
+screen): `python3 tools/readme/make_images.py <demo-out-dir>` (Pillow, numpy,
+ffmpeg). The moments it takes are the house demo's; retime them in `main()`
+if the script changes.
+
 ## UI preview (`tools/ui_preview`)
 
 Renders the screen on the PC with the firmware's own drawing code (ui*.cpp,
