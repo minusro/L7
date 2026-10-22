@@ -49,7 +49,7 @@ constexpr uint32_t LATENCY_FRAMES = 153;
 
 // Tempo range. Loops play at any speed this allows vs their recorded tempo
 // (1/8x to 8x); high ratios need that much more from the card.
-constexpr float MIN_BPM = 30.0f, MAX_BPM = 300.0f;
+constexpr float MIN_BPM = 60.0f, MAX_BPM = 240.0f;
 
 // Loops up to this many bars: their range's start moves a beat at a time
 // (input.cpp), and the start position is the range's first half bar or bar

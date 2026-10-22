@@ -2550,8 +2550,8 @@ for f in os.listdir("."):
     check(worst < 0.01 && fabs(transport.spb - expectSpb(133.5)) < expectSpb(133.5) * 0.003, m);
     {                                                // B+DOWN: ours theirs halved, from their next beat; B+UP: back
       measure = false;
-      check(midiScale(1) && !midiScale(1) && midiScale(-1), "B+UP following MIDI at 133.5: doubled (267), again refused (534, over the clock's range), B+DOWN: back");
-      check(midiScale(-1), "B+DOWN following MIDI: halved");
+      check(!midiScale(1), "B+UP following MIDI at 133.5: refused (267, over the clock's range)");
+      check(midiScale(-1) && !midiScale(-1), "B+DOWN following MIDI: halved (66.75), again refused (33.4, under the clock's range)");
       mult = 0.5;
       runCounted(4);
       measure = true; worst = 0;
@@ -3231,8 +3231,7 @@ for f in os.listdir("."):
       n = offBy(inputIndex - (uint32_t)(6 * AUDIO_SAMPLE_RATE_EXACT), mean, worst);
       snprintf(m9, sizeof m9, "doubled back: on their beat again (the last 6 s: %d kicks, worst %.1f ms; %.2f BPM)", n, worst, bpm);
       check(n >= 10 && worst < 10 && fabs(bpm - 126) <= 0.15f, m9);
-      check(audioFollowScale(1) && !audioFollowScale(1) && audioFollowScale(-1) && fabs(bpm - 126) <= 0.15f,
-            "doubled again (252, in range), and again refused (504, out of the clock's range), then back");
+      check(!audioFollowScale(1) && fabs(bpm - 126) <= 0.15f, "doubling again refused (252, over the clock's range)");
     }
     for (int k = 0; k < 8 * (int)fps; k++) {        // their tempo rising to 132 over 8 s
       drumBpm = 126 + 6.0 * k / (8 * fps);

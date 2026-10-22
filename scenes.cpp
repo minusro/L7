@@ -682,13 +682,19 @@ bool projectInfo(int p, int &scenes, float &tempo, int &current) {
   return true;
 }
 
+// A scene's saved tempo, or 0 (none): one saved under the wider range before
+// (30-300) brought into today's.
+static float savedTempo(float b) {
+  return b >= 30 && b <= 300 ? constrain(b, MIN_BPM, MAX_BPM) : 0;
+}
+
 float projectSceneTempo(int p, int pos) {
   FsFile f = openProject(p);
   SceneList l;
   if (!readList(f, l) || pos < 1 || pos > l.count) return 0;
   SceneInfo s;
   if (!f.seekSet((uint64_t)(1 + l.slot[pos - 1]) * BLOCK) || f.read(&s, sizeof s) != (int)sizeof s || memcmp(s.magic, "M8SC", 4)) return 0;
-  return s.tempo >= MIN_BPM && s.tempo <= MAX_BPM ? s.tempo : 0;
+  return savedTempo(s.tempo);
 }
 
 bool projectScene(int p, int pos, TrackUnit *units) {
@@ -719,7 +725,7 @@ void sceneRecorded(float bpm, bool resample) {
 float sceneSavedTempo() {
   float b = list.current >= 1 && list.current <= list.count ? sceneTempo
           : list.current == list.count + 1 && list.count ? sceneAt(list.count).tempo : 0;   // (N+1*: the copy of N's)
-  return b >= MIN_BPM && b <= MAX_BPM ? b : 0;
+  return savedTempo(b);
 }
 
 void projectMasterChanged() {

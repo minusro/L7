@@ -63,7 +63,7 @@ its volume as steps from unity, so another clip plays at its own level as
 recorded. Its meter: the top half at 0 dBFS. `volumeStepOf()` in engine.cpp; the
 clip's peak is kept in its WAV header, older ones' taken from their overview) and balance (while B is held on it: its level lines light grey, the meter in the accent colour; stopped or muted, no meter: the level all in the accent colour; LEFT/RIGHT: ±20, two steps a half line, an odd one dotting it; each step moves the
 other channel's level by a half line, so every press shows; all the way one side, that way again: the volume up a step; UP at the top step, panned: the balance a step back to the centre),
-tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 30–300 BPM),
+tempo (LEFT/RIGHT ±0.1, UP/DOWN ±1 to the nearest integer; 60–240 BPM),
 the clock cell: the master volume and balance, each project's own (new ones: 100 %, centred) (UP/DOWN the volume a step, LEFT/RIGHT the balance, ±22, all the way: the other side silent; past it, the volume up a step; UP at full volume, panned: the balance a step back; B twice: back to 100% and centred, as B twice resets any cell; saved in the session as `out=` and `pan=`, older `gain=`, `level=`/`balance=` and `volume=` converted).
 
 Timing constants (input.cpp): key repeat after 200 ms, every 50 ms;
