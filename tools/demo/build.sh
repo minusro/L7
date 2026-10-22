@@ -12,10 +12,10 @@ out="${TMPDIR:-/tmp}/l7_demo"
 styles="${*:-house}"
 rm -rf "$src" && mkdir -p "$src" "$out"
 for f in "$root"/*.cpp "$root"/*.h; do
-  case "$(basename "$f")" in M8Board.*|usb_drive.cpp|midi_usb.cpp|app_loader.cpp) ;; *) cp "$f" "$src/" ;; esac
+  case "$(basename "$f")" in M8Board.*|usb_drive.cpp|midi_usb.cpp) ;; *) cp "$f" "$src/" ;; esac
 done
 cp "$root/m8_looper.ino" "$src/l7_sketch.cpp"
-cp "$root"/tools/desktop/stubs/*.h "$here"/stubs/*.h "$here/demo.cpp" "$src/"
+cp "$root"/tools/desktop/stubs/*.h "$here/demo.cpp" "$src/"
 fontsrc="$HOME/Documents/Arduino/libraries/ILI9341_t3n/src/glcdfont.c"
 sed 's/^const unsigned char glcdfont/extern "C" const unsigned char glcdfont/' "$fontsrc" > "$src/glcdfont.cpp"
 c++ -std=c++17 -O2 -Wno-macro-redefined -I"$src" "$src"/*.cpp -o "$out/l7demo"

@@ -134,6 +134,11 @@ contain the `FLASH_ID` string (app_loader.cpp does this) or images of it
 will be refused. The final copy is the only brick window (a few seconds);
 recovery is a USB reflash.
 
+L7 no longer carries it (2026-10-22): no chord, no app_loader or FlashTxx,
+and so no `FLASH_ID` in its image either, so the other apps' switch refuses
+an L7.HEX built since ("NOT A TEENSY40 IMAGE"). L7 goes on and off the M8
+over USB only.
+
 ## Debugging
 
 * Serial 115200. L7's freeze detector pattern is worth copying early: a

@@ -40,10 +40,6 @@ void usbDriveBegin() {}
 bool usbDriveMode() { return false; }
 }  // namespace looper
 void midiUsbBegin() {}
-bool appLoaderFlash(FsFile &, const char **err, void (*)(int), void (*)()) {   // (no app switching here)
-  *err = "NOT IN THE DEMO";
-  return false;
-}
 
 // ---- Virtual time. Every look at the clock moves it on a little (so waits
 // on it end); the audio "interrupt" runs whenever a block is due and

@@ -87,7 +87,6 @@
 #include "midi_in.h"
 #include "midi_usb.h"
 #include "audio_follow.h"
-#include "app_loader.h"
 
 AudioInputI2S        i2sIn;
 LooperEngine         engine;
@@ -121,48 +120,6 @@ static void freezeCheck() {
     audioStill = 0;
     lastNow = now;
   }
-}
-
-// ---- App switch (SHIFT + B + PLAY): flashes /APPS/N9.HEX from the card
-// and reboots into N9 (app_loader.h; N9 carries the mirror switch back).
-static void appMsg(const char *l1, const char *l2) {
-  auto &t = board.tft();
-  t.fillScreen(BG);
-  drawText((320 - textWidth(l1)) / 2, 100, l1, INK, BG);
-  if (l2) drawText((320 - textWidth(l2)) / 2, 124, l2, LIGHT, BG);
-}
-
-// Only the progress line repaints (a fixed-width opaque box over the old
-// text): appMsg's fillScreen on every percent made the whole screen flicker.
-static void appProgress(int pct) {
-  char ln[24];
-  snprintf(ln, sizeof ln, "READING  %d", pct);
-  int w = textWidth("READING  100");
-  drawText((320 - w) / 2, 124, ln, LIGHT, BG, w);
-}
-
-static void appPreMove() {
-  codec.volume(0.0f);
-  AudioNoInterrupts();              // the last copy: a few silent seconds
-  appMsg("FLASHING N9", "DON'T POWER OFF");
-}
-
-static void appSwitchToN9() {
-  appMsg("SWITCHING TO N9", "SAVING");
-  flushHeaders();
-  saveSessionNow();
-  flushScenes();
-  const char *err = "NO /APPS/N9.HEX";
-  FsFile f = SD.sdfs.open("/APPS/N9.HEX", O_RDONLY);
-  if (f) {
-    if (appLoaderFlash(f, &err, appProgress, appPreMove)) return;   // (never returns)
-    f.close();
-    AudioInterrupts();
-    codec.volume(0.6f);
-  }
-  appMsg("SWITCH FAILED", err);
-  delay(1500);
-  uiGeneration++;                   // back to the looper, redrawn whole
 }
 
 // ---- Power
@@ -322,14 +279,6 @@ static void passReport() {
 
 void loop() {
   board.chargeGuard();
-  {                                 // SHIFT + B + PLAY: switch to N9
-    static uint8_t apPrev = 0;
-    uint8_t apK = board.keys();
-    if ((apK & (m8::BTN_SHIFT | m8::BTN_OPT)) == (m8::BTN_SHIFT | m8::BTN_OPT) &&
-        (apK & ~apPrev & m8::BTN_PLAY))
-      appSwitchToN9();
-    apPrev = apK;
-  }
   loopCount++;
   passMark("power");
   debugStage = "power button";

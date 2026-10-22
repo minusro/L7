@@ -216,7 +216,9 @@ checked, or turn it into a fix.
   (COMP/TAPE, CHORUS/DRIVE). The editor's new bar strip: 16 slots, 4-bar mock
   clip, the accent loop brace wrapping bars 3-4-1, a white frame on the shown
   bar.
-- [ ] **App switcher (both apps) + N9's SD folders.** Copy apps_sd/L7.HEX
+- [ ] **App switcher (both apps) + N9's SD folders.** (2026-10-22: L7's side
+  removed - no SHIFT+B+PLAY, and an L7.HEX built since is refused by the
+  other app's switch, having no FLASH_ID; only N9/K6 matter here now.) Copy apps_sd/L7.HEX
   and N9.HEX to the card as /APPS/L7.HEX and /APPS/N9.HEX (card reader or
   L7 storage mode; tools/make_apps.sh rebuilds both). N9: SHIFT+B+A
   switches to L7; L7: SHIFT+B+PLAY switches to N9 (saves its session
