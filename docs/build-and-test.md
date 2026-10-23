@@ -153,15 +153,16 @@ The Model:02 keeps the same block size (`PX` 2) and gives its extra room to
 the rows (30 -> 40 px) and to the waveform and filter cells; the status row is 34 px, a block
 shorter than the space left over, that block going to the gap above it; the volume cell
 keeps its width, because its arcs are the volume's 20 steps rather than
-anything about the cell's size. In the status row the clock cell stays
-as snug round the master meter as the Model:01's is (96 against 94, round
-the same 86 px of lines: 22 at a 4 px pitch), and the scene and the tempo
-take the extra width between them -- so no cell shows a wide empty frame
-when it is selected. Each cell's contents keep their own place in it (the
-scene's at its left, the clock's centred, the tempo's at its right), and
-the clock cell's middle is at 218 whichever width it has, so the clock and
-the meter sit in the middle of what the other two leave: 129 and 131 px
-from them, where the Model:01 leaves 78 and 28. The scene's and the tempo's
+anything about the cell's size. In the status row the clock cell is the
+Model:01's own 94 wide, so its contents sit in it exactly as they do there:
+the master meter (86 px, 22 lines at a 4 px pitch) with a block of space
+each side, and the clock's text 20 px in. The meter always starts 4 px into
+the cell, so a wider cell would leave more space on its right than on its
+left. The scene and the tempo take the extra width between them -- no cell
+shows a wide empty frame when it is selected -- and since the scene's
+contents sit at its left and the tempo's at its right, the clock still
+lands in the middle of what the two leave: 126 and 132 px from them, where
+the Model:01 leaves 78 and 28. The scene's and the tempo's
 contents come two blocks further in from the row's two ends than on the
 Model:01 (`EDGE_INSET` in ui_status.cpp, 8 px against 4; the cells' inner
 edges keep 4). Nothing of the Model:02 has run on hardware
