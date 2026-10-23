@@ -38,7 +38,7 @@ the right. The selected cell has a light frame; move it with the arrows. The
 
 ## The keys
 
-<img src="docs/readme/keys.png" width="290" align="right" alt="The M8's keys: B (OPTION) and A (EDIT) top right, the arrows, SHIFT and START">
+<img src="docs/readme/keys.png" width="290" alt="The M8's keys: B (OPTION) and A (EDIT) top right, the arrows, SHIFT and START">
 
 | Keys | What they do |
 |---|---|
@@ -50,8 +50,6 @@ the right. The selected cell has a light frame; move it with the arrows. The
 | **START** | Play from 1.1.1 / stop |
 | **B** + **A** on an empty track | Resample what you hear |
 | Arrow past the screen's edge | Open the menu |
-
-<br clear="right">
 
 ## Quick guide
 
