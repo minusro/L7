@@ -87,3 +87,56 @@ The driver starts by setting REG_RST (REG14 |= 0x80). It then writes:
 | STC3115 driver | 0x600900A0–0x60090540 |
 | I²S (SAI1) setup, ITCM | 0x1DF00, 0x1DFC0, 0x218B4 |
 | SD (USDHC1) pad setup, ITCM | 0x29538 |
+
+# Dirtywave M8 Model:02 — the display
+
+Recovered from `M8_V6_6_3C_MODEL02.bin` (the stock Model:02 firmware, V6.6.3C). Everything here is read
+straight out of that image, so it is **confirmed**; nothing of it has been checked against real hardware,
+because there is no Model:02 here. The rest of the Model:02's board — its MCU, pin map, keys, backlight,
+audio, card — is **not** covered: that needs the same disassembly the Model:01 above got, and a device.
+
+## Display controller
+
+| Item | Value | Confidence |
+|---|---|---|
+| Controller | **ILI9488**, 480 x 320 | confirmed |
+| Evidence | its Adjust Control 3 signature `F7 A9 51 2C 82`, and the whole init table below, at 0x1DB128 | confirmed |
+| Pixel format | **18 bits (RGB666), 3 bytes a pixel**: `COLMOD (3A) = 0x66` | confirmed |
+| Rotation / order | `MADCTL (36) = 0x48` | confirmed |
+
+The init table, verbatim (`length, command, data...`):
+
+| Cmd | Data | What |
+|---|---|---|
+| `E0` | `00 03 09 08 16 0a 3f 78 4c 09 0a 08 16 1a 0f` | positive gamma |
+| `E1` | `00 16 19 03 0f 05 32 45 46 04 0e 0d 35 37 0f` | negative gamma |
+| `C0` | `17 15` | power control 1 |
+| `C1` | `41` | power control 2 |
+| `C5` | `00 12 80` | VCOM control |
+| `36` | `48` | MADCTL |
+| `3A` | `66` | COLMOD: 18 bits a pixel |
+| `B0` | `80` | interface mode control |
+| `B1` | `a0` | frame rate control |
+| `B4` | `02` | display inversion control |
+| `B6` | `02 02 ...` | display function control |
+| `E9` | `00` | set image function |
+| `F7` | `a9 51 2c 82` | adjust control 3 |
+
+## What the 18-bit format means for a port
+
+**The ILI9488 has no 16-bit mode over SPI.** L7 draws in RGB565 throughout and hands the display
+`uint16_t` buffers (`writeRect()`, the row buffers in `ui_splash.cpp` and `ui_help.cpp`, the cell buffers
+in `ui_mix.cpp` and `ui_filter.cpp`); none of that reaches an ILI9488 unchanged. A port needs a driver
+that expands each pixel to 3 bytes on the wire — half as much again to push, which is the thing to measure
+first, since the screen already shares its time with SD streaming. `ILI9341_t3n` does not drive this part;
+`ILI9488_t3` is the usual one, or the panel's parallel bus if the Model:02 wires one.
+
+So the layout being done (see `src/screen.h`) does not mean the screen will light up: the driver, and
+everything else on the board, is still ahead.
+
+## Not the Model:01's spare path
+
+HARDWARE.md says above that the Model:01's V6.6.2A image carries an unreachable third display path for
+480 x 320 on pins 28/40. The V6.6.3C Model:01 image has **no ILI9488 init table** in it at all (only the
+two ILI9341 ones), so either that path went between the two releases or it never carried this table. Take
+the pins 28/40 note as being about 6.6.2A, not as the Model:02's wiring.

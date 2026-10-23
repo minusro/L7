@@ -137,12 +137,18 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 // cells are hidden in the menu; the action button is clear to the right), its frame
 // round its label with 3 blocks of space.
 static constexpr int CARD_W = 21, CARD_H = 15, CARD_CUT = 3, CARD_GAP = 3, CARD_VGAP = 3;
-static constexpr int CARDS_X = (SCREEN_W / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 13 + 2;   // (2 blocks lower)
+static constexpr int CARDS_X = (SCREEN_W / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2;
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
 // The first place where it was with four places, the last of them level with
 // the action button (from the status row's top); the fourth place gone (the
 // logo's row clear).
 static constexpr int LIST_Y = STATUS_TOP / PX + LIST_SPACE + 1 - 3 * LIST_PITCH;   // 75
+// The cards' three rows, and where they sit in the room the list leaves
+// above it: the space over them to the gap under them in 5:3, which is the
+// row 15 they have always had here. The list follows the status row down a
+// taller screen, so the cards follow the list rather than staying put.
+static constexpr int CARDS_H = CARD_ROWS * (CARD_H + CARD_VGAP) - CARD_VGAP;   // 51
+static constexpr int CARDS_Y = (LIST_Y - CARDS_H) * 5 / 8;                     // 15 (the Model:02: 37)
 
 // The logo in the bottom left corner (CORNER_LOGO_X / Y: a block in, on the status row's line).
 static constexpr int LOGO_X = CORNER_LOGO_X, LOGO_Y = CORNER_LOGO_Y;

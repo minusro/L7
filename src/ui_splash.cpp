@@ -43,8 +43,15 @@ static void drawL7(int x, int y, float s, uint16_t color, int fromRow = 0) {
   }
 }
 
+#if M8_MODEL == 1
 static constexpr float LOGO_SCALE = 2.5f;           // the splash's logo: pixels a unit
 static constexpr int LOGO_W = 138, LOGO_H = 65;     // (55 x 26 units at 2.5: drawL7() rounds the width up)
+#else
+// The Model:02: half as big again, so the logo covers the same share of the
+// wider screen (43% of it) as 2.5 does here.
+static constexpr float LOGO_SCALE = 3.75f;
+static constexpr int LOGO_W = 206, LOGO_H = 98;     // (55 x 26 units at 3.75)
+#endif
 // The logo and the copyright line under it centred together (the logo
 // above the middle).
 static constexpr int TEXT_GAP = 22;               // logo to text (the copyright sign's top), px
@@ -217,7 +224,7 @@ FLASHMEM void splashTick() {
 void showSplash() {
   auto &t = board.tft();
   t.fillScreen(BG);                                // (logo and line fade in: splashTick())
-  copyrightX = lineX = (320 - textWidthPx(COPYRIGHT)) / 2;
+  copyrightX = lineX = (SCREEN_W - textWidthPx(COPYRIGHT)) / 2;
   lineText = COPYRIGHT;
   lineHidden = false;
   shownTextY = -1;

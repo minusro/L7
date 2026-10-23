@@ -165,8 +165,12 @@ lands in the middle of what the two leave: 126 and 132 px from them, where
 the Model:01 leaves 78 and 28. The scene's and the tempo's
 contents come two blocks further in from the row's two ends than on the
 Model:01 (`EDGE_INSET` in ui_status.cpp, 8 px against 4; the cells' inner
-edges keep 4). Nothing of the Model:02 has run on hardware
-and it has no board layer yet (see docs/testing-checklist.md).
+edges keep 4). The help pages are generated per model too: `M8_MODEL=2 python3
+tools/help/make_help.py <preview-out>` writes `src/help_slides_m02.h`
+(the Model:01's stays `help_slides.h`), and `ui_help.cpp` includes whichever
+the build is for. Nothing of the Model:02 has run on hardware and it has no
+board layer yet: its panel is an ILI9488 at 18 bits a pixel, which no part of
+the drawing code feeds yet (docs/HARDWARE.md, docs/testing-checklist.md).
 
 ## UI preview (`tools/ui_preview`)
 

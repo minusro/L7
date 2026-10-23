@@ -1,12 +1,18 @@
-// ui_help.cpp — the help pages (the menu's HELP): drawn from help_slides.h
-// (tools/help/make_help.py), each page a list of steps (rectangles, text in
+// ui_help.cpp — the help pages (the menu's HELP): drawn from help_slides.h,
+// or help_slides_m02.h on the Model:02, whose screen the pages are laid out
+// for (both from tools/help/make_help.py, which takes M8_MODEL)
+// — each page a list of steps (rectangles, text in
 // L7's font at 1-6 px a dot, run-length coded images), then the page row:
 // a square each, the pages seen (app.h helpSeen()) filled in their project's
 // colour, the others a grey outline; the page shown in its colour, wider,
 // down to the screen's bottom. Rainbow text animated (helpService()).
 #include "ui.h"
 #include "ui_font.h"
+#if M8_MODEL == 1
 #include "help_slides.h"
+#else
+#include "help_slides_m02.h"
+#endif
 
 int helpPages() { return HELP_PAGES; }
 
@@ -65,7 +71,7 @@ FLASHMEM static void helpImage(int x0, int y0, const HelpImage &im) {
 static int dotsX = 10;
 FLASHMEM static void helpDots(int x, int shown) {
   auto &t = board.tft();
-  constexpr int Y = 226, SIZE = 8, STEP = 16;
+  constexpr int Y = SCREEN_H - 14, SIZE = 8, STEP = 16;   // 226 on the Model:01
   uint16_t seen = helpSeen();
   t.fillRect(0, Y - 2 * PX, SCREEN_W, SCREEN_H - (Y - 2 * PX), MENU_BG);   // (the row: places shift as the page turns)
   for (int i = 0; i < HELP_PAGES; i++) {

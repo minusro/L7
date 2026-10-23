@@ -21,10 +21,25 @@ PREV = sys.argv[1]
 # ---- The pages: the title (two lines), the steps (a preview screenshot, the
 # part of it shown, its caption), notes under them, two lines of text (the
 # first page: three). The parts, at the screen's size (px, on the 2 px grid):
-def TRACK(t, x0=110): top = (7 - t) * 30; return (x0, top, x0 + 210, top + 30)   # track t's row (from x0: its right part)
-STATUS_LEFT, STATUS_RIGHT = (0, 212, 210, 240), (110, 212, 320, 240)            # the status row: the scene's end, the tempo's
-CARDS = (60, 26, 270, 64)                                                         # the menu's top card row
-BOTTOM = (0, 90, 320, 240)                                                        # the screen's lower part (tracks 4-1, the status row)
+# Which M8 the pages are for (src/screen.h): M8_MODEL=2 in the environment
+# builds them for the Model:02's bigger screen, into help_slides_m02.h.
+MODEL = int(os.environ.get("M8_MODEL", "1"))
+if MODEL == 1: SW, SH, ROW_BAND, STATUS_TOP = 320, 240, 30, 214
+elif MODEL == 2: SW, SH, ROW_BAND, STATUS_TOP = 480, 320, 40, 286
+else: sys.exit("M8_MODEL: 1 or 2")
+# The menu's cards, as ui_menu.cpp places them (blocks), for the crop below.
+_LIST_Y = STATUS_TOP // 2 + 3 + 1 - 36
+_CARDS_X, _CARDS_Y, _CARDS_W = (SW // 2 - 4 * 21 - 3 * 3) // 2, (_LIST_Y - 51) * 5 // 8, 4 * 21 + 3 * 3
+# A strip is this wide, the share of the screen the Model:01's 210 is:
+CROP_W = SW * 210 // 320
+def TRACK(t, x0=None):                                 # track t's row (from x0: its right part)
+    if x0 is None: x0 = SW - CROP_W                    # (110 here, 165 on the Model:02)
+    top = (7 - t) * ROW_BAND
+    return (x0, top, x0 + CROP_W, top + ROW_BAND)
+STATUS_LEFT = (0, STATUS_TOP - 2, CROP_W, SH)                     # the status row: the scene's end,
+STATUS_RIGHT = (SW - CROP_W, STATUS_TOP - 2, SW, SH)              # and the tempo's
+CARDS = (_CARDS_X * 2 - 6, _CARDS_Y * 2 - 4, (_CARDS_X + _CARDS_W) * 2 + 18, _CARDS_Y * 2 + 34)   # the menu's top card row
+BOTTOM = (0, 3 * ROW_BAND, SW, SH)                                # the screen's lower part (tracks 4-1, the status row)
 PAGES = [
     dict(title=("L7", "HELP"), steps=[], lines=("A LOOPER FOR THE M8", "7 STEREO TRACKS, 200 SCENES AND 12 PROJECTS", "{< >} TO MOVE   {A} OR {B} TO EXIT")),
     dict(title=("THE", "SCREEN"), icon="PLAY", whole=("ui_played", BOTTOM),
@@ -52,7 +67,7 @@ PAGES = [
 ]
 
 # ---- L7's font (its widths: centring, wrapping)
-src = open(os.path.join(ROOT, "ui_font.cpp")).read()
+src = open(os.path.join(ROOT, "src", "ui_font.cpp")).read()
 GLYPHS = {}
 for m in re.finditer(r"\{'(.)',\s*\{((?:\"[.#]*\",?\s*)+)\}", src):
     GLYPHS[m.group(1)] = re.findall(r'"([.#]*)"', m.group(2))
@@ -74,7 +89,7 @@ for line in [l for p in PAGES for l in p["lines"] + tuple(p.get("notes", [])) + 
         if ch not in "{}[]" and ch not in GLYPHS and ch.upper() not in GLYPHS: sys.exit(f"not in the font: {ch!r} ({line})")
 
 # ---- The action button's icons (ui_buttons.cpp), by name: their art, rows of '#'.
-_ub = open(os.path.join(ROOT, "ui_buttons.cpp")).read()
+_ub = open(os.path.join(ROOT, "src", "ui_buttons.cpp")).read()
 _names = re.search(r"enum \{ (ICON_NONE[^}]*)\}", _ub).group(1).replace(" ", "").split(",")
 _block = _ub[_ub.index("static const Icon ICONS[] = {"):]
 _block = _block[:_block.index("\n};")]
@@ -94,11 +109,11 @@ _shots = {}
 def shot(name, acc):
     k = (name, acc)
     if k not in _shots:
-        im = Image.open(os.path.join(PREV, name + ".png")).convert("RGB").resize((320, 240), Image.NEAREST)
+        im = Image.open(os.path.join(PREV, name + ".png")).convert("RGB").resize((SW, SH), Image.NEAREST)
         h = colorsys.rgb_to_hls(*(v / 255 for v in acc))[0]
         px = im.load()
-        for y in range(240):
-            for x in range(320):
+        for y in range(SH):
+            for x in range(SW):
                 r, gg, b = px[x, y]
                 _, l, sat = colorsys.rgb_to_hls(r / 255, gg / 255, b / 255)
                 if sat > 0.15 and max(r, gg, b) - min(r, gg, b) > 12:
@@ -147,23 +162,30 @@ def circle(acc):
     return image(("circle", acc), im)
 
 # ---- A page's steps: ("rect", x, y, w, h, colour) / ("text", x, y, k, colour, text) / ("image", x, y, name)
+# The page: the title's band down to CONTENT_TOP, then the content, then the
+# rule and the two lines of text in the last BOTTOM_BAND px. A taller screen
+# gives all of its extra height to the content.
+CONTENT_TOP, BOTTOM_BAND = 30, 58
+RULE_Y, LINE1_Y, LINE2_Y = SH - BOTTOM_BAND, SH - 50, SH - 34
+CONTENT_H = RULE_Y - CONTENT_TOP                       # 152 here, 232 on the Model:02
+
 def page(n, p):
     acc = PROJ[n - 1]
-    ops = [("rect", 0, 0, 320, 240, NAMED["MENU_BG"])]
+    ops = [("rect", 0, 0, SW, SH, NAMED["MENU_BG"])]
     t1, t2 = p["title"]
     if n == 1:
         # The logo as the menu's (drawn from its shape, not an image), twice its size: 110 x 52, on the ground.
-        ops.append(("logo", 8, 36, 2, acc))              # (left-aligned, as the other pages' titles)
-        ops.append(("text", 8, 104, 4, acc, "HELP"))
+        ops.append(("logo", 8, ev(CONTENT_TOP + 6 * CONTENT_H // 152), 2 if MODEL == 1 else 3, acc))   # (left-aligned, as the other pages' titles)
+        ops.append(("text", 8, ev(CONTENT_TOP + 74 * CONTENT_H // 152), 4, acc, "HELP"))
         lines = []
         for line, ink in zip(p["lines"], ("LIGHT", "LIGHT", "DIM")):
-            if text_w(line, 2) > 304 and " AND " in line:      # (a natural break: before its last "and")
+            if text_w(line, 2) > SW - 16 and " AND " in line:      # (a natural break: before its last "and")
                 a, b = line.rsplit(" AND ", 1)
                 lines += [(a, ink), ("AND " + b, ink)]
             else:
                 lines.append((line, ink))
         for j, (line, ink) in enumerate(lines):           # (the last, how to move, a line lower: apart)
-            ops += say(8, 140 + (j + (j == len(lines) - 1)) * 14, 2, NAMED[ink], line)
+            ops += say(8, ev(CONTENT_TOP + 110 * CONTENT_H // 152) + (j + (j == len(lines) - 1)) * 14, 2, NAMED[ink], line)
         return ops, 12                                 # (its square, two blocks wider, from x 8: as the first one is on the other pages)
     title = (t1 + " " + t2).strip()                  # (one line, in the page's colour; no page number)
     # Its icon left of it (the action button's, a block a dot: 2 px), in the
@@ -183,18 +205,19 @@ def page(n, p):
                 if v == '#': d.rectangle([c * 2, r * 2, c * 2 + 1, r * 2 + 1], fill=acc + (255,))
         ops.append(("image", 8, ev(8 + 15 // 2 - h), image(("icon", p["icon"], acc), icon)))
         tx = 8 + w * 2 + 6
-    if tx + text_w(title, 3) > 312: sys.exit(f"title too wide: {title}")
+    if tx + text_w(title, 3) > SW - 8: sys.exit(f"title too wide: {title}")
     ops.append(("text", tx, 8, 3, acc, title))       # (3 px a dot: 15 px tall)
-    ops.append(("rect", 0, 30, 320, 152, NAMED["BG"]))   # (the content's area, under the title down to the rule: black)
+    ops.append(("rect", 0, CONTENT_TOP, SW, CONTENT_H, NAMED["BG"]))   # (the content's area, under the title down to the rule: black)
     # The steps: strips, each its part of a screenshot at the screen's size in a
     # black frame a block wide, its number in a circle left of it, its caption
     # right of it; centred together between the title and the rule. A page
     # without steps: its screenshot's part whole, the screen's width.
     if p.get("whole"):
         name, crop = p["whole"]
-        ops.append(("image", 0, 30, image((name, acc, crop), shot(name, acc).crop(crop))))   # (y 30-180: under the title, over the rule)
+        ops.append(("image", 0, CONTENT_TOP, image((name, acc, crop), shot(name, acc).crop(crop))))   # (under the title, over the rule)
     steps = p.get("steps", [])
-    PITCH, TOP, ROOM = 48, 38, 140                     # (a strip every 48 px, in y 38-178: under the one-line title)
+    PITCH, TOP = ROW_BAND + 18, CONTENT_TOP + 8        # (a strip a row tall plus its frame and the gap; under the one-line title)
+    ROOM = RULE_Y - 4 - TOP                            # (140 here, 220 on the Model:02)
     y = ev(TOP + (ROOM - (len(steps) * PITCH - 18)) // 2) if not p.get("notes") else 44
     for i, (name, crop, lab) in enumerate(steps):
         w, h = crop[2] - crop[0], crop[3] - crop[1]
@@ -207,15 +230,16 @@ def page(n, p):
         y += PITCH
     for j, line in enumerate(p.get("notes", [])):     # (under the strips)
         ops += say(32, y + j * 14, 2, NAMED["LIGHT"], line)
-    ops.append(("rect", 0, 182, 320, 2, acc))
-    ops += say(8, 190, 2, NAMED["LIGHT"], p["lines"][0])
-    ops += say(8, 206, 2, NAMED["LIGHT"], p["lines"][1])   # (a block more than the first's line pitch)
+    ops.append(("rect", 0, RULE_Y, SW, 2, acc))
+    ops += say(8, LINE1_Y, 2, NAMED["LIGHT"], p["lines"][0])
+    ops += say(8, LINE2_Y, 2, NAMED["LIGHT"], p["lines"][1])   # (a block more than the first's line pitch)
     return ops, 8
 
 pages = [page(i + 1, p) for i, p in enumerate(PAGES)]
 
 # ---- help_slides.h
-out = ["// help_slides.h — the help pages, generated by tools/help/make_help.py from",
+out = [f"// {'help_slides.h' if MODEL == 1 else 'help_slides_m02.h'} — the help pages for the Model:0{MODEL},",
+       "// generated by tools/help/make_help.py from",
        "// its content and the UI preview's screenshots: don't edit, run it again.",
        "// (Included after ui.h: PROGMEM and the types from there.)",
        "#pragma once", "",
@@ -255,5 +279,6 @@ out.append(f"constexpr int HELP_PAGES = {len(pages)};")
 out.append("PROGMEM static const HelpPage HELP[HELP_PAGES] = {")
 out += [f"  {{HELP_PAGE_{n}, {len(rows)}, {dx}}}," for n, rows, dx in page_ops]
 out.append("};")
-open(os.path.join(ROOT, "src", "help_slides.h"), "w").write("\n".join(out) + "\n")
-print(f"help_slides.h: {len(pages)} pages, {len(images)} images, {total // 1024} KB of image data")
+name = "help_slides.h" if MODEL == 1 else "help_slides_m02.h"
+open(os.path.join(ROOT, "src", name), "w").write("\n".join(out) + "\n")
+print(f"{name}: {len(pages)} pages, {len(images)} images, {total // 1024} KB of image data")

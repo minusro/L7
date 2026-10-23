@@ -196,13 +196,11 @@ TTTTT000000TTTTT
 
 # Backlog
 
-- model 02 (480x320) - the main screen's layout done, the rest open
-	- board layer: display driver (480x320 is not the ILI9341), its pins, keys, backlight
-	- help pages - make_help.py lays them out for 320x240
-	- menu - the cards and the list don't re-centre on the taller screen
-	- splash logo still at its Model:01 size
-	- storage mode screen
-	- none of it run on hardware
+- model 02 (480x320) - the screens are all laid out now, the board is not
+	- board layer: the panel is an ILI9488 (read out of the stock Model:02 firmware, see docs/HARDWARE.md), 18 bits a pixel - no 16-bit mode over SPI, so every uint16_t buffer we draw into needs expanding to 3 bytes a pixel on the wire; measure that against the SD streaming first
+	- board layer: pins, keys, backlight, audio, card - none of it known yet, needs the same disassembly the Model:01 got, and a device
+	- none of it run on hardware (there is no Model:02 here)
+	- done: the layout (src/screen.h, M8_MODEL), help pages (help_slides_m02.h), menu placement, splash logo, storage mode screen
 - further manual tweaks
 - midi clips page
 	- prototype second screen V (off for now)
