@@ -1,4 +1,4 @@
-# L7 (m8_looper) — project notes
+# L7 — project notes
 
 Custom firmware that turns a Dirtywave M8 Model:01 (Teensy 4.0, board variant B)
 into L7, a 7-track stereo looper with scenes. These notes are for whoever works on

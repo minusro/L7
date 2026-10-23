@@ -1,4 +1,4 @@
-// input.cpp — see input.h. The key list is at the top of m8_looper.ino.
+// input.cpp — see input.h. The key list is at the top of L7.ino.
 #include "input.h"
 #include "audio_follow.h"
 #include "ui.h"

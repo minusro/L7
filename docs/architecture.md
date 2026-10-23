@@ -3,11 +3,11 @@
 ## Modules
 
 The code is in `src/` (the Arduino builder compiles a sketch's `src/` folder); only
-`m8_looper.ino` stays at the root, where the IDE wants it, including `src/…` headers.
+`L7.ino` stays at the root, where the IDE wants it, including `src/…` headers.
 
 | File | Role |
 |---|---|
-| `m8_looper.ino` | `setup()` / `loop()`, the key list (header comment), power button, freeze detector, splash |
+| `L7.ino` | `setup()` / `loop()`, the key list (header comment), power button, freeze detector, splash |
 | `M8Board.*` | Board access: display (ILI9341_t3n), keys (SX1508 on variant B), headphone sense, speaker enable, MIDI ports |
 | `engine.*` | Audio interrupt (`LooperEngine::update()`): master clock, varispeed playback from the track rings, filters, volume/balance, master volume and output meter, input capture and monitoring, MIDI clock scheduling |
 | `storage.*` | Everything on the SD card, all from `loop()`: streaming tracks into their rings, recording, sample files and the pool, track units, the clipboard, transport start/stop, clip changes while playing |

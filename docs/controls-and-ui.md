@@ -2,7 +2,7 @@
 
 M8 keys: arrows, SHIFT, PLAY (Start), OPT (= **B**), EDIT (= **A**), power.
 Keys are on/off only (no pressure). The full key list is the header comment of
-`m8_looper.ino`; this page adds the details behind it.
+`L7.ino`; this page adds the details behind it.
 
 ## Keys
 

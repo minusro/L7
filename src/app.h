@@ -36,7 +36,7 @@ enum { METRO_OFF, METRO_AUTO, METRO_ON };
 int metronomeMode();
 int nextMetronomeMode();
 void setMetronomeMode(int mode);
-bool metronomeWanted();                  // the click, by the setting now (a recording keeps its own: m8_looper.ino)
+bool metronomeWanted();                  // the click, by the setting now (a recording keeps its own: L7.ino)
 // The settings (the menu's SETTINGS popup; saved with the session), each on
 // or off, all on at first: the input monitored (heard in the mix: the line
 // out and USB 1-2; recorded either way), a new recording playing once done

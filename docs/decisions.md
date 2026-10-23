@@ -23,7 +23,7 @@
   eye on the device — make the requested change exactly, keep the rest.
 * Double-tap window 200 ms (100 ms was too short).
 * Comments in the code describe behaviour in plain sentences; match that
-  style and keep the key list in `m8_looper.ino` up to date.
+  style and keep the key list in `L7.ino` up to date.
 * The author sometimes reverts experiments through git. Commits: after each
   successful upload (build-and-test.md).
 

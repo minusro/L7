@@ -1,4 +1,4 @@
-// m8_looper.ino — L7, a 7-track stereo looper for the Dirtywave M8 Model:01
+// L7.ino — L7, a 7-track stereo looper for the Dirtywave M8 Model:01
 //
 // engine.cpp runs the master clock, varispeed playback, filters, mixing,
 // input monitoring and MIDI clock; storage.cpp streams the tracks from SD and
