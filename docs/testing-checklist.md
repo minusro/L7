@@ -418,3 +418,4 @@ checked, or turn it into a fix.
 - High tempo (more than twice the clips' own), a long resampling (10+ bars): the new scene switches in by itself (no SHIFT+START needed); if a track runs dry it comes back in step.
 - Stop, start and press record at once: the recording starts on the start's bar line, its length right.
 - Export while playing, right after recording (the export stops the clock itself): the Live set's samples are the clips' own size (not 22 MB each, the recording space's) and named (A30012.wav ...); the export no slower than from stopped. The set opens in Live, the new clips play.
+- README logo (2026-10-23): check on github.com in both themes that the logo over the README shows (the `<picture>`, light and dark, and the relative SVG paths through their proxy) and that 120 px wide looks right beside the text; nothing of it could be rendered locally.
