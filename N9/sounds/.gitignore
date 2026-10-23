@@ -1,8 +1,7 @@
-# ROM dumps and scanned manuals stay local: not ours to distribute.
-Korg_M1_Plus1/*.bin
-Korg_M1_Plus1/*.pdf
-# freewavesamples.com: royalty-free to USE, but copies may not be re-hosted
-# for download - so the files stay local (their NOTES.md is tracked).
-SC-88/*.wav
-# The SC-88 soundfont: not ours to redistribute.
-*.sf2
+# Nothing in here belongs in the repo: ROM dumps, scanned manuals, sample
+# packs and soundfonts that are not ours to distribute. What had been
+# committed (Korg_M1_Plus1, the M1, Microwave and PSS795 banks, SC-88 and
+# the SC-88 soundfont) was taken out of the history on 2026-10-23, so ignore
+# the lot -- a plain `git add -A` must not be able to put any of it back.
+*
+!.gitignore
