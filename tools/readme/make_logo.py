@@ -3,8 +3,8 @@
 the app draws on its splash screen (src/ui_splash.cpp, l7Row()): "L7", italic,
 the 7's right edge a 45-degree line, two cuts near the bottom. Drawn there a
 pixel row at a time; here the same shape as flat polygons, so it stays sharp
-at any size. Two of them, in the app's two accents: the bright one for a dark
-page, the dark one for a light one (the README picks between them).
+at any size. Two of them: white for a dark page, and the screen's own black
+for a light one (the README picks between them).
 
   make_logo.py [dest-dir]
 """
@@ -15,8 +15,8 @@ W, H = 55, 26                  # the shape's units, as in ui_splash.cpp
 STEM, FOOT, FOOT_FROM = 7, 17, H - 10         # the L: its stem's width, its foot's, the row the foot starts
 TOP, TOP_FROM, DIAG = 7, 21, 10               # the 7: its top line's height, where it starts, its diagonal's width
 BANDS = ((0, 18), (20, 22), (24, 26))         # between the cuts (rows 18-20 and 22-24: nothing there)
-COLORS = {"logo.svg": "#30e6aa",          # the accent (colors.h: rgb565(48, 230, 170))
-          "logo-light.svg": "#187848"}    # ACCENT_DARK, for a light page (rgb565(24, 120, 72))
+COLORS = {"logo.svg": "#ffffff",          # white (colors.h: GREY_100), for a dark page
+          "logo-light.svg": "#000000"}    # the screen's own black (BG), for a light one
 
 def off(y):                    # the italic slant: a unit right every three rows up
     return (H - y) / 3
