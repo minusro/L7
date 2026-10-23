@@ -107,5 +107,4 @@ pictures: see [docs/build-and-test.md](docs/build-and-test.md).
 L7 is free software: © 2026 Daniel Stanciu, released under the
 [GNU General Public License v3.0](LICENSE). You can use, study, change and share
 it; changed versions you share must stay under the same license, with their
-source. Code in it from others (in the sibling apps' folders, K6 and N9) keeps
-its own license.
+source.
