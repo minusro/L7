@@ -137,7 +137,7 @@ static void fillRing(const Shape &s, int outer, int inner, uint16_t color, bool 
 // cells are hidden in the menu; the action button is clear to the right), its frame
 // round its label with 3 blocks of space.
 static constexpr int CARD_W = 21, CARD_H = 15, CARD_CUT = 3, CARD_GAP = 3, CARD_VGAP = 3;
-static constexpr int CARDS_X = (320 / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 13 + 2;   // (2 blocks lower)
+static constexpr int CARDS_X = (SCREEN_W / PX - COLS * CARD_W - (COLS - 1) * CARD_GAP) / 2, CARDS_Y = 13 + 2;   // (2 blocks lower)
 static constexpr int LIST_PITCH = 12, LIST_SPACE = 3;   // (neighbouring frames share a row: only one shows)
 // The first place where it was with four places, the last of them level with
 // the action button (from the status row's top); the fourth place gone (the
@@ -155,7 +155,7 @@ static Shape itemShape(int k) {
   // list where it's always been, its labels shorter now).
   int w = textWidth("EXPORT ABLETON PROJECT") / PX;
   for (const char *label : LABELS) w = max(w, textWidth(label) / PX);
-  return {(320 / PX - w) / 2, LIST_Y + (k - CARDS - listTop) * LIST_PITCH, w, FONT_H / PX, 0};   // (in view: listInView())
+  return {(SCREEN_W / PX - w) / 2, LIST_Y + (k - CARDS - listTop) * LIST_PITCH, w, FONT_H / PX, 0};   // (in view: listInView())
 }
 
 int menuListX() { return itemShape(CARDS).x * PX; }
@@ -397,7 +397,7 @@ static void setLayout(int &x, int &yb, int &w) {
   int lw = 0;
   for (const char *l : SET_LABELS) lw = max(lw, textWidth(l) / PX);
   w = lw + 4 + textWidth("OFF") / PX;
-  x = (320 / PX - w) / 2;
+  x = (SCREEN_W / PX - w) / 2;
   yb = itemShape(CARDS + MENU_SETTINGS).y - 17;   // (its border 8 rows above SETTINGS' label: the arrow between)
 }
 static void setBox(int &x0, int &y0, int &x1, int &y1) {
@@ -610,7 +610,7 @@ FLASHMEM void drawBatteryIcon(bool all, uint16_t ink, uint16_t ground) {
   shownCharging = charging;
   static const char *const BOLT[5] = {"....#....", "...##....", "..#####..", "....##...", "....#...."};   // (cut out: rows 1-5, columns 1-9)
   auto &t = board.tft();
-  constexpr int W = 11, H = 7, X = 320 / PX - 2 - (W + 1), Y = 2;   // (its body, then its tip)
+  constexpr int W = 11, H = 7, X = SCREEN_W / PX - 2 - (W + 1), Y = 2;   // (its body, then its tip)
   for (int r = 0; r < H; r++)
     for (int c = 0; c <= W; c++) {
       bool edge = r == 0 || r == H - 1 || c == 0 || c == W - 1, tip = c == W && r >= 2 && r <= H - 3;
@@ -634,7 +634,7 @@ FLASHMEM void drawMenu() {
     // its own just after: nothing on screen wiped first, no flicker; the
     // track rows' place and the status row's: no action button in the menu).
     drawn = uiGeneration;
-    for (int r = 0; r < 240 / PX; r++) {
+    for (int r = 0; r < SCREEN_H / PX; r++) {
       int spans[ITEMS][2], n = 0;
       for (int k = 0; k < ITEMS; k++) {
         if (!listInView(k) || underSettings(k)) continue;   // (under the settings: the ground, the popup over it)
@@ -648,7 +648,7 @@ FLASHMEM void drawMenu() {
       }
       int at = 0;                                  // (the first column not filled yet)
       for (int i = 0; i <= n; i++) {
-        int end = i < n ? spans[i][0] : 320 / PX;
+        int end = i < n ? spans[i][0] : SCREEN_W / PX;
         if (end > at) t.fillRect(at * PX, r * PX, (end - at) * PX, PX, MENU_BG);
         if (i < n) at = max(at, spans[i][1] + 1);
       }
@@ -894,7 +894,7 @@ void closeMenu(bool draw) {
   // (Not the whole screen wiped first, which flickered: the looper's rows,
   // drawn whole below, cover all of it but the strip under the last track's
   // cells, above the status row.)
-  board.tft().fillRect(0, rowTop(LAST_TRACK_ROW) + CELL_H, 320, STATUS_TOP - rowTop(LAST_TRACK_ROW) - CELL_H, BG);
+  board.tft().fillRect(0, rowTop(LAST_TRACK_ROW) + CELL_H, SCREEN_W, STATUS_TOP - rowTop(LAST_TRACK_ROW) - CELL_H, BG);
   uiGeneration++;                                // everything redraws in full
   if (draw)
     for (int i = 0; i < ROWS; i++) drawTrack(i);

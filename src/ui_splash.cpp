@@ -52,7 +52,7 @@ static constexpr int TEXT_PX = 2, TEXT_ROWS = 7, TEXT_H = TEXT_ROWS * TEXT_PX;  
 static constexpr int GROUP_H = LOGO_H + TEXT_GAP + TEXT_H;   // logo, gap, text
 static constexpr int GROUP_DOWN = 16;                // the group sits this far below the middle, px
 static constexpr int LOGO_RIGHT = 12;                // the logo this far right of the middle, px (the text stays centred)
-static constexpr int LOGO_X = (320 - LOGO_W) / 2 + LOGO_RIGHT, LOGO_Y = (240 - GROUP_H) / 2 + GROUP_DOWN;
+static constexpr int LOGO_X = (SCREEN_W - LOGO_W) / 2 + LOGO_RIGHT, LOGO_Y = (SCREEN_H - GROUP_H) / 2 + GROUP_DOWN;
 // The splash's animation, in ms from showSplash(): the logo fades in from
 // black (0-500), then its colour goes once round the hues (500-2500); the
 // copyright line fades in (1500-2000); both fade out once the start-up is
@@ -145,16 +145,16 @@ FLASHMEM static uint16_t oklch565(float L, float C, float hDeg) {
 uint16_t hueCycle(float phase) { return oklch565(0.8238f, 0.1641f, 164.76f + 360 * phase); }
 
 static void drawLogo(uint16_t color, int shift) {
-  static uint16_t row[320];
+  static uint16_t row[SCREEN_W];
   auto &t = board.tft();
-  auto span = [](int a, int b, uint16_t c) { for (int x = max(a, 0); x < min(b, 320); x++) row[x] = c; };
+  auto span = [](int a, int b, uint16_t c) { for (int x = max(a, 0); x < min(b, SCREEN_W); x++) row[x] = c; };
   for (int p = 0; p < LOGO_H; p++) {
     int l0, l1, s0, s1;
     if (!l7Row(p, LOGO_SCALE, l0, l1, s0, s1)) continue;       // (a cut: always black)
-    span(0, 320, BG);
+    span(0, SCREEN_W, BG);
     span(LOGO_X + l0 - shift, LOGO_X + l1 - shift, color);
     span(LOGO_X + s0 + shift, LOGO_X + s1 + shift, color);
-    t.writeRect(0, LOGO_Y + p, 320, 1, row);
+    t.writeRect(0, LOGO_Y + p, SCREEN_W, 1, row);
   }
 }
 static_assert(LOGO_W == (int)(55 * LOGO_SCALE + 0.5f) && LOGO_H == (int)(26 * LOGO_SCALE + 0.5f), "the logo's size at its scale");

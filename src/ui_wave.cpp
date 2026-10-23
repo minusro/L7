@@ -37,7 +37,13 @@ static constexpr int BLOCK_COLS = WAVE_W / PX;                  // 94, the borde
 static constexpr int WAVE_LEFT = 2;                            // the first waveform column (after the border and a space)
 static constexpr int WAVE_COLS = BLOCK_COLS - 2 * WAVE_LEFT;   // 90 waveform columns
 static constexpr int BAND_ROWS = CELL_H / PX;                  // 16
-static constexpr int MID_ROW = 7, WAVE_REACH = 5;              // the line: rows 7-8; peaks: rows 2-13
+// Two block rows of margin above and below, whatever the cell's height, so
+// the waveform is centred in it and grows with it (the band it fills is an
+// even number of rows: the two middle ones and WAVE_REACH each side. A cell
+// of an odd number of rows keeps the odd one as a third row of margin below,
+// leaving the waveform a pixel above the middle).
+static constexpr int WAVE_REACH = (BAND_ROWS - 6) / 2;         // 5 here
+static constexpr int MID_ROW = 2 + WAVE_REACH;                 // 7: the line's rows are 7-8; peaks rows 2-13
 
 // The waveform in pixels: a 2-pixel line along the middle of rows 2-13 (pixel
 // rows 15-16 of the cell), the peaks reaching up to WAVE_REACH_PX pixels above
@@ -45,6 +51,8 @@ static constexpr int MID_ROW = 7, WAVE_REACH = 5;              // the line: rows
 static constexpr int WAVE_MID_Y = (MID_ROW + 1) * PX - 1;        // 15: the line's upper pixel row
 static constexpr int WAVE_REACH_PX = WAVE_REACH * PX + 1;      // 11
 static_assert(WAVE_MID_Y - WAVE_REACH_PX == (MID_ROW - WAVE_REACH) * PX, "the peaks reach the top of row 2");
+static_assert(MID_ROW - WAVE_REACH == 2 && MID_ROW + 1 + WAVE_REACH <= BAND_ROWS - 3,
+              "two block rows of margin above the waveform and at least two below, at any cell height");
 // Reach (pixels each way) for a level (0-255): in proportion.
 static int pixelReach(uint8_t level) { return (level * WAVE_REACH_PX + 127) / 255; }
 

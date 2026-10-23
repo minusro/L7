@@ -3,6 +3,7 @@
 // each part redraws only what changed.
 #pragma once
 #include "app.h"
+#include "screen.h"
 
 // ---- Screen (drawn over its own background: no full clears, which would
 // hold up SD streaming)
@@ -13,8 +14,15 @@ constexpr int PX = 2;
 // Vertical layout: rows every 30 px (15 blocks): the 7 tracks from the top
 // of the screen, track 7 first (row 0) down to track 1 (row NUM_TRACKS - 1, just
 // above the status row), then the status row 4 px (two blocks) lower.
+// The Model:02: rows of 40, and the status row 6 px lower -- a block of what
+// its height would be given to the space above it instead.
+#if M8_MODEL == 1
 constexpr int ROW_BAND = 30;                             // a row's height (its button's)
 constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2 * PX;   // 214
+#else
+constexpr int ROW_BAND = 40;                             // (7 of them plus the status row fill the Model:02's 320)
+constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 3 * PX;   // 286 (the status row 34 tall)
+#endif
 // Each track row: three cells, then the button (a square): the waveform, the
 // filter (its response curve), then volume and balance. A cell is its
 // content in a one-block border, shared with the cells above and below (a
@@ -24,6 +32,7 @@ constexpr int STATUS_TOP = NUM_TRACKS * ROW_BAND + 2 * PX;   // 214
 // selected track gets a grey panel in its button, behind its number
 // (ui_buttons.cpp). A block's space before the buttons.
 //   waveform: x 0-187   filter: x 188-247   volume: x 250-297   button: x 298-319
+//   (the Model:02: 0-327, 328-407, 410-457, 458-479)
 //   (a block of space between filter and volume; volume up to the button)
 //   (the track cells side by side, their own borders each; the tracks'
 //   buttons TRACK_BUTTON_SHIFT right of the status row's)
@@ -31,11 +40,19 @@ struct Cell { int x, w; };
 constexpr int CELL_H = ROW_BAND + PX;
 // The status row's cells: to the screen's bottom edge, framed all round (no
 // row below shares their bottom border).
-constexpr int STATUS_H = 240 - STATUS_TOP;               // y 214-239: the tags a block from the frame each way
+constexpr int STATUS_H = SCREEN_H - STATUS_TOP;          // y 214-239 (the Model:02: 286-319): the tags a block from the frame each way
 constexpr int CELLS = 3, WAVE_CELL = 0, FILTER_CELL = 1, MIX_CELL = 2;   // left to right
+#if M8_MODEL == 1
 constexpr Cell CELL[CELLS] = {{0, 188}, {188, 60}, {250, 48}};
+#else
+// The Model:02: the volume cell keeps its width (its arcs are the volume's
+// steps, not the cell's size), the filter grows with the row so its curve
+// keeps the shape it has here (60 x 32 -> 80 x 42), and the waveform takes
+// all the width that leaves.
+constexpr Cell CELL[CELLS] = {{0, 328}, {328, 80}, {410, 48}};
+#endif
 constexpr int TRACK_BUTTON_SHIFT = 2 * PX;           // (their content cut by the screen's edge)
-constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_X = 294, BUTTON_W = 320 - BUTTON_X;
+constexpr int BUTTON_SIZE = ROW_BAND, BUTTON_W = 26, BUTTON_X = SCREEN_W - BUTTON_W;
 constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // The status row below the tracks: three cells (to the volume cells' edge), left
 // to right: the scene (the widest, from the screen's left edge), the clock
@@ -43,7 +60,17 @@ constexpr int WAVE_X = CELL[WAVE_CELL].x, WAVE_W = CELL[WAVE_CELL].w;
 // cells share the side between them.
 constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCENE_CELL = 1, CLOCK_CELL = 2, TEMPO_CELL = 3;
 // (MENU_CELL: no cell any more, nothing in its place: kept, empty, so the others keep their numbers.)
+#if M8_MODEL == 1
 constexpr Cell MENU_BOX = {0, 0}, SCENE_BOX = {0, 120}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 80};
+#else
+// The Model:02: the three share the extra width about equally (each ends up
+// with ~90 px more than its contents need), rather than one cell holding all
+// the slack and showing it as a wide empty frame when it is selected. The
+// scene's contents sit at its left and the tempo's at its right, as here, so
+// only the clock's move: centred in its cell, they land halfway between the
+// two -- 129 and 131 px from them, where the Model:01 leaves 78 and 28.
+constexpr Cell MENU_BOX = {0, 0}, SCENE_BOX = {0, 150}, CLOCK_BOX = {148, 140}, TEMPO_BOX = {286, 164};
+#endif
 // ---- What the rows show of each track (ui.cpp): a copy of its looks, taken
 // as they're drawn. While a change is on its way to any track (a scene's, a
 // project's, a move: from its request until its switch point has passed, the
@@ -115,8 +142,8 @@ inline int rowBelow(int i) { return i < NUM_TRACKS - 1 ? i + 1 : -1; }
 constexpr int LAST_TRACK_ROW = NUM_TRACKS - 1;
 inline int bgTop(int i) { return notesLayout && i == 0 ? STATUS_H : rowTop(i); }
 inline int bgHeight(int i) {
-  if (notesLayout) return (i == STATUS_ROW ? STATUS_H : i == LAST_TRACK_ROW ? 240 : rowTop(i) + ROW_BAND) - bgTop(i);
-  return (i == STATUS_ROW ? 240 : i == LAST_TRACK_ROW ? STATUS_TOP : rowTop(i) + ROW_BAND) - bgTop(i);
+  if (notesLayout) return (i == STATUS_ROW ? STATUS_H : i == LAST_TRACK_ROW ? SCREEN_H : rowTop(i) + ROW_BAND) - bgTop(i);
+  return (i == STATUS_ROW ? SCREEN_H : i == LAST_TRACK_ROW ? STATUS_TOP : rowTop(i) + ROW_BAND) - bgTop(i);
 }
 
 inline bool recordingOn(int i) { return recording.track == i && recording.mode != Recording::Idle; }

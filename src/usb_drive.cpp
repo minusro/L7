@@ -28,12 +28,12 @@ static const char HINT[] = "PRESS ANY KEY TO EXIT";
 // left-aligned with the menu's list (HELP's label too).
 static constexpr int LINE = FONT_H + 3 * PX;
 static constexpr int STATE_DY = 32, OLD_HINT2_DY = STATE_DY + 56 + LINE;   // (for the title's place)
-static constexpr int TITLE_Y = (240 - (OLD_HINT2_DY + FONT_H)) / 2 / PX * PX + LINE;
+static constexpr int TITLE_Y = (SCREEN_H - (OLD_HINT2_DY + FONT_H)) / 2 / PX * PX + LINE;
 static constexpr int STATE_Y = TITLE_Y + STATE_DY;
 static int textX() { return menuListX(); }
 
 static void line(int y, const char *text, uint16_t ink) {
-  board.tft().fillRect(textX(), y, 320 - textX(), FONT_H, SCREEN);   // (from the texts' edge: the corner logo stays)
+  board.tft().fillRect(textX(), y, SCREEN_W - textX(), FONT_H, SCREEN);   // (from the texts' edge: the corner logo stays)
   drawText(textX(), y, text, ink, SCREEN);
 }
 

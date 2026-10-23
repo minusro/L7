@@ -264,17 +264,17 @@ FLASHMEM static void paintEdgeLine(uint8_t key, uint16_t color) {
   t.setClipRect();
   constexpr int W = PX;
   auto band = [&](int in, int w, uint16_t c) {     // (w px, in px from the edge)
-    if (key == m8::BTN_LEFT) t.fillRect(in, 0, w, 240, c);
-    else if (key == m8::BTN_RIGHT) t.fillRect(320 - in - w, 0, w, 240, c);
-    else if (key == m8::BTN_UP) t.fillRect(0, in, 320, w, c);
-    else t.fillRect(0, 240 - in - w, 320, w, c);
+    if (key == m8::BTN_LEFT) t.fillRect(in, 0, w, SCREEN_H, c);
+    else if (key == m8::BTN_RIGHT) t.fillRect(SCREEN_W - in - w, 0, w, SCREEN_H, c);
+    else if (key == m8::BTN_UP) t.fillRect(0, in, SCREEN_W, w, c);
+    else t.fillRect(0, SCREEN_H - in - w, SCREEN_W, w, c);
   };
   band(0, W, color);
   shownDepth = W;
-  if (key == m8::BTN_LEFT) t.setClipRect(W, 0, 320 - W, 240);
-  else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, 320 - W, 240);
-  else if (key == m8::BTN_UP) t.setClipRect(0, W, 320, 240 - W);
-  else t.setClipRect(0, 0, 320, 240 - W);
+  if (key == m8::BTN_LEFT) t.setClipRect(W, 0, SCREEN_W - W, SCREEN_H);
+  else if (key == m8::BTN_RIGHT) t.setClipRect(0, 0, SCREEN_W - W, SCREEN_H);
+  else if (key == m8::BTN_UP) t.setClipRect(0, W, SCREEN_W, SCREEN_H - W);
+  else t.setClipRect(0, 0, SCREEN_W, SCREEN_H - W);
 }
 
 FLASHMEM void drawEdgeLine() {   // (flash: RAM1 is full)
@@ -289,10 +289,10 @@ FLASHMEM void drawEdgeLine() {   // (flash: RAM1 is full)
         drawMenu();
         drawTrack(STATUS_ROW);
       } else {                                     // (only the line's band cleared first: no flash of the whole screen)
-        if (shownKey == m8::BTN_LEFT) t.fillRect(0, 0, shownDepth, 240, BG);
-        else if (shownKey == m8::BTN_RIGHT) t.fillRect(320 - shownDepth, 0, shownDepth, 240, BG);
-        else if (shownKey == m8::BTN_UP) t.fillRect(0, 0, 320, shownDepth, BG);
-        else t.fillRect(0, 240 - shownDepth, 320, shownDepth, BG);
+        if (shownKey == m8::BTN_LEFT) t.fillRect(0, 0, shownDepth, SCREEN_H, BG);
+        else if (shownKey == m8::BTN_RIGHT) t.fillRect(SCREEN_W - shownDepth, 0, shownDepth, SCREEN_H, BG);
+        else if (shownKey == m8::BTN_UP) t.fillRect(0, 0, SCREEN_W, shownDepth, BG);
+        else t.fillRect(0, SCREEN_H - shownDepth, SCREEN_W, shownDepth, BG);
         for (int i = 0; i < ROWS; i++) drawTrack(i);
       }
     }

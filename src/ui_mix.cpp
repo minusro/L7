@@ -17,7 +17,7 @@ static constexpr int CELL_COLS = CELL[MIX_CELL].w / PX, BAND_ROWS = CELL_H / PX;
 // The lines: one in every other column, from the centre out (a column short
 // of the cell's edges), 2 taller each one out, the outermost the waveform's
 // height (rows 2-13).
-static constexpr int MIX_ARCS = (CELL_COLS - 4) / 4;                     // 5
+static constexpr int MIX_ARCS = VOLUME_MAX / 4;                          // 5: the volume's 20 steps, two halves a line (not the cell's width)
 static constexpr int HALVES = 2 * MIX_ARCS;                              // 10 a channel
 static_assert(2 * HALVES == VOLUME_MAX && BALANCE_MAX == 2 * HALVES, "a half per two volume steps, and per two balance steps");
 static constexpr float METER_FALL_DB_PER_S = 24;

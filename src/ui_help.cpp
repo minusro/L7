@@ -38,7 +38,7 @@ FLASHMEM static void helpText(int x, int y, int k, uint16_t ink, const char *s, 
 // An image at (x0, y0): a row at a time (a transparent run: that row drawn run by run).
 FLASHMEM static void helpImage(int x0, int y0, const HelpImage &im) {
   auto &t = board.tft();
-  DMAMEM static uint16_t line[320];               // (RAM2: RAM1 is full)
+  DMAMEM static uint16_t line[SCREEN_W];               // (RAM2: RAM1 is full)
   const uint8_t *run = im.runs, *end = im.runs + 2 * im.runCount;
   for (int y = 0; y < im.h && run < end; y++) {
     const uint8_t *rowStart = run;
@@ -46,7 +46,7 @@ FLASHMEM static void helpImage(int x0, int y0, const HelpImage &im) {
     for (int x = 0; x < im.w && run < end; run += 2) {
       int n = run[0] + 1;
       if (run[1] == 255) clear = true;
-      else for (int i = 0; i < n && x + i < 320; i++) line[x + i] = im.pal[run[1]];
+      else for (int i = 0; i < n && x + i < SCREEN_W; i++) line[x + i] = im.pal[run[1]];
       x += n;
     }
     if (!clear) {
@@ -67,13 +67,13 @@ FLASHMEM static void helpDots(int x, int shown) {
   auto &t = board.tft();
   constexpr int Y = 226, SIZE = 8, STEP = 16;
   uint16_t seen = helpSeen();
-  t.fillRect(0, Y - 2 * PX, 320, 240 - (Y - 2 * PX), MENU_BG);   // (the row: places shift as the page turns)
+  t.fillRect(0, Y - 2 * PX, SCREEN_W, SCREEN_H - (Y - 2 * PX), MENU_BG);   // (the row: places shift as the page turns)
   for (int i = 0; i < HELP_PAGES; i++) {
     int x0 = x + i * STEP;                         // (the shown page: two blocks more space either side, not past the ends)
     if (shown > 0 && i >= shown) x0 += 2 * PX;
     if (shown < HELP_PAGES - 1 && i > shown) x0 += 2 * PX;
     if (i == shown) {                              // (the shown page: two blocks wider each side, down to the bottom)
-      t.fillRect(x0 - 2 * PX, Y, SIZE + 4 * PX, 240 - Y, PROJECT_COLORS[i]);   // (its top level with the others', down to the screen's bottom)
+      t.fillRect(x0 - 2 * PX, Y, SIZE + 4 * PX, SCREEN_H - Y, PROJECT_COLORS[i]);   // (its top level with the others', down to the screen's bottom)
     } else if (seen & (1 << i)) {
       t.fillRect(x0, Y, SIZE, SIZE, PROJECT_COLORS[i]);
     } else {

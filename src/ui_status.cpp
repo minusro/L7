@@ -30,6 +30,14 @@
 // there); the frames only when they change.
 static constexpr int32_t CLOCK_BARS = 256;        // the clock wraps from 256.4.4 to 1.1.1
 static constexpr int INSET = 2 * PX;               // text from the cell's edges (inside the frame)
+// The scene's contents sit against the row's left end and the tempo's
+// against its right; on the Model:02 they come two blocks further in, which
+// its wider screen has room for. (The cells' inner edges keep INSET.)
+#if M8_MODEL == 1
+static constexpr int EDGE_INSET = INSET;
+#else
+static constexpr int EDGE_INSET = INSET + 2 * PX;
+#endif
 
 // The status row's cells: the scene's, the clock's and the tempo's (ui.h).
 static constexpr int STATUS_CELLS = TEMPO_CELL + 1;
@@ -178,7 +186,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
     // scene's "SCN"): both in the accent colour while B alone is held on the
     // cell (B + arrows change the tempo).
     const Cell &box = TEMPO_BOX;
-    int right = box.x + box.w - INSET;
+    int right = box.x + box.w - EDGE_INSET;
     uint16_t ink = (cell == TEMPO_CELL && bAlone()) || offsetShown || rotateShown ? ACCENT : labelInk(TEMPO_CELL);
     // Tap tempo (A on the cell): the tag in the accent colour while A is held,
     // the number for TAP_FLASH_MS after each tap.
@@ -269,7 +277,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   static constexpr int ARROWS_W = 5 * PX;          // (a block, the arrows, 3 blocks, and a block of space)
   const int tagW = tagWidth("SCN") + (sceneAccent ? ARROWS_W : 0);
   static bool wasWide = false;                     // (the wider tag shown: once narrow again, what it covered past the plain one cleared)
-  if (!sceneAccent && (wasWide || cleared)) t.fillRect(box.x + INSET + tagWidth("SCN"), tagY, ARROWS_W + PX, TAG_H, G);
+  if (!sceneAccent && (wasWide || cleared)) t.fillRect(box.x + EDGE_INSET + tagWidth("SCN"), tagY, ARROWS_W + PX, TAG_H, G);
   wasWide = sceneAccent;
   int scene = sceneCurrent(), count = sceneCount();
   // Another scene selected (stepped to, or come in): the tag and position
@@ -281,7 +289,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
     picked = scene;
   }
   const bool sceneFlash = pickedAt && millis() - pickedAt < 100;
-  if (!sceneAccent) drawTag(box.x + INSET, tagY, "SCN", TAG_INVERTED, sceneFlash ? INK : labelInk(SCENE_CELL), G);
+  if (!sceneAccent) drawTag(box.x + EDGE_INSET, tagY, "SCN", TAG_INVERTED, sceneFlash ? INK : labelInk(SCENE_CELL), G);
   if (scene > count) snprintf(text, sizeof text, "*/%d", count);   // the copy after the last
   else snprintf(text, sizeof text, "%d/%d", scene, count);       // (0: the empty scene)
   uint16_t ink = sceneAccent ? ACCENT : labelInk(SCENE_CELL);
@@ -292,7 +300,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
     ink = firstHalf ? ACCENT : DIM;
   }
   if (sceneFlash) ink = INK;
-  int x = box.x + INSET + tagW + PX;
+  int x = box.x + EDGE_INSET + tagW + PX;
   t.fillRect(x - PX, tagY, PX, TAG_H, G);          // (the block between the tag and the position: the position, moved, left nothing there)
   // 0*: grey; held (stepping), light grey. N+1*: its "*" in the accent colour,
   // its "/N" as any position's; held, the "*" white, the "/N" in the accent colour.
@@ -308,7 +316,7 @@ FLASHMEM void drawStatus() {                    // (flash: RAM1 is full; the sta
   // Stepping (the accent colour on): the wider tag, its up and down arrows
   // stacked, in black (both, whether that way goes on or not).
   if (sceneAccent) {
-    const int tx = box.x + INSET;
+    const int tx = box.x + EDGE_INSET;
     drawTag(tx, tagY, "", TAG_INVERTED, sceneFlash ? INK : ACCENT, G, tagW);   // (the box alone: its contents placed below)
     static const char *const ARROWS[5] = {".#.", "###", "...", "###", ".#."};
     const int ax = tx + 2 * PX, ay = tagY + 2 * PX;  // (two blocks in from the tag's edge; its text's rows)

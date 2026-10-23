@@ -1,6 +1,7 @@
-// Stand-in for M8Board.h in the UI preview: the display draws into a 320x240
+// Stand-in for M8Board.h in the UI preview: the display draws into a screen-sized (screen.h)
 // RGB565 frame buffer (written out as an image), the keys are set by the preview.
 #pragma once
+#include "screen.h"
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
@@ -26,7 +27,7 @@ enum : uint8_t {
 
 class Display {
 public:
-  static constexpr int W = 320, H = 240;
+  static constexpr int W = SCREEN_W, H = SCREEN_H;
   uint16_t px[W * H] = {};
   void drawPixel(int x, int y, uint16_t c) {
     x += ox_; y += oy_;

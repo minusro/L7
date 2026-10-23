@@ -138,6 +138,33 @@ a light page) is drawn from the splash screen's own shape (`l7Row()` in
 `src/ui_splash.cpp`) as flat polygons: `python3 tools/readme/make_logo.py`
 (nothing else needed). Change the shape there and run it again.
 
+## Which M8 a build is for (`src/screen.h`)
+
+`M8_MODEL` is 1 for the Model:01 (320 x 240) and 2 for the Model:02
+(480 x 320); it gives `SCREEN_W` and `SCREEN_H`, which the layout (`ui.h`)
+and the host builds' stand-in displays are measured from. The host builds
+take it from the environment, with `DEFS` for any other flags:
+
+```sh
+M8_MODEL=2 ./build.sh          # tools/ui_preview, tools/desktop
+```
+
+The Model:02 keeps the same block size (`PX` 2) and gives its extra room to
+the rows (30 -> 40 px) and to the waveform and filter cells; the status row is 34 px, a block
+shorter than the space left over, that block going to the gap above it; the volume cell
+keeps its width, because its arcs are the volume's 20 steps rather than
+anything about the cell's size. In the status row the three cells share the
+extra width about equally (each about 90 px more than its contents need),
+rather than one holding all of it and showing it as a wide empty frame when
+selected. The scene's contents sit at its left and the tempo's at its right,
+so only the clock's move: centred in its cell, they land 132 and 134 px from
+their neighbours, where the Model:01 leaves 78 and 28. The scene's and the tempo's contents also come two blocks further in from
+the row's two ends (`EDGE_INSET` in ui_status.cpp, 8 px against the
+Model:01's 4; the cells' inner edges keep 4). The master meter is
+the same 86 px on both (22 lines at a 4 px pitch), centred, so on the
+Model:02 it has about 27 px each side of it rather than 4. Nothing of the Model:02 has run on hardware
+and it has no board layer yet (see docs/testing-checklist.md).
+
 ## UI preview (`tools/ui_preview`)
 
 Renders the screen on the PC with the firmware's own drawing code (ui*.cpp,

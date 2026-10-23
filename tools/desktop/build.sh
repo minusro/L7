@@ -6,6 +6,7 @@
 # ~/Documents/L7 Desktop). Sources are copied next to the stubs so the
 # stand-in headers are the ones they include.
 set -e
+# DEFS passes extra -D flags. M8_MODEL=2 builds for the Model:02's bigger screen (src/screen.h); 1 (the default) for the Model:01.
 here=$(cd "$(dirname "$0")" && pwd)
 root="$here/../.."
 out="${TMPDIR:-/tmp}/l7_desktop"
@@ -19,7 +20,7 @@ fontsrc="$HOME/Documents/Arduino/libraries/ILI9341_t3n/src/glcdfont.c"
 sed 's/^const unsigned char glcdfont/extern "C" const unsigned char glcdfont/' "$fontsrc" > "$out/glcdfont.cpp"
 # SDL linked in (the app runs without Homebrew's).
 sdl_static=$(sdl2-config --static-libs | sed "s|-lSDL2 |$(sdl2-config --prefix)/lib/libSDL2.a |")
-c++ -std=c++17 -O2 -Wno-macro-redefined -I"$out" $(sdl2-config --cflags) \
+c++ -std=c++17 ${M8_MODEL:+-DM8_MODEL=$M8_MODEL} $DEFS -O2 -Wno-macro-redefined -I"$out" $(sdl2-config --cflags) \
   "$out"/*.cpp $sdl_static -o "$here/L7"
 echo "built $here/L7"
 

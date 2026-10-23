@@ -1,7 +1,8 @@
-// Stand-in for M8Board.h in the desktop app: the display draws into a 320x240
+// Stand-in for M8Board.h in the desktop app: the display draws into a screen-sized (screen.h)
 // RGB565 frame buffer (desktop.cpp shows it in a window), the keys come from
 // the keyboard (desktop.cpp sets heldKeys).
 #pragma once
+#include "screen.h"
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
@@ -27,7 +28,7 @@ enum : uint8_t {
 
 class Display {
 public:
-  static constexpr int W = 320, H = 240;
+  static constexpr int W = SCREEN_W, H = SCREEN_H;
   uint16_t px[W * H] = {};
   bool dirty = true;                               // (drawn on since the window last showed it)
   void drawPixel(int x, int y, uint16_t c) {
