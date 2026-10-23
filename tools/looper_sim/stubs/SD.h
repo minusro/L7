@@ -80,6 +80,7 @@ public:
   int read(void *buf, size_t n) {
     if (simSdLatency) simSdLatency(n, false);
     if (simFailIo > 0) { simFailIo--; return -1; }
+    if (!f_) return -1;                          // (not open: as SdFat, a failed read)
     return (int)fread(buf, 1, n, f_);
   }
   size_t write(const void *buf, size_t n) {
@@ -89,7 +90,7 @@ public:
     fflush(f_);    // SdFat shares one cache between handles: writes are visible to all readers
     return r;
   }
-  bool seekSet(uint64_t pos) { return fseek(f_, (long)pos, SEEK_SET) == 0; }
+  bool seekSet(uint64_t pos) { return f_ && fseek(f_, (long)pos, SEEK_SET) == 0; }
   uint64_t curPosition() { return f_ ? (uint64_t)ftell(f_) : 0; }
   uint64_t fileSize() { long c = ftell(f_); fseek(f_, 0, SEEK_END); long s = ftell(f_); fseek(f_, c, SEEK_SET); return s; }
   bool preAllocate(uint64_t) { return !simNoRun; }   // (simNoRun: the card's free space in pieces)
