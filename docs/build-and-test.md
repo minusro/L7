@@ -133,6 +133,11 @@ screen): `python3 tools/readme/make_images.py <demo-out-dir>` (Pillow, numpy,
 ffmpeg). The moments it takes are the house demo's; retime them in `main()`
 if the script changes.
 
+The logo over the README (`docs/readme/logo.svg`, and `logo-light.svg` for
+a light page) is drawn from the splash screen's own shape (`l7Row()` in
+`src/ui_splash.cpp`) as flat polygons: `python3 tools/readme/make_logo.py`
+(nothing else needed). Change the shape there and run it again.
+
 ## UI preview (`tools/ui_preview`)
 
 Renders the screen on the PC with the firmware's own drawing code (ui*.cpp,

@@ -1,4 +1,7 @@
-# L7
+<h1><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/logo.svg">
+  <img src="docs/readme/logo-light.svg" width="120" alt="L7">
+</picture></h1>
 
 A 7-track stereo looper for the **Dirtywave M8 Model:01**: alternative firmware
 that turns the M8 into a live looper. Record loops from the line input, layer
