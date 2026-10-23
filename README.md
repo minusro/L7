@@ -1,6 +1,6 @@
 <h1><picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/logo.svg">
-  <img src="docs/readme/logo-light.svg" width="120" alt="L7">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/l7-logo.svg">
+  <img src="docs/readme/l7-logo-light.svg" width="120" alt="L7">
 </picture></h1>
 
 A 7-track stereo looper for the **Dirtywave M8 Model:01**: alternative firmware
