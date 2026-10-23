@@ -80,13 +80,13 @@
 
 #include <Audio.h>
 #include <SD.h>
-#include "app.h"
-#include "ui.h"
-#include "usb_drive.h"
-#include "input.h"
-#include "midi_in.h"
-#include "midi_usb.h"
-#include "audio_follow.h"
+#include "src/app.h"
+#include "src/ui.h"
+#include "src/usb_drive.h"
+#include "src/input.h"
+#include "src/midi_in.h"
+#include "src/midi_usb.h"
+#include "src/audio_follow.h"
 
 AudioInputI2S        i2sIn;
 LooperEngine         engine;

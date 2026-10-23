@@ -2,6 +2,9 @@
 
 ## Modules
 
+The code is in `src/` (the Arduino builder compiles a sketch's `src/` folder); only
+`m8_looper.ino` stays at the root, where the IDE wants it, including `src/…` headers.
+
 | File | Role |
 |---|---|
 | `m8_looper.ino` | `setup()` / `loop()`, the key list (header comment), power button, freeze detector, splash |

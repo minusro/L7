@@ -11,10 +11,10 @@ here=$(cd "$(dirname "$0")" && pwd)
 root="$here/../.."
 out="${TMPDIR:-/tmp}/l7_ios"
 rm -rf "$out" && mkdir -p "$out"
-for f in "$root"/*.cpp "$root"/*.h; do
+for f in "$root"/src/*.cpp "$root"/src/*.h; do
   case "$(basename "$f")" in M8Board.*|usb_drive.cpp|midi_usb.cpp) ;; *) cp "$f" "$out/" ;; esac
 done
-cp "$root/m8_looper.ino" "$out/l7_sketch.cpp"
+sed 's|#include "src/|#include "|' "$root/m8_looper.ino" > "$out/l7_sketch.cpp"
 cp "$root"/tools/desktop/stubs/*.h "$here/ios.mm" "$out/"
 fontsrc="$HOME/Documents/Arduino/libraries/ILI9341_t3n/src/glcdfont.c"
 sed 's/^const unsigned char glcdfont/extern "C" const unsigned char glcdfont/' "$fontsrc" > "$out/glcdfont.cpp"

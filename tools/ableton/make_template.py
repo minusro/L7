@@ -5,7 +5,7 @@ Live 11.3): its first track (with its two Auto Filters, highpass first, and a
 Utility; any other device left out), an empty clip slot, a clip, a scene and the set around them, as text
 with fields marked "\\001" + a letter for ableton.cpp to fill in.
 
-  python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 2 Project/L7 Test 2 Project.als" ableton_template.h
+  python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 2 Project/L7 Test 2 Project.als" src/ableton_template.h
 
 Fields:
   set:   N NextPointeeId   T tempo   R the tracks   C the scenes   L a fresh id of the master Limiter (in order)

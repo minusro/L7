@@ -2,7 +2,7 @@
 """Makes ableton_icon.h: the resource fork of the "Icon\\r" file Live puts in its project
 folders (what macOS shows as the folder's icon), from a project Live saved.
 
-  python3 tools/ableton/make_icon.py "docs/design/ableton/L7 Test 1 Project" ableton_icon.h
+  python3 tools/ableton/make_icon.py "docs/design/ableton/L7 Test 1 Project" src/ableton_icon.h
 """
 import sys
 

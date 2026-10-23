@@ -8,7 +8,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 root="$here/../.."
 out="${TMPDIR:-/tmp}/m8_ui_preview"
 rm -rf "$out" && mkdir -p "$out"
-for f in "$root"/*.cpp "$root"/*.h; do
+for f in "$root"/src/*.cpp "$root"/src/*.h; do
   case "$(basename "$f")" in M8Board.*|input.cpp|midi_usb.cpp) ;; *) cp "$f" "$out/" ;; esac
 done
 cp "$here"/stubs/*.h "$here/preview.cpp" "$out/"

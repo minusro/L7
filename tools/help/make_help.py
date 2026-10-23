@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # make_help.py — the help pages (ui_help.cpp) from their content and the UI
-# preview's screenshots: writes help_slides.h (the sketch folder), each page a
+# preview's screenshots: writes src/help_slides.h, each page a
 # list of drawing steps (rectangles, text in L7's font at 1-6 px a dot,
 # images), the images run-length coded with their own palettes, all in flash.
 #
@@ -255,5 +255,5 @@ out.append(f"constexpr int HELP_PAGES = {len(pages)};")
 out.append("PROGMEM static const HelpPage HELP[HELP_PAGES] = {")
 out += [f"  {{HELP_PAGE_{n}, {len(rows)}, {dx}}}," for n, rows, dx in page_ops]
 out.append("};")
-open(os.path.join(ROOT, "help_slides.h"), "w").write("\n".join(out) + "\n")
+open(os.path.join(ROOT, "src", "help_slides.h"), "w").write("\n".join(out) + "\n")
 print(f"help_slides.h: {len(pages)} pages, {len(images)} images, {total // 1024} KB of image data")

@@ -17,5 +17,5 @@ Comments in the source stay the authority on details; these pages give the map.
 | [sibling-app-notes.md](sibling-app-notes.md) | What a sibling app on this hardware (N9, ...) reuses from L7: bring-up, audio, build, RAM, UI language |
 | [design/](design/) | The Elektron-style restyle: `l8_restyle.html` (before/after and every state, self-contained) and the screenshots in `screens/` (rendered with tools/ui_preview) |
 
-Hardware pinout and board variants: [../HARDWARE.md](../HARDWARE.md).
+Hardware pinout and board variants: [HARDWARE.md](HARDWARE.md).
 Work log and to-do notes kept by the author: `../M8 Looper.txt`.

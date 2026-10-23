@@ -47,8 +47,8 @@ truncate; counts file-system changes and file creations).
 
 ```sh
 cd tools/looper_sim
-c++ -std=c++17 -O1 -Wno-macro-redefined -Istubs -I../.. \
-  ../../engine.cpp ../../storage.cpp ../../scenes.cpp ../../ableton.cpp ../../midi_in.cpp ../../audio_follow.cpp looper_sim.cpp -o looper_sim
+c++ -std=c++17 -O1 -Wno-macro-redefined -Istubs -I../../src \
+  ../../src/engine.cpp ../../src/storage.cpp ../../src/scenes.cpp ../../src/ableton.cpp ../../src/midi_in.cpp ../../src/audio_follow.cpp looper_sim.cpp -o looper_sim
 ./looper_sim          # all checks + 5 random 600 s sessions; ./looper_sim 0 skips the fuzzing
 ```
 
@@ -81,7 +81,7 @@ clip, a scene and the set around them, with the fields the export fills in
 marked. Remake it after changing that set:
 
 ```sh
-python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 2 Project/L7 Test 2 Project.als" ableton_template.h
+python3 tools/ableton/make_template.py "docs/design/ableton/L7 Test 2 Project/L7 Test 2 Project.als" src/ableton_template.h
 ```
 
 ## Demo video (`tools/demo`)

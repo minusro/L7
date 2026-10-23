@@ -4,7 +4,7 @@
 // MIDI clock.
 //
 //   cd tools/looper_sim
-//   c++ -std=c++17 -O1 -Istubs -I../.. ../../engine.cpp ../../storage.cpp ../../scenes.cpp looper_sim.cpp -o looper_sim
+//   c++ -std=c++17 -O1 -Istubs -I../../src ../../src/engine.cpp ../../src/storage.cpp ../../src/scenes.cpp ... looper_sim.cpp -o looper_sim
 //   ./looper_sim
 #include <cmath>
 #include <vector>
