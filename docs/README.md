@@ -18,4 +18,7 @@ Comments in the source stay the authority on details; these pages give the map.
 | [design/](design/) | The Elektron-style restyle: `l8_restyle.html` (before/after and every state, self-contained) and the screenshots in `screens/` (rendered with tools/ui_preview) |
 
 Hardware pinout and board variants: [HARDWARE.md](HARDWARE.md).
+The sibling sketches (`K6/`, `N9/`) and `OctogonTest/` are on the `experiments`
+branch, not on main; their notes and mockups stay here (`K6 Devlog.txt`,
+`design/k6_mockup.html`, `design/n9_mockup.html`, `sibling-app-notes.md`).
 Work log and to-do notes kept by the author: `../M8 Looper.txt`.

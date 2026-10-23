@@ -5,3 +5,10 @@ N9/n9_gm_pcm.cpp
 N9/n9_gm_pcm.h
 K6/k6_gm_pcm.cpp
 K6/k6_gm_pcm.h
+
+# The sibling sketches live on the `experiments` branch, not here. What is
+# left of their folders on main is local-only material their own ignore
+# files kept out of the repo (N9/sounds: ROM dumps, sample packs and a
+# soundfont that are not ours to redistribute), so keep the folders ignored.
+/K6/
+/N9/
