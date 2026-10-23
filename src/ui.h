@@ -63,13 +63,15 @@ constexpr int STATUS_ROW = NUM_TRACKS, ROWS = NUM_TRACKS + 1, MENU_CELL = 0, SCE
 #if M8_MODEL == 1
 constexpr Cell MENU_BOX = {0, 0}, SCENE_BOX = {0, 120}, CLOCK_BOX = {118, 94}, TEMPO_BOX = {210, 80};
 #else
-// The Model:02: the three share the extra width about equally (each ends up
-// with ~90 px more than its contents need), rather than one cell holding all
-// the slack and showing it as a wide empty frame when it is selected. The
-// scene's contents sit at its left and the tempo's at its right, as here, so
-// only the clock's move: centred in its cell, they land halfway between the
-// two -- 129 and 131 px from them, where the Model:01 leaves 78 and 28.
-constexpr Cell MENU_BOX = {0, 0}, SCENE_BOX = {0, 150}, CLOCK_BOX = {148, 140}, TEMPO_BOX = {286, 164};
+// The Model:02: the clock cell wraps the master meter as snugly as the
+// Model:01's does (96 against 94, round the same 86 px of lines), and the
+// scene and the tempo take the rest of the extra width between them. The
+// cell's middle stays at 218 whatever its width, so the clock and the meter
+// sit exactly where they did when it was wide -- all that moves is where
+// the cells meet. The scene's contents sit at its left and the tempo's at
+// its right, so those do not move either; the clock keeps its 129 and
+// 131 px from them, where the Model:01 leaves 78 and 28.
+constexpr Cell MENU_BOX = {0, 0}, SCENE_BOX = {0, 172}, CLOCK_BOX = {170, 96}, TEMPO_BOX = {264, 186};
 #endif
 // ---- What the rows show of each track (ui.cpp): a copy of its looks, taken
 // as they're drawn. While a change is on its way to any track (a scene's, a
