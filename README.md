@@ -98,3 +98,11 @@ The [user guide](docs/L7%20User%20Guide.pdf) has everything else; the
 Teensyduino with a patched core (for storage mode and USB audio and MIDI), a
 simulator for the engine, and the tools behind the demo video and these
 pictures: see [docs/build-and-test.md](docs/build-and-test.md).
+
+## License
+
+L7 is free software: © 2026 Daniel Stanciu, released under the
+[GNU General Public License v3.0](LICENSE). You can use, study, change and share
+it; changed versions you share must stay under the same license, with their
+source. Code in it from others (in the sibling apps' folders, K6 and N9) keeps
+its own license.
