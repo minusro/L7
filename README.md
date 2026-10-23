@@ -3,10 +3,8 @@
   <img src="docs/readme/l7-logo-light.svg" width="120" alt="L7">
 </picture></h1>
 
-A 7-track stereo looper for the **Dirtywave M8 Model:01**: alternative firmware
-that turns the M8 into a live looper. Record loops from the line input, layer
-them as 1- to 32-bar loops, shape and mix them, keep combinations as scenes,
-and export a whole project to Ableton Live.
+A 7-track stereo looper firmware for the **Dirtywave M8 Model:01**. Record loops from the line input, layer
+them as 1 to 32-bar loops, shape and mix them, keep combinations as scenes, and export a whole project to Ableton Live.
 
 <p align="center"><img src="docs/readme/demo.gif" width="640" alt="L7 playing four loops while a lowpass filter is swept on track 4"></p>
 
