@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# Intel hex images: kept byte for byte (Teensy builds write them with CRLF; a flashed file should match its checksum)
+*.hex -text
