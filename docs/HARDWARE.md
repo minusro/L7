@@ -88,55 +88,126 @@ The driver starts by setting REG_RST (REG14 |= 0x80). It then writes:
 | I²S (SAI1) setup, ITCM | 0x1DF00, 0x1DFC0, 0x218B4 |
 | SD (USDHC1) pad setup, ITCM | 0x29538 |
 
-# Dirtywave M8 Model:02 — the display
+# Dirtywave M8 Model:02 hardware map
 
-Recovered from `M8_V6_6_3C_MODEL02.bin` (the stock Model:02 firmware, V6.6.3C). Everything here is read
-straight out of that image, so it is **confirmed**; nothing of it has been checked against real hardware,
-because there is no Model:02 here. The rest of the Model:02's board — its MCU, pin map, keys, backlight,
-audio, card — is **not** covered: that needs the same disassembly the Model:01 above got, and a device.
+Recovered by static analysis of `M8_V6_6_3C_MODEL02.bin` (the stock Model:02 firmware, V6.6.3C), read side by side
+with the V6.6.3C Model:01 image. Nothing of it has been checked on a device: there is no Model:02 here.
+**Confirmed** means read straight from the code or data; **inferred** means the code path is certain but what the
+pin is for, or which bus object an address is, is my best reading.
 
-## Display controller
+How it was done, so it can be redone: the Teensy core's `pinMode` / `digitalWrite` / `analogWriteFrequency` were
+found in the Model:01 image (its own pin-17 variant read is a known anchor), their bytes lifted with the pin-count
+immediate masked, and matched in the Model:02 image; then every `bl` to them was decoded for the pin in `r0`.
+The board-variant byte lives at RAM `0x2001382C` in both images; every literal reference to it was classified, and
+the sites that compare it with 2 enumerate everything that is Model:02's own.
+
+## MCU: a Teensy MicroMod
 
 | Item | Value | Confidence |
 |---|---|---|
-| Controller | **ILI9488**, 480 x 320 | confirmed |
-| Evidence | its Adjust Control 3 signature `F7 A9 51 2C 82`, and the whole init table below, at 0x1DB128 | confirmed |
-| Pixel format | **18 bits (RGB666), 3 bytes a pixel**: `COLMOD (3A) = 0x66` | confirmed |
-| Rotation / order | `MADCTL (36) = 0x48` | confirmed |
+| Board | **Teensy MicroMod** (i.MX RT1062, 16 MB flash). Build target `teensy:avr:teensyMM` | the pin count confirmed; the board inferred from it |
+| Evidence | the core's pin-range checks are `cmp r0, #45` (46 pins) where the Model:01 image has `cmp r0, #39` (40); every other compare in the two images' histograms is identical. `cores/teensy4/core_pins.h` has `CORE_NUM_DIGITAL 46` only under `ARDUINO_TEENSY_MICROMOD` (4.0: 40, 4.1: 55) | confirmed |
+| Layout | ITCM code from flash `0x60001680` to `0x0`; `.data` from flash `0x601DE9C0` to `0x20000000` | confirmed |
 
-The init table, verbatim (`length, command, data...`):
+The pin numbers below are MicroMod pin numbers as the firmware uses them. For 0–39 they carry the same peripheral
+functions as on a Teensy 4.0 (SPI on 10–13, I²C on 18/19, SAI1 on 7/8/20/21/23), so the Model:01 names still read.
+
+## One board, hard-coded as "variant 2"
+
+The shared code keeps the Model:01's two variants and a third. The Model:01 reads pin 17 to pick 0 or 1; the
+Model:02 image replaces that routine with `movs r3, #2; strb r3, [r0]` (`0x600A664C`, called from board-init
+`0x600828FE`). So on a Model:02 every `variant == 2` branch is live, and everything that only tests zero against
+non-zero follows **Model:01 variant B**. That is most of the board: keys, charger, gauge, headphone sense, speaker
+enable, MIDI ports and the backlight pin are variant B's. What is Model:02's own is the display, a few lines at
+boot, and the touch controller's chip ID.
+
+## Pin map
+
+| Function | Model:02 | Confidence |
+|---|---|---|
+| **Display** ILI9488 480×320, SPI (LPSPI4) | MOSI 11, SCK 13, MISO 12 (the driver's own pin fields are 255: the port's defaults; the constructor stores `&SPI`, `0x2000A8A0`), **DC 10, RST 5**, the CS field 10 as well (see below) | confirmed (the fields); the DC/CS reading inferred |
+| Display SPI clock | **56 MHz** (`begin()` is passed `0x03567E00`) | confirmed |
+| Display rotation | `setRotation(3)` | confirmed |
+| Pixel format | 18 bits (`COLMOD 0x66`), 3 bytes a pixel; see "What the 18-bit format means" | confirmed |
+| **Backlight** PWM | **pin 4**, `analogWriteFrequency(4, 44100)`, LOW at init (variant B's; variant 0's pin 6 at 261 Hz is the Model:01 A) | confirmed |
+| **Keys** (8) | **SX1508 @0x20 on `Wire`** (object `0x2000AAC0`, the one variant B uses: SDA 18 / SCL 19), **INT pin 15** `INPUT_PULLUP`; the key-init only tests zero/non-zero, no variant-2 branch | confirmed (path and pin); the bus's pins inferred |
+| **Touch** | FocalTech @0x38 on `Wire`, probed for chip ID **0x36** (variant B probes 0x06), **INT pin 16** `INPUT_PULLDOWN` (variant 0: pin 9) | confirmed |
+| **Audio** I²S, SAI1 | MCLK 23, BCLK 21, LRCLK 20, TX 7, RX 8; no codec I²C — the Model:01's shared path, not re-read | inferred |
+| **SD card** | SDIO / USDHC1 (`BUILTIN_SDCARD`) — shared path, not re-read | inferred |
+| Headphone sense | **pin 22** `INPUT_PULLDOWN` (variant 0: 26) | confirmed |
+| Speaker amp enable | **pin 9** `OUTPUT` (variant 0: 30) | confirmed |
+| **Charger / fuel gauge** | variant B's: BQ2589x @0x6A and STC3115 @0x70 on `Wire`, charger INT **pin 2** `INPUT` | inferred from the shared path |
+| Model:02-only at charger init | **pin 40** `OUTPUT`, driven LOW for 10 ms then HIGH (`0x6007CE2C`–`0x6007CE46`): a reset or enable for one of the power parts | pin confirmed, purpose inferred |
+| Model:02-only at board-init | **pin 28** `OUTPUT` set HIGH, and **pin 6** `OUTPUT` set HIGH then LOW after 1 ms (`0x60082926`–`0x6008294E`); the Model:01's early-boot **pin 1** `OUTPUT` HIGH is kept too (`0x60082908`, `0x6007BF52`) | pins confirmed, purposes inferred |
+| **Serial MIDI** | variant B's: port 1 `Serial1` (RX 0 / TX 1), port 2 `Serial3` (TX 14; RX 15 is the key INT) — shared path, not re-read | inferred |
+| USB "connected" | read from USB1 `PORTSC1` bit 0 (variant 2 only; the others use bit 7 inverted) | confirmed |
+| Random seed | `analogRead` pin 27 (`INPUT`) | confirmed |
+
+**DC and CS both 10.** The display-init routine (`0x60079388`) writes `rst 5, cs 10, dc 10` into the display
+object on the non-zero path, where the Model:01 image writes `dc 6` on the same path — so Dirtywave's Model:02
+build changed that one constant. Pin 10 is LPSPI4's PCS0, and an ILI9488_t3-style `begin()` checks
+`pinIsChipSelect(dc)` and, when it is one, drives D/C through the hardware chip-select; the `pinMode(cs, OUTPUT)`
+on the same pin is then overridden when the pad is handed to the SPI block. The reading that fits is: **D/C on
+pin 10 as hardware PCS, no CS line to the panel** (tied). Unverified: if a Model:02 shows nothing, this is the
+first thing to look at.
+
+## The display's init sequence (the live one)
+
+`begin()` is passed a table at RAM `0x20003C2C`; the command list sits `0x200` bytes into it (file `0x1E27EC`).
+This is the one the panel is set up with; the ILI9488 driver's stock table is also in the image (`0x1DB128`,
+`.rodata`) but this path does not use it. Verbatim (`command: data`):
 
 | Cmd | Data | What |
 |---|---|---|
-| `E0` | `00 03 09 08 16 0a 3f 78 4c 09 0a 08 16 1a 0f` | positive gamma |
-| `E1` | `00 16 19 03 0f 05 32 45 46 04 0e 0d 35 37 0f` | negative gamma |
-| `C0` | `17 15` | power control 1 |
-| `C1` | `41` | power control 2 |
-| `C5` | `00 12 80` | VCOM control |
+| `C0` | `01 1f` | power control 1 |
+| `C1` | `40` | power control 2 |
+| `C2` | `00` | power control 3 |
+| `C5` | `00 48 80` | VCOM control |
 | `36` | `48` | MADCTL |
 | `3A` | `66` | COLMOD: 18 bits a pixel |
-| `B0` | `80` | interface mode control |
-| `B1` | `a0` | frame rate control |
+| `B0` | `00` | interface mode control |
+| `B1` | `c0` | frame rate control |
 | `B4` | `02` | display inversion control |
-| `B6` | `02 02 ...` | display function control |
+| `B6` | `02 02` | display function control |
+| `E0` | `00 08 0c 02 0e 04 30 45 47 04 0c 0a 2e 34 0f` | positive gamma |
+| `E1` | `00 11 0d 01 0f 05 39 36 51 06 0f 0d 33 37 0f` | negative gamma |
 | `E9` | `00` | set image function |
 | `F7` | `a9 51 2c 82` | adjust control 3 |
+| `F8` | `21 07` | adjust control 4 |
 
 ## What the 18-bit format means for a port
 
-**The ILI9488 has no 16-bit mode over SPI.** L7 draws in RGB565 throughout and hands the display
-`uint16_t` buffers (`writeRect()`, the row buffers in `ui_splash.cpp` and `ui_help.cpp`, the cell buffers
-in `ui_mix.cpp` and `ui_filter.cpp`); none of that reaches an ILI9488 unchanged. A port needs a driver
-that expands each pixel to 3 bytes on the wire — half as much again to push, which is the thing to measure
-first, since the screen already shares its time with SD streaming. `ILI9341_t3n` does not drive this part;
-`ILI9488_t3` is the usual one, or the panel's parallel bus if the Model:02 wires one.
+**The ILI9488 has no 16-bit mode over SPI.** L7 draws in RGB565 throughout and hands the display `uint16_t`
+buffers (`writeRect()`, the row buffers in `ui_splash.cpp` and `ui_help.cpp`, the cell buffers in `ui_mix.cpp` and
+`ui_filter.cpp`); none of that reaches an ILI9488 unchanged. A port needs a driver that expands each pixel to 3
+bytes on the wire — half as much again to push, at 56 MHz against the Model:01's 70 — which is the thing to
+measure first, since the screen already shares its time with SD streaming. `ILI9341_t3n` does not drive this
+part; `ILI9488_t3` is the usual one.
 
-So the layout being done (see `src/screen.h`) does not mean the screen will light up: the driver, and
-everything else on the board, is still ahead.
+## What a board layer needs, then
 
-## Not the Model:01's spare path
+Less than it looked: build for `teensy:avr:teensyMM`, and take `M8Board`'s variant B as the starting point —
+keys, touch (chip ID 0x36), charger, gauge, headphone sense, speaker enable, MIDI, audio and card are its. On top
+of that: the ILI9488 driver at 56 MHz with D/C on 10 and RST on 5, rotation 3 and the table above; the backlight
+on pin 4 at 44.1 kHz (as B); pin 1 held HIGH from boot; at board-init pin 28 HIGH and pin 6 pulsed; at charger init
+pin 40 pulsed LOW. And the RGB666 path under the drawing code.
 
-HARDWARE.md says above that the Model:01's V6.6.2A image carries an unreachable third display path for
-480 x 320 on pins 28/40. The V6.6.3C Model:01 image has **no ILI9488 init table** in it at all (only the
-two ILI9341 ones), so either that path went between the two releases or it never carried this table. Take
-the pins 28/40 note as being about 6.6.2A, not as the Model:02's wiring.
+## Where to look in the Model:02 image (6.6.3C; flash = `0x60000000` + file offset)
+
+| What | Address |
+|---|---|
+| `pinMode` / `digitalWrite` / `delay` / `analogWriteFrequency` | `0x600AE86C` / `0x600AE818` / `0x600AE770` / `0x600AEF40` |
+| Board-variant byte / its setter / board-init | `0x2001382C` (RAM) / `0x600A664C` / `0x600828DC` |
+| Display object / constructor / its static-init | `0x2001D230` (RAM) / `0x6008F0A4` / `0x600A65F0` |
+| Display init + backlight / `begin()` / `setRotation` | `0x60079324` / `0x6008E508` / `0x6008DF28` |
+| Display init table | RAM `0x20003C2C` (+`0x200`), file `0x1E25EC` |
+| Key init / touch init | `0x6007B9F4` / `0x6007BEF4` |
+| Charger init (pins 2, 40) / headphone + speaker (22, 9) | `0x6007CE16` / `0x6007D2E0` |
+| `.data` load / ITCM load | flash `0x601DE9C0` → `0x20000000` / flash `0x60001680` → `0x0` |
+
+## About the Model:01 section's "third code path (pins 28/40)"
+
+That note above is right that the Model:01 image carries a third variant: the `variant == 2` branches are in it
+too (17 sites). But pins 28 and 40 are not that variant's display pins — they are the power/reset lines in the
+shared init code listed above — and the Model:01 image has no ILI9488 table and writes the Model:01's own display
+pins on that path, so it was never a complete Model:02 configuration. The Model:02 image is.
