@@ -4,11 +4,16 @@
 // buffer from them too, so a preview shows what the device will.
 #pragma once
 
-// 1: Model:01, the ILI9341 320 x 240 (see docs/HARDWARE.md). 2: Model:02,
-// 480 x 320 (the size the stock Model:01 firmware's unreachable third
-// display path is built for). Pass -DM8_MODEL=2 to build for the other.
+// 1: Model:01, the ILI9341 320 x 240 on a Teensy 4.0. 2: Model:02, the
+// ILI9488 480 x 320 on a Teensy MicroMod (docs/HARDWARE.md, its Model:02
+// section). A sketch build takes it from the board it is built for, so
+// -b teensy:avr:teensyMM is the Model:02; the host builds pass -DM8_MODEL=2.
 #ifndef M8_MODEL
+#if defined(ARDUINO_TEENSY_MICROMOD)
+#define M8_MODEL 2
+#else
 #define M8_MODEL 1
+#endif
 #endif
 
 #if M8_MODEL == 1

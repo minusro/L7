@@ -9,7 +9,20 @@ static constexpr uint8_t VARIANT_DETECT_PIN = 17;
 //                      CS  DC RST  BL  BL-Hz    rot  keyBus   INT  SDdet HPsense HPen  touchINT  MIDI out  MIDI in
 const Pins PINS_A = {   10,  2,  3,  6,   261.0f,  3, &Wire1,    5,    4,    26,   30,    9,  &Serial7, &Serial7 };
 const Pins PINS_B = {   10,  6,  5,  4, 44100.0f,  1, &Wire,    15,   17,    22,    9,   16,  &Serial3, &Serial1 };
+// The Model:02 (HARDWARE.md, its Model:02 section): variant B's pins but for
+// the display - an ILI9488 with D/C on 10 (the stock firmware sets its CS
+// field to 10 as well: no CS line, the panel's tied - unverified), RST 5,
+// rotation 3.
+#if M8_MODEL == 2
+const Pins PINS_M02 = { 10, 10,  5,  4, 44100.0f,  3, &Wire,    15,   17,    22,    9,   16,  &Serial3, &Serial1 };
+#endif
 
+#if M8_MODEL == 2
+class M8Display : public ILI9488Spi {       // (sendCmd() is public there)
+public:
+  using ILI9488Spi::ILI9488Spi;
+};
+#else
 // ILI9341_t3n with access to its protected command helpers, so we can apply
 // the panel tuning the stock firmware uses on variant B.
 class M8Display : public ILI9341_t3n {
@@ -29,13 +42,22 @@ public:
     endSPITransaction();
   }
 };
+#endif
 
 bool Board::begin(uint32_t spiHz) {
+#if M8_MODEL == 2
+  // --- 1. One board: the stock Model:02 firmware sets its variant to a
+  // constant and never reads pin 17 (HARDWARE.md). Variant B's paths are its.
+  (void)VARIANT_DETECT_PIN;
+  _variant = VARIANT_B;
+  _pins = &PINS_M02;
+#else
   // --- 1. Detect board variant exactly like the stock firmware ---
   pinMode(VARIANT_DETECT_PIN, INPUT_PULLDOWN);
   delay(1);
   _variant = digitalRead(VARIANT_DETECT_PIN) ? VARIANT_A : VARIANT_B;
   _pins = (_variant == VARIANT_A) ? &PINS_A : &PINS_B;
+#endif
   const Pins &p = *_pins;
 
   // --- 2. Early power-up sequence (mirrors stock setup()) ---
@@ -44,6 +66,16 @@ bool Board::begin(uint32_t spiHz) {
     digitalWrite(1, HIGH);
     delay(30);
   }
+#if M8_MODEL == 2
+  // The Model:02's own lines at board-init (stock: pin 28 high, pin 6 high
+  // for a millisecond; their purposes inferred - power enables, likely).
+  pinMode(28, OUTPUT);
+  digitalWrite(28, HIGH);
+  pinMode(6, OUTPUT);
+  digitalWrite(6, HIGH);
+  delay(1);
+  digitalWrite(6, LOW);
+#endif
   pinMode(p.backlight, OUTPUT);  // backlight off until the panel is initialised
   digitalWrite(p.backlight, LOW);
 
@@ -54,6 +86,12 @@ bool Board::begin(uint32_t spiHz) {
     Wire1.setClock(400000);
   }
 
+#if M8_MODEL == 2
+  pinMode(40, OUTPUT);           // the Model:02's line at charger init: low 10 ms, then high (stock; purpose inferred)
+  digitalWrite(40, LOW);
+  delay(10);
+  digitalWrite(40, HIGH);
+#endif
   if (_variant == VARIANT_B) initChargerB();
 
   pinMode(p.hpEnable, OUTPUT);   // stock fw sets this HIGH during audio/HP init
@@ -66,6 +104,17 @@ bool Board::begin(uint32_t spiHz) {
   bool keysOk = (_variant == VARIANT_A) ? initMCP23008() : initSX1508();
 
   // --- 4. Display ---
+#if M8_MODEL == 2
+  // The ILI9488 on LPSPI4 ("SPI": MOSI 11, SCK 13, MISO 12), at the stock
+  // firmware's 56 MHz with its init table (ili9488_spi.cpp); the inversion
+  // inferred from a driver call with 1 right after its setRotation(3), where
+  // variant B gets its own.
+  (void)spiHz;
+  M8Display *d = new M8Display(SPI, p.tftCS, p.tftDC, p.tftRST);
+  _tft = d;
+  d->begin(56000000);
+  d->invertDisplay(true);
+#else
   // MOSI 11, SCK 13, MISO 12 -> LPSPI4 ("SPI")
   M8Display *d = new M8Display(p.tftCS, p.tftDC, p.tftRST, 11, 13, 12);
   _tft = d;
@@ -76,8 +125,9 @@ bool Board::begin(uint32_t spiHz) {
     // (observed on hardware; typical for IPS ILI9341 panels).
     d->invertDisplay(true);
   }
+#endif
   d->setRotation(p.tftRotation);
-  d->fillScreen(ILI9341_BLACK);
+  d->fillScreen(0);
 
   // --- 5. Backlight on ---
   analogWriteFrequency(p.backlight, p.backlightPwmHz);
@@ -86,6 +136,7 @@ bool Board::begin(uint32_t spiHz) {
   return keysOk;
 }
 
+#if M8_MODEL != 2
 void Board::applyVariantBPanelTuning() {
   // Stock variant-B init table differs from ILI9341_t3n's default only in
   // these entries (recovered verbatim from the firmware image).
@@ -103,6 +154,7 @@ void Board::applyVariantBPanelTuning() {
   d->sendCmd(0xE0, gmctrp1, sizeof gmctrp1);
   d->sendCmd(0xE1, gmctrn1, sizeof gmctrn1);
 }
+#endif
 
 void Board::setBacklight(uint8_t level) { analogWrite(_pins->backlight, level); }
 

@@ -21,7 +21,7 @@ What it changes, in <teensyduino>/hardware/avr/1.62.0:
   cores/teensy4/usb.c                  configure hook, GET MAX LUN, bulk-only reset, a clear-halt that resets the toggle;
                                        UAC2's requests (alternate settings, GET CUR / RANGE) to usb_audio_l7.cpp
   cores/teensy4/usb_audio.h, .cpp      Teensyduino's USB audio left out where AUDIO_UAC2 is defined
-  boards.txt                           the menu entry (Teensy 4.0)
+  boards.txt                           the menu entry (Teensy 4.0, and the Teensy MicroMod: the Model:02's board)
   libraries/SdFat/src/common/FsStructs.h, FsName.cpp  file names may contain a carriage return (the "Icon\\r" file
                                        of a macOS folder icon, ableton.cpp); SdFat refuses control characters.
                                        Stored as U+F00D, as macOS does (it maps control characters to U+F000+c)
@@ -35,6 +35,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MARK = "L7_MSC"
+MARK_MM = "# L7_MSC_MM: tools/teensy_msc/patch.py"   # (the MicroMod entry, added later than the rest)
 CORE_FILES = ("usb_msc.c", "usb_msc.h", "usb_audio_l7.cpp", "usb_audio_l7.h")
 
 
@@ -484,6 +485,21 @@ def apply():
                       "teensy40.menu.usb.serialmsc.upload_port.usbtype=USB_SERIAL\n", 1)
         open(boards, "w").write(b)
         changed.append("boards.txt")
+    b = open(boards).read()
+    if MARK_MM not in b:                             # the same USB type for the Teensy MicroMod (the Model:02's board)
+        if not os.path.exists(boards + ".l7orig"): backup(boards)
+        anchor = ("teensyMM.menu.usb.serialmtp=Serial + MTP Disk (Experimental)\n"
+                  "teensyMM.menu.usb.serialmtp.build.usbtype=USB_MTPDISK_SERIAL\n"
+                  "teensyMM.menu.usb.serialmtp.upload_port.usbtype=USB_MTPDISK_SERIAL\n")
+        if anchor not in b:
+            sys.exit("boards.txt: teensyMM anchor not found")
+        b = b.replace(anchor, anchor +
+                      MARK_MM + "\n"
+                      "teensyMM.menu.usb.serialmsc=Serial + MIDI + Audio + Mass Storage (L7 patch)\n"
+                      "teensyMM.menu.usb.serialmsc.build.usbtype=USB_SERIAL_MSC\n"
+                      "teensyMM.menu.usb.serialmsc.upload_port.usbtype=USB_SERIAL\n", 1)
+        open(boards, "w").write(b)
+        changed.append("boards.txt (MicroMod)")
     else:                                            # (its name from before MIDI and audio)
         for old in ("serialmsc=Serial + Mass Storage (L7 patch)", "serialmsc=Serial + MIDI + Mass Storage (L7 patch)"):
             if old in b:

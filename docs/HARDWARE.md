@@ -192,6 +192,12 @@ of that: the ILI9488 driver at 56 MHz with D/C on 10 and RST on 5, rotation 3 an
 on pin 4 at 44.1 kHz (as B); pin 1 held HIGH from boot; at board-init pin 28 HIGH and pin 6 pulsed; at charger init
 pin 40 pulsed LOW. And the RGB666 path under the drawing code.
 
+## The board layer, as written from this
+
+`M8Board` builds for the Model:02 with `-b teensy:avr:teensyMM` (docs/build-and-test.md): variant B's code with
+`PINS_M02`, the lines above at boot, and `src/ili9488_spi.h` for the panel - D/C on pin 10 driven as a plain
+output, no CS line, the init table above, 56 MHz, rotation 3, inversion on. Untested, every word of it.
+
 ## Where to look in the Model:02 image (6.6.3C; flash = `0x60000000` + file offset)
 
 | What | Address |

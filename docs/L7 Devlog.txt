@@ -200,7 +200,8 @@ TTTTT000000TTTTT
 	- the board is a Teensy MicroMod, and in the stock firmware it is "variant 2": everything but the display is Model:01 variant B's (keys SX1508 on Wire, INT 15; touch INT 16, chip ID 0x36; hp sense 22, speaker 9; charger INT 2; backlight pin 4 at 44.1 kHz) - docs/HARDWARE.md, the Model:02 section
 	- display: ILI9488 on SPI, D/C on pin 10 (the hardware CS pin; no CS line - unverified), RST 5, 56 MHz, rotation 3, its own init table (in HARDWARE.md); 18 bits a pixel, so the RGB565 buffers need expanding on the wire - measure that against the SD streaming first
 	- boot lines of its own: pin 1 held high, pin 28 high and pin 6 pulsed at board-init, pin 40 pulsed low at charger init
-	- to write: M8Board variant 2 from variant B plus the above, built for teensy:avr:teensyMM (installed here); none of it can run - there is no Model:02 here
+	- written: M8Board builds for teensy:avr:teensyMM with PINS_M02 and src/ili9488_spi (an ILI9488 driver of our own: the calls L7 makes, 18 bits a pixel, the stock init table, 56 MHz); the serialmsc USB type patched into the MicroMod's menu too; a test build made 2026-10-26 - never run, there is no Model:02 here
+	- first things to check on a device: the panel at all (D/C on pin 10, no CS line - inferred), the boot lines (28 high, 6 and 40 pulsed), the keys (SX1508 on Wire, INT 15), the card, audio; then speed - the UI's RGB565 rows go out as 3 bytes a pixel over plain SPI, no DMA
 	- done: the layout (src/screen.h, M8_MODEL), help pages (help_slides_m02.h), menu placement, splash logo, storage mode screen
 - further manual tweaks
 - midi clips page

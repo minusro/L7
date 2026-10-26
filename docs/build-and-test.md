@@ -172,6 +172,32 @@ the build is for. Nothing of the Model:02 has run on hardware and it has no
 board layer yet: its panel is an ILI9488 at 18 bits a pixel, which no part of
 the drawing code feeds yet (docs/HARDWARE.md, docs/testing-checklist.md).
 
+## Building for the Model:02 (`-b teensy:avr:teensyMM`)
+
+The Model:02 is a Teensy MicroMod (docs/HARDWARE.md, its Model:02 section),
+and `src/screen.h` takes the model from the board, so the sketch build is:
+
+```sh
+arduino-cli compile -b teensy:avr:teensyMM:usb=serialmsc --build-path <dir> .
+```
+
+`usb=serialmsc` is L7's USB type (Serial + MIDI + Audio + Mass Storage);
+`tools/teensy_msc/patch.py` adds it to the MicroMod's menu as well as the
+Teensy 4.0's (run it again after a Teensyduino update). The board layer is
+`M8Board` as for variant B of the Model:01, with `PINS_M02` and the panel on
+`src/ili9488_spi.h` - a small driver of this repo's own for the ILI9488 (the
+calls L7 makes of a display, 18 bits a pixel over plain SPI transfers, the
+stock firmware's init table and its 56 MHz); `src/glcdfont5x7.h` is the font
+its start-up messages print in (`tools/make_glcdfont.py`).
+
+**None of it has run on a device** - there is no Model:02 here. What is
+inferred rather than read (HARDWARE.md says which) is what to look at first if
+a Model:02 shows nothing: D/C on pin 10 with no CS line, and the lines pulsed
+at boot (28, 6, 40). The Model:01 build is untouched by all this: its image
+has every function and data object at the same address and size (the
+linker's 8-byte branch stubs come out in another order, so it is not
+byte-identical).
+
 ## UI preview (`tools/ui_preview`)
 
 Renders the screen on the PC with the firmware's own drawing code (ui*.cpp,

@@ -12,11 +12,24 @@
 #pragma once
 #include <Arduino.h>
 #include <Wire.h>
+#include "screen.h"
+#if M8_MODEL == 2
+#include "ili9488_spi.h"                   // the Model:02's panel, in this repo (docs/HARDWARE.md, its Model:02 section)
+#else
 #include <ILI9341_t3n.h>
+#endif
 
 namespace m8 {
 
 enum Variant : uint8_t { VARIANT_A = 0, VARIANT_B = 1 };
+// The Model:02 build (M8_MODEL 2, a Teensy MicroMod) has one board, and in
+// the stock firmware it is a third variant that shares everything but its
+// display with variant B; here it runs as VARIANT_B with PINS_M02.
+#if M8_MODEL == 2
+using Tft = ILI9488Spi;
+#else
+using Tft = ILI9341_t3n;
+#endif
 
 // Key bitmask. The stock firmware stores ~expanderGPIO directly as its key
 // state, so bit N == expander pin GPn. The names below follow the M8 headless
@@ -59,6 +72,9 @@ struct Pins {
 
 extern const Pins PINS_A;
 extern const Pins PINS_B;
+#if M8_MODEL == 2
+extern const Pins PINS_M02;                // (the Model:02 build's only one)
+#endif
 
 class Board {
 public:
@@ -68,7 +84,7 @@ public:
 
   Variant variant() const { return _variant; }
   const Pins &pins() const { return *_pins; }
-  ILI9341_t3n &tft() { return *_tft; }
+  Tft &tft() { return *_tft; }
 
   // Current key state (bit set = pressed). Cheap to call every loop;
   // only touches I2C when the expander's INT line says something changed.
@@ -138,7 +154,7 @@ private:
 
   Variant _variant = VARIANT_A;
   const Pins *_pins = nullptr;
-  ILI9341_t3n *_tft = nullptr;
+  Tft *_tft = nullptr;
   uint8_t _keys = 0, _lastReported = 0;
   bool _first = true;
   // The key bus read at most every _keyGap us (keys() is asked many times a
