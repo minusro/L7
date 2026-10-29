@@ -12,8 +12,8 @@ them as 1 to 32-bar loops, shape and mix them, keep combinations as scenes, and 
 [User guide (PDF)](docs/L7%20User%20Guide.pdf) ·
 [Cheatsheet (PDF)](docs/L7%20Cheatsheet.pdf)
 
-> **Model:01 only.** L7 is built for the Model:01's Teensy 4.0 board and its
-> 320×240 screen. It doesn't run on the Model:02.
+> **Only tested on Model:01 so far.** L7 is built for the Model:01's Teensy 4.0 board and its
+> 320×240 screen. You can find a **Model:02** test build in the [wip](https://github.com/minusro/L7/tree/main/wip) folder, but it's not yet confirmed to be working.
 
 ## Installing
 
