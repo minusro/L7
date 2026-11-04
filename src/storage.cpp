@@ -479,6 +479,15 @@ static uint32_t freePoolNumber() {
 static FsFile growing;                           // (the one being grown; closed: none)
 static uint32_t growingNumber = 0;
 static uint64_t grownBytes = 0;
+// The last step a file of recording space failed at, and the card's error
+// codes then (for the start-up's error screen; "" none).
+static char poolError[64] = "";
+static void notePoolError(const char *step) {
+  SdCard *card = SD.sdfs.card();
+  snprintf(poolError, sizeof poolError, "%s (err 0x%02X/0x%lX)", step, card ? card->errorCode() : 0,
+           card ? (unsigned long)card->errorData() : 0ul);
+  Serial.printf("recording space: %s\n", poolError);
+}
 static void addToPool(uint32_t number) {
   int i = poolCount++;                           // (kept sorted)
   while (i > 0 && pool[i - 1] > number) { pool[i] = pool[i - 1]; i--; }
@@ -490,6 +499,9 @@ FLASHMEM static void growPoolFile() {
   const size_t n = left < sizeof chunk ? (size_t)left : sizeof chunk;
   memset(chunk, 0, n);
   if (growing.write(chunk, n) != n) {            // (a write that fails: the card really is full)
+    char step[40];
+    snprintf(step, sizeof step, "grow: write failed at %lu KB", (unsigned long)(grownBytes >> 10));
+    notePoolError(step);
     char path[40];
     poolPath(growingNumber, path, sizeof path);
     growing.close();
@@ -503,13 +515,17 @@ FLASHMEM static void growPoolFile() {
   bool ok = writeSampleHeader(growing, 0, 0, 0, nullptr);
   growing.close();
   if (ok) addToPool(growingNumber);
+  else notePoolError("grow: header write failed");
   Serial.printf("recording space: %04u.DAT grown in pieces (%d of %d ready)\n", (unsigned)growingNumber, poolCount, POOL_SIZE);
 }
 
 FLASHMEM static bool createPoolFile() {
   if (poolCount >= POOL_SIZE || growing) return false;
   uint32_t number = freePoolNumber();
-  if (!number) return false;
+  if (!number) {
+    notePoolError("no free file number in /L7/DATA");
+    return false;
+  }
   char path[40];
   poolPath(number, path, sizeof path);
   if (transport.running) Serial.printf("no recording space left: creating %s while playing (refill %s, %d to trim)\n", path,
@@ -517,7 +533,10 @@ FLASHMEM static bool createPoolFile() {
   else Serial.printf("recording space: making %s (%d of %d ready)\n", path, poolCount + 1, POOL_SIZE);
   debugStage = "SD create (sample file)";
   FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
-  if (!f) return false;
+  if (!f) {
+    notePoolError("can't create DATA/NNNN.DAT");
+    return false;
+  }
   bool pre = f.preAllocate(SAMPLE_FILE_BYTES);
   if (!pre && !transport.running) {              // no run of free space that long: grown a piece at a time instead (stopped)
     growing = std::move(f);
@@ -534,6 +553,10 @@ FLASHMEM static bool createPoolFile() {
   if (!ok) Serial.printf("%s: preallocate %s, seek %s, last byte %s, header %s (card error 0x%02X)\n", path, pre ? "ok" : "failed",
                          seek ? "ok" : "failed", wrote ? "ok" : "failed", head ? "ok" : "failed", SD.sdfs.card()->errorCode());
   if (!ok) {                                     // probably no space: don't keep half a file
+    char step[48];
+    snprintf(step, sizeof step, "pre %s seek %s write %s head %s", pre ? "ok" : "no",
+             seek ? "ok" : "no", wrote ? "ok" : "no", head ? "ok" : "no");
+    notePoolError(step);
     SD.sdfs.remove(path);
     poolBlocked = true;
     Serial.printf("no space for more recording files (%d ready; %lu MB free, one needs %lu MB)\n", poolCount,
@@ -2035,6 +2058,7 @@ static const char *failure = "SD card: can't be read.";
 
 FLASHMEM bool storageBegin(void (*progress)(const char *)) {
   failure = "SD card: can't be read (is it FAT32 or exFAT?).";
+  *poolError = 0;
   if (!sdBegin()) return false;
   if (!SD.sdfs.exists("/L7") && SD.sdfs.exists("/looper")) SD.sdfs.rename("/looper", "/L7");   // (the app's folder, renamed)
   SD.sdfs.mkdir("/L7");
@@ -2084,9 +2108,21 @@ FLASHMEM bool storageBegin(void (*progress)(const char *)) {
   if (clipboard.sample && !sampleExists(clipboard.sample)) clipboard.sample = 0;   // (gone from the card: after storage mode)
   if (!ok) failure = "SD card: can't write the track files in /L7/DATA.";
   else if (!poolCount) {
-    static char msg[64];
-    snprintf(msg, sizeof msg, "Card full: %lu MB free, the looper needs ~100 MB.",
-             (unsigned long)((uint64_t)SD.sdfs.freeClusterCount() * SD.sdfs.bytesPerCluster() >> 20));
+    // A small file written and read back: do writes reach the card at all?
+    uint8_t probe[512], back[512];
+    for (int i = 0; i < 512; i++) probe[i] = (uint8_t)(i * 7 + 1);
+    FsFile t = SD.sdfs.open("/L7/DATA/PROBE.TMP", O_RDWR | O_CREAT | O_TRUNC);
+    bool made = (bool)t, wrote = made && t.write(probe, sizeof probe) == sizeof probe && t.sync();
+    bool read = wrote && t.seekSet(0) && t.read(back, sizeof back) == (int)sizeof back && !memcmp(probe, back, sizeof back);
+    if (t) t.close();
+    SD.sdfs.remove("/L7/DATA/PROBE.TMP");
+    static char msg[200];
+    snprintf(msg, sizeof msg, "No recording space: %lu MB free (%s)\n%s\nTest file: %s.",
+             (unsigned long)((uint64_t)SD.sdfs.freeClusterCount() * SD.sdfs.bytesPerCluster() >> 20),
+             SD.sdfs.fatType() == FAT_TYPE_EXFAT ? "exFAT" : SD.sdfs.fatType() == 32 ? "FAT32" : "FAT16",
+             *poolError ? poolError : "no step failed",
+             !made ? "not created" : !wrote ? "write failed" : !read ? "read back wrong" : "ok");
+    Serial.println(msg);
     failure = msg;
   }
   return ok && poolCount > 0;

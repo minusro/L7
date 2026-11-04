@@ -142,8 +142,13 @@ static void fatal(const char *msg) {
   auto &t = board.tft();
   t.setTextColor(TEXT_ERROR, BG);
   t.setTextSize(1);
-  t.setCursor(4, splashBottom() + 16);           // under the logo
-  t.print(msg);
+  int y = splashBottom() + 16;                   // under the logo, a line per '\n'
+  for (const char *line = msg; line; y += 12) {
+    const char *end = strchr(line, '\n');
+    t.setCursor(4, y);
+    t.printf("%.*s", end ? (int)(end - line) : (int)strlen(line), line);
+    line = end ? end + 1 : nullptr;
+  }
   for (;;) handlePowerButton();
 }
 
