@@ -2,11 +2,14 @@
 
 Builds here have not been tested; releases are on GitHub's releases page.
 
-- `L7-M8-Model02-test-2026-10-26.hex`: the first Model:02 build (a Teensy
-  MicroMod, `-b teensy:avr:teensyMM:usb=serialmsc`, commit 5f6e973), never
-  run on a device. docs/HARDWARE.md says what is inferred and
-  docs/testing-checklist.md what to check first.
+- `L7-M8-Model02-test-2026-11-04.hex`: a Model:02 build (a Teensy MicroMod,
+  `-b teensy:avr:teensyMM:usb=serialmsc`, commit 6ea9000). The 2026-10-26 build
+  started and drew its screen on a Model:02 but stopped at "SD card full" with
+  free space on the card; this one grows its first recording-space file at
+  the start when the card's free space is in pieces, and if it still stops,
+  the message says why (with the free MB). docs/HARDWARE.md says what is
+  inferred and docs/testing-checklist.md what to check first.
 
-Download: [L7-M8-Model02-test-2026-10-26.hex](https://github.com/minusro/L7/raw/main/wip/L7-M8-Model02-test-2026-10-26.hex)
+Download: [L7-M8-Model02-test-2026-11-04.hex](https://github.com/minusro/L7/raw/main/wip/L7-M8-Model02-test-2026-11-04.hex)
 (raw file). Saving the GitHub page with "Save link as" gets HTML, which
 TyUploader reports as an IHEX parse error on line 1.

@@ -13,7 +13,7 @@ them as 1 to 32-bar loops, shape and mix them, keep combinations as scenes, and 
 [Cheatsheet (PDF)](docs/L7%20Cheatsheet.pdf)
 
 > **Only tested on M8 Model:01 so far.** L7 is built for the Model:01's Teensy 4.0 board and its
-> 320×240 screen. A **Model:02** test build is in the [wip](https://github.com/minusro/L7/tree/main/wip) folder ([direct download](https://github.com/minusro/L7/raw/main/wip/L7-M8-Model02-test-2026-10-26.hex)), but it's not yet confirmed to be working. Use the direct download link or the file page's "Download raw file" button: right-click → "Save link as" on the folder page saves GitHub's HTML page, which TyUploader rejects with a parse error.
+> 320×240 screen. A **Model:02** test build is in the [wip](https://github.com/minusro/L7/tree/main/wip) folder ([direct download](https://github.com/minusro/L7/raw/main/wip/L7-M8-Model02-test-2026-11-04.hex)), but it's not yet confirmed to be working. Use the direct download link or the file page's "Download raw file" button: right-click → "Save link as" on the folder page saves GitHub's HTML page, which TyUploader rejects with a parse error.
 
 ## Installing
 
