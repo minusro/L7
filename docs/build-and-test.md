@@ -174,9 +174,8 @@ Model:01 (`EDGE_INSET` in ui_status.cpp, 8 px against 4; the cells' inner
 edges keep 4). The help pages are generated per model too: `M8_MODEL=2 python3
 tools/help/make_help.py <preview-out>` writes `src/help_slides_m02.h`
 (the Model:01's stays `help_slides.h`), and `ui_help.cpp` includes whichever
-the build is for. Nothing of the Model:02 has run on hardware and it has no
-board layer yet: its panel is an ILI9488 at 18 bits a pixel, which no part of
-the drawing code feeds yet (docs/HARDWARE.md, docs/testing-checklist.md).
+the build is for. The board layer and the ILI9488 driver are in the next
+section.
 
 ## Building for the Model:02 (`-b teensy:avr:teensyMM`)
 
@@ -196,10 +195,11 @@ calls L7 makes of a display, 18 bits a pixel over plain SPI transfers, the
 stock firmware's init table and its 56 MHz); `src/glcdfont5x7.h` is the font
 its start-up messages print in (`tools/make_glcdfont.py`).
 
-**None of it has run on a device** - there is no Model:02 here. What is
-inferred rather than read (HARDWARE.md says which) is what to look at first if
-a Model:02 shows nothing: D/C on pin 10 with no CS line, and the lines pulsed
-at boot (28, 6, 40). The Model:01 build is untouched by all this: its image
+Released from v1.0.2 (`L7-v…-M8-Model02.hex`), tested on a Model:02 by a
+user - there is no Model:02 here. What is inferred rather than read
+(HARDWARE.md says which) is what to look at first if a Model:02 shows
+nothing: D/C on pin 10 with no CS line, and the lines pulsed at boot (28, 6,
+40). The Model:01 build is untouched by all this: its image
 has every function and data object at the same address and size (the
 linker's 8-byte branch stubs come out in another order, so it is not
 byte-identical).

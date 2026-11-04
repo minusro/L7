@@ -12,12 +12,13 @@ them as 1 to 32-bar loops, shape and mix them, keep combinations as scenes, and 
 [User guide (PDF)](docs/L7%20User%20Guide.pdf) ·
 [Cheatsheet (PDF)](docs/L7%20Cheatsheet.pdf)
 
-> **Only tested on M8 Model:01 so far.** L7 is built for the Model:01's Teensy 4.0 board and its
-> 320×240 screen. A **Model:02** test build is in the [wip](https://github.com/minusro/L7/tree/main/wip) folder ([direct download](https://github.com/minusro/L7/raw/main/wip/L7-M8-Model02-test-2026-11-04c.hex)), but it's not yet confirmed to be working. Use the direct download link or the file page's "Download raw file" button: right-click → "Save link as" on the folder page saves GitHub's HTML page, which TyUploader rejects with a parse error.
+> **For the M8 Model:01 and Model:02.** Each has its own firmware file: `…-M8-Model01.hex` for the
+> Model:01, `…-M8-Model02.hex` for the Model:02.
 
 ## Installing
 
-1. Download `L7-v….hex` from the [latest release](https://github.com/minusro/L7/releases/latest).
+1. Download the `.hex` for your M8 from the [latest release](https://github.com/minusro/L7/releases/latest):
+   `L7-v…-M8-Model01.hex` or `L7-v…-M8-Model02.hex`.
 2. Connect the M8 to your computer over USB and switch it on.
 3. Flash the `.hex` the way you'd install a Dirtywave firmware update: open it
    in [Teensy Loader](https://www.pjrc.com/teensy/loader.html) (or TyUploader)
