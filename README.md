@@ -98,6 +98,10 @@ Teensyduino with a patched core (for storage mode and USB audio and MIDI), a
 simulator for the engine, and the tools behind the demo video and these
 pictures: see [docs/build-and-test.md](docs/build-and-test.md).
 
+## Thanks
+
+To [Scherbeth](https://github.com/Scherbeth) for helping troubleshoot the Model:02 build.
+
 ## License
 
 L7 is free software: © 2026 Daniel Stanciu, released under the
