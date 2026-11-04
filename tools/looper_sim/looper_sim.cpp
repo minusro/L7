@@ -26,6 +26,7 @@ std::string simRoot;
 SDClass SD;
 SerialStub Serial;
 bool simNoRun = false;
+bool simFat32 = getenv("LOOPER_FAT32") != nullptr;   // (LOOPER_FAT32=1: the whole run on a FAT32 card)
 bool (*simFragmented)(unsigned long long) = nullptr;
 int simFailIo = 0, simReinits = 0, simFsChanges = 0, simFileCreates = 0, simSampleTruncates = 0;
 void (*simSdLatency)(size_t, bool) = nullptr;

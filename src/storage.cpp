@@ -519,6 +519,37 @@ FLASHMEM static void growPoolFile() {
   Serial.printf("recording space: %04u.DAT grown in pieces (%d of %d ready)\n", (unsigned)growingNumber, poolCount, POOL_SIZE);
 }
 
+// exFAT: the space preAllocate() reserves is past the file's valid length
+// (FAT32's sets the file's size), and SdFat reads, writes and seeks only up
+// to that - so a new file of recording space couldn't be given its size and
+// an exFAT card got none ("card full"). The valid length set to all of it,
+// as FAT32 has it (the reserved clusters' old contents, never played: a
+// recording's header says how much of the file it is); SdFat has no call for
+// that, so its private members are reached the standard-conforming way (an
+// explicit instantiation may name them; SdFat changing them breaks the build,
+// not the card). false: not done.
+#ifdef ARDUINO
+namespace {
+template <typename Tag, typename Tag::type M> struct Reach { friend typename Tag::type reach(Tag) { return M; } };
+struct XFile { typedef ExFatFile *FsBaseFile::*type; friend type reach(XFile); };
+struct XValid { typedef uint64_t ExFatFile::*type; friend type reach(XValid); };
+struct XFlags { typedef uint8_t ExFatFile::*type; friend type reach(XFlags); };
+template struct Reach<XFile, &FsBaseFile::m_xFile>;
+template struct Reach<XValid, &ExFatFile::m_validLength>;
+template struct Reach<XFlags, &ExFatFile::m_flags>;
+}
+static bool reservedIsData(FsFile &f) {
+  ExFatFile *x = static_cast<FsBaseFile &>(f).*reach(XFile());
+  if (!x) return true;                           // (FAT32: preAllocate() did it)
+  x->*reach(XValid()) = x->dataLength();
+  x->*reach(XFlags()) |= 0x80;                   // (FILE_FLAG_DIR_DIRTY: sync() writes the stream entry's valid length)
+  return f.sync() && f.fileSize() == x->dataLength();
+}
+#else
+static bool reservedIsData(FsFile &f) { return f.simReservedIsData(); }
+#endif
+bool reserveWhole(FsFile &f, uint64_t bytes) { return f.preAllocate(bytes) && reservedIsData(f); }
+
 FLASHMEM static bool createPoolFile() {
   if (poolCount >= POOL_SIZE || growing) return false;
   uint32_t number = freePoolNumber();
@@ -537,7 +568,7 @@ FLASHMEM static bool createPoolFile() {
     notePoolError("can't create DATA/NNNN.DAT");
     return false;
   }
-  bool pre = f.preAllocate(SAMPLE_FILE_BYTES);
+  bool pre = reserveWhole(f, SAMPLE_FILE_BYTES);
   if (!pre && !transport.running) {              // no run of free space that long: grown a piece at a time instead (stopped)
     growing = std::move(f);
     growingNumber = number;

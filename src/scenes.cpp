@@ -455,7 +455,7 @@ FLASHMEM static FsFile createProject(int p) {
   projectPath(path, sizeof path, p);
   FsFile f = SD.sdfs.open(path, O_RDWR | O_CREAT | O_TRUNC);
   if (!f) return f;
-  f.preAllocate(FILE_BYTES);
+  reserveWhole(f, FILE_BYTES);                   // (exFAT: preAllocate() alone leaves no seeking to its end)
   uint8_t zero = 0;
   f.seekSet(FILE_BYTES - 1);
   f.write(&zero, 1);

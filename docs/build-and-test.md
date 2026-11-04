@@ -52,6 +52,12 @@ c++ -std=c++17 -O1 -Wno-macro-redefined -Istubs -I../../src \
 ./looper_sim          # all checks + 5 random 600 s sessions; ./looper_sim 0 skips the fuzzing
 ```
 
+The stub card is exFAT, as SdFat has it: `preAllocate()` reserves space but
+doesn't extend the file, and there's no seeking past a file's end (its valid
+length); storage.cpp's `reserveWhole()` makes the reserved space part of the
+file. `LOOPER_FAT32=1 ./looper_sim` runs it all on a FAT32 card instead (seeks
+past the end allowed). Run both after a change to how files are made.
+
 It checks recording alignment and lengths, gapless playback, sync after every
 kind of change (`checkSync`: each beat starts on the right frame), ranges,
 clipboard, sample stepping, scenes (including bar-line and quick switching,

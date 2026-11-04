@@ -20,6 +20,7 @@
 
 extern std::string simRoot;
 extern bool simNoRun;   // preAllocate fails: no free run long enough
+extern bool simFat32;   // a FAT32 card (else exFAT: preAllocate() doesn't extend a file, no seek past its end)
 extern bool (*simFragmented)(unsigned long long inode);   // a file in pieces on the card (nullptr: none)
 extern int simFailIo;      // > 0: that many reads/writes fail (card stopped responding)
 extern int simReinits;
@@ -90,10 +91,11 @@ public:
     fflush(f_);    // SdFat shares one cache between handles: writes are visible to all readers
     return r;
   }
-  bool seekSet(uint64_t pos) { return f_ && fseek(f_, (long)pos, SEEK_SET) == 0; }
+  bool seekSet(uint64_t pos) { return f_ && (simFat32 || pos <= fileSize()) && fseek(f_, (long)pos, SEEK_SET) == 0; }   // (exFAT: not past the valid length)
   uint64_t curPosition() { return f_ ? (uint64_t)ftell(f_) : 0; }
   uint64_t fileSize() { long c = ftell(f_); fseek(f_, 0, SEEK_END); long s = ftell(f_); fseek(f_, c, SEEK_SET); return s; }
-  bool preAllocate(uint64_t) { return !simNoRun; }   // (simNoRun: the card's free space in pieces)
+  bool preAllocate(uint64_t n) { reserved_ = n; return !simNoRun; }   // (simNoRun: the card's free space in pieces)
+  bool simReservedIsData() { return f_ && ftruncate(fileno(f_), (off_t)reserved_) == 0; }   // (storage.cpp's exFAT valid length set to the reserved size)
   bool contiguousRange(uint32_t *, uint32_t *) {    // (in one piece unless the test says this file isn't)
     struct stat st;
     return f_ && !(simFragmented && fstat(fileno(f_), &st) == 0 && simFragmented((unsigned long long)st.st_ino));
@@ -107,6 +109,7 @@ public:
 private:
   void take(FsFile &o) { f_ = o.f_; dir_ = o.dir_; path_ = o.path_; name_ = o.name_; o.f_ = nullptr; o.dir_ = nullptr; }
   FILE *f_ = nullptr;
+  uint64_t reserved_ = 0;
   DIR *dir_ = nullptr;
   std::string path_, name_;
 };
@@ -122,7 +125,7 @@ public:
   bool begin(SdioConfig) { simReinits++; return true; }
   SdCard *card() { static SdCard c; return &c; }
   FsFile open(const char *path, int flags) { FsFile f; f.open(path, flags); return f; }
-  uint8_t fatType() { return 64; }   // (FAT_TYPE_EXFAT)
+  uint8_t fatType() { return simFat32 ? 32 : 64; }   // (FAT_TYPE_EXFAT unless simFat32)
   bool mkdir(const char *path) { return ::mkdir((simRoot + path).c_str(), 0755) == 0; }
   bool exists(const char *path) { struct stat st; return ::stat((simRoot + path).c_str(), &st) == 0; }
   uint32_t freeClusterCount() { return 1u << 20; }

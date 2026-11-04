@@ -70,6 +70,9 @@ const char *storageFailure();
 // The card: there and answering (none, or another one put in since: false);
 // started again (true: a card there now). Both stopped and idle only.
 bool cardResponds();
+// A new, empty file given `bytes` in one run of clusters, all of it readable,
+// writable and seekable (exFAT too: see storage.cpp). false: no run that long.
+bool reserveWhole(FsFile &f, uint64_t bytes);
 bool cardRestart();
 // Drops everything held from the card without touching it (storage mode: the
 // computer may have changed any file), the tracks emptied; storageBegin() and
