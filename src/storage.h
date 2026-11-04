@@ -65,6 +65,8 @@ bool smallWriteDue();                // an edit's small write may go now (playin
 // Mount SD, load saved tracks; prepares recording space the first time
 // (progress messages go to `progress`). false = no card / no space.
 bool storageBegin(void (*progress)(const char *));
+// Why it last returned false, for the screen (with a card answering: not none).
+const char *storageFailure();
 // The card: there and answering (none, or another one put in since: false);
 // started again (true: a card there now). Both stopped and idle only.
 bool cardResponds();

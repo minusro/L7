@@ -2030,7 +2030,11 @@ static bool sdBegin() {
 bool cardResponds() { return SD.sdfs.card() && SD.sdfs.card()->status() != 0; }
 bool cardRestart() { return sdBegin(); }
 
+// Why storageBegin() last returned false, the card answering (for the screen).
+static const char *failure = "SD card: can't be read.";
+
 FLASHMEM bool storageBegin(void (*progress)(const char *)) {
+  failure = "SD card: can't be read (is it FAT32 or exFAT?).";
   if (!sdBegin()) return false;
   if (!SD.sdfs.exists("/L7") && SD.sdfs.exists("/looper")) SD.sdfs.rename("/looper", "/L7");   // (the app's folder, renamed)
   SD.sdfs.mkdir("/L7");
@@ -2069,10 +2073,26 @@ FLASHMEM bool storageBegin(void (*progress)(const char *)) {
     Serial.printf("preparing recording space (%d of %d)...\n", poolCount + 1, POOL_SIZE);
     if (!createPoolFile()) break;
   }
+  // None ready and the card's free space in pieces (no 21 MB in one run): the
+  // first file grown here and now, a chunk at a time, rather than taken for a
+  // full card (the rest grow while stopped, as usual).
+  if (!poolCount && growing) {
+    if (progress) progress("Preparing recording space...");
+    while (growing) growPoolFile();
+  }
   openPoolNext();
   if (clipboard.sample && !sampleExists(clipboard.sample)) clipboard.sample = 0;   // (gone from the card: after storage mode)
+  if (!ok) failure = "SD card: can't write the track files in /L7/DATA.";
+  else if (!poolCount) {
+    static char msg[64];
+    snprintf(msg, sizeof msg, "Card full: %lu MB free, the looper needs ~100 MB.",
+             (unsigned long)((uint64_t)SD.sdfs.freeClusterCount() * SD.sdfs.bytesPerCluster() >> 20));
+    failure = msg;
+  }
   return ok && poolCount > 0;
 }
+
+const char *storageFailure() { return failure; }
 
 // Slow or failed SD transfers go to Serial with the card's error code. Writes
 // of 50-200 ms are normal for SD cards and covered by the buffers (~280 ms of

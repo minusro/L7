@@ -3747,6 +3747,25 @@ for f in os.listdir("."):
     check(files == 24 && full, m);
   }
 
+  printf("a card in pieces and no recording space yet: the first file grown at the start, not taken for a full card\n");
+  {
+    if (transport.running) transportStop();
+    runUntilIdle();
+    std::system(("rm -f " + simRoot + "/L7/DATA/[0-9][0-9][0-9][0-9].DAT").c_str());
+    simNoRun = true;
+    storageForget();
+    scenesForget();
+    bool began = storageBegin([](const char *) {});
+    scenesBegin(simTempo, simSetTempo, projectCurrent() < 0 ? 0 : projectCurrent(), simNewTempo);
+    struct stat st;
+    bool full = ::stat((simRoot + "/L7/DATA/0001.DAT").c_str(), &st) == 0 && (uint64_t)st.st_size >= 128ull * 44118 * 4;
+    char m[160];
+    snprintf(m, sizeof m, "started (%d), 0001.DAT full size (%d)", (int)began, (int)full);
+    check(began && full, m);
+    simNoRun = false;
+    for (int i = 0; i < 40000; i++) serviceStorage();   // (the rest made while stopped, as before)
+  }
+
   printf("random sessions\n");
   for (unsigned seed = 1; seed <= (argc > 1 ? atoi(argv[1]) : 5); seed++) fuzz(600, seed);
   for (auto &tr : tracks) tr.stretch = true;       // and one with every track stretched

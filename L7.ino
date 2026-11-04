@@ -174,7 +174,7 @@ static void reloadFromCard() {
     storageForget();
     scenesForget();
     if (storageBegin([](const char *msg) { Serial.println(msg); })) break;
-    if (cardResponds()) fatal("SD card full: the looper needs ~100 MB free in /L7.");
+    if (cardResponds()) fatal(storageFailure());
     waitForCard();
   }
   beginSession();
@@ -212,7 +212,7 @@ FLASHMEM void setup() {
     splashTick();
   };
   while (!storageBegin(progress)) {                  // (no card: wait for one)
-    if (cardResponds()) fatal("SD card full: the looper needs ~100 MB free in /L7.");
+    if (cardResponds()) fatal(storageFailure());
     storageForget();
     waitForCard();
     showSplash();
