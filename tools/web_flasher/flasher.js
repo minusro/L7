@@ -20,7 +20,7 @@ const els = {
   log: $('log'), file: $('file'), fileClear: $('file-clear'),
   downloads: $('downloads'), guide: $('guide'), cheatsheet: $('cheatsheet'),
   restore: $('restore'), restoreGo: $('restore-go'), restoreSlot: $('restore-slot'),
-  dwPage: $('dw-page'),
+  dwPage: $('dw-page'), restoreTitle: $('restore-title'),
 };
 
 const LOADER_FILTERS = [{ vendorId: HK.VENDOR_ID, productId: HK.LOADER_PRODUCT_ID }];
@@ -99,7 +99,8 @@ const localSource = {
 // Dirtywave's zip is fetched as soon as Restore is clicked, so it downloads
 // while the browser's device lists are open.
 const dirtywaveSource = {
-  label: "the M8's own firmware",
+  version: null, // read from the zip's file list when the page loads
+  get label() { return this.version ? `the M8 firmware ${this.version}` : "the M8's own firmware"; },
   m8Only: true,
   slot: () => els.restoreSlot,
   actions: () => els.restoreActions,
@@ -131,8 +132,8 @@ const dirtywaveSource = {
     log(`Dirtywave zip: ${(buf.byteLength / 1e6).toFixed(1)} MB, using ${entry.name}`);
     const fw = HK.parseHex(new TextDecoder().decode(await ZIP.extractZip(buf, entry)));
     checkBuiltFor(fw, board, name);
-    const version = ZIP.m8FirmwareVersion(name);
-    return { fw, label: version ? `the M8 firmware ${version}` : "the M8's own firmware" };
+    this.version = ZIP.m8FirmwareVersion(name) || this.version;
+    return { fw, label: this.label };
   },
 };
 
@@ -229,6 +230,34 @@ async function loadRelease() {
   if (release.docs?.cheatsheet) els.cheatsheet.href = release.docs.cheatsheet;
   els.dwPage.href = release.dirtywave?.page || DW_PAGE;
   refresh();
+  loadDirtywaveVersion();
+}
+
+// The version of Dirtywave's current firmware, for the Restore title: the
+// .hex names in the zip's file list say it, and the file list is at the end
+// of the zip, so only the last 64 KB are fetched (a plain "bytes=N-" Range,
+// which needs no CORS preflight; the zip's host refuses preflights).
+async function loadDirtywaveVersion() {
+  const url = release?.dirtywave?.zip;
+  if (!url) return;
+  try {
+    const head = await fetch(url, { method: 'HEAD', cache: 'no-cache' });
+    const size = Number(head.headers.get('content-length'));
+    if (!head.ok || !size) throw new Error(`HEAD ${head.status}, size ${size}`);
+    const start = Math.max(0, size - 65536);
+    const res = await fetch(url, { headers: { Range: `bytes=${start}-` }, cache: 'no-cache' });
+    if (res.status !== 206 && res.status !== 200) throw new Error(`HTTP ${res.status}`);
+    const entries = ZIP.listZip(await res.arrayBuffer(), res.status === 206 ? start : 0);
+    const hex = ZIP.m8FirmwareHex(entries, 'model01') || ZIP.m8FirmwareHex(entries, 'model02');
+    const version = hex && ZIP.m8FirmwareVersion(hex.name);
+    if (!version) throw new Error('no version in the file names');
+    dirtywaveSource.version = version;
+    els.restoreTitle.textContent = `Go back to the M8's own firmware (${version})`;
+    log(`Dirtywave firmware: ${version}`);
+    refresh();
+  } catch (e) {
+    log(`Dirtywave firmware version: ${e.message}`);
+  }
 }
 
 // ---- The M8 ------------------------------------------------------------------
@@ -340,7 +369,8 @@ async function flash(device, source) {
       signal: abort.signal,
       onProgress: (n, total) => {
         els.progress.value = n / total;
-        els.status.textContent = `Installing ${label}… ${Math.round((100 * n) / total)}%`;
+        const pct = Math.round((100 * n) / total);
+        els.status.textContent = pct ? `Installing ${label}… ${pct}%` : `Installing ${label}…`;
         els.status.dataset.kind = '';
       },
     });

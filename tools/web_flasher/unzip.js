@@ -8,8 +8,10 @@ const LOCAL_SIG = 0x04034b50;
 
 export class ZipError extends Error {}
 
-// [{ name, method, compressedSize, size, crc, offset }]
-export function listZip(buf) {
+// [{ name, method, compressedSize, size, crc, offset }]. buf can be just the
+// end of the zip (from a Range request) starting at byte `base` of it, as long
+// as it holds the whole central directory.
+export function listZip(buf, base = 0) {
   const bytes = new Uint8Array(buf);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   // The end-of-central-directory record is in the last 22 + 65535 bytes
@@ -19,7 +21,8 @@ export function listZip(buf) {
   }
   if (eocd < 0) throw new ZipError("The download isn't a zip file.");
   const count = view.getUint16(eocd + 10, true);
-  let p = view.getUint32(eocd + 16, true);
+  let p = view.getUint32(eocd + 16, true) - base;
+  if (p < 0) throw new ZipError("The zip's file list starts before the part that was read.");
   const names = new TextDecoder();
   const entries = [];
   for (let n = 0; n < count; n++) {
