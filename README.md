@@ -17,6 +17,10 @@ them as 1 to 32-bar loops, shape and mix them, keep combinations as scenes, and 
 
 ## Installing
 
+The easiest way is from **[danielstanciu.com/l7](https://danielstanciu.com/l7/)** in Chrome or Edge
+on a computer: connect the M8, click Install, and the page picks the right file for your model.
+Or by hand:
+
 1. Download the `.hex` for your M8 from the [latest release](https://github.com/minusro/L7/releases/latest):
    `L7-v…-M8-Model01.hex` or `L7-v…-M8-Model02.hex`.
 2. Connect the M8 to your computer over USB and switch it on.

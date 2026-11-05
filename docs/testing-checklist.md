@@ -6,6 +6,22 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **The install page, danielstanciu.com/l7 (2026-11-05).** Never run
+  against an M8 yet: halfkay.js is checked offline (check.mjs: both v1.0.2
+  .hex files parse to objcopy's image, the right model each), the WebHID and
+  Web Serial parts only by reading. On a Model:01 in Chrome on the Mac:
+  Install restarts the M8 into its loader from the first list (134 baud), the
+  second list shows the loader, "Found an M8 Model:01", progress to 100%, and
+  L7 starts with the clock set (a new recording's file date is right). Then:
+  Details shows "output report 1088 bytes"; a second Install right away skips
+  the first list if Chrome remembers the loader; pulling the cable mid-install
+  stops with an error and a re-run finishes it; a Model:02 .hex from "Install
+  a .hex file" is refused on a Model:01 before anything is written. Also
+  worth a try: Windows, Linux (udev rules), the M8 on Dirtywave's firmware
+  (does its serial port take the 134-baud restart?), a Model:02 (a user).
+  The workflow: first run after SITE_DEPLOY_KEY is set, and on the next
+  release.
+
 - [ ] **K6: the SONG arranger (2026-10-18).** Make a few clips, then on
   SONG: A adds a row after the cursor (duplicating it), A+U/D sets the
   scene, A+L/R the repeats - the label counts BARS in scene-span steps (a

@@ -1,0 +1,70 @@
+# Publishes the install page (tools/web_flasher) with the latest release's
+# firmware to danielstanciu.com/l7: the l7/ folder of the minusro.github.io
+# repo, pushed with the SITE_DEPLOY_KEY deploy key (write access to that repo
+# only). Runs when a release is published, when the page's code changes on
+# main, and by hand (Actions > Web flasher > Run workflow).
+name: Web flasher
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+    paths:
+      - 'tools/web_flasher/**'
+      - '.github/workflows/web-flasher.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: web-flasher
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the deploy key is set
+        env:
+          KEY: ${{ secrets.SITE_DEPLOY_KEY }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::The SITE_DEPLOY_KEY secret isn't set (see docs/build-and-test.md, 'The install page')"; exit 1; }
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build the page with the latest release's firmware
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/web_flasher/build_site.sh "$RUNNER_TEMP/l7"
+
+      - name: Check out the site
+        uses: actions/checkout@v4
+        with:
+          repository: minusro/minusro.github.io
+          ssh-key: ${{ secrets.SITE_DEPLOY_KEY }}
+          path: site
+
+      - name: Publish to danielstanciu.com/l7
+        working-directory: site
+        run: |
+          rsync -a --delete "$RUNNER_TEMP/l7/" l7/
+          git add -A l7
+          if git diff --cached --quiet; then
+            echo "The site already has this version."
+            exit 0
+          fi
+          version=$(jq -r .version l7/firmware/latest.json)
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "l7: install page with L7 $version (minusro/L7@${GITHUB_SHA::7})"
+          for attempt in 1 2 3; do
+            git pull --rebase && git push && exit 0
+            sleep 5
+          done
+          exit 1

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install L7 | Daniel Stanciu</title>
+  <meta name="description" content="Install L7, the multitrack looper for the Dirtywave M8, straight from your browser.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0f3471" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f2f0e6" media="(prefers-color-scheme: light)">
+  <link rel="canonical" href="https://danielstanciu.com/l7/">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/ibm-plex-sans-condensed-600-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-mono-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    /* The portfolio's blueprint palette and fonts (served from the site root) */
+    @font-face { font-family: "IBM Plex Mono"; font-weight: 400; font-display: swap; src: url("/fonts/ibm-plex-mono-400-latin.woff2") format("woff2"); }
+    @font-face { font-family: "IBM Plex Mono"; font-weight: 500; font-display: swap; src: url("/fonts/ibm-plex-mono-500-latin.woff2") format("woff2"); }
+    @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 400; font-display: swap; src: url("/fonts/ibm-plex-sans-condensed-400-latin.woff2") format("woff2"); }
+    @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 600; font-display: swap; src: url("/fonts/ibm-plex-sans-condensed-600-latin.woff2") format("woff2"); }
+
+    :root {
+      color-scheme: light dark;
+      --bg: light-dark(#f2f0e6, #0f3471);
+      --bg-raise: light-dark(#f7f6ef, #123a7c);
+      --fg: light-dark(#1b3d8c, #eef5ff);
+      --muted: light-dark(#4862a3, #b3cbee);
+      --line: light-dark(rgba(27, 61, 140, 0.18), rgba(238, 245, 255, 0.2));
+      --line-strong: light-dark(rgba(27, 61, 140, 0.5), rgba(238, 245, 255, 0.55));
+      --grid: light-dark(rgba(27, 61, 140, 0.07), rgba(238, 245, 255, 0.07));
+      --accent: light-dark(#cf3e2a, #ffd75e);
+      --ok: light-dark(#1d7a46, #8fe3b0);
+      --font-sans: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+      --g: 24px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: var(--g) var(--g);
+      color: var(--fg);
+      font: 400 17px/24px var(--font-sans);
+    }
+    main { max-width: 720px; margin: 0 auto; padding: calc(2 * var(--g)) 16px calc(3 * var(--g)); }
+    a { color: inherit; text-underline-offset: 3px; }
+    a:hover { color: var(--accent); }
+    .kicker { font: 500 13px/24px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+    .kicker a { text-decoration: none; }
+    .logo { display: block; margin: 24px 0 0; }
+    h1 { font: 600 48px/48px var(--font-sans); margin: 20px 0 24px; letter-spacing: -0.01em; }
+    h2 { font: 600 22px/24px var(--font-sans); margin: 0 0 12px; }
+    p { margin: 0 0 12px; }
+    .lede { font-size: 20px; line-height: 28px; color: var(--muted); max-width: 34em; }
+    .mono { font-family: var(--font-mono); font-size: 14px; }
+
+    .panel {
+      background: var(--bg-raise);
+      border: 1px solid var(--line-strong);
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .release { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; margin-bottom: 20px; }
+    .release strong { font: 600 22px/24px var(--font-sans); }
+    .release span { color: var(--muted); }
+
+    ol.before { margin: 0 0 20px; padding-left: 1.4em; }
+    ol.before li { margin-bottom: 6px; }
+    ol.before li::marker { font-family: var(--font-mono); color: var(--muted); }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    button {
+      font: 600 18px/24px var(--font-sans);
+      color: var(--bg);
+      background: var(--fg);
+      border: 0;
+      padding: 12px 20px;
+      cursor: pointer;
+    }
+    button:hover:not(:disabled) { background: var(--accent); color: light-dark(#fff, #0f3471); }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    button:disabled { opacity: 0.45; cursor: default; }
+    button.secondary { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-strong); }
+    button.secondary:hover:not(:disabled) { color: var(--accent); background: transparent; box-shadow: inset 0 0 0 1px var(--accent); }
+    .linkish { background: none; color: inherit; padding: 0; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
+    .linkish:hover:not(:disabled) { background: none; color: var(--accent); }
+
+    #status { margin: 20px 0 0; min-height: 24px; }
+    #status[data-kind="error"] { color: var(--accent); }
+    #status[data-kind="ok"] { color: var(--ok); font-weight: 600; }
+    progress {
+      display: block; width: 100%; height: 12px; margin-top: 12px;
+      appearance: none; border: 1px solid var(--line-strong); background: transparent;
+    }
+    progress::-webkit-progress-bar { background: transparent; }
+    progress::-webkit-progress-value { background: var(--fg); }
+    progress::-moz-progress-bar { background: var(--fg); }
+
+    details { border-top: 1px solid var(--line); padding: 12px 0 0; margin-top: 20px; }
+    details + details { margin-top: 12px; }
+    summary { cursor: pointer; color: var(--muted); }
+    summary:hover { color: var(--accent); }
+    #log { font: 400 12px/18px var(--font-mono); white-space: pre-wrap; word-break: break-word; margin: 12px 0 0; max-height: 240px; overflow: auto; color: var(--muted); }
+    #file-row { margin-top: 12px; }
+    input[type="file"] { font: inherit; max-width: 100%; }
+
+    .help h3 { font: 600 18px/24px var(--font-sans); margin: 20px 0 4px; }
+    .help h3:first-of-type { margin-top: 0; }
+    .downloads { list-style: none; padding: 0; margin: 0 0 12px; }
+    .downloads li { margin-bottom: 4px; }
+    code { font-family: var(--font-mono); font-size: 0.85em; }
+    footer { color: var(--muted); font-size: 15px; margin-top: 36px; }
+
+    @media (max-width: 520px) {
+      h1 { font-size: 36px; line-height: 40px; }
+      .lede { font-size: 18px; line-height: 26px; }
+      .panel { padding: 16px; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <p class="kicker"><a href="/">Daniel Stanciu</a> / L7</p>
+  <svg class="logo" viewBox="0 0 55 26" width="110" height="52" fill="currentColor" role="img" aria-label="L7">
+    <path d="M8.667,0 15.67,0 10.33,16 20.33,16 19.67,18 2.667,18Z"/>
+    <path d="M55,0 37,18 27,18 38,7 27.33,7 29.67,0Z"/>
+    <path d="M2,20 19,20 18.33,22 1.333,22Z"/>
+    <path d="M35,20 33,22 23,22 25,20Z"/>
+    <path d="M0.6667,24 17.67,24 17,26 0,26Z"/>
+    <path d="M31,24 29,26 19,26 21,24Z"/>
+  </svg>
+  <h1>Install L7 on your M8</h1>
+  <p class="lede">L7 is a 7-track stereo looper firmware for the Dirtywave M8. Install it from this page over USB, with nothing else to set up.</p>
+
+  <section class="panel" aria-labelledby="install-title">
+    <h2 id="install-title" hidden>Install</h2>
+    <div class="release" id="release"><span>Looking up the latest release…</span></div>
+
+    <div id="unsupported" hidden>
+      <p><strong>This browser can't talk to the M8.</strong> Installing from the page needs WebHID, which Chrome and Edge have on a computer (not on phones or tablets). Open this page in one of those, or install by hand with the steps under "Install without this page" below.</p>
+    </div>
+
+    <div id="flasher" hidden>
+      <ol class="before">
+        <li>Connect the M8 to this computer with a USB data cable, then switch it on.</li>
+        <li>Quit anything else that uses the M8 over USB: M8C, the headless display, Teensy Loader, TyCommander, a serial monitor.</li>
+        <li>Click Install. The browser asks twice: first for the M8, so the page can restart it into its loader, then for the loader itself. Pick the one entry each time.</li>
+      </ol>
+      <div class="actions">
+        <button id="go" disabled>Install</button>
+        <button id="pick" class="secondary" hidden>Select the loader</button>
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <progress id="progress" max="1" value="0" hidden></progress>
+
+      <details id="file-details">
+        <summary>Install a .hex file from your computer</summary>
+        <p>For a test build, or Dirtywave's firmware to go back. The page checks the file is for your M8's model before it writes anything.</p>
+        <div id="file-row">
+          <input type="file" id="file" accept=".hex">
+          <button id="file-clear" class="linkish" hidden>Use the latest release instead</button>
+        </div>
+      </details>
+      <details>
+        <summary>Details</summary>
+        <pre id="log"></pre>
+      </details>
+    </div>
+  </section>
+
+  <section class="help">
+    <h2>If something goes wrong</h2>
+    <h3>It's safe to try again</h3>
+    <p>The M8's loader sits on its own chip, and installing never overwrites it. If an install stops halfway, the M8 stays in its loader. Run it again and click "Select the loader". Installing doesn't touch the SD card, so your projects and recordings stay put.</p>
+    <h3>The M8 isn't in the first list</h3>
+    <p>Try another cable (some only charge). If the M8 is already in its loader (after a stopped install, for instance), close the list and click "Select the loader".</p>
+    <h3>"Couldn't open the M8's USB port"</h3>
+    <p>Another app has it. Quit M8C, Teensy Loader, TyCommander, the Arduino IDE's serial monitor, then try again.</p>
+    <h3>Linux</h3>
+    <p>Install PJRC's <a href="https://www.pjrc.com/teensy/00-teensy.rules">udev rules for Teensy</a> (the M8 is built around a Teensy), then unplug and replug the M8.</p>
+    <h3 id="manual">Install without this page</h3>
+    <p>Download the file for your M8 and open it in <a href="https://www.pjrc.com/teensy/loader.html">Teensy Loader</a>, the same way you'd install a Dirtywave firmware update:</p>
+    <ul class="downloads" id="downloads"><li>Looking up the latest release…</li></ul>
+  </section>
+
+  <footer>
+    <p><a href="https://github.com/minusro/L7">L7 on GitHub</a> · <a id="guide" href="https://github.com/minusro/L7/releases/latest">User guide</a> · <a id="cheatsheet" href="https://github.com/minusro/L7/releases/latest">Cheatsheet</a> · <a href="https://github.com/minusro/L7/releases">All releases</a> · <a href="/">danielstanciu.com</a></p>
+    <p>L7 is an independent project, not made by Dirtywave.</p>
+  </footer>
+</main>
+<script type="module" src="flasher.js"></script>
+</body>
+</html>

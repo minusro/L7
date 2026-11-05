@@ -262,3 +262,39 @@ for f in "guide:L7 User Guide" "cheatsheet:L7 Cheatsheet"; do
     --no-pdf-header-footer --print-to-pdf="docs/${f#*:}.pdf" "file://$PWD/docs/user-guide/${f%%:*}.html"
 done
 ```
+
+## The install page (`tools/web_flasher`, danielstanciu.com/l7)
+
+A page that installs L7 from Chrome or Edge with no Teensy Loader:
+`flasher.js` asks for the M8's serial port and opens it at 134 baud
+(Teensyduino's request to reboot into the loader), then asks for the loader
+(HalfKay, a HID device: VID 0x16C0 PID 0x0478) and writes the firmware over
+WebHID with `halfkay.js`, as PJRC's teensy_loader_cli and TyTools do (64-byte
+header + 1024-byte blocks, the first one erases, an 0xFFFFFF block reboots and
+sets the clock). The loader's HID usage names the board (0x24 Teensy 4.0 =
+Model:01, 0x26 MicroMod = Model:02) and the .hex names the one it's built for
+(the flash size in its FlexSPI config block), so the page picks the release
+file by itself and refuses a .hex built for the other model.
+
+GitHub's release downloads can't be fetched by another site's page (no CORS
+headers), so the page hosts the firmware: `.github/workflows/web-flasher.yml`
+runs `build_site.sh` (the page + the latest release's two .hex files +
+`firmware/latest.json`) and pushes it to `l7/` in the minusro.github.io repo.
+It runs when a release is published (a prerelease doesn't change "latest"),
+when `tools/web_flasher/` changes on main, and by hand from the Actions tab.
+The push uses the `SITE_DEPLOY_KEY` secret: the private half of a deploy key
+with write access to minusro.github.io only. To set it up (or replace it):
+
+```sh
+ssh-keygen -t ed25519 -N "" -C "L7 web flasher" -f /tmp/site_deploy
+gh repo deploy-key add /tmp/site_deploy.pub -R minusro/minusro.github.io --allow-write --title "L7 web flasher"
+gh secret set SITE_DEPLOY_KEY -R minusro/L7 < /tmp/site_deploy
+rm /tmp/site_deploy /tmp/site_deploy.pub
+```
+
+`node tools/web_flasher/check.mjs <file.hex>... --objcopy <arm-none-eabi-objcopy>`
+checks halfkay.js offline: the board each file is for, and its image against
+objcopy's, byte for byte. To try the page locally:
+`tools/web_flasher/build_site.sh /tmp/site/l7`, `python3 -m http.server` in
+/tmp/site, and http://localhost:8000/l7/ in Chrome (localhost counts as
+secure for WebHID; the fonts come from the portfolio, so they don't load).
