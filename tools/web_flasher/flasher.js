@@ -173,7 +173,7 @@ const dirtywaveSource = {
 
 // While the M8 waits in its loader, the clicked button turns into an outlined
 // Cancel and a filled "Upload <firmware>" goes beside it.
-// A chosen .hex works the same way: a filled "Install <file>" beside an
+// A chosen .hex (in the fold-out) shows a filled "Install <file>" beside an
 // outlined Cancel until it's clicked.
 function refresh() {
   const goWaits = awaiting === releaseSource;
@@ -182,8 +182,9 @@ function refresh() {
   els.go.disabled = busy || !release;
   els.restoreGo.textContent = awaiting === dirtywaveSource ? 'Cancel' : 'Restore the M8 firmware';
   els.restoreGo.disabled = busy || !release?.dirtywave?.zip;
-  els.fileGo.textContent = local ? 'Cancel' : 'Install a .hex file from your computer';
+  els.fileActions.hidden = !local;
   els.fileGo.disabled = busy;
+  els.file.disabled = busy;
   els.fileStart.hidden = !local || awaiting === localSource;
   if (local) els.fileStart.textContent = `Install ${local.name}`;
   els.fileStart.disabled = busy;
@@ -539,11 +540,9 @@ els.file.addEventListener('change', async () => {
   refresh();
 });
 
-// No file yet: choose one. A file chosen (or waiting for its loader): Cancel.
+// Cancel: forget the file (and stop waiting for its loader)
 els.fileGo.addEventListener('click', () => {
-  if (busy) return;
-  if (local) cancel();
-  else els.file.click();
+  if (!busy) cancel();
 });
 
 els.fileStart.addEventListener('click', () => start(localSource));
