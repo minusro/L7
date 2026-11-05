@@ -91,7 +91,6 @@
     .linkish:hover:not(:disabled) { background: none; color: var(--accent); }
 
     #console { margin-top: 20px; }
-    #pick { margin-bottom: 12px; }
     #status { margin: 0; min-height: 24px; }
     details.log { border-top: 0; margin: -12px 0 24px; padding-top: 0; }
     #status[data-kind="error"] { color: var(--accent); }
@@ -153,14 +152,14 @@
       <ol class="before">
         <li>Connect the M8 to this computer with a USB data cable, then switch it on.</li>
         <li>Quit anything else that uses the M8 over USB: M8C, the headless display, Teensy Loader, TyCommander, a serial monitor.</li>
-        <li>Click Install. The browser asks twice: first for the M8, so the page can restart it into its loader, then for the loader itself. Pick the one entry each time.</li>
+        <li>Click Install. The first time, the browser asks you to choose the M8 (the page restarts it into its loader), then the loader; pick the one entry each time. After that, Install goes straight through.</li>
       </ol>
-      <div class="actions">
+      <div class="actions" id="l7-actions">
+        <button id="pick" hidden>Upload</button>
         <button id="go" disabled>Install</button>
       </div>
       <div id="l7-slot">
         <div id="console">
-          <button id="pick" class="secondary" hidden>Select the loader</button>
           <p id="status" role="status" aria-live="polite"></p>
           <progress id="progress" max="1" value="0" hidden></progress>
         </div>
@@ -180,7 +179,7 @@
   <section class="panel" id="restore" hidden aria-labelledby="restore-title">
     <h2 id="restore-title">Go back to the M8's own firmware</h2>
     <p>Downloads the latest firmware from <a id="dw-page" href="https://dirtywave.com/pages/resources-downloads">Dirtywave's downloads page</a> and installs the file for your M8's model. It comes straight from Dirtywave to your browser; this site doesn't host it. Installing it means you agree to Dirtywave's licence (EULA.txt in their download).</p>
-    <div class="actions">
+    <div class="actions" id="restore-actions">
       <button id="restore-go" class="secondary" disabled>Restore the M8 firmware</button>
     </div>
     <div id="restore-slot"></div>
@@ -194,9 +193,11 @@
   <section class="help">
     <h2>If something goes wrong</h2>
     <h3>It's safe to try again</h3>
-    <p>The M8's loader sits on its own chip, and installing never overwrites it. If an install stops halfway, the M8 stays in its loader. Run it again and click "Select the loader". Installing doesn't touch the SD card, so your projects and recordings stay put, whichever firmware you install.</p>
-    <h3>The M8 isn't in the first list</h3>
-    <p>Try another cable (some only charge). If the M8 is already in its loader (after a stopped install, for instance), close the list and click "Select the loader".</p>
+    <p>The M8's loader sits on its own chip, and installing never overwrites it. If an install stops halfway, the M8 stays in its loader: click Upload to try again, or Install after reloading the page. Installing doesn't touch the SD card, so your projects and recordings stay put, whichever firmware you install.</p>
+    <h3>The M8 isn't in the list</h3>
+    <p>Try another cable (some only charge). If the M8 is already in its loader (after a stopped install, for instance), close the list and click Upload.</p>
+    <h3>The second list doesn't open</h3>
+    <p>The browser only opens it by itself for a few seconds after the click. If it doesn't, the page shows an Upload button: click it and choose the loader.</p>
     <h3>"Couldn't open the M8's USB port"</h3>
     <p>Another app has it. Quit M8C, Teensy Loader, TyCommander, the Arduino IDE's serial monitor, then try again.</p>
     <h3>Linux</h3>

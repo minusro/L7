@@ -15,7 +15,7 @@ const ZIP = await import('./unzip.js' + v);
 const $ = (id) => document.getElementById(id);
 const els = {
   release: $('release'), unsupported: $('unsupported'), flasher: $('flasher'),
-  go: $('go'), pick: $('pick'), status: $('status'), progress: $('progress'),
+  go: $('go'), pick: $('pick'), l7Actions: $('l7-actions'), restoreActions: $('restore-actions'), status: $('status'), progress: $('progress'),
   console: $('console'), l7Slot: $('l7-slot'),
   log: $('log'), file: $('file'), fileClear: $('file-clear'),
   downloads: $('downloads'), guide: $('guide'), cheatsheet: $('cheatsheet'),
@@ -29,7 +29,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let release = null;  // firmware/latest.json
 let local = null;    // { name, fw, board } when a .hex from the computer is chosen
-let pending = null;  // the source waiting for "Select the loader"
+let awaiting = null; // the source whose M8 is in its loader, waiting for Upload
 let busy = false;
 
 function log(msg) {
@@ -66,6 +66,8 @@ const releaseSource = {
   get label() { return release ? `L7 ${release.version}` : 'L7'; },
   m8Only: true,
   slot: () => els.l7Slot,
+  actions: () => els.l7Actions,
+  start: () => els.go,
   async firmware(board) {
     const entry = release?.firmware?.[board.key];
     if (!entry) throw new Error(`There's no L7 build for ${describe(board)} in this release.`);
@@ -86,6 +88,8 @@ const localSource = {
   get label() { return local?.name || 'the file'; },
   m8Only: false,
   slot: () => els.l7Slot,
+  actions: () => els.l7Actions,
+  start: () => els.go,
   async firmware(board) {
     checkBuiltFor(local.fw, board, local.name);
     return { fw: local.fw, label: local.name };
@@ -98,6 +102,8 @@ const dirtywaveSource = {
   label: "the M8's own firmware",
   m8Only: true,
   slot: () => els.restoreSlot,
+  actions: () => els.restoreActions,
+  start: () => els.restoreGo,
   download: null,
   start() {
     const url = release?.dirtywave?.zip;
@@ -134,13 +140,36 @@ const mainSource = () => (local ? localSource : releaseSource);
 
 // ---- Page state --------------------------------------------------------------
 
+// While the M8 waits in its loader, the clicked button turns into an outlined
+// Cancel and a filled "Upload <firmware>" goes beside it.
 function refresh() {
-  els.go.textContent = `Install ${mainSource().label}`;
+  const goWaits = awaiting && awaiting.start() === els.go;
+  const restoreWaits = awaiting === dirtywaveSource;
+  els.go.textContent = goWaits ? 'Cancel' : `Install ${mainSource().label}`;
+  els.go.classList.toggle('secondary', goWaits);
   els.go.disabled = busy || !(release || local);
+  els.restoreGo.textContent = restoreWaits ? 'Cancel' : 'Restore the M8 firmware';
   els.restoreGo.disabled = busy || !release?.dirtywave?.zip;
+  els.pick.hidden = !awaiting;
+  if (awaiting) els.pick.textContent = `Upload ${awaiting.label}`;
   els.pick.disabled = busy;
   els.file.disabled = busy;
   els.fileClear.hidden = !local;
+}
+
+function awaitLoader(source) {
+  awaiting = source;
+  source.actions().prepend(els.pick);
+  refresh();
+}
+
+// Back to how the page started (the M8 stays in its loader until it's
+// switched off and on, or something is uploaded)
+function cancel() {
+  awaiting = null;
+  els.progress.hidden = true;
+  say('');
+  refresh();
 }
 
 function setBusy(on) {
@@ -149,15 +178,14 @@ function setBusy(on) {
   refresh();
 }
 
-// The status line, progress bar and "Select the loader" follow the button
-// that was clicked.
+// The status line and progress bar follow the button that was clicked.
 function useSlot(source) {
   const slot = source.slot();
   if (els.console.parentElement !== slot) {
     slot.append(els.console);
     say('');
     els.progress.hidden = true;
-    els.pick.hidden = true;
+    awaiting = null;
   }
 }
 
@@ -220,17 +248,25 @@ async function waitForGrantedLoader(ms) {
   return null;
 }
 
-// Asks for the running M8's serial port and restarts it into the loader.
-// false if the person closed the list without choosing.
-async function restartIntoLoader() {
-  if (!('serial' in navigator)) return false;
-  let port;
+// The running M8's serial port: one the browser already allows this page
+// (from an earlier install) when there's exactly one, so no list is needed;
+// otherwise the browser's list. null if the person closed the list.
+async function m8Port() {
+  if (!('serial' in navigator)) return null;
+  const known = (await navigator.serial.getPorts()).filter((p) => p.getInfo().usbVendorId === HK.VENDOR_ID);
+  if (known.length === 1) return known[0];
+  say('Choose your M8 in the list. The page restarts it into its loader.');
   try {
-    port = await navigator.serial.requestPort({ filters: [{ usbVendorId: HK.VENDOR_ID }] });
+    return await navigator.serial.requestPort({ filters: [{ usbVendorId: HK.VENDOR_ID }] });
   } catch (e) {
-    if (e.name === 'NotFoundError') return false;
+    if (e.name === 'NotFoundError') return null;
     throw e;
   }
+}
+
+// Opening the port at 134 baud asks Teensyduino's USB code to reboot into
+// the loader.
+async function restartIntoLoader(port) {
   try {
     await port.open({ baudRate: 134 });
   } catch (e) {
@@ -239,7 +275,39 @@ async function restartIntoLoader() {
   }
   await sleep(200);
   try { await port.close(); } catch { /* it has usually gone by now */ }
-  return true;
+}
+
+// The loader, once the M8 has restarted into it: one the browser already
+// allows, or, while the click that started this still counts as one (Chrome
+// gives it about 5 s), the browser's list straight away, which shows the
+// loader as soon as it appears. null if neither: then the Upload button asks.
+// Waiting for an allowed loader costs time from that click, so the page only
+// waits long when this browser has allowed the loader before.
+const LOADER_ALLOWED = 'l7-flasher.loader-allowed';
+function rememberLoaderAllowed() {
+  try { localStorage.setItem(LOADER_ALLOWED, '1'); } catch { /* storage off: just waits less */ }
+}
+function loaderAllowedBefore() {
+  try { return localStorage.getItem(LOADER_ALLOWED) === '1'; } catch { return false; }
+}
+
+async function chooseLoader() {
+  const [device] = await navigator.hid.requestDevice({ filters: LOADER_FILTERS });
+  if (device) rememberLoaderAllowed();
+  return device || null;
+}
+
+async function findLoader() {
+  const known = await waitForGrantedLoader(loaderAllowedBefore() ? 3000 : 300);
+  if (known) return known;
+  if (!navigator.userActivation?.isActive) return null;
+  say("Choose the M8's loader in the list. It appears a moment after the M8 restarts.");
+  try {
+    return await chooseLoader();
+  } catch (e) {
+    log(`loader list: ${e.name}: ${e.message}`);
+    return null;
+  }
 }
 
 async function flash(device, source) {
@@ -286,75 +354,86 @@ async function flash(device, source) {
     navigator.hid.removeEventListener('disconnect', onGone);
     try { await device.close(); } catch { /* gone into the new firmware */ }
   }
-  els.pick.hidden = true;
-  pending = null;
+  awaiting = null;
   say(`Done. ${label[0].toUpperCase()}${label.slice(1)} is starting on your M8. If the screen stays dark, switch the M8 off and on.`, 'ok');
 }
 
-function fail(e) {
+function fail(e, source, inLoader = true) {
   console.error(e);
+  if (inLoader) awaitLoader(source);
   if (e?.name === 'NotFoundError') {
-    say('No loader chosen. Click "Select the loader" when the M8 is in its loader.');
+    say(`No loader chosen. Click "Upload ${source.label}" when the M8 is in its loader.`);
   } else if (e?.name === 'SecurityError' || e?.name === 'NotAllowedError') {
     say(`The browser blocked access to the M8 (${e.message}). Click the button again.`, 'error');
   } else {
     const fileProblem = e instanceof HK.HexError || e instanceof ZIP.ZipError || /Nothing was written/.test(e?.message);
     say(`${e?.message || e}${fileProblem ? '' : " It's safe to try again."}`, 'error');
   }
-  els.pick.hidden = false;
 }
 
+// One click: restart the M8 into its loader and install. The browser shows
+// a list for each device the page hasn't been allowed before (the M8, then
+// its loader), so a first install shows two and later ones none; if the
+// second list can't open by itself, the Upload button opens it.
 async function start(source) {
   if (busy) return;
   useSlot(source);
-  pending = source;
+  awaiting = null;
   setBusy(true);
+  let inLoader = false;
   try {
     let device = await grantedLoader();
     if (!device) {
-      say('Choose your M8 in the list. The page restarts it into its loader.');
-      const restarted = await restartIntoLoader();
-      if (restarted) {
+      const port = await m8Port();
+      if (port) {
+        await restartIntoLoader(port);
+        inLoader = true;
         say('Restarting the M8 into its loader…');
-        device = await waitForGrantedLoader(4000);
       }
+      device = port ? await findLoader() : null;
       if (!device) {
-        els.pick.hidden = false;
-        say(restarted
-          ? 'The M8 is in its loader. Click "Select the loader" and choose it in the list.'
-          : 'No M8 chosen. If it\'s already in its loader, click "Select the loader".');
+        awaitLoader(source);
+        say(port
+          ? `The M8 is in its loader. Click "Upload ${source.label}" and choose the loader in the list.`
+          : `No M8 chosen. If it's already in its loader, click "Upload ${source.label}".`);
         return;
       }
     }
+    inLoader = true;
     await flash(device, source);
   } catch (e) {
-    fail(e);
+    fail(e, source, inLoader);
   } finally {
     setBusy(false);
   }
 }
 
-els.go.addEventListener('click', () => start(mainSource()));
+els.go.addEventListener('click', () => {
+  if (busy) return;
+  if (awaiting && awaiting.start() === els.go) cancel();
+  else start(mainSource());
+});
 
 els.restoreGo.addEventListener('click', () => {
   if (busy) return;
+  if (awaiting === dirtywaveSource) return cancel();
   dirtywaveSource.start();
   start(dirtywaveSource);
 });
 
 els.pick.addEventListener('click', async () => {
   if (busy) return;
-  const source = pending || mainSource();
+  const source = awaiting || mainSource();
   setBusy(true);
   try {
-    const [device] = await navigator.hid.requestDevice({ filters: LOADER_FILTERS });
+    const device = await chooseLoader();
     if (!device) {
-      say('No loader chosen. If the list was empty, the M8 isn\'t in its loader yet: start again from the Install button.');
+      say('No loader chosen. If the list was empty, the M8 isn\'t in its loader yet: click Cancel and start again.');
       return;
     }
     await flash(device, source);
   } catch (e) {
-    fail(e);
+    fail(e, source);
   } finally {
     setBusy(false);
   }
@@ -369,7 +448,6 @@ els.file.addEventListener('change', async () => {
     const board = HK.identifyFirmware(fw);
     if (!board) throw new HK.HexError(`${file.name} isn't firmware for an M8.`);
     local = { name: file.name, fw, board };
-    pending = null;
     say(`Ready to install ${file.name}, built for ${describe(board)}.`);
   } catch (e) {
     local = null;
@@ -381,7 +459,7 @@ els.file.addEventListener('change', async () => {
 
 els.fileClear.addEventListener('click', () => {
   local = null;
-  pending = null;
+  awaiting = null;
   els.file.value = '';
   say('');
   refresh();

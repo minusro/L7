@@ -20,7 +20,11 @@ checked, or turn it into a fix.
   worth a try: Windows, Linux (udev rules), the M8 on Dirtywave's firmware
   (does its serial port take the 134-baud restart?), a Model:02 (a user).
   The workflow: first run after SITE_DEPLOY_KEY is set, and on the next
-  release.
+  release. One click: on a first install, does the loader's list open by
+  itself after choosing the M8 (if the M8 is chosen within ~5 s), and show
+  the loader as it appears? On a second install, does Install go straight
+  through with no lists (Chrome keeping the port and loader permissions)?
+  If not, the Upload/Cancel pair: Upload opens the list, Cancel goes back.
 - [ ] **Restore the M8 firmware, on the install page (2026-11-05).** Checked
   in headless Chrome: it downloads Dirtywave's zip from
   raw.githubusercontent.com, unpacks both models' (TyUploader).hex (6.6.3 F)

@@ -276,6 +276,17 @@ Model:01, 0x26 MicroMod = Model:02) and the .hex names the one it's built for
 (the flash size in its FlexSPI config block), so the page picks the release
 file by itself and refuses a .hex built for the other model.
 
+It's one click where the browser allows it. The browser shows a list for each
+device a page hasn't been allowed before, and opens one only within about
+5 s of a click (`navigator.userActivation`). So: a serial port allowed before
+(exactly one) is used without a list; after the restart, a loader allowed
+before is waited for (3 s if this browser has allowed one, a localStorage
+flag, else 0.3 s); otherwise the loader's list opens straight away while the
+click still counts, and shows the loader once it appears. A first install
+shows two lists, later ones none if Chrome keeps both permissions. When the
+second list can't open, the clicked button turns into Cancel (back to the
+start; the M8 stays in its loader) and a filled "Upload <firmware>" opens it.
+
 "Restore the M8 firmware" installs Dirtywave's own firmware the same way. The
 browser downloads Dirtywave's M8Firmware.zip itself (`unzip.js` reads it,
 `DecompressionStream('deflate-raw')` inflates it, its CRC-32 is checked) and
