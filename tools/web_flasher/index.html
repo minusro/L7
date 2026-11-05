@@ -108,8 +108,7 @@
     summary { cursor: pointer; color: var(--muted); }
     summary:hover { color: var(--accent); }
     #log { font: 400 12px/18px var(--font-mono); white-space: pre-wrap; word-break: break-word; margin: 12px 0 0; max-height: 240px; overflow: auto; color: var(--muted); }
-    #file-row { margin-top: 12px; }
-    input[type="file"] { font: inherit; max-width: 100%; }
+    #file-actions { margin-top: 12px; }
 
     .help h3 { font: 600 18px/24px var(--font-sans); margin: 20px 0 4px; }
     .help h3:first-of-type { margin-top: 0; }
@@ -164,15 +163,6 @@
           <progress id="progress" max="1" value="0" hidden></progress>
         </div>
       </div>
-
-      <details id="file-details">
-        <summary>Install a .hex file from your computer</summary>
-        <p>For a test build, or an older version of L7 or of the M8's firmware. The page checks the file is for your M8's model before it writes anything.</p>
-        <div id="file-row">
-          <input type="file" id="file" accept=".hex">
-          <button id="file-clear" class="linkish" hidden>Use the latest release instead</button>
-        </div>
-      </details>
     </div>
   </section>
 
@@ -183,6 +173,13 @@
       <button id="restore-go" class="secondary" disabled>Restore the M8 firmware</button>
     </div>
     <div id="restore-slot"></div>
+    <!-- A test build, or an older L7 or M8 firmware; checked against the M8's model before anything is written -->
+    <div class="actions" id="file-actions">
+      <button id="file-start" hidden>Install</button>
+      <button id="file-go" class="secondary" disabled>Install a .hex file from your computer</button>
+    </div>
+    <input type="file" id="file" accept=".hex" hidden>
+    <div id="file-slot"></div>
   </section>
 
   <details class="log">

@@ -17,7 +17,8 @@ const els = {
   release: $('release'), unsupported: $('unsupported'), flasher: $('flasher'),
   go: $('go'), pick: $('pick'), l7Actions: $('l7-actions'), restoreActions: $('restore-actions'), status: $('status'), progress: $('progress'),
   console: $('console'), l7Slot: $('l7-slot'),
-  log: $('log'), file: $('file'), fileClear: $('file-clear'),
+  log: $('log'), file: $('file'), fileGo: $('file-go'), fileStart: $('file-start'),
+  fileActions: $('file-actions'), fileSlot: $('file-slot'),
   downloads: $('downloads'), guide: $('guide'), cheatsheet: $('cheatsheet'),
   restore: $('restore'), restoreGo: $('restore-go'), restoreSlot: $('restore-slot'),
   dwPage: $('dw-page'), restoreTitle: $('restore-title'),
@@ -116,9 +117,9 @@ const localSource = {
   get label() { return local?.name || 'the file'; },
   kind: 'file',
   m8Only: false,
-  slot: () => els.l7Slot,
-  actions: () => els.l7Actions,
-  button: () => els.go,
+  slot: () => els.fileSlot,
+  actions: () => els.fileActions,
+  button: () => els.fileGo,
   async firmware(board) {
     checkBuiltFor(local.fw, board, local.name);
     return { fw: local.fw, label: local.name };
@@ -167,25 +168,28 @@ const dirtywaveSource = {
   },
 };
 
-const mainSource = () => (local ? localSource : releaseSource);
 
 // ---- Page state --------------------------------------------------------------
 
 // While the M8 waits in its loader, the clicked button turns into an outlined
 // Cancel and a filled "Upload <firmware>" goes beside it.
+// A chosen .hex works the same way: a filled "Install <file>" beside an
+// outlined Cancel until it's clicked.
 function refresh() {
-  const goWaits = awaiting && awaiting.button() === els.go;
-  const restoreWaits = awaiting === dirtywaveSource;
-  els.go.textContent = goWaits ? 'Cancel' : `Install ${mainSource().label}`;
+  const goWaits = awaiting === releaseSource;
+  els.go.textContent = goWaits ? 'Cancel' : `Install ${releaseSource.label}`;
   els.go.classList.toggle('secondary', goWaits);
-  els.go.disabled = busy || !(release || local);
-  els.restoreGo.textContent = restoreWaits ? 'Cancel' : 'Restore the M8 firmware';
+  els.go.disabled = busy || !release;
+  els.restoreGo.textContent = awaiting === dirtywaveSource ? 'Cancel' : 'Restore the M8 firmware';
   els.restoreGo.disabled = busy || !release?.dirtywave?.zip;
+  els.fileGo.textContent = local ? 'Cancel' : 'Install a .hex file from your computer';
+  els.fileGo.disabled = busy;
+  els.fileStart.hidden = !local || awaiting === localSource;
+  if (local) els.fileStart.textContent = `Install ${local.name}`;
+  els.fileStart.disabled = busy;
   els.pick.hidden = !awaiting;
   if (awaiting) els.pick.textContent = `Upload ${awaiting.label}`;
   els.pick.disabled = busy;
-  els.file.disabled = busy;
-  els.fileClear.hidden = !local;
 }
 
 function awaitLoader(source) {
@@ -198,6 +202,10 @@ function awaitLoader(source) {
 // switched off and on, or something is uploaded)
 function cancel() {
   if (awaiting) track(`${awaiting.kind}-cancel`);
+  if (awaiting === localSource || (!awaiting && local)) {
+    local = null;
+    els.file.value = '';
+  }
   awaiting = null;
   els.progress.hidden = true;
   say('');
@@ -483,8 +491,8 @@ async function start(source) {
 
 els.go.addEventListener('click', () => {
   if (busy) return;
-  if (awaiting && awaiting.button() === els.go) cancel();
-  else start(mainSource());
+  if (awaiting === releaseSource) cancel();
+  else start(releaseSource);
 });
 
 els.restoreGo.addEventListener('click', () => {
@@ -496,7 +504,7 @@ els.restoreGo.addEventListener('click', () => {
 
 els.pick.addEventListener('click', async () => {
   if (busy) return;
-  const source = awaiting || mainSource();
+  const source = awaiting || releaseSource;
   currentModel = null;
   setBusy(true);
   try {
@@ -522,7 +530,7 @@ els.file.addEventListener('change', async () => {
     const board = HK.identifyFirmware(fw);
     if (!board) throw new HK.HexError(`${file.name} isn't firmware for an M8.`);
     local = { name: file.name, fw, board };
-    say(`Ready to install ${file.name}, built for ${describe(board)}.`);
+    say(`${file.name} is built for ${describe(board)}.`);
   } catch (e) {
     local = null;
     els.file.value = '';
@@ -531,13 +539,14 @@ els.file.addEventListener('change', async () => {
   refresh();
 });
 
-els.fileClear.addEventListener('click', () => {
-  local = null;
-  awaiting = null;
-  els.file.value = '';
-  say('');
-  refresh();
+// No file yet: choose one. A file chosen (or waiting for its loader): Cancel.
+els.fileGo.addEventListener('click', () => {
+  if (busy) return;
+  if (local) cancel();
+  else els.file.click();
 });
+
+els.fileStart.addEventListener('click', () => start(localSource));
 
 if ('hid' in navigator && window.isSecureContext) {
   els.flasher.hidden = false;
