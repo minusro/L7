@@ -276,12 +276,25 @@ Model:01, 0x26 MicroMod = Model:02) and the .hex names the one it's built for
 (the flash size in its FlexSPI config block), so the page picks the release
 file by itself and refuses a .hex built for the other model.
 
+"Restore the M8 firmware" installs Dirtywave's own firmware the same way. The
+browser downloads Dirtywave's M8Firmware.zip itself (`unzip.js` reads it,
+`DecompressionStream('deflate-raw')` inflates it, its CRC-32 is checked) and
+takes `Firmware/Model0N/…(TyUploader).hex` for the model the loader names.
+This site never hosts that firmware: Dirtywave's EULA forbids hosting or
+redistributing it. The zip's address comes from latest.json: `build_site.sh`
+reads the link off dirtywave.com/pages/resources-downloads (a page the browser
+can't read, no CORS), follows it to where it lands (now
+raw.githubusercontent.com/DirtyWave/M8Firmware/main/M8Firmware.zip, which
+sends `Access-Control-Allow-Origin: *`; github.com's redirect to it doesn't),
+and warns in the workflow log if that stops allowing the download.
+
 GitHub's release downloads can't be fetched by another site's page (no CORS
 headers), so the page hosts the firmware: `.github/workflows/web-flasher.yml`
 runs `build_site.sh` (the page + the latest release's two .hex files +
 `firmware/latest.json`) and pushes it to `l7/` in the minusro.github.io repo.
 It runs when a release is published (a prerelease doesn't change "latest"),
-when `tools/web_flasher/` changes on main, and by hand from the Actions tab.
+when `tools/web_flasher/` changes on main, daily (for the Dirtywave link),
+and by hand from the Actions tab.
 The push uses the `SITE_DEPLOY_KEY` secret: the private half of a deploy key
 with write access to minusro.github.io only. To set it up (or replace it):
 
@@ -294,7 +307,9 @@ rm /tmp/site_deploy /tmp/site_deploy.pub
 
 `node tools/web_flasher/check.mjs <file.hex>... --objcopy <arm-none-eabi-objcopy>`
 checks halfkay.js offline: the board each file is for, and its image against
-objcopy's, byte for byte. To try the page locally:
+objcopy's, byte for byte; `--zip M8Firmware.zip` does the same for the two
+.hex files the page would take from Dirtywave's zip (unzip.js, inflating with
+Node's zlib). To try the page locally:
 `tools/web_flasher/build_site.sh /tmp/site/l7`, `python3 -m http.server` in
 /tmp/site, and http://localhost:8000/l7/ in Chrome (localhost counts as
 secure for WebHID; the fonts come from the portfolio, so they don't load).

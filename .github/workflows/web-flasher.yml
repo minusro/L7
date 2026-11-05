@@ -2,7 +2,9 @@
 # firmware to danielstanciu.com/l7: the l7/ folder of the minusro.github.io
 # repo, pushed with the SITE_DEPLOY_KEY deploy key (write access to that repo
 # only). Runs when a release is published, when the page's code changes on
-# main, and by hand (Actions > Web flasher > Run workflow).
+# main, daily (to pick up a change to the Dirtywave firmware link the page
+# downloads from; it commits only when something changed), and by hand
+# (Actions > Web flasher > Run workflow).
 name: Web flasher
 
 on:
@@ -13,6 +15,8 @@ on:
     paths:
       - 'tools/web_flasher/**'
       - '.github/workflows/web-flasher.yml'
+  schedule:
+    - cron: '23 5 * * *'
   workflow_dispatch:
 
 concurrency:

@@ -21,6 +21,15 @@ checked, or turn it into a fix.
   (does its serial port take the 134-baud restart?), a Model:02 (a user).
   The workflow: first run after SITE_DEPLOY_KEY is set, and on the next
   release.
+- [ ] **Restore the M8 firmware, on the install page (2026-11-05).** Checked
+  in headless Chrome: it downloads Dirtywave's zip from
+  raw.githubusercontent.com, unpacks both models' (TyUploader).hex (6.6.3 F)
+  and names their boards right; check.mjs --zip matches objcopy. Not run
+  against an M8: from L7, Restore goes through the same two lists, says
+  "Installing the M8 firmware 6.6.3 F", and the M8 starts its own firmware
+  with the SD card's projects untouched; then Install puts L7 back. If
+  Dirtywave changes the link on their downloads page, the daily workflow
+  run should pick it up (its log prints the address).
 
 - [ ] **K6: the SONG arranger (2026-10-18).** Make a few clips, then on
   SONG: A adds a row after the cursor (duplicating it), A+U/D sets the

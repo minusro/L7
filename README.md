@@ -29,8 +29,8 @@ Or by hand:
    and let it program the M8.
 
 L7 keeps everything on the SD card under `/L7` (projects, recordings,
-exports). To go back to the M8's own firmware, flash Dirtywave's firmware the
-same way.
+exports). To go back to the M8's own firmware, click "Restore the M8 firmware" on
+[the install page](https://danielstanciu.com/l7/), or flash Dirtywave's firmware the same way.
 
 ## The screen
 

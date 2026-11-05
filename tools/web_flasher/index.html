@@ -90,7 +90,10 @@
     .linkish { background: none; color: inherit; padding: 0; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
     .linkish:hover:not(:disabled) { background: none; color: var(--accent); }
 
-    #status { margin: 20px 0 0; min-height: 24px; }
+    #console { margin-top: 20px; }
+    #pick { margin-bottom: 12px; }
+    #status { margin: 0; min-height: 24px; }
+    details.log { border-top: 0; margin: -12px 0 24px; padding-top: 0; }
     #status[data-kind="error"] { color: var(--accent); }
     #status[data-kind="ok"] { color: var(--ok); font-weight: 600; }
     progress {
@@ -154,30 +157,44 @@
       </ol>
       <div class="actions">
         <button id="go" disabled>Install</button>
-        <button id="pick" class="secondary" hidden>Select the loader</button>
       </div>
-      <p id="status" role="status" aria-live="polite"></p>
-      <progress id="progress" max="1" value="0" hidden></progress>
+      <div id="l7-slot">
+        <div id="console">
+          <button id="pick" class="secondary" hidden>Select the loader</button>
+          <p id="status" role="status" aria-live="polite"></p>
+          <progress id="progress" max="1" value="0" hidden></progress>
+        </div>
+      </div>
 
       <details id="file-details">
         <summary>Install a .hex file from your computer</summary>
-        <p>For a test build, or Dirtywave's firmware to go back. The page checks the file is for your M8's model before it writes anything.</p>
+        <p>For a test build, or an older version of L7 or of the M8's firmware. The page checks the file is for your M8's model before it writes anything.</p>
         <div id="file-row">
           <input type="file" id="file" accept=".hex">
           <button id="file-clear" class="linkish" hidden>Use the latest release instead</button>
         </div>
       </details>
-      <details>
-        <summary>Details</summary>
-        <pre id="log"></pre>
-      </details>
     </div>
   </section>
+
+  <section class="panel" id="restore" hidden aria-labelledby="restore-title">
+    <h2 id="restore-title">Go back to the M8's own firmware</h2>
+    <p>Downloads the latest firmware from <a id="dw-page" href="https://dirtywave.com/pages/resources-downloads">Dirtywave's downloads page</a> and installs the file for your M8's model. It comes straight from Dirtywave to your browser; this site doesn't host it. Installing it means you agree to Dirtywave's licence (EULA.txt in their download).</p>
+    <div class="actions">
+      <button id="restore-go" class="secondary" disabled>Restore the M8 firmware</button>
+    </div>
+    <div id="restore-slot"></div>
+  </section>
+
+  <details class="log">
+    <summary>Details</summary>
+    <pre id="log"></pre>
+  </details>
 
   <section class="help">
     <h2>If something goes wrong</h2>
     <h3>It's safe to try again</h3>
-    <p>The M8's loader sits on its own chip, and installing never overwrites it. If an install stops halfway, the M8 stays in its loader. Run it again and click "Select the loader". Installing doesn't touch the SD card, so your projects and recordings stay put.</p>
+    <p>The M8's loader sits on its own chip, and installing never overwrites it. If an install stops halfway, the M8 stays in its loader. Run it again and click "Select the loader". Installing doesn't touch the SD card, so your projects and recordings stay put, whichever firmware you install.</p>
     <h3>The M8 isn't in the first list</h3>
     <p>Try another cable (some only charge). If the M8 is already in its loader (after a stopped install, for instance), close the list and click "Select the loader".</p>
     <h3>"Couldn't open the M8's USB port"</h3>

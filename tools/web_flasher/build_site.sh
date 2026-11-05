@@ -17,9 +17,11 @@ out=${1:?usage: build_site.sh <out dir> [<release tag>]}
 tag=${2:-}
 here=$(cd "$(dirname "$0")" && pwd)
 repo=${GITHUB_REPOSITORY:-minusro/L7}
-stamp=$(git -C "$here" rev-parse --short HEAD 2>/dev/null || date +%s)
 
 sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
+# The page's ?v= stamp: a hash of its code, so it changes only when the code
+# does (and an unchanged daily run commits nothing)
+stamp=$(cat "$here/index.html" "$here/flasher.js" "$here/halfkay.js" "$here/unzip.js" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -c1-10)
 
 # A release can be published before its files finish uploading: wait for both.
 json=
@@ -42,7 +44,29 @@ gh release download "$version" -R "$repo" -D "$out/firmware" -p "$m1" -p "$m2"
 
 # The page, with ?v= on its script so a deploy is never served a cached old one
 sed "s|src=\"flasher.js\"|src=\"flasher.js?v=$stamp\"|" "$here/index.html" > "$out/index.html"
-cp "$here/flasher.js" "$here/halfkay.js" "$out/"
+cp "$here/flasher.js" "$here/halfkay.js" "$here/unzip.js" "$out/"
+
+# Dirtywave's firmware: the page downloads it straight from Dirtywave (their
+# EULA rules out hosting it here), from the zip their downloads page links to.
+# That page can't be read from the browser (no CORS), so its link is looked up
+# here, followed to where it lands (a redirect without CORS headers would stop
+# the browser), and checked to allow the page's download.
+dw_page=https://dirtywave.com/pages/resources-downloads
+dw_fallback=https://raw.githubusercontent.com/DirtyWave/M8Firmware/main/M8Firmware.zip
+dw_links=$(curl -fsSL -A "Mozilla/5.0" "$dw_page" | grep -o -i -E 'href="[^"]+\.zip[^"]*"' | sed -E 's/^href="//; s/"$//; s/&amp;/\&/g' || true)
+dw_link=$(grep -i 'm8firmware' <<<"$dw_links" | head -1 || true)
+[ -n "$dw_link" ] || dw_link=$(head -1 <<<"$dw_links")
+case "$dw_link" in //*) dw_link="https:$dw_link" ;; /*) dw_link="https://dirtywave.com$dw_link" ;; esac
+if [ -z "$dw_link" ]; then
+  echo "::warning::No firmware zip link found on $dw_page; using $dw_fallback"
+  dw_link=$dw_fallback
+fi
+dw_zip=$(curl -fsSIL -o /dev/null -w '%{url_effective}' "$dw_link" || true)
+if ! curl -fsSI -H "Origin: https://danielstanciu.com" "${dw_zip:-$dw_link}" | grep -qi '^access-control-allow-origin: \*'; then
+  echo "::warning::$dw_link (landing at ${dw_zip:-?}) doesn't allow downloads from another site's page: the page's Restore will fail"
+fi
+dw_zip=${dw_zip:-$dw_link}
+echo "Dirtywave firmware: $dw_zip"
 
 entry() { jq -n --arg file "$1" --argjson bytes "$(wc -c < "$out/firmware/$1" | tr -d ' ')" --arg sha256 "$(sha256 "$out/firmware/$1")" '{$file, $bytes, $sha256}'; }
 jq -n \
@@ -53,7 +77,9 @@ jq -n \
   --arg cheatsheet "$(asset 'Cheatsheet\.pdf$' | jq -r '.url // empty')" \
   --argjson model01 "$(entry "$m1")" \
   --argjson model02 "$(entry "$m2")" \
-  '{$version, $published, $url, docs: {guide: (if $guide == "" then null else $guide end), cheatsheet: (if $cheatsheet == "" then null else $cheatsheet end)}, firmware: {$model01, $model02}}' \
+  --arg dw_page "$dw_page" \
+  --arg dw_zip "$dw_zip" \
+  '{$version, $published, $url, docs: {guide: (if $guide == "" then null else $guide end), cheatsheet: (if $cheatsheet == "" then null else $cheatsheet end)}, firmware: {$model01, $model02}, dirtywave: {page: $dw_page, zip: $dw_zip}}' \
   > "$out/firmware/latest.json"
 
 # Check the hosted files the way the page will read them

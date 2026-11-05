@@ -1,20 +1,44 @@
 // Offline check of halfkay.js against real firmware files:
-//   node tools/web_flasher/check.mjs <file.hex>... [--objcopy <arm-none-eabi-objcopy>]
+//   node tools/web_flasher/check.mjs <file.hex>... [--zip <M8Firmware.zip>] [--objcopy <arm-none-eabi-objcopy>]
 // For each file: parses it, names the board it's for, counts the blocks the
 // page would send, and (with --objcopy) compares the parsed image byte for byte
 // with objcopy's own conversion of the .hex. Also checks the boot report's
 // clock encoding against TyTools' arithmetic.
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { inflateRawSync } from 'node:zlib';
 import * as HK from './halfkay.js';
+import * as ZIP from './unzip.js';
 
 const args = process.argv.slice(2);
 const oi = args.indexOf('--objcopy');
 const objcopy = oi >= 0 ? args.splice(oi, 2)[1] : null;
 let failed = false;
 const fail = (msg) => { console.log(`  FAIL ${msg}`); failed = true; };
+
+// A Dirtywave M8Firmware.zip: find each model's .hex the way the page does,
+// unpack it (CRC-checked), and check it like any other .hex below.
+const zi = args.indexOf('--zip');
+if (zi >= 0) {
+  const zipFile = args.splice(zi, 2)[1];
+  const buf = readFileSync(zipFile);
+  const entries = ZIP.listZip(buf);
+  const dir = mkdtempSync(join(tmpdir(), 'm8zip-'));
+  process.on('exit', () => rmSync(dir, { recursive: true, force: true }));
+  for (const [model, want] of [['model01', HK.BOARDS.teensy40], ['model02', HK.BOARDS.teensyMM]]) {
+    const entry = ZIP.m8FirmwareHex(entries, model);
+    if (!entry) { fail(`${zipFile}: no .hex for ${model}`); continue; }
+    const data = await ZIP.extractZip(buf, entry, (d) => inflateRawSync(d));
+    const board = HK.identifyFirmware(HK.parseHex(new TextDecoder().decode(data)));
+    console.log(`${zipFile}: ${model} -> ${entry.name}, version ${ZIP.m8FirmwareVersion(entry.name)}, for ${board?.name}`);
+    if (board !== want) fail(`${entry.name} is not for a ${want.name}`);
+    const out = join(dir, `${model}.hex`);
+    writeFileSync(out, data);
+    args.push(out);
+  }
+}
 
 for (const file of args) {
   console.log(file);
