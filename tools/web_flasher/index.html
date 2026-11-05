@@ -115,6 +115,11 @@
     .downloads { list-style: none; padding: 0; margin: 0 0 12px; }
     .downloads li { margin-bottom: 4px; }
     code { font-family: var(--font-mono); font-size: 0.85em; }
+    .tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--line-strong); margin: 32px 0 0; }
+    .tabs a { font: 600 18px/24px var(--font-sans); color: var(--muted); text-decoration: none; padding: 0 0 10px; margin-bottom: -1px; border-bottom: 3px solid transparent; }
+    .tabs a:hover { color: var(--accent); }
+    .tabs a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--fg); }
+    #tab-help { min-height: 240px; }
     footer { color: var(--muted); font-size: 15px; margin-top: 36px; }
 
     @media (max-width: 520px) {
@@ -138,6 +143,12 @@
   <h1>Install L7 on your M8</h1>
   <p class="lede">L7 is a 7-track stereo looper firmware for the Dirtywave M8. Install it from this page over USB, with nothing else to set up.</p>
 
+  <nav class="tabs" aria-label="Page sections">
+    <a href="#install" id="tab-install-link" aria-current="page">Install</a>
+    <a href="#help" id="tab-help-link">Help</a>
+  </nav>
+
+  <div id="tab-install">
   <section class="panel" aria-labelledby="install-title">
     <h2 id="install-title" hidden>Install</h2>
     <div class="release" id="release"><span>Looking up the latest release…</span></div>
@@ -207,12 +218,32 @@
     <p>Download the file for your M8 and open it in <a href="https://www.pjrc.com/teensy/loader.html">Teensy Loader</a>, the same way you'd install a Dirtywave firmware update:</p>
     <ul class="downloads" id="downloads"><li>Looking up the latest release…</li></ul>
   </section>
+  </div>
+
+  <div id="tab-help" hidden></div>
+
 
   <footer>
     <p><a href="https://github.com/minusro/L7">L7 on GitHub</a> · <a id="guide" href="https://github.com/minusro/L7/releases/latest">User guide</a> · <a id="cheatsheet" href="https://github.com/minusro/L7/releases/latest">Cheatsheet</a> · <a href="https://github.com/minusro/L7/releases">All releases</a> · <a href="/">danielstanciu.com</a></p>
     <p>L7 is an independent project, not made by Dirtywave.</p>
   </footer>
 </main>
+<script>
+  // Install / Help tabs, by the address's #, so Help can be linked to
+  (function () {
+    function show() {
+      var help = location.hash === '#help';
+      document.getElementById('tab-install').hidden = help;
+      document.getElementById('tab-help').hidden = !help;
+      var on = document.getElementById(help ? 'tab-help-link' : 'tab-install-link');
+      var off = document.getElementById(help ? 'tab-install-link' : 'tab-help-link');
+      on.setAttribute('aria-current', 'page');
+      off.removeAttribute('aria-current');
+    }
+    addEventListener('hashchange', show);
+    show();
+  })();
+</script>
 <script type="module" src="flasher.js"></script>
 <!-- Visit and install counts, on their own GoatCounter site (no cookies,
      nothing stored on the device; local previews aren't counted) -->
