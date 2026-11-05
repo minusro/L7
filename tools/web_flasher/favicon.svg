@@ -1,20 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- The L7 logo in the portfolio favicon's paper and ink colours -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -14.5 55 55">
+  <!-- The L7 logo, full width, in the portfolio's ink colours -->
   <style>
-    rect { fill: #f2f0e6; }
     path { fill: #1b3d8c; }
     @media (prefers-color-scheme: dark) {
-      rect { fill: #0f3471; }
       path { fill: #eef5ff; }
     }
   </style>
-  <rect width="64" height="64" rx="14"/>
-  <g transform="translate(8.9 21.08) scale(0.84)">
-    <path d="M8.667,0 15.67,0 10.33,16 20.33,16 19.67,18 2.667,18Z"/>
-    <path d="M55,0 37,18 27,18 38,7 27.33,7 29.67,0Z"/>
-    <path d="M2,20 19,20 18.33,22 1.333,22Z"/>
-    <path d="M35,20 33,22 23,22 25,20Z"/>
-    <path d="M0.6667,24 17.67,24 17,26 0,26Z"/>
-    <path d="M31,24 29,26 19,26 21,24Z"/>
-  </g>
+  <path d="M8.667,0 15.67,0 10.33,16 20.33,16 19.67,18 2.667,18Z"/>
+  <path d="M55,0 37,18 27,18 38,7 27.33,7 29.67,0Z"/>
+  <path d="M2,20 19,20 18.33,22 1.333,22Z"/>
+  <path d="M35,20 33,22 23,22 25,20Z"/>
+  <path d="M0.6667,24 17.67,24 17,26 0,26Z"/>
+  <path d="M31,24 29,26 19,26 21,24Z"/>
 </svg>

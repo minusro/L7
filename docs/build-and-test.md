@@ -316,6 +316,17 @@ gh secret set SITE_DEPLOY_KEY -R minusro/L7 < /tmp/site_deploy
 rm /tmp/site_deploy /tmp/site_deploy.pub
 ```
 
+Visits and installs are counted on their own GoatCounter site,
+danielstanciu-l7.goatcounter.com (the portfolio's is danielstanciu), as events
+named `<kind>-<what>[-<model>]`: kind is `install` (the release), `restore`
+(Dirtywave's firmware) or `file`; what is `start`, `done`, `cancel`,
+`no-m8-chosen`, `upload-button` (the loader's list couldn't open by itself)
+or `fail-<code>` (`port-busy`, `download`, `write`, `disconnected`,
+`wrong-model`, `not-m8`, `loader-not-chosen`, `browser-blocked`, `bad-file`,
+... - the `StepError` codes in flasher.js; the event's title is the message
+shown); model is `model01`/`model02`. Also `download-model0N` (the manual
+.hex links) and `unsupported-browser`.
+
 `node tools/web_flasher/check.mjs <file.hex>... --objcopy <arm-none-eabi-objcopy>`
 checks halfkay.js offline: the board each file is for, and its image against
 objcopy's, byte for byte; `--zip M8Firmware.zip` does the same for the two

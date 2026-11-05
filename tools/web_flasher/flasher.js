@@ -57,26 +57,54 @@ async function sha256(buf) {
   return [...d].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// A failure with a short code for the install counts
+class StepError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+
+// GoatCounter events, on the page's own site (danielstanciu-l7.goatcounter.com).
+// count.js loads after the page and doesn't count on localhost; until it has
+// loaded, or if it's blocked, nothing is counted.
+function track(path, title = path) {
+  try {
+    window.goatcounter?.count?.({ path, title: String(title).slice(0, 200), event: true });
+  } catch { /* counting is best-effort */ }
+}
+
+function failCode(e) {
+  if (e instanceof StepError) return e.code;
+  if (e instanceof HK.HexError || e instanceof ZIP.ZipError) return 'bad-file';
+  if (e?.name === 'NotFoundError') return 'loader-not-chosen';
+  if (e?.name === 'SecurityError' || e?.name === 'NotAllowedError') return 'browser-blocked';
+  return 'other';
+}
+
+let currentModel = null; // the board found in the loader this attempt, for the counts
+
 function checkBuiltFor(fw, board, what) {
   const built = HK.identifyFirmware(fw);
-  if (built !== board) throw new Error(`${what} is built for ${built ? describe(built) : 'something else'}, but this is ${describe(board)}. Nothing was written.`);
+  if (built !== board) throw new StepError('wrong-model', `${what} is built for ${built ? describe(built) : 'something else'}, but this is ${describe(board)}. Nothing was written.`);
 }
 
 const releaseSource = {
   get label() { return release ? `L7 ${release.version}` : 'L7'; },
+  kind: 'install',
   m8Only: true,
   slot: () => els.l7Slot,
   actions: () => els.l7Actions,
-  start: () => els.go,
+  button: () => els.go,
   async firmware(board) {
     const entry = release?.firmware?.[board.key];
-    if (!entry) throw new Error(`There's no L7 build for ${describe(board)} in this release.`);
+    if (!entry) throw new StepError('no-build', `There's no L7 build for ${describe(board)} in this release.`);
     say(`Downloading ${entry.file}…`);
     const res = await fetch(`firmware/${entry.file}`);
-    if (!res.ok) throw new Error(`Couldn't download ${entry.file} (HTTP ${res.status}).`);
+    if (!res.ok) throw new StepError('download', `Couldn't download ${entry.file} (HTTP ${res.status}).`);
     const buf = await res.arrayBuffer();
     if (entry.sha256 && (await sha256(buf)) !== entry.sha256) {
-      throw new Error(`${entry.file} didn't download intact. Reload the page and try again.`);
+      throw new StepError('download', `${entry.file} didn't download intact. Reload the page and try again.`);
     }
     const fw = HK.parseHex(new TextDecoder().decode(buf));
     checkBuiltFor(fw, board, entry.file);
@@ -86,10 +114,11 @@ const releaseSource = {
 
 const localSource = {
   get label() { return local?.name || 'the file'; },
+  kind: 'file',
   m8Only: false,
   slot: () => els.l7Slot,
   actions: () => els.l7Actions,
-  start: () => els.go,
+  button: () => els.go,
   async firmware(board) {
     checkBuiltFor(local.fw, board, local.name);
     return { fw: local.fw, label: local.name };
@@ -101,12 +130,13 @@ const localSource = {
 const dirtywaveSource = {
   version: null, // read from the zip's file list when the page loads
   get label() { return this.version ? `the M8 firmware ${this.version}` : "the M8's own firmware"; },
+  kind: 'restore',
   m8Only: true,
   slot: () => els.restoreSlot,
   actions: () => els.restoreActions,
-  start: () => els.restoreGo,
+  button: () => els.restoreGo,
   download: null,
-  start() {
+  prefetch() {
     const url = release?.dirtywave?.zip;
     if (!url) return;
     this.download = fetch(url, { cache: 'no-cache' }).then(async (res) => {
@@ -116,18 +146,18 @@ const dirtywaveSource = {
     this.download.catch(() => {}); // reported when it's awaited
   },
   async firmware(board) {
-    if (!this.download) this.start();
-    if (!this.download) throw new Error("The page doesn't know where Dirtywave's firmware is. Reload it and try again.");
+    if (!this.download) this.prefetch();
+    if (!this.download) throw new StepError('download', "The page doesn't know where Dirtywave's firmware is. Reload it and try again.");
     say("Downloading the M8's firmware from Dirtywave…");
     let buf;
     try {
       buf = await this.download;
     } catch (e) {
       this.download = null;
-      throw new Error(`Couldn't download the firmware from Dirtywave (${e.message}).`);
+      throw new StepError('download', `Couldn't download the firmware from Dirtywave (${e.message}).`);
     }
     const entry = ZIP.m8FirmwareHex(ZIP.listZip(buf), board.key);
-    if (!entry) throw new Error(`Dirtywave's download has no .hex for the M8 ${board.m8}. Nothing was written.`);
+    if (!entry) throw new StepError('zip-no-hex', `Dirtywave's download has no .hex for the M8 ${board.m8}. Nothing was written.`);
     const name = entry.name.split('/').pop();
     log(`Dirtywave zip: ${(buf.byteLength / 1e6).toFixed(1)} MB, using ${entry.name}`);
     const fw = HK.parseHex(new TextDecoder().decode(await ZIP.extractZip(buf, entry)));
@@ -144,7 +174,7 @@ const mainSource = () => (local ? localSource : releaseSource);
 // While the M8 waits in its loader, the clicked button turns into an outlined
 // Cancel and a filled "Upload <firmware>" goes beside it.
 function refresh() {
-  const goWaits = awaiting && awaiting.start() === els.go;
+  const goWaits = awaiting && awaiting.button() === els.go;
   const restoreWaits = awaiting === dirtywaveSource;
   els.go.textContent = goWaits ? 'Cancel' : `Install ${mainSource().label}`;
   els.go.classList.toggle('secondary', goWaits);
@@ -167,6 +197,7 @@ function awaitLoader(source) {
 // Back to how the page started (the M8 stays in its loader until it's
 // switched off and on, or something is uploaded)
 function cancel() {
+  if (awaiting) track(`${awaiting.kind}-cancel`);
   awaiting = null;
   els.progress.hidden = true;
   say('');
@@ -223,6 +254,7 @@ async function loadRelease() {
     const f = release.firmware[board.key];
     const li = document.createElement('li');
     const a = Object.assign(document.createElement('a'), { href: `firmware/${f.file}`, download: f.file, textContent: f.file });
+    a.addEventListener('click', () => track(`download-${board.key}`, f.file));
     li.append(`M8 ${board.m8}: `, a);
     els.downloads.append(li);
   }
@@ -300,7 +332,7 @@ async function restartIntoLoader(port) {
     await port.open({ baudRate: 134 });
   } catch (e) {
     log(`serial open: ${e.message}`);
-    throw new Error("Couldn't open the M8's USB port. Another app is probably using it: quit M8C, Teensy Loader or any serial monitor, then try again.");
+    throw new StepError('port-busy', "Couldn't open the M8's USB port. Another app is probably using it: quit M8C, Teensy Loader or any serial monitor, then try again.");
   }
   await sleep(200);
   try { await port.close(); } catch { /* it has usually gone by now */ }
@@ -346,15 +378,16 @@ async function flash(device, source) {
   const outBits = col?.outputReports?.[0]?.items?.reduce((n, i) => n + i.reportSize * i.reportCount, 0);
   log(`loader: usage 0x${col?.usage?.toString(16)}, output report ${outBits / 8} bytes`);
   if (!board) {
-    throw new Error("This loader belongs to a board the page doesn't know. It installs on the M8 Model:01 and Model:02 only.");
+    throw new StepError('unknown-board', "This loader belongs to a board the page doesn't know. It installs on the M8 Model:01 and Model:02 only.");
   }
   if (source.m8Only && !board.m8) {
-    throw new Error(`That's a ${board.name}, not an M8. This installs on the M8 Model:01 and Model:02.`);
+    throw new StepError('not-m8', `That's a ${board.name}, not an M8. This installs on the M8 Model:01 and Model:02.`);
   }
+  currentModel = board.m8 ? board.key : board.id;
   say(`Found ${describe(board)}.`);
 
   const { fw, label } = await source.firmware(board);
-  if (fw.size > board.codeSize) throw new Error(`The firmware is too big for a ${board.name}.`);
+  if (fw.size > board.codeSize) throw new StepError('too-big', `The firmware is too big for a ${board.name}.`);
 
   const abort = new AbortController();
   const onGone = (e) => { if (e.device === device) abort.abort(); };
@@ -365,15 +398,20 @@ async function flash(device, source) {
     els.progress.value = 0;
     say("Erasing the M8's flash. This takes a few seconds…");
     const started = Date.now();
-    const blocks = await HK.upload(fw, send, {
-      signal: abort.signal,
-      onProgress: (n, total) => {
-        els.progress.value = n / total;
-        const pct = Math.round((100 * n) / total);
-        els.status.textContent = pct ? `Installing ${label}… ${pct}%` : `Installing ${label}…`;
-        els.status.dataset.kind = '';
-      },
-    });
+    let blocks;
+    try {
+      blocks = await HK.upload(fw, send, {
+        signal: abort.signal,
+        onProgress: (n, total) => {
+          els.progress.value = n / total;
+          const pct = Math.round((100 * n) / total);
+          els.status.textContent = pct ? `Installing ${label}… ${pct}%` : `Installing ${label}…`;
+          els.status.dataset.kind = '';
+        },
+      });
+    } catch (e) {
+      throw new StepError(abort.signal.aborted ? 'disconnected' : 'write', e.message);
+    }
     log(`wrote ${blocks} blocks in ${((Date.now() - started) / 1000).toFixed(1)} s`);
     try {
       await HK.boot(send);
@@ -385,11 +423,13 @@ async function flash(device, source) {
     try { await device.close(); } catch { /* gone into the new firmware */ }
   }
   awaiting = null;
+  track(`${source.kind}-done-${currentModel}`, `${label} on ${describe(board)}`);
   say(`Done. ${label[0].toUpperCase()}${label.slice(1)} is starting on your M8. If the screen stays dark, switch the M8 off and on.`, 'ok');
 }
 
 function fail(e, source, inLoader = true) {
   console.error(e);
+  track(`${source.kind}-fail-${failCode(e)}${currentModel ? `-${currentModel}` : ''}`, e?.message || e);
   if (inLoader) awaitLoader(source);
   if (e?.name === 'NotFoundError') {
     say(`No loader chosen. Click "Upload ${source.label}" when the M8 is in its loader.`);
@@ -409,7 +449,9 @@ async function start(source) {
   if (busy) return;
   useSlot(source);
   awaiting = null;
+  currentModel = null;
   setBusy(true);
+  track(`${source.kind}-start`, `Clicked: ${source.label}`);
   let inLoader = false;
   try {
     let device = await grantedLoader();
@@ -423,6 +465,7 @@ async function start(source) {
       device = port ? await findLoader() : null;
       if (!device) {
         awaitLoader(source);
+        track(port ? `${source.kind}-upload-button` : `${source.kind}-no-m8-chosen`);
         say(port
           ? `The M8 is in its loader. Click "Upload ${source.label}" and choose the loader in the list.`
           : `No M8 chosen. If it's already in its loader, click "Upload ${source.label}".`);
@@ -440,20 +483,21 @@ async function start(source) {
 
 els.go.addEventListener('click', () => {
   if (busy) return;
-  if (awaiting && awaiting.start() === els.go) cancel();
+  if (awaiting && awaiting.button() === els.go) cancel();
   else start(mainSource());
 });
 
 els.restoreGo.addEventListener('click', () => {
   if (busy) return;
   if (awaiting === dirtywaveSource) return cancel();
-  dirtywaveSource.start();
+  dirtywaveSource.prefetch();
   start(dirtywaveSource);
 });
 
 els.pick.addEventListener('click', async () => {
   if (busy) return;
   const source = awaiting || mainSource();
+  currentModel = null;
   setBusy(true);
   try {
     const device = await chooseLoader();
@@ -503,6 +547,8 @@ if ('hid' in navigator && window.isSecureContext) {
   });
 } else {
   els.unsupported.hidden = false;
+  // count.js may not have loaded yet
+  window.addEventListener('load', () => setTimeout(() => track('unsupported-browser', 'Browser without WebHID'), 1000));
 }
 refresh();
 loadRelease();
