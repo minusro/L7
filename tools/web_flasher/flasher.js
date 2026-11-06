@@ -177,7 +177,7 @@ const dirtywaveSource = {
 // outlined Cancel until it's clicked.
 function refresh() {
   const goWaits = awaiting === releaseSource;
-  els.go.textContent = goWaits ? 'Cancel' : `Install ${releaseSource.label}`;
+  els.go.textContent = goWaits ? 'Cancel' : 'Install';   // the version is in the panel's title
   els.go.classList.toggle('secondary', goWaits);
   els.go.disabled = busy || !release;
   els.restoreGo.textContent = awaiting === dirtywaveSource ? 'Cancel' : 'Restore the M8 firmware';
