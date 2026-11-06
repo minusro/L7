@@ -87,6 +87,7 @@
 #include "src/midi_in.h"
 #include "src/midi_usb.h"
 #include "src/audio_follow.h"
+#include "src/m02_diag.h"
 
 AudioInputI2S        i2sIn;
 LooperEngine         engine;
@@ -203,6 +204,9 @@ FLASHMEM void setup() {
   codec.inputSelect(AUDIO_INPUT_LINEIN);
   codec.lineInLevel(5);
   codec.volume(0.6f);
+#if M02_DIAG
+  m02Diag();                                         // (a diagnostic build: src/m02_diag.h. Never returns)
+#endif
 
   board.tft().setTextWrap(false);
   showSplash();

@@ -196,6 +196,13 @@ TTTTT000000TTTTT
 
 # Backlog
 
+- model 02 mic input - waiting on the line-in sense diagnostic (wip/, 2026-11-06)
+	- the mic used when nothing is in line in; never monitored, but recorded; resampling leaves it out (it isn't in the mix), line input still in
+	- USB audio with no line input: USB monitored (no mic), recorded with the mic
+	- audio follow hears the mic too; the speaker stays on while recording it
+	- a MIC mark on the recording track (the empty one ready to record, and while recording) - placement: from renders
+	- how to tell nothing's in line in: a sense pin if the diagnostic finds one; if not, an AUTO / LINE / MIC setting (AUTO: line silent ~2 s between recordings -> mic, peeking at line every few s)
+	- mic at Dirtywave's settings: +30 dB preamp, bias on, +12 dB ADC (HARDWARE.md)
 - model 02 (480x320) - the screens are all laid out and the board is mapped; the board layer itself is not written
 	- the board is a Teensy MicroMod, and in the stock firmware it is "variant 2": everything but the display is Model:01 variant B's (keys SX1508 on Wire, INT 15; touch INT 16, chip ID 0x36; hp sense 22, speaker 9; charger INT 2; backlight pin 4 at 44.1 kHz) - docs/HARDWARE.md, the Model:02 section
 	- display: ILI9488 on SPI, D/C on pin 10 (the hardware CS pin; no CS line - unverified), RST 5, 56 MHz, rotation 3, its own init table (in HARDWARE.md); 18 bits a pixel, so the RGB565 buffers need expanding on the wire - measure that against the SD streaming first

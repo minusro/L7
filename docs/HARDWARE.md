@@ -198,6 +198,23 @@ pin 40 pulsed LOW. And the RGB666 path under the drawing code.
 `PINS_M02`, the lines above at boot, and `src/ili9488_spi.h` for the panel - D/C on pin 10 driven as a plain
 output, no CS line, the init table above, 56 MHz, rotation 3, inversion on. Untested, every word of it.
 
+## The built-in mic, and no line-in sense
+
+Read out of `M8_V6_6_3F_MODEL02.bin` (6.6.3F: the addresses here are that image's, not 6.6.3C's).
+
+| Item | Value | Confidence |
+|---|---|---|
+| Codec | SGTL5000 on `Wire` (Teensy audio shield wiring), as on the Model:01 | confirmed (L7 drives it) |
+| Mic | on the codec's **MIC input**, chosen in software (`ANA_CTRL` bit 2: line or mic). **One ADC**: the codec hears the line input or the mic, never both at once | confirmed |
+| Stock mic settings | `inputSelect(MIC)`, then `micGain(30)`, then `lineInLevel(8, 8)`: `MIC_CTRL 0x172` (+30 dB preamp, bias on: 2 kOhm, 3.0 V) and `ANA_ADC_CTRL 0x88` (+12 dB). Its line input ends at `0x88` too; L7's runs at `0x55` | confirmed |
+| When the stock firmware uses it | only when chosen: a sampler recording source (line, USB or mic), and a measuring routine that runs on the Model:02 alone (`variant == 2`). It never switches to it by itself | confirmed |
+| Line-in plug sense | **none that the stock firmware reads.** No `digitalRead` in the image; its three analog reads are the battery voltage (variant A's, shared code), the headphone sense and the random seed; its direct GPIO reads (pins 2, 5, 14, 15, 24) are all in the Model:01 image too: keys and charger. A sense wired to a pin it ignores is still possible: `src/m02_diag.h` looks for one on a device | confirmed (the firmware); open (the board) |
+
+| What | Address (6.6.3F) |
+|---|---|
+| The app's line/mic switch (`this`, `bool mic`; the flag kept at `this+0x1A0`) | `0x60039860` |
+| SGTL5000 `write(reg, val)` / `micGain()` / `lineInLevel(l, r)` | `0x600AD93C` / `0x600ADB18` / `0x600ADB94` |
+
 ## Where to look in the Model:02 image (6.6.3C; flash = `0x60000000` + file offset)
 
 | What | Address |
