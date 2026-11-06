@@ -375,9 +375,25 @@ static uint32_t itemKey(int k) {
 // (storage.h defragSamples(), shown alike: the bar, then "DEFRAGGED N
 // SAMPLES"), and after that's gone, DELETE UNUSED SAMPLES again; opening the
 // popup: DELETE first.
+#if M8_MODEL == 2
+// The Model:02: AUDIO IN at the bottom, under MONITOR AUDIO IN (where the
+// input comes from, then whether it's heard), the on/off settings an item up
+// (item i: setting i - SET_FIRST). A or B steps it AUTO, LINE, MIC; in AUTO
+// it says which it's on now.
+static const char *const SET_LABELS[SETTING_COUNT + 2] = {"AUDIO IN", "MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
+                                                          "EMPTY PROJECT CLICK", "DELETE UNUSED SAMPLES"};
+static constexpr int SET_AUDIO_IN = 0, SET_FIRST = 1;
+static constexpr int SET_ITEMS = SETTING_COUNT + 2, SET_PITCH = 10, SET_REMOVE = SETTING_COUNT + 1;
+static const char *audioInLabel() {
+  if (audioIn() == AUDIO_IN_LINE) return "LINE";
+  if (audioIn() == AUDIO_IN_MIC) return "MIC";
+  return micIsInput ? "AUTO: MIC" : "AUTO: LINE";
+}
+#else
 static const char *const SET_LABELS[SETTING_COUNT + 1] = {"MONITOR AUDIO IN", "PLAY NEWLY RECORDED", "SELECT NEXT FREE TRACK",
                                                           "EMPTY PROJECT CLICK", "DELETE UNUSED SAMPLES"};
 static constexpr int SET_ITEMS = SETTING_COUNT + 1, SET_PITCH = 10, SET_REMOVE = SETTING_COUNT;
+#endif
 static int removedCount = -1;                    // (the command's result, until the popup closes; -1: not run)
 static bool defragItem = false;                  // (the command: DEFRAG SAMPLES, after a clean-up)
 static bool resultDefrag = false;                // (the result shown: a defrag's)
@@ -402,7 +418,11 @@ static int setRow(int i, int yb) { return yb - i * SET_PITCH; }
 static void setLayout(int &x, int &yb, int &w) {
   int lw = 0;
   for (const char *l : SET_LABELS) lw = max(lw, textWidth(l) / PX);
+#if M8_MODEL == 2
+  w = lw + 4 + textWidth("AUTO: LINE") / PX;       // (AUDIO IN's widest value)
+#else
   w = lw + 4 + textWidth("OFF") / PX;
+#endif
   x = (SCREEN_W / PX - w) / 2;
   yb = itemShape(CARDS + MENU_SETTINGS).y - 17;   // (its border 8 rows above SETTINGS' label: the arrow between)
 }
@@ -453,6 +473,9 @@ FLASHMEM static void drawSettings(bool whole) {
   uint16_t frame = setPressAt && millis() - setPressAt < PRESS_FLASH_MS ? LIGHT : actionHeld() ? DARK : frameColor();
   uint32_t key = setSel | (uint32_t)frame << 8;
   for (int i = 0; i < SETTING_COUNT; i++) key |= (uint32_t)setting(i) << (3 + i);
+#if M8_MODEL == 2
+  key ^= (uint32_t)(audioIn() * 2 + micIsInput + 1) * 0x9E3779B1u;   // (AUDIO IN, and AUTO's input now)
+#endif
   key ^= (uint32_t)(removedCount + 1) * 2654435761u ^ (uint32_t)(removingPct + 2) * 40503u ^ (uint32_t)defragItem << 31;
   if (key == shownKey) return;
   shownKey = key;
@@ -460,7 +483,11 @@ FLASHMEM static void drawSettings(bool whole) {
     for (int i = 0; i < SET_ITEMS; i++) {
       bool sel = i == setSel;
       if (sel != (pass == 1)) continue;
+#if M8_MODEL == 2
+      bool on = i >= SET_FIRST && i < SET_REMOVE && setting(i - SET_FIRST);
+#else
       bool on = i < SETTING_COUNT && setting(i);
+#endif
       Shape s = {x, setRow(i, yb), w, FONT_H / PX, 0};   // (its frame round the whole line, 2 blocks out)
       fillRing(s, 3, 2, sel ? frame : DIM, true);
       fillRing(s, 2, 0, DIM);
@@ -488,6 +515,13 @@ FLASHMEM static void drawSettings(bool whole) {
         continue;
       }
       drawText(s.x * PX, s.y * PX, i == SET_REMOVE ? commandLabel() : SET_LABELS[i], sel ? INK : LIGHT, DIM);
+#if M8_MODEL == 2
+      if (i == SET_AUDIO_IN) {                     // (its value: always as a setting that's on)
+        const char *v = audioInLabel();
+        drawText((x + w) * PX - textWidth(v), s.y * PX, v, sel ? INK : LIGHT, DIM);
+        continue;
+      }
+#endif
       const char *v = i == SET_REMOVE ? "" : on ? "ON" : "OFF";
       drawText((x + w) * PX - textWidth(v), s.y * PX, v, i == SET_REMOVE || on ? (sel ? INK : LIGHT) : DARK, DIM);
     }
@@ -561,7 +595,12 @@ FLASHMEM void menuSettingsAct() {
     deleteProgress = nullptr;
     removingPct = -1;
   } else {
+#if M8_MODEL == 2
+    if (setSel == SET_AUDIO_IN) setAudioIn((audioIn() + 1) % AUDIO_IN_COUNT);   // AUTO, LINE, MIC, round
+    else setSetting(setSel - SET_FIRST, !setting(setSel - SET_FIRST));
+#else
     setSetting(setSel, !setting(setSel));
+#endif
   }
   drawSettings(false);
 }

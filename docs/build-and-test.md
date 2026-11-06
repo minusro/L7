@@ -52,6 +52,12 @@ c++ -std=c++17 -O1 -Wno-macro-redefined -Istubs -I../../src \
 ./looper_sim          # all checks + 5 random 600 s sessions; ./looper_sim 0 skips the fuzzing
 ```
 
+Built with `-DM8_MODEL=2` it runs the Model:02's engine: the same checks, and
+the mic input's routing too (engine.h inputSource: the mic recorded but not
+heard, a peek measured but neither, the line input's silence counted only on
+it, a switch's settling left out). Build it somewhere else (`-o`): the
+`looper_sim` here is the Model:01's.
+
 The stub card is exFAT, as SdFat has it: `preAllocate()` reserves space but
 doesn't extend the file, and there's no seeking past a file's end (its valid
 length); storage.cpp's `reserveWhole()` makes the reserved space part of the

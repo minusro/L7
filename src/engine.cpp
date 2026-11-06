@@ -208,6 +208,13 @@ static float usbEnv = 0;                             // the USB input's slow ave
 static bool usbOnsetArmed = false;                   // (one a beat: its first)
 static constexpr float LINE_GATE_LEVEL = 0.0015f;   // ~ -56 dBFS (as measured on the M8: see the log)
 static constexpr uint32_t LINE_GATE_HOLD_MS = 2000;
+#if M8_MODEL == 2
+volatile uint8_t inputSource = INPUT_LINE, inputHold = 0;
+volatile float peekPeak = 0;
+volatile uint32_t lineQuietBlocks = 0;
+const float lineGateLevel = LINE_GATE_LEVEL;
+const uint32_t lineGateHoldMs = LINE_GATE_HOLD_MS;
+#endif
 static constexpr bool USB_OUT_CLICK = false;          // the metronome on the USB output too (measuring: tools/latency/clocksync.c)
 volatile int32_t clickFromBeat = INT32_MIN;
 volatile const char *underrunStage = "";          // (debugStage at the last underrun)
@@ -824,11 +831,28 @@ void LooperEngine::update() {
     linePeak = max(linePeak, max(a, b));
   }
   float lp = linePeak / 32768.0f;
+#if M8_MODEL == 2
+  const uint8_t source = inputSource;              // (the codec's input this block; loop() may switch it between blocks)
+  const bool settling = inputHold > 0;
+  if (settling) inputHold = inputHold - 1;
+  const bool codecLine = source == INPUT_LINE && !settling;   // the line input, as heard
+  if (source == INPUT_PEEK && !settling && lp > peekPeak) peekPeak = lp;
+  if (codecLine) {
+    if (lp > lineInPeak) lineInPeak = lp;
+    if (lp < lineInFloor) lineInFloor = lp;
+  }
+#else
   if (lp > lineInPeak) lineInPeak = lp;
   if (lp < lineInFloor) lineInFloor = lp;
+#endif
   usbAudioIn = usbIn;
   const uint32_t holdBlocks = (uint32_t)(LINE_GATE_HOLD_MS * AUDIO_SAMPLE_RATE_EXACT / 1000 / AUDIO_BLOCK_SAMPLES);
+#if M8_MODEL == 2
+  lineQuietBlocks_ = !codecLine ? 0 : lp < LINE_GATE_LEVEL ? lineQuietBlocks_ + 1 : 0;   // (on the line input again: counted from nothing)
+  lineQuietBlocks = lineQuietBlocks_;
+#else
   lineQuietBlocks_ = lp < LINE_GATE_LEVEL ? lineQuietBlocks_ + 1 : 0;
+#endif
   const float lineFrom = lineGain_, lineTo = usbIn && lineQuietBlocks_ >= holdBlocks ? 0.0f : 1.0f;
   lineGain_ = lineTo;
 
@@ -923,12 +947,30 @@ void LooperEngine::update() {
     }
     // The input: the line input (gated, faded over the block) and USB audio, mixed.
     float g = lineFrom + (lineTo - lineFrom) * i / AUDIO_BLOCK_SAMPLES;
+#if M8_MODEL == 2
+    // The codec's part: the line input (gated), the mic (mono: both sides
+    // averaged, on both), or nothing (settling, or peeking at the line input).
+    const int32_t ul = usbIn ? (int16_t)(usbFrames[i] & 0xFFFF) : 0, ur = usbIn ? (int16_t)(usbFrames[i] >> 16) : 0;
+    int32_t cl = 0, cr = 0;
+    if (!settling && source == INPUT_LINE) {
+      cl = (int32_t)((inL ? inL->data[i] : 0) * g);
+      cr = (int32_t)((inR ? inR->data[i] : 0) * g);
+    } else if (!settling && source == INPUT_MIC) {
+      cl = cr = ((inL ? inL->data[i] : 0) + (inR ? inR->data[i] : 0)) / 2;
+    }
+    int32_t li = cl + ul, ri = cr + ur;
+#else
     int32_t li = (int32_t)((inL ? inL->data[i] : 0) * g) + (usbIn ? (int16_t)(usbFrames[i] & 0xFFFF) : 0);
     int32_t ri = (int32_t)((inR ? inR->data[i] : 0) * g) + (usbIn ? (int16_t)(usbFrames[i] >> 16) : 0);
+#endif
     int16_t l = (int16_t)constrain(li, -32768, 32767), r = (int16_t)constrain(ri, -32768, 32767);
     const uint32_t at = transport.now;
     inputRing[at % INPUT_FRAMES] = (uint16_t)l | ((uint32_t)(uint16_t)r << 16);
+#if M8_MODEL == 2
+    if (listen && !settling && source != INPUT_PEEK) {   // audio follow: the bands' energies (the mic's too; not a settling's or a peek's gap)
+#else
     if (listen) {                                    // audio follow: the bands' energies
+#endif
       float m = 0.5f * (l + r);
       onLo1 += (m - onLo1) * ON_K_LO;
       onLo2 += (onLo1 - onLo2) * ON_K_LO;
@@ -939,7 +981,15 @@ void LooperEngine::update() {
       onE[2] += (m * m - onE[2]) * ON_K_E;
     }
 
+#if M8_MODEL == 2
+    // The input being monitored (app.h's setting): the mic never (nor a
+    // peek's line input): then USB audio alone.
+    const bool codecHeard = source == INPUT_LINE;
+    const float monL = !inputMonitored ? 0 : codecHeard ? l : constrain(ul, -32768, 32767);
+    const float monR = !inputMonitored ? 0 : codecHeard ? r : constrain(ur, -32768, 32767);
+#else
     const float monL = inputMonitored ? l : 0, monR = inputMonitored ? r : 0;   // the input being monitored (app.h's setting)
+#endif
     float mixL = 0, mixR = 0;                        // the tracks
     int16_t *usbFrame = usbOut ? usbOut + i * USB_OUT_CHANNELS : nullptr;
     if (usbFrame) memset(usbFrame + 2, 0, 2 * NUM_TRACKS * sizeof *usbFrame);   // (each track's: silent unless playing)

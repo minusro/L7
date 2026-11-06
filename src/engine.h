@@ -9,6 +9,7 @@
 #include <Audio.h>
 #include <SD.h>
 #include "config.h"
+#include "screen.h"                                // (M8_MODEL: the Model:02's mic input)
 
 namespace looper {
 
@@ -310,6 +311,25 @@ extern volatile bool metronomeSteady;          // (loop()) the metronome set on,
 // lineInFloor its quietest (0..1; the serial log, to set the level).
 extern volatile float lineInPeak, lineInFloor;
 extern volatile bool usbAudioIn;                     // USB audio coming in (its last block)
+#if M8_MODEL == 2
+// The Model:02's built-in mic (src/mic_input.h, docs/HARDWARE.md): the codec
+// has one ADC, on the line input or on the mic, never both; loop() says
+// which. INPUT_LINE: the line input, as ever. INPUT_MIC: the mic, recorded
+// (into the input history, mono on both sides, with USB audio) but never
+// heard - USB audio still is, and audio follow hears both. INPUT_PEEK: the
+// line input for a moment while the mic is the input (is anything playing
+// into it?): its loudest block into peekPeak, nothing recorded, heard or
+// followed. For inputHold blocks after the codec is switched its input is
+// left out, whichever it is (its settling: no pop recorded, heard or
+// followed). lineQuietBlocks: blocks in a row the line input has peaked under
+// lineGateLevel (counted only while it is the input).
+enum : uint8_t { INPUT_LINE, INPUT_MIC, INPUT_PEEK };
+extern volatile uint8_t inputSource, inputHold;
+extern volatile float peekPeak;
+extern volatile uint32_t lineQuietBlocks;
+extern const float lineGateLevel;
+extern const uint32_t lineGateHoldMs;
+#endif
 // USB audio with a computer (the sketch sets these to the M8's own, usb_audio_l7
 // in the patched core; the simulator to its own). Each called once a block:
 //   usbAudioRead: the computer's audio for this block (AUDIO_BLOCK_SAMPLES stereo

@@ -405,6 +405,17 @@ int main(int argc, char **argv) {
   recording.resample = true;                       // resampling: the record dot with a plus on its button
   render(out + "/ui_resampling.png");
   recording.resample = false;
+#if M8_MODEL == 2
+  micIsInput = true;                               // the Model:02's mic the input (the line input empty): the mic on the button
+  render(out + "/ui_mic_recording.png");           // on the track recording,
+  recording.resample = true;
+  render(out + "/ui_mic_resampling.png");          // none on a resampling (it leaves the mic out),
+  recording.resample = false;
+  recording.mode = Recording::Idle;
+  render(out + "/ui_mic_empty.png");               // and on the selected empty track, ready to record
+  recording.mode = Recording::Running;
+  micIsInput = false;
+#endif
   {                                                // the recording done: track 2 playing it (a clip as track 1's), then empty again
     recording.mode = Recording::Idle;
     Track &tr = tracks[5];

@@ -34,7 +34,7 @@
 // start from 1.1.1 (play).
 // While A is held it keeps showing the command it ran, on the accent colour.
 // (int, not an enum class: the Arduino IDE declares functions above any types.)
-enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_METRO, ICON_MOVE, ICON_EAR, ICON_HELP, ICON_SCENE_CLEAR };
+enum { ICON_NONE, ICON_RECORD, ICON_STOP, ICON_PLAY, ICON_PAUSE, ICON_DELETE, ICON_TAP, ICON_CUT, ICON_PASTE, ICON_HOME, ICON_SCENE_CUT, ICON_SCENE_PASTE, ICON_MUTE, ICON_UNMUTE, ICON_RESAMPLE, ICON_ADJUST, ICON_LOAD, ICON_NEW, ICON_SAVE, ICON_USB, ICON_CHECK, ICON_RESTART, ICON_SCENE_DUP, ICON_NEXT, ICON_METRO, ICON_MOVE, ICON_EAR, ICON_HELP, ICON_SCENE_CLEAR, ICON_MIC };   // (MIC: track rows only, SMALL_MIC)
 
 // Flashing icons blink four times per beat, twice above 100 BPM.
 static bool flashOn() {
@@ -129,6 +129,12 @@ static bool movingClip(int i) {
 static int trackIcon(int i) {
   // (Resampling: the record dot with a plus instead.)
   int rec = (recordQueued() == i ? recordQueuedResample() : recordingOn(i) && recording.resample) ? ICON_RESAMPLE : ICON_RECORD;
+#if M8_MODEL == 2
+  if (micMarkOn(i)) {                              // the mic the input: its icon instead of the record dot,
+    if (rec == ICON_RECORD) rec = ICON_MIC;        // and on the selected empty track instead of its number
+    if (!recordingOn(i) && recordQueued() != i) return ICON_MIC;
+  }
+#endif
   if (recordQueued() == i) return flashOn() ? rec : ICON_NONE;   // waiting, like WaitBar
   if (recordingOn(i)) {
     switch (recording.mode) {
@@ -150,6 +156,9 @@ static int trackIcon(int i) {
 enum : uint8_t { BADGE_NONE, BADGE_EMPTY, BADGE_MUTED, BADGE_PLAYING, BADGE_LABEL };   // LABEL: the number alone, black
 
 static uint8_t trackBadge(int i) {
+#if M8_MODEL == 2
+  if (trackIcon(i) == ICON_MIC) return BADGE_NONE;   // (the mic instead of its number)
+#endif
   if (i == STATUS_ROW || recordingOn(i) || recordQueued() == i || trackIcon(i) == ICON_MOVE) return BADGE_NONE;   // (its icons instead)
   if (scenePreviewing() && !halfBeatOn()) return BADGE_NONE;   // (a scene shown before it plays: blinking, a half beat each way)
   if (!shownClip(i)) return BADGE_EMPTY;          // (as the row shows it: a switch all at once)
@@ -157,6 +166,15 @@ static uint8_t trackBadge(int i) {
 }
 
 int trackNumber(int i) { return NUM_TRACKS - i; }
+
+#if M8_MODEL == 2
+bool micMarkOn(int i) {
+  if (!micIsInput || i < 0 || i >= NUM_TRACKS) return false;
+  if (recordingOn(i)) return !recording.resample;
+  if (recordQueued() == i) return !recordQueuedResample();
+  return shownSelected(i) && !shownClip(i);
+}
+#endif
 
 static int buttonIcon(int i) {
   if (i != STATUS_ROW) return trackIcon(i);
@@ -217,6 +235,10 @@ PROGMEM static const Icon ICONS[] = {
 // Track rows' state icons, smaller (the status button keeps the big ones).
 PROGMEM static const Icon SMALL_RECORD = {5, 5, {".###.", "#####", "#####", "#####", ".###."}};
 PROGMEM static const Icon SMALL_PLAY = {3, 5, {"#..", "##.", "###", "##.", "#.."}};
+#if M8_MODEL == 2
+// The mic (the Model:02's, the input): its head, the cradle round it, the stand and its base.
+PROGMEM static const Icon SMALL_MIC = {7, 8, {"..###..", "..###..", "#.###.#", "#.###.#", ".#...#.", "..###..", "...#...", "..###.."}};
+#endif
 PROGMEM static const Icon SMALL_PAUSE = {3, 5, {"#.#", "#.#", "#.#", "#.#", "#.#"}};
 static constexpr int TRACK_ICON_CENTRE = 5;       // the column track rows' icons and number centre on
 static constexpr int PANEL_LEFT = 1;              // the selected track's panel's first column (a block in)
@@ -400,7 +422,11 @@ static void drawButton(int i, int icon, uint16_t color, uint16_t bg, uint8_t bad
       }
   } else if (icon != ICON_NONE) {
     bool track = i != STATUS_ROW;
+#if M8_MODEL == 2
+    const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_MIC ? SMALL_MIC : icon == ICON_PLAY ? SMALL_PLAY
+#else
     const Icon &ic = !track ? ICONS[icon] : icon == ICON_RECORD ? SMALL_RECORD : icon == ICON_PLAY ? SMALL_PLAY
+#endif
                    : icon == ICON_PAUSE ? SMALL_PAUSE : ICONS[icon];
     int c0 = (track ? TRACK_ICON_CENTRE - (ic.w - 1) / 2 + (icon == ICON_RESAMPLE) : max((cols - ic.w) / 2, PANEL_LEFT + 1) + (icon == ICON_SAVE || icon == ICON_USB)),   // (a track's resample: a block right)
       r0 = (rows - ic.h) / 2 - track;   // (a block clear of the backdrop's edge; a track's: a block higher)

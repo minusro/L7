@@ -174,6 +174,14 @@ bool screenSwitchPending();               // (input.cpp) an arrow held that swit
 // (it then looks as the others).
 // (A scene shown before it plays, scenes.h scenePreviewing(): none, as if nothing were selected.)
 inline bool shownSelected(int i) { return i == selected && !menuOpen() && !screenSwitchPending() && !scenePreviewing(); }
+#if M8_MODEL == 2
+// The Model:02's mic the input (src/mic_input.h): the recording track shows a
+// mic in its button, in place of its number on the selected empty track
+// (ready to record) and of the record dot on the one recording or queued to
+// (not resampling: a resampling leaves the mic out).
+inline bool micIsInput = false;
+bool micMarkOn(int i);
+#endif
 inline uint16_t rowGround(int i) { return i >= 0 && i < ROWS && shownSelected(i) ? DARK : BG; }
 // Something drawn dark grey that would vanish on it: black there instead.
 inline uint16_t onGround(uint16_t color, uint16_t ground) { return ground == DARK && color == DARK ? BG : color; }

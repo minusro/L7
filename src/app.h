@@ -45,6 +45,16 @@ bool metronomeWanted();                  // the click, by the setting now (a rec
 enum { SET_MONITOR, SET_PLAY_NEW, SET_NEXT_FREE, SET_EMPTY_CLICK, SETTING_COUNT };
 bool setting(int which);
 void setSetting(int which, bool on);
+#if M8_MODEL == 2
+// The Model:02's AUDIO IN (the settings popup, below MONITOR AUDIO IN; saved
+// with the session): where recordings come from. LINE: the line input. MIC:
+// the built-in mic (recorded, never heard). AUTO, the default: the line
+// input, and the mic once the line input has been silent a while - nothing
+// plugged in, as far as L7 can tell (src/mic_input.h).
+enum { AUDIO_IN_AUTO, AUDIO_IN_LINE, AUDIO_IN_MIC, AUDIO_IN_COUNT };
+int audioIn();
+void setAudioIn(int which);
+#endif
 // The help pages (the menu's HELP, ui_help.cpp): those seen (a bit each, the
 // first page bit 0) and the one last shown (0: the title page), saved with
 // the session; setHelpPage() shows another, marking it seen.

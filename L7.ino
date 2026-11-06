@@ -88,6 +88,7 @@
 #include "src/midi_usb.h"
 #include "src/audio_follow.h"
 #include "src/m02_diag.h"
+#include "src/mic_input.h"
 
 AudioInputI2S        i2sIn;
 LooperEngine         engine;
@@ -333,6 +334,9 @@ void loop() {
 
   passMark("midi, follow");
   debugStage = "MIDI in";
+#if M8_MODEL == 2
+  micInputService();                               // the Model:02: the line input or the mic, as AUDIO IN says (src/mic_input.h)
+#endif
   midiInService();                                 // an external clock: its start, stop, tempo and beat
   audioFollowService();                            // the tempo and beat heard in the input
   // Back on the internal clock (an external one no longer followed): the

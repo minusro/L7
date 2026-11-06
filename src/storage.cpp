@@ -1847,6 +1847,9 @@ FLASHMEM Session loadSession() {
     else if (!strncmp(line, "playnew=", 8)) s.settings[1] = strtol(line + 8, nullptr, 10) != 0;
     else if (!strncmp(line, "nextfree=", 9)) s.settings[2] = strtol(line + 9, nullptr, 10) != 0;
     else if (!strncmp(line, "emptyclick=", 11)) s.settings[3] = strtol(line + 11, nullptr, 10) != 0;
+#if M8_MODEL == 2
+    else if (!strncmp(line, "audioin=", 8)) s.audioIn = (int)strtol(line + 8, nullptr, 10);
+#endif
     else if (!strncmp(line, "helpseen=", 9)) s.helpSeen = (int)strtol(line + 9, nullptr, 10) & 0xFFFF;
     else if (!strncmp(line, "octaves=", 8)) {   // (three numbers, a comma between)
       char *p = line + 8;
@@ -1880,6 +1883,9 @@ FLASHMEM void saveSession(const Session &s) {
   f.printf("bpm=%.2f\nnewbpm=%.2f\nmvol=%d\npan=%d\nproject=%d\nmenu=%d\nplaying=%d\nrow=%d\ncell=%d\nmetro=%d\nfollow=%d\noffmidi=%d\noffusb=%d\noffaudio=%d\n", s.bpm, s.newBpm, s.master, s.balance, s.project + 1,
            s.menu, s.playing ? 1 : 0, s.row, s.cell, s.metro, s.follow ? 1 : 0, s.offsets[0], s.offsets[1], s.offsets[2]);
   f.printf("monitor=%d\nplaynew=%d\nnextfree=%d\nemptyclick=%d\n", s.settings[0], s.settings[1], s.settings[2], s.settings[3]);
+#if M8_MODEL == 2
+  f.printf("audioin=%d\n", s.audioIn);
+#endif
   f.printf("helpseen=%d\nhelppage=%d\n", s.helpSeen, s.helpPage);
   f.printf("octaves=%d,%d,%d\n", s.octaves[0], s.octaves[1], s.octaves[2]);
   f.printf("touched=");

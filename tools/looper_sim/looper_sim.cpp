@@ -55,6 +55,7 @@ static double pendingUs = 0;
 static int16_t feedUsb = 0;                         // USB audio in: this level (0: none coming in)
 static int32_t feedUsbClick = -1;                   // USB audio in: a click this many samples after each beat line (-1: none)
 static bool feedNoise = false;                      // the line input: noise only (overrides the feed below)
+static int16_t feedLevel = 0;                       // the codec's input: this level on both sides (overrides the feeds; 0: off)
 // The input: a drum pattern (audio follow's tests): a kick on every beat, a
 // snare on 2 and 4, a closed hat on the eighths, over a quiet pad; at drumBpm
 // (0: none), drumBeat its position in beats; each beat's kick (its input sample) in drumKicks.
@@ -180,6 +181,8 @@ static void audioBlock() {
     }
   if (feedNoise)                                   // (the line input: a little noise, as with nothing plugged in)
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) inL.data[i] = inR.data[i] = (int16_t)(rand() % 21 - 10);
+  if (feedLevel)
+    for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) inL.data[i] = inR.data[i] = feedLevel;
   engine.simIn[0] = &inL; engine.simIn[1] = &inR;
   engine.simSetInput(0, &inL); engine.simSetInput(1, &inR);
   if (feedUsb || feedUsbClick >= 0) {             // USB audio from a computer: a constant level, both channels, or a click after each beat
@@ -428,6 +431,57 @@ int main(int argc, char **argv) {
     const double blockUs = AUDIO_BLOCK_SAMPLES * 1e6 / AUDIO_SAMPLE_RATE_EXACT;
     while (pendingUs >= blockUs) { pendingUs -= blockUs; audioBlock(); }
   };
+#if M8_MODEL == 2
+  {                                                // the Model:02's mic (engine.h inputSource), stopped, no tracks: just the input
+    printf("Model:02: the line input, the mic, a peek, a settling\n");
+    feedRamp = false;
+    feedSineHz = 0;
+    inputMonitored = true;
+    auto run = [](uint8_t source, int16_t codec, int16_t usb, int16_t &recorded, int16_t &heard) {
+      inputSource = source;
+      inputHold = 0;
+      feedLevel = codec;
+      feedUsb = usb;
+      for (int b = 0; b < 40; b++) audioBlock();   // (the glides settled)
+      recorded = (int16_t)(inputRing[(transport.now - 1) % INPUT_FRAMES] & 0xFFFF);
+      heard = outL.data[AUDIO_BLOCK_SAMPLES - 1];
+    };
+    int16_t recLine, heardLine, recMic, heardMic, recPeek, heardPeek, recUsb, heardUsb;
+    run(INPUT_LINE, 0, 2000, recUsb, heardUsb);    // the reference: USB audio alone
+    run(INPUT_LINE, 6000, 2000, recLine, heardLine);
+    run(INPUT_MIC, 6000, 2000, recMic, heardMic);
+    char m[200];
+    snprintf(m, sizeof m, "line input: recorded with USB audio (%d) and heard (%d, USB alone %d)", recLine, heardLine, heardUsb);
+    check(recLine == 8000 && heardLine != heardUsb, m);
+    snprintf(m, sizeof m, "mic: recorded with USB audio (%d), not heard - the output is USB audio's alone (%d = %d)", recMic, heardMic, heardUsb);
+    check(recMic == 8000 && heardMic == heardUsb, m);
+    peekPeak = 0;
+    run(INPUT_PEEK, 6000, 2000, recPeek, heardPeek);
+    snprintf(m, sizeof m, "a peek at the line input: measured (%.3f), not recorded (%d: USB audio alone), not heard (%d)", peekPeak, recPeek, heardPeek);
+    check(fabsf(peekPeak - 6000 / 32768.0f) < 0.001f && recPeek == 2000 && heardPeek == heardUsb, m);
+    run(INPUT_LINE, 0, 0, recLine, heardLine);     // (nothing in: the line input quiet, counted)
+    const uint32_t quiet = lineQuietBlocks;
+    run(INPUT_MIC, 0, 0, recMic, heardMic);
+    snprintf(m, sizeof m, "line quiet counted on the line input (%u blocks), not on the mic (%u)", quiet, lineQuietBlocks);
+    check(quiet >= 40 && lineQuietBlocks == 0, m);
+    inputSource = INPUT_MIC;                       // a switch: the codec's input left out while it settles
+    inputHold = 3;
+    feedLevel = 6000;
+    feedUsb = 0;
+    bool silent = true;
+    for (int b = 0; b < 3; b++) {
+      audioBlock();
+      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) silent &= inputRing[(transport.now - 1 - i) % INPUT_FRAMES] == 0;
+    }
+    audioBlock();
+    snprintf(m, sizeof m, "settling: 3 blocks left out, then the mic again (%d)", (int16_t)(inputRing[(transport.now - 1) % INPUT_FRAMES] & 0xFFFF));
+    check(silent && inputHold == 0 && (int16_t)(inputRing[(transport.now - 1) % INPUT_FRAMES] & 0xFFFF) == 6000, m);
+    inputSource = INPUT_LINE;                      // back as the rest of the checks expect it
+    feedLevel = 0;
+    feedUsb = 0;
+    feedRamp = true;
+  }
+#endif
   simRoot = "/tmp/looper_sim_sd";
   system(("rm -rf " + simRoot + " && mkdir -p " + simRoot + "/looper").c_str());
   // A card from an older version: track 5 holds a 1-bar loop in its own

@@ -233,6 +233,9 @@ struct Session {
   bool settings[4] = {true, true, true, true};     // app.h's settings: monitor, play new, next free, empty project click
   int helpSeen = 0, helpPage = 0;                  // the help pages seen (a bit each) and the one last shown (app.h)
   uint32_t touched[12] = {};                       // each project's sample last stepped to or recorded (0: none; touchedSample())
+#if M8_MODEL == 2
+  int audioIn = 0;                                 // the Model:02's AUDIO IN (app.h: AUTO, LINE, MIC)
+#endif
 };
 Session loadSession();
 // A new recording plays once it's done (false: it comes in muted; app.h's setting).

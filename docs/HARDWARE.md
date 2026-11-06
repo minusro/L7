@@ -215,6 +215,8 @@ Read out of `M8_V6_6_3F_MODEL02.bin` (6.6.3F: the addresses here are that image'
 | The app's line/mic switch (`this`, `bool mic`; the flag kept at `this+0x1A0`) | `0x60039860` |
 | SGTL5000 `write(reg, val)` / `micGain()` / `lineInLevel(l, r)` | `0x600AD93C` / `0x600ADB18` / `0x600ADB94` |
 
+L7 uses it as `src/mic_input.h` says: the AUDIO IN setting (AUTO, LINE, MIC), the stock firmware's mic settings, the codec switched only between recordings.
+
 ## Where to look in the Model:02 image (6.6.3C; flash = `0x60000000` + file offset)
 
 | What | Address |

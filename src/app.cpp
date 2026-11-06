@@ -108,6 +108,15 @@ void setSetting(int which, bool on) {
   applySettings();
   changedMs = millis();
 }
+#if M8_MODEL == 2
+static int audioInSetting = AUDIO_IN_AUTO, savedAudioIn = AUDIO_IN_AUTO;
+int audioIn() { return audioInSetting; }
+void setAudioIn(int which) {
+  if (which < 0 || which >= AUDIO_IN_COUNT) return;
+  audioInSetting = which;
+  changedMs = millis();
+}
+#endif
 
 // ---- Session (tempo, master volume, the loaded project, the selection: the
 // app's, not a project's or a scene's)
@@ -133,6 +142,9 @@ FLASHMEM void beginSession() {
   if (s.metro >= METRO_OFF && s.metro <= METRO_ON) metroMode = savedMetro = s.metro == METRO_ON ? METRO_ON : METRO_OFF;   // (auto: off, the setting below)
   for (int i = 0; i < SETTING_COUNT; i++) settings[i] = savedSettings[i] = s.settings[i];
   applySettings();
+#if M8_MODEL == 2
+  audioInSetting = savedAudioIn = s.audioIn >= 0 && s.audioIn < AUDIO_IN_COUNT ? s.audioIn : AUDIO_IN_AUTO;
+#endif
   seenPages = savedSeenPages = (uint16_t)s.helpSeen;
   shownPage = savedShownPage = s.helpPage;
   memcpy(touchedSample, s.touched, sizeof touchedSample);
@@ -157,7 +169,11 @@ static bool sessionDirty() {
          menuState() != savedMenu || transport.running != savedPlaying || row != savedRow || cell != savedCell ||
          metroMode != savedMetro || audioFollowOn() != savedFollow || memcmp(settings, savedSettings, sizeof settings) || seenPages != savedSeenPages || shownPage != savedShownPage ||
          memcmp(syncOffsetMs, savedOffsets, sizeof savedOffsets) || memcmp(touchedSample, savedTouched, sizeof savedTouched) ||
-         midiOctave(0) != savedOctaves[0] || midiOctave(1) != savedOctaves[1] || audioFollowOctave() != savedOctaves[2];
+         midiOctave(0) != savedOctaves[0] || midiOctave(1) != savedOctaves[1] || audioFollowOctave() != savedOctaves[2]
+#if M8_MODEL == 2
+         || audioInSetting != savedAudioIn
+#endif
+         ;
 }
 
 FLASHMEM static void writeSession() {
@@ -173,6 +189,9 @@ FLASHMEM static void writeSession() {
   s.metro = metroMode;
   s.follow = audioFollowOn();
   for (int i = 0; i < SETTING_COUNT; i++) s.settings[i] = savedSettings[i] = settings[i];
+#if M8_MODEL == 2
+  s.audioIn = savedAudioIn = audioInSetting;
+#endif
   s.helpSeen = savedSeenPages = seenPages;
   s.helpPage = savedShownPage = shownPage;
   memcpy(s.touched, touchedSample, sizeof s.touched);
