@@ -161,7 +161,7 @@
       <ol class="before">
         <li>Connect the M8 to this computer with a USB data cable, then switch it on.</li>
         <li>Quit anything else that uses the M8 over USB: M8C, the headless display, Teensy Loader, TyCommander, a serial monitor.</li>
-        <li>Click Install. The first time, the browser shows two pop-ups: choose the M8 in the first (the page then restarts it into its loader), and the loader in the second. Later installs usually skip both.</li>
+        <li>Click Install, and choose the M8 when the browser asks. The page restarts it into its loader and installs.</li>
       </ol>
       <div class="actions" id="l7-actions">
         <button id="pick" hidden>Upload</button>
@@ -205,12 +205,12 @@
   <section class="help">
     <h2>If something goes wrong</h2>
     <h3>It's safe to try again</h3>
-    <p>The M8's loader sits on its own chip, and installing never overwrites it. If an install stops partway, the M8 waits in its loader: click Upload to try again. After reloading the page, click Install, close the first pop-up, then click Upload. Installing doesn't touch the SD card, so your projects and recordings stay put, whichever firmware you install.</p>
-    <h3>The M8 isn't in the first pop-up</h3>
+    <p>The M8's loader sits on its own chip, and installing never overwrites it. If an install stops partway, the M8 waits in its loader: click Upload to try again. After reloading the page, click Install, close the browser's pop-up, then click Upload. Installing doesn't touch the SD card, so your projects and recordings stay put, whichever firmware you install.</p>
+    <h3>The M8 isn't in the browser's pop-up</h3>
     <p>Check the M8 is switched on, and try another cable (some only charge). If the M8 is already in its loader (after a stopped install, for instance), it doesn't show there: close the pop-up and click Upload.</p>
-    <h3>An Upload button appears instead of the second pop-up</h3>
-    <p>The browser lets the page open the second pop-up only for a few seconds after your click, so it can't if choosing the M8 took longer. The M8 is in its loader by then: click Upload and choose the loader. Cancel goes back to the start.</p>
-    <h3>The second pop-up is empty</h3>
+    <h3>An Upload button appears</h3>
+    <p>The M8 is waiting in its loader: click Upload and choose it when the browser asks. Cancel goes back to the start.</p>
+    <h3>Upload's pop-up is empty</h3>
     <p>The M8 didn't restart into its loader. Click Cancel, check nothing else is using the M8 (see the next point), then click Install again.</p>
     <h3>"Couldn't open the M8's USB port"</h3>
     <p>Another app has it. Quit M8C, Teensy Loader, TyCommander and any serial monitor (such as the Arduino IDE's), then try again.</p>
