@@ -19,7 +19,7 @@ const els = {
   console: $('console'), l7Slot: $('l7-slot'),
   log: $('log'), file: $('file'), fileGo: $('file-go'), fileStart: $('file-start'),
   fileActions: $('file-actions'), fileSlot: $('file-slot'),
-  downloads: $('downloads'), guide: $('guide'), cheatsheet: $('cheatsheet'),
+  downloads: $('downloads'),
   restore: $('restore'), restoreGo: $('restore-go'), restoreSlot: $('restore-slot'),
   dwPage: $('dw-page'), restoreTitle: $('restore-title'),
 };
@@ -267,8 +267,6 @@ async function loadRelease() {
     li.append(`M8 ${board.m8}: `, a);
     els.downloads.append(li);
   }
-  if (release.docs?.guide) els.guide.href = release.docs.guide;
-  if (release.docs?.cheatsheet) els.cheatsheet.href = release.docs.cheatsheet;
   els.dwPage.href = release.dirtywave?.page || DW_PAGE;
   refresh();
   loadDirtywaveVersion();
