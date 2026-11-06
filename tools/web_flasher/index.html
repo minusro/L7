@@ -23,7 +23,11 @@
   <meta name="twitter:description" content="A 7-track stereo looper for the Dirtywave M8. Record loops from line in or USB. Layer, crop and mix them, arrange combinations as scenes and export to an Ableton Live project.">
   <meta name="twitter:image" content="https://danielstanciu.com/l7/social-card.png">
   <meta name="twitter:image:alt" content="The L7 logo">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- PNGs for browsers without SVG icons (Safari before 26), the SVG last so the rest take it -->
+  <link rel="icon" href="favicon-light.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="favicon-dark.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: dark)">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" sizes="any">
   <link rel="preload" href="/fonts/ibm-plex-sans-condensed-600-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/ibm-plex-mono-400-latin.woff2" as="font" type="font/woff2" crossorigin>
   <style>
