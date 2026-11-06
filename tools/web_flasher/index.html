@@ -51,7 +51,8 @@
     a { color: inherit; text-underline-offset: 3px; }
     a:hover { color: var(--accent); }
     .logo { display: block; margin: 0; }
-    h1 { font: 600 48px/48px var(--font-sans); margin: 20px 0 24px; letter-spacing: -0.01em; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .demo { display: block; width: 100%; max-width: 640px; height: auto; margin: 24px 0; }
     h2 { font: 600 22px/24px var(--font-sans); margin: 0 0 12px; }
     p { margin: 0 0 12px; }
     .lede { font-size: 20px; line-height: 28px; color: var(--muted); max-width: 34em; }
@@ -123,7 +124,6 @@
     footer { color: var(--muted); font-size: 15px; margin-top: 36px; }
 
     @media (max-width: 520px) {
-      h1 { font-size: 36px; line-height: 40px; }
       .lede { font-size: 18px; line-height: 26px; }
       .panel { padding: 16px; }
       button { width: 100%; }
@@ -140,7 +140,8 @@
     <path d="M0.6667,24 17.67,24 17,26 0,26Z"/>
     <path d="M31,24 29,26 19,26 21,24Z"/>
   </svg>
-  <h1>Install L7 on your M8</h1>
+  <h1 class="visually-hidden">L7 looper</h1>
+  <img class="demo" src="demo.gif" width="640" height="480" alt="L7 playing four loops while a lowpass filter is swept on track 4">
   <p class="lede">L7 is a 7-track stereo looper firmware for the Dirtywave M8. Install it from this page over USB, with nothing else to set up.</p>
 
   <nav class="tabs" aria-label="Page sections">
