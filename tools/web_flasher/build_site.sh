@@ -44,7 +44,7 @@ gh release download "$version" -R "$repo" -D "$out/firmware" -p "$m1" -p "$m2"
 
 # The page, with ?v= on its script so a deploy is never served a cached old one
 sed "s|src=\"flasher.js\"|src=\"flasher.js?v=$stamp\"|" "$here/index.html" > "$out/index.html"
-cp "$here/flasher.js" "$here/halfkay.js" "$here/unzip.js" "$here/favicon.svg" "$out/"
+cp "$here/flasher.js" "$here/halfkay.js" "$here/unzip.js" "$here/favicon.svg" "$here/social-card.png" "$out/"
 cp "$here/../../docs/readme/demo.gif" "$out/demo.gif"   # the README's demo
 
 # Dirtywave's firmware: the page downloads it straight from Dirtywave (their
