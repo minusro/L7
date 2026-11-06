@@ -5,31 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>L7 looper</title>
   <meta name="description" content="Install L7, the multitrack looper for the Dirtywave M8, straight from your browser.">
-  <meta name="color-scheme" content="dark light">
-  <meta name="theme-color" content="#0f3471" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#f2f0e6" media="(prefers-color-scheme: light)">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#292c29">
   <link rel="canonical" href="https://danielstanciu.com/l7/">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/fonts/ibm-plex-sans-condensed-600-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/ibm-plex-mono-400-latin.woff2" as="font" type="font/woff2" crossorigin>
   <style>
-    /* The portfolio's blueprint palette and fonts (served from the site root) */
+    /* The colours of L7's own screen (as in the demo GIF), and the portfolio's
+       fonts (served from the site root) */
     @font-face { font-family: "IBM Plex Mono"; font-weight: 400; font-display: swap; src: url("/fonts/ibm-plex-mono-400-latin.woff2") format("woff2"); }
     @font-face { font-family: "IBM Plex Mono"; font-weight: 500; font-display: swap; src: url("/fonts/ibm-plex-mono-500-latin.woff2") format("woff2"); }
     @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 400; font-display: swap; src: url("/fonts/ibm-plex-sans-condensed-400-latin.woff2") format("woff2"); }
     @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 600; font-display: swap; src: url("/fonts/ibm-plex-sans-condensed-600-latin.woff2") format("woff2"); }
 
     :root {
-      color-scheme: light dark;
-      --bg: light-dark(#f2f0e6, #0f3471);
-      --bg-raise: light-dark(#f7f6ef, #123a7c);
-      --fg: light-dark(#1b3d8c, #eef5ff);
-      --muted: light-dark(#4862a3, #b3cbee);
-      --line: light-dark(rgba(27, 61, 140, 0.18), rgba(238, 245, 255, 0.2));
-      --line-strong: light-dark(rgba(27, 61, 140, 0.5), rgba(238, 245, 255, 0.55));
-      --grid: light-dark(rgba(27, 61, 140, 0.07), rgba(238, 245, 255, 0.07));
-      --accent: light-dark(#cf3e2a, #ffd75e);
-      --ok: light-dark(#1d7a46, #8fe3b0);
+      color-scheme: dark;
+      --bg: #292c29;                          /* the GIF's dark grey */
+      --bg-raise: #000000;                    /* its screen black */
+      --fg: #d5d2d5;                          /* its light grey */
+      --muted: #a4a2a4;
+      --line: rgba(213, 210, 213, 0.18);
+      --line-strong: #737173;                 /* its mid grey */
+      --grid: rgba(213, 210, 213, 0.1);       /* light grey, faint */
+      --accent: #b4e2c5;                      /* its accent green */
+      --on-accent: #000000;
+      --error: #f4b6c2;
+      --ok: #b4e2c5;
       --font-sans: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
       --font-mono: "IBM Plex Mono", ui-monospace, monospace;
       --g: 24px;
@@ -40,17 +42,15 @@
     body {
       margin: 0;
       background-color: var(--bg);
-      background-image:
-        linear-gradient(var(--grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-      background-size: var(--g) var(--g);
+      background-image: linear-gradient(var(--grid) 1px, transparent 1px);   /* horizontal lines only */
+      background-size: 100% var(--g);
       color: var(--fg);
       font: 400 17px/24px var(--font-sans);
     }
     main { max-width: 720px; margin: 0 auto; padding: calc(2 * var(--g)) 16px calc(3 * var(--g)); }
     a { color: inherit; text-underline-offset: 3px; }
     a:hover { color: var(--accent); }
-    .logo { display: block; margin: 0; }
+    .logo { display: block; margin: 0; color: var(--accent); }
     .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .hero { display: flex; align-items: stretch; gap: 24px; }
     .hero-text { flex: 1; min-width: 0; text-align: left; display: flex; flex-direction: column; justify-content: flex-end; }
@@ -78,13 +78,13 @@
     .actions { display: flex; flex-wrap: wrap; gap: 12px; }
     button {
       font: 600 18px/24px var(--font-sans);
-      color: var(--bg);
-      background: var(--fg);
+      color: var(--on-accent);
+      background: var(--accent);
       border: 0;
       padding: 12px 20px;
       cursor: pointer;
     }
-    button:hover:not(:disabled) { background: var(--accent); color: light-dark(#fff, #0f3471); }
+    button:hover:not(:disabled) { background: #ffffff; color: var(--on-accent); }
     button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
     button:disabled { opacity: 0.45; cursor: default; }
     button.secondary { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-strong); }
@@ -95,15 +95,15 @@
     #status { margin: 20px 0 0; }
     #status:empty { display: none; }
     details.log { border-top: 0; margin: -12px 0 24px; padding-top: 0; }
-    #status[data-kind="error"] { color: var(--accent); }
+    #status[data-kind="error"] { color: var(--error); }
     #status[data-kind="ok"] { color: var(--ok); font-weight: 600; }
     progress {
       display: block; width: 100%; height: 12px; margin-top: 12px;
       appearance: none; border: 1px solid var(--line-strong); background: transparent;
     }
     progress::-webkit-progress-bar { background: transparent; }
-    progress::-webkit-progress-value { background: var(--fg); }
-    progress::-moz-progress-bar { background: var(--fg); }
+    progress::-webkit-progress-value { background: var(--accent); }
+    progress::-moz-progress-bar { background: var(--accent); }
 
     details { border-top: 1px solid var(--line); padding: 12px 0 0; margin-top: 20px; }
     details + details { margin-top: 12px; }
@@ -122,7 +122,7 @@
     .tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--line-strong); margin: 32px 0 0; }
     .tabs a { font: 600 18px/24px var(--font-sans); color: var(--muted); text-decoration: none; padding: 0 0 10px; margin-bottom: -1px; border-bottom: 3px solid transparent; }
     .tabs a:hover { color: var(--accent); }
-    .tabs a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--fg); }
+    .tabs a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--accent); }
     #tab-help { min-height: 240px; }
     .guide { margin: 24px 0; }
     .guide h3 { font: 600 18px/24px var(--font-sans); margin: 28px 0 8px; }
