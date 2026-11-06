@@ -36,6 +36,8 @@ L7 itself; this is the extract you need to start fresh.
   termination, 12 h safety timer; the chip's own protections are autonomous).
   Call `chargeGuard()` from `loop()` for the belt-and-braces layer: it pauses
   charging on abnormal readings and latches off after three strikes.
+  Some variant B units have no charger on the bus (HARDWARE.md): both do
+  nothing there, and the charger looks after itself.
 * MIDI serial: use `midiOutBegin()` / `midiInBegin()`, never the ports'
   `begin()` directly — variant B shares pins between the ports, the key INT
   and the SD card (details in M8Board.h and HARDWARE.md).

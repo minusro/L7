@@ -92,7 +92,10 @@ bool Board::begin(uint32_t spiHz) {
   delay(10);
   digitalWrite(40, HIGH);
 #endif
-  if (_variant == VARIANT_B) initChargerB();
+  if (_variant == VARIANT_B) {
+    _chgInit = initChargerB();
+    wireScan(_bootScan);         // (for batteryLog(): what answered at boot)
+  }
 
   pinMode(p.hpEnable, OUTPUT);   // stock fw sets this HIGH during audio/HP init
   digitalWrite(p.hpEnable, HIGH);
@@ -231,6 +234,15 @@ static int bqRead(uint8_t reg) {
   return Wire.read();
 }
 
+// Which addresses answer on Wire (a bit each), for the log.
+FLASHMEM void Board::wireScan(uint8_t map[16]) {
+  memset(map, 0, 16);
+  for (uint8_t a = 0x08; a < 0x78; a++) {
+    Wire.beginTransmission(a);
+    if (Wire.endTransmission() == 0) map[a >> 3] |= 1 << (a & 7);
+  }
+}
+
 // The fuel gauge (STC3115 @0x70): n registers from reg.
 FLASHMEM static bool gaugeRead(uint8_t reg, uint8_t *buf, uint8_t n) {
   Wire.beginTransmission(0x70);
@@ -290,6 +302,11 @@ FLASHMEM void Board::batteryLog() {
   Serial.printf("battery %d%%: gauge mode 0x%02x%s, its charge %d%%, current %d (raw), %d mV; charger REG0B 0x%02x (charging: %s), %d mV (%d%% by voltage)\n",
                 _batPct, _batGaugeMode & 0xFF, _batGaugeMode < 0 ? " (no answer)" : (_batGaugeMode & 0x10) ? " (running)" : " (standby)",
                 _batSoc, _batCurrent, _batGaugeMv, _batStatus & 0xFF, _batCharging ? "yes" : "no", _batMv, _batMv > 0 ? percentForMv(_batMv) : -1);
+  // The charger: whether its init was written at boot, and what answered on
+  // the bus then (a variant B with no charger on it exists: HARDWARE.md).
+  Serial.printf("charger: init at boot %s; on the bus at boot:", _chgInit ? "written" : "not written (no answer at 0x6a)");
+  for (int a = 0; a < 128; a++) if (_bootScan[a >> 3] & 1 << (a & 7)) Serial.printf(" 0x%02x", a);
+  Serial.println();
 }
 
 bool Board::initChargerB() {

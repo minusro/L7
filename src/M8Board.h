@@ -151,6 +151,7 @@ private:
   int  readReg(uint8_t reg);
   void applyVariantBPanelTuning();
   bool initChargerB();
+  static void wireScan(uint8_t map[16]);
 
   Variant _variant = VARIANT_A;
   const Pins *_pins = nullptr;
@@ -176,6 +177,8 @@ private:
   uint32_t _cgCheckedMs = 0, _cgPausedMs = 0;   // charge guard
   uint8_t _cgStrikes = 0;
   bool _cgPaused = false, _cgLatched = false;
+  bool _chgInit = false;             // (the charger's init written at boot; what answered on Wire then: for batteryLog())
+  uint8_t _bootScan[16] = {};
 };
 
 } // namespace m8
