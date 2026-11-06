@@ -325,7 +325,7 @@ async function m8Port() {
   if (!('serial' in navigator)) return null;
   const known = (await navigator.serial.getPorts()).filter((p) => p.getInfo().usbVendorId === HK.VENDOR_ID);
   if (known.length === 1) return known[0];
-  say('Choose your M8 in the list. The page restarts it into its loader.');
+  say('Choose your M8 in the pop-up. The page restarts it into its loader.');
   try {
     return await navigator.serial.requestPort({ filters: [{ usbVendorId: HK.VENDOR_ID }] });
   } catch (e) {
@@ -371,7 +371,7 @@ async function findLoader() {
   const known = await waitForGrantedLoader(loaderAllowedBefore() ? 3000 : 300);
   if (known) return known;
   if (!navigator.userActivation?.isActive) return null;
-  say("Choose the M8's loader in the list. It appears a moment after the M8 restarts.");
+  say("Choose the M8's loader in the pop-up. It appears a moment after the M8 restarts.");
   try {
     return await chooseLoader();
   } catch (e) {
@@ -476,7 +476,7 @@ async function start(source) {
         awaitLoader(source);
         track(port ? `${source.kind}-upload-button` : `${source.kind}-no-m8-chosen`);
         say(port
-          ? `The M8 is in its loader. Click "Upload ${source.label}" and choose the loader in the list.`
+          ? `The M8 is in its loader. Click "Upload ${source.label}" and choose the loader in the pop-up.`
           : `No M8 chosen. If it's already in its loader, click "Upload ${source.label}".`);
         return;
       }
@@ -511,7 +511,7 @@ els.pick.addEventListener('click', async () => {
   try {
     const device = await chooseLoader();
     if (!device) {
-      say('No loader chosen. If the list was empty, the M8 isn\'t in its loader yet: click Cancel and start again.');
+      say('No loader chosen. If the pop-up was empty, the M8 isn\'t in its loader: click Cancel, then Install again.');
       return;
     }
     await flash(device, source);
