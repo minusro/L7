@@ -52,7 +52,10 @@
     a:hover { color: var(--accent); }
     .logo { display: block; margin: 0; }
     .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .demo { display: block; width: 100%; max-width: 640px; height: auto; margin: 24px 0; }
+    .hero { display: flex; align-items: center; gap: 24px; }
+    .hero-text { flex: 1; min-width: 0; text-align: left; }
+    .hero .lede { margin: 20px 0 0; }
+    .demo { display: block; flex: none; width: 320px; max-width: 100%; height: auto; }
     h2 { font: 600 22px/24px var(--font-sans); margin: 0 0 12px; }
     p { margin: 0 0 12px; }
     .lede { font-size: 20px; line-height: 28px; color: var(--muted); max-width: 34em; }
@@ -132,6 +135,9 @@
     .guide .keys { color: var(--muted); }
     footer { color: var(--muted); font-size: 15px; margin-top: 36px; }
 
+    @media (max-width: 640px) {
+      .hero { flex-direction: column; align-items: stretch; }
+    }
     @media (max-width: 520px) {
       .lede { font-size: 18px; line-height: 26px; }
       .panel { padding: 16px; }
@@ -141,17 +147,21 @@
 </head>
 <body>
 <main>
-  <svg class="logo" viewBox="0 0 55 26" width="110" height="52" fill="currentColor" role="img" aria-label="L7">
-    <path d="M8.667,0 15.67,0 10.33,16 20.33,16 19.67,18 2.667,18Z"/>
-    <path d="M55,0 37,18 27,18 38,7 27.33,7 29.67,0Z"/>
-    <path d="M2,20 19,20 18.33,22 1.333,22Z"/>
-    <path d="M35,20 33,22 23,22 25,20Z"/>
-    <path d="M0.6667,24 17.67,24 17,26 0,26Z"/>
-    <path d="M31,24 29,26 19,26 21,24Z"/>
-  </svg>
-  <h1 class="visually-hidden">L7 looper</h1>
-  <img class="demo" src="demo.gif" width="640" height="480" alt="L7 playing four loops while a lowpass filter is swept on track 4">
-  <p class="lede">L7 is a 7-track stereo looper firmware for the Dirtywave M8. Install it from this page over USB, with nothing else to set up.</p>
+  <header class="hero">
+    <div class="hero-text">
+      <svg class="logo" viewBox="0 0 55 26" width="110" height="52" fill="currentColor" role="img" aria-label="L7">
+        <path d="M8.667,0 15.67,0 10.33,16 20.33,16 19.67,18 2.667,18Z"/>
+        <path d="M55,0 37,18 27,18 38,7 27.33,7 29.67,0Z"/>
+        <path d="M2,20 19,20 18.33,22 1.333,22Z"/>
+        <path d="M35,20 33,22 23,22 25,20Z"/>
+        <path d="M0.6667,24 17.67,24 17,26 0,26Z"/>
+        <path d="M31,24 29,26 19,26 21,24Z"/>
+      </svg>
+      <h1 class="visually-hidden">L7 looper</h1>
+      <p class="lede">L7 is a 7-track stereo looper firmware for the Dirtywave M8. Install it from this page over USB, with nothing else to set up.</p>
+    </div>
+    <img class="demo" src="demo.gif" width="320" height="240" alt="L7 playing four loops while a lowpass filter is swept on track 4">
+  </header>
 
   <nav class="tabs" aria-label="Page sections">
     <a href="#install" id="tab-install-link" aria-current="page">Install</a>
