@@ -14,14 +14,13 @@ const ZIP = await import('./unzip.js' + v);
 
 const $ = (id) => document.getElementById(id);
 const els = {
-  release: $('release'), unsupported: $('unsupported'), flasher: $('flasher'),
+  release: $('release'), flasher: $('flasher'),
   go: $('go'), pick: $('pick'), l7Actions: $('l7-actions'), restoreActions: $('restore-actions'), status: $('status'), progress: $('progress'),
   console: $('console'), l7Slot: $('l7-slot'),
   log: $('log'), file: $('file'), fileGo: $('file-go'), fileStart: $('file-start'),
   fileActions: $('file-actions'), fileSlot: $('file-slot'),
-  downloads: $('downloads'),
   restore: $('restore'), restoreGo: $('restore-go'), restoreSlot: $('restore-slot'),
-  dwPage: $('dw-page'), restoreTitle: $('restore-title'),
+  restoreTitle: $('restore-title'),
 };
 
 const LOADER_FILTERS = [{ vendorId: HK.VENDOR_ID, productId: HK.LOADER_PRODUCT_ID }];
@@ -245,29 +244,38 @@ async function loadRelease() {
     release = await res.json();
   } catch (e) {
     log(`latest.json: ${e.message}`);
-    els.release.replaceChildren(Object.assign(document.createElement('span'), {
-      textContent: "Couldn't look up the latest release. Reload the page to try again.",
-    }));
-    els.downloads.innerHTML = '<li><a href="https://github.com/minusro/L7/releases/latest" target="_blank" rel="noopener">The latest release on GitHub</a></li>';
+    for (const el of document.querySelectorAll('.release')) {
+      el.replaceChildren(Object.assign(document.createElement('span'), {
+        textContent: "Couldn't look up the latest release. Reload the page to try again.",
+      }));
+    }
+    for (const list of document.querySelectorAll('.downloads')) {
+      list.innerHTML = '<li><a href="https://github.com/minusro/L7/releases/latest" target="_blank" rel="noopener">The latest release on GitHub</a></li>';
+    }
     refresh();
     return;
   }
 
-  const strong = Object.assign(document.createElement('strong'), { textContent: `L7 ${release.version}` });
-  const date = Object.assign(document.createElement('span'), { textContent: `Released ${fmtDate(release.published)}` });
-  const notes = Object.assign(document.createElement('a'), { href: release.url, target: '_blank', rel: 'noopener', textContent: 'Release notes' });
-  els.release.replaceChildren(strong, date, notes);
-
-  els.downloads.replaceChildren();
-  for (const board of [HK.BOARDS.teensy40, HK.BOARDS.teensyMM]) {
-    const f = release.firmware[board.key];
-    const li = document.createElement('li');
-    const a = Object.assign(document.createElement('a'), { href: `firmware/${f.file}`, download: f.file, textContent: f.file });
-    a.addEventListener('click', () => track(`download-${board.key}`, f.file));
-    li.append(`M8 ${board.m8}: `, a);
-    els.downloads.append(li);
+  // The release line and download links appear in the install panel and in
+  // the manual install shown to browsers that can't install from the page
+  for (const el of document.querySelectorAll('.release')) {
+    const strong = Object.assign(document.createElement('strong'), { textContent: `L7 ${release.version}` });
+    const date = Object.assign(document.createElement('span'), { textContent: `Released ${fmtDate(release.published)}` });
+    const notes = Object.assign(document.createElement('a'), { href: release.url, target: '_blank', rel: 'noopener', textContent: 'Release notes' });
+    el.replaceChildren(strong, date, notes);
   }
-  els.dwPage.href = release.dirtywave?.page || DW_PAGE;
+  for (const list of document.querySelectorAll('.downloads')) {
+    list.replaceChildren();
+    for (const board of [HK.BOARDS.teensy40, HK.BOARDS.teensyMM]) {
+      const f = release.firmware[board.key];
+      const li = document.createElement('li');
+      const a = Object.assign(document.createElement('a'), { href: `firmware/${f.file}`, download: f.file, textContent: f.file });
+      a.addEventListener('click', () => track(`download-${board.key}`, f.file));
+      li.append(`M8 ${board.m8}: `, a);
+      list.append(li);
+    }
+  }
+  for (const a of document.querySelectorAll('#dw-page, .dw-page')) a.href = release.dirtywave?.page || DW_PAGE;
   refresh();
   loadDirtywaveVersion();
 }
@@ -545,14 +553,12 @@ els.fileGo.addEventListener('click', () => {
 
 els.fileStart.addEventListener('click', () => start(localSource));
 
-if ('hid' in navigator && window.isSecureContext) {
-  els.flasher.hidden = false;
-  els.restore.hidden = false;
+// The page's <head> decided which install it shows (can-flash / cannot-flash)
+if (document.documentElement.classList.contains('can-flash')) {
   navigator.hid.addEventListener('connect', (e) => {
     if (e.device.productId === HK.LOADER_PRODUCT_ID) log('loader connected');
   });
 } else {
-  els.unsupported.hidden = false;
   // count.js may not have loaded yet
   window.addEventListener('load', () => setTimeout(() => track('unsupported-browser', 'Browser without WebHID'), 1000));
 }

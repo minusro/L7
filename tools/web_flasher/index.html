@@ -148,6 +148,9 @@
     .guide strong { color: var(--accent); font-weight: 600; }   /* the key combos */
     .guide li ul { margin: 6px 0 0; padding-left: 1.2em; }
     .guide li li { margin-bottom: 4px; }
+    .cannot-flash .needs-flash, .can-flash .no-flash { display: none !important; }
+    #manual ol.before { margin-bottom: 12px; }
+    #manual .downloads { margin: 6px 0 0; }
     footer { color: var(--muted); font-size: 15px; margin-top: 36px; }
 
     @media (max-width: 640px) {
@@ -159,6 +162,11 @@
       button { width: 100%; }
     }
   </style>
+  <script>
+    // Installing from the page needs WebHID (Chrome or Edge on a computer).
+    // Without it, the page shows the manual install instead of its buttons.
+    document.documentElement.className = ('hid' in navigator && window.isSecureContext) ? 'can-flash' : 'cannot-flash';
+  </script>
 </head>
 <body>
 <main>
@@ -184,15 +192,27 @@
   </nav>
 
   <div id="tab-install">
-  <section class="panel" aria-labelledby="install-title">
+  <section class="panel no-flash" id="manual" aria-labelledby="manual-title">
+    <div class="release"><span>Looking up the latest release…</span></div>
+    <h2 id="manual-title" class="visually-hidden">Install by hand</h2>
+    <p>This browser can't install firmware on the M8. In Chrome or Edge on a computer, this page installs L7 with one click. Here, install it by hand with TyUploader, the way Dirtywave's own updates go:</p>
+    <ol class="before">
+      <li>Download the file for your M8:
+        <ul class="downloads"><li>Looking up the latest release…</li></ul>
+      </li>
+      <li>Install <a href="https://github.com/Koromix/tytools/releases" target="_blank" rel="noopener">TyTools</a> (on a Mac, move it to the Applications folder).</li>
+      <li>Connect the M8 to the computer with a USB data cable, switch it on, and quit anything else that uses it: M8C, the headless display, a serial monitor.</li>
+      <li>Open TyUploader (not TyCommander), check the M8 is selected in its list, click Upload and choose the file.</li>
+    </ol>
+    <p>To go back to the M8's own firmware, download it from <a class="dw-page" href="https://dirtywave.com/pages/resources-downloads" target="_blank" rel="noopener">Dirtywave's downloads page</a> and install the .hex for your model the same way.</p>
+    <p>On Linux, install PJRC's <a href="https://www.pjrc.com/teensy/00-teensy.rules" target="_blank" rel="noopener">udev rules for Teensy</a> first (the M8 is built around a Teensy), then unplug and replug the M8.</p>
+  </section>
+
+  <section class="panel needs-flash" aria-labelledby="install-title">
     <h2 id="install-title" hidden>Install</h2>
     <div class="release" id="release"><span>Looking up the latest release…</span></div>
 
-    <div id="unsupported" hidden>
-      <p><strong>This browser can't talk to the M8.</strong> Installing from the page needs WebHID, which Chrome and Edge have on a computer (not on phones or tablets). Open this page in one of those, or install by hand with the steps under "Install without this page" below.</p>
-    </div>
-
-    <div id="flasher" hidden>
+    <div id="flasher">
       <ol class="before">
         <li>Connect the M8 to this computer with a USB data cable, then switch it on.</li>
         <li>Quit anything else that uses the M8 over USB: M8C, the headless display, Teensy Loader, TyCommander, a serial monitor.</li>
@@ -211,7 +231,7 @@
     </div>
   </section>
 
-  <section class="panel" id="restore" hidden aria-labelledby="restore-title">
+  <section class="panel needs-flash" id="restore" aria-labelledby="restore-title">
     <h2 id="restore-title">Go back to the M8's own firmware</h2>
     <p>Downloads the latest firmware from <a id="dw-page" href="https://dirtywave.com/pages/resources-downloads" target="_blank" rel="noopener">Dirtywave's downloads page</a> and installs the file for your M8's model. It comes straight from Dirtywave to your browser; this site doesn't host it. Installing it means you agree to Dirtywave's licence (EULA.txt in their download).</p>
     <div class="actions" id="restore-actions">
@@ -232,12 +252,12 @@
     </details>
   </section>
 
-  <details class="log">
+  <details class="log needs-flash">
     <summary>Details</summary>
     <pre id="log"></pre>
   </details>
 
-  <section class="help">
+  <section class="help needs-flash">
     <h2>If something goes wrong</h2>
     <h3>It's safe to try again</h3>
     <p>The M8's loader sits on its own chip, and installing never overwrites it. If an install stops partway, the M8 waits in its loader: click Upload to try again. After reloading the page, click Install, close the browser's pop-up, then click Upload. Installing doesn't touch the SD card, so your projects and recordings stay put, whichever firmware you install.</p>
@@ -256,8 +276,8 @@
     <h3>Linux</h3>
     <p>Install PJRC's <a href="https://www.pjrc.com/teensy/00-teensy.rules" target="_blank" rel="noopener">udev rules for Teensy</a> (the M8 is built around a Teensy), then unplug and replug the M8.</p>
     <h3 id="manual">Install without this page</h3>
-    <p>Download the file for your M8 and open it in <a href="https://www.pjrc.com/teensy/loader.html" target="_blank" rel="noopener">Teensy Loader</a>, the same way you'd install a Dirtywave firmware update:</p>
-    <ul class="downloads" id="downloads"><li>Looking up the latest release…</li></ul>
+    <p>Download the file for your M8 and install it with <a href="https://github.com/Koromix/tytools/releases" target="_blank" rel="noopener">TyUploader</a>, the way Dirtywave's own updates go: connect and switch on the M8, open TyUploader, check the M8 is selected, click Upload and choose the file.</p>
+    <ul class="downloads"><li>Looking up the latest release…</li></ul>
   </section>
   </div>
 
