@@ -6,7 +6,7 @@
   <title>L7 looper</title>
   <meta name="description" content="Install L7, the multitrack looper for the Dirtywave M8, straight from your browser.">
   <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#292c29">
+  <meta name="theme-color" content="#141614">
   <link rel="canonical" href="https://danielstanciu.com/l7/">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/fonts/ibm-plex-sans-condensed-600-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -21,7 +21,7 @@
 
     :root {
       color-scheme: dark;
-      --bg: #292c29;                          /* the GIF's dark grey */
+      --bg: #141614;                          /* the GIF's dark grey, half as bright */
       --bg-raise: #000000;                    /* its screen black */
       --fg: #d5d2d5;                          /* its light grey */
       --muted: #a4a2a4;
@@ -43,7 +43,7 @@
       margin: 0;
       background-color: var(--bg);
       background-image: linear-gradient(var(--grid) 1px, transparent 1px);   /* horizontal lines only */
-      background-size: 100% var(--g);
+      background-size: 100% calc(var(--g) / 2);
       color: var(--fg);
       font: 400 17px/24px var(--font-sans);
     }
