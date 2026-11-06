@@ -485,6 +485,9 @@ int main(int argc, char **argv) {
   render(out + "/ui_menu_settings.png");
   setSetting(SET_NEXT_FREE, true);
   board.charging = false;
+  board.battery = 8;                               // (the battery low: its icon red)
+  render(out + "/ui_menu_settings_battery_low.png");
+  board.battery = 96;
   menuSettings(false);
   writePng(out + "/ui_menu_settings_closed.png");  // (as drawn, not redrawn: closed, what was under it back)
   menuSettings(true);

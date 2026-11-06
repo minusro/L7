@@ -611,9 +611,13 @@ FLASHMEM void drawBatteryIcon(bool all, uint16_t ink, uint16_t ground) {
   constexpr int STEPS = 7;
   int pct = board.batteryPercent(), fill = pct < 0 || pct >= 90 ? STEPS : (pct * STEPS + 50) / 100;
   bool charging = pct >= 0 && board.batteryCharging();
-  if (!all && fill == shownFill && charging == shownCharging) return;
+  bool low = pct >= 0 && pct <= BATTERY_LOW_PCT && !charging;   // (red, whatever the caller's grey)
+  static bool shownLow = false;
+  if (!all && fill == shownFill && charging == shownCharging && low == shownLow) return;
   shownFill = fill;
   shownCharging = charging;
+  shownLow = low;
+  if (low) ink = BATTERY_LOW;
   static const char *const BOLT[5] = {"....#....", "...##....", "..#####..", "....##...", "....#...."};   // (cut out: rows 1-5, columns 1-9)
   auto &t = board.tft();
   constexpr int W = 11, H = 7, X = SCREEN_W / PX - 2 - (W + 1), Y = 2;   // (its body, then its tip)

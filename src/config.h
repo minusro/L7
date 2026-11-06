@@ -31,6 +31,14 @@ constexpr uint32_t CHUNK_FRAMES = 4096;            // 16 KB per SD call
 constexpr uint32_t STRETCH_HISTORY = 1024;            // (a grain reads at most ~515 frames back at half speed, ~710 at an eighth)
 constexpr uint32_t STREAM_FRAMES = RING_FRAMES - STRETCH_HISTORY;
 constexpr bool STRETCH_DEFAULT = true;             // new tracks stretch (keep their pitch) rather than resample
+// The battery (L7.ino handleLowBattery(), the menu's icon). Empty, everything
+// saved and switched off: the fuel gauge at BATTERY_EMPTY_PCT or under while
+// the voltage is under BATTERY_EMPTY_PCT_MV too, or the voltage under
+// BATTERY_EMPTY_MV (over BATTERY_SANE_MV: a reading), for BATTERY_EMPTY_MS.
+// Low, the icon red: BATTERY_LOW_PCT and under.
+constexpr int BATTERY_EMPTY_PCT = 3, BATTERY_EMPTY_PCT_MV = 3600, BATTERY_EMPTY_MV = 3300, BATTERY_SANE_MV = 2500;
+constexpr uint32_t BATTERY_EMPTY_MS = 15000;
+constexpr int BATTERY_LOW_PCT = 10;
 constexpr bool LOG_ENGINE_LOAD = true;             // the audio interrupt's CPU use on the serial log every 5 s
 // Input history: the late press's grace (and the 128-frame pre-roll before
 // it) + slack for SD write stalls (what's recorded waits in it for the card).

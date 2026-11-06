@@ -112,6 +112,9 @@ public:
   // Charging (the fuel gauge's current flowing in; without the gauge, the
   // charger's REG0B CHRG_STAT), as of the last batteryPercent() read.
   bool batteryCharging() const { return _batCharging; }
+  // Its voltage, mV (the fuel gauge's while it runs, else the charger's;
+  // -1: not known), as of the last batteryPercent() read.
+  int batteryMillivolts() const { return _batSoc >= 0 && _batGaugeMv > 0 ? _batGaugeMv : _batMv; }
   void batteryLog();                 // the last read, raw, on the serial log (the gauge's mode and charge, the charger's status and voltage)
 
   // Charge guard (variant B; call it from loop()). Every 5 s it reads the

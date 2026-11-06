@@ -39,6 +39,8 @@ constexpr uint16_t PROJECT_COLORS[12] = {
 // ---- Roles
 constexpr uint16_t MUTED_HEAD = BG;          // the selected muted clip (a cut through its waveform)
 
+constexpr uint16_t BATTERY_LOW = rgb565(240, 72, 72);   // red: the battery icon at BATTERY_LOW_PCT and under
+
 // ---- Boot / errors
 constexpr uint16_t TEXT_PROGRESS = 0xFFE0;   // yellow: startup messages
 constexpr uint16_t LOGO_COLOR = rgb565(48, 230, 170);   // the splash screen's logo (the accent before a project is loaded)

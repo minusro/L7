@@ -88,6 +88,7 @@ public:
   void setSpeaker(bool) {}
   int batteryPercent() { return battery; }
   bool batteryCharging() const { return charging; }
+  int batteryMillivolts() const { return 3900; }
   void batteryLog() {}
   void chargeGuard() {}
   HardwareSerial *midiOutBegin() { return &midi; }

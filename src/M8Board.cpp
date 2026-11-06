@@ -243,14 +243,21 @@ FLASHMEM void Board::wireScan(uint8_t map[16]) {
   }
 }
 
-// The fuel gauge (STC3115 @0x70): n registers from reg.
+// The fuel gauge (STC3115 @0x70): n registers from reg. Three tries: a read
+// fails now and then on a gauge that answers the next one 200 us later (one
+// in ten or so on the unit here, 2026-11-06; why isn't known), and a failed
+// one reads as no gauge (the icon full, the empty battery's count begun again).
 FLASHMEM static bool gaugeRead(uint8_t reg, uint8_t *buf, uint8_t n) {
-  Wire.beginTransmission(0x70);
-  Wire.write(reg);
-  if (Wire.endTransmission(false) != 0) return false;
-  if (Wire.requestFrom((uint8_t)0x70, n) != n) return false;
-  for (uint8_t i = 0; i < n; i++) buf[i] = Wire.read();
-  return true;
+  for (int tries = 0; tries < 3; tries++) {
+    if (tries) delayMicroseconds(200);
+    Wire.beginTransmission(0x70);
+    Wire.write(reg);
+    if (Wire.endTransmission(false) != 0) continue;
+    if (Wire.requestFrom((uint8_t)0x70, n) != n) continue;
+    for (uint8_t i = 0; i < n; i++) buf[i] = Wire.read();
+    return true;
+  }
+  return false;
 }
 
 // A Li-ion cell's charge from its voltage at rest (mV), roughly.

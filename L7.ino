@@ -123,15 +123,49 @@ static void freezeCheck() {
 }
 
 // ---- Power
+// Everything saved (the recordings' headers, the session, the scenes).
+static void saveAll() {
+  flushHeaders();
+  saveSessionNow();
+  flushScenes();
+}
+
+// The battery empty: a message, everything saved, off. Empty is the fuel
+// gauge at BATTERY_EMPTY_PCT or under with the voltage agreeing (a gauge
+// wrong about its charge can't switch a full battery off), or the voltage
+// under BATTERY_EMPTY_MV; not while it charges, and only once every reading
+// for BATTERY_EMPTY_MS said so (a dip under load doesn't count). No reading
+// of the voltage (variant A; the gauge not running): never.
+static void handleLowBattery() {
+  static uint32_t since = 0;
+  static bool empty = false;
+  int pct = board.batteryPercent(), mv = board.batteryMillivolts();   // (read every 5 s at most)
+  bool now = !board.batteryCharging() && mv > BATTERY_SANE_MV &&
+             (mv < BATTERY_EMPTY_MV || (pct >= 0 && pct <= BATTERY_EMPTY_PCT && mv < BATTERY_EMPTY_PCT_MV));
+  if (!now) { empty = false; return; }
+  if (!empty) { empty = true; since = millis(); }
+  if (millis() - since < BATTERY_EMPTY_MS) return;
+  Serial.printf("battery empty (%d%%, %d mV): saving, switching off\n", pct, mv);
+  codec.volume(0.0f);
+  board.tft().fillScreen(BG);
+  const char *msg = "BATTERY EMPTY";
+  drawText((SCREEN_W - textWidth(msg)) / 2, (SCREEN_H - FONT_H) / 2, msg, LIGHT, BG);
+  uint32_t at = millis();
+  saveAll();
+  while (millis() - at < 2000) loopCount++;      // (the message: 2 s on screen)
+  board.powerOff();
+}
+
+// The power key held a second: everything saved, off. (And the battery:
+// watched wherever the power key is.)
 static void handlePowerButton() {
+  handleLowBattery();
   if (!board.powerButtonPressed()) return;
   uint32_t start = millis();
   while (board.powerButtonHeld()) {
     if (millis() - start >= 1000) {
       codec.volume(0.0f);
-      flushHeaders();
-      saveSessionNow();
-      flushScenes();
+      saveAll();
       board.powerOff();
     }
   }
@@ -158,7 +192,7 @@ static void waitForCard() {
   auto &t = board.tft();
   t.fillScreen(BG);
   const char *msg = "INSERT AN SD CARD";
-  drawText((320 - textWidth(msg)) / 2, (240 - FONT_H) / 2, msg, LIGHT, BG);
+  drawText((SCREEN_W - textWidth(msg)) / 2, (SCREEN_H - FONT_H) / 2, msg, LIGHT, BG);
   Serial.println("SD card: none, waiting for one");
   while (!cardRestart()) {
     for (uint32_t at = millis(); millis() - at < 300;) {

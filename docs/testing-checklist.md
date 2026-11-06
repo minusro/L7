@@ -6,6 +6,17 @@ checked, or turn it into a fix.
 
 ## To check
 
+- [ ] **Battery empty: saved and off (2026-11-06).** Never seen with a flat
+  battery. On the M8 with the limit raised over a full battery's voltage and
+  the switching off left out: the message's line on the log 15 s after the
+  start, the save 6 ms.
+  Off USB, run it down: the menu's battery red from 10 %; at 3 % (and under
+  3.6 V) or under 3.3 V for 15 s, BATTERY EMPTY for 2 s and off; switched on
+  again, the project and session as they were (while recording, while
+  playing). Switched on flat: the message again after ~15 s. On USB: never.
+  Watch for a false one under load (loud speaker, card writes) at 10-20 %:
+  the serial log's "battery empty (N%, N mV)" line gives the reading.
+  Whether 3.3 V is above where the M8's supply drops out isn't known.
 - [ ] **The install page, danielstanciu.com/l7 (2026-11-05).** Never run
   against an M8 yet: halfkay.js is checked offline (check.mjs: both v1.0.2
   .hex files parse to objcopy's image, the right model each), the WebHID and
@@ -418,10 +429,17 @@ checked, or turn it into a fix.
 
 ## Open problems
 
-- [ ] **No low-battery power-off.** Nothing acts on `batteryPercent()` but
-  the icon: L7 runs until the supply drops out, without the save a power-off
-  does. Power off (and save) at a few percent.
-
+- [ ] **The fuel gauge's reads fail now and then** (2026-11-06, the M8
+  here: one in ten or so of the reads every 5 s; the next try 200 us later
+  answers, so `gaugeRead()` tries three times). Why isn't known: not the
+  charger's unanswered reads just before (the one caught came 5 s after
+  them). A scan of the bus once showed an address (0x18) nothing is at. The
+  bus runs at 400 kHz; the keys are on it too ("keys: the key bus failed" on
+  the log would be the same trouble).
+- [ ] **The desktop build (tools/desktop/build.sh) doesn't compile**
+  (noticed 2026-11-06, there before that day's changes): storage.cpp's
+  `reservedIsData()` calls `FsFile::simReservedIsData()`, which its SD
+  stand-in lacks (the simulator's has it, as with simFat32 for the preview).
 - [ ] **Snags on project load**: a capture of several loads (2026-10-12) heard
   nothing; the log had one tiny dropout on track 7 (112 + 256 samples, ~8 ms)
   during a scene write, then a stream read. Watch for it again.
