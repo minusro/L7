@@ -287,7 +287,7 @@ shows two lists, later ones none if Chrome keeps both permissions. When the
 second list can't open, the clicked button turns into Cancel (back to the
 start; the M8 stays in its loader) and a filled "Upload <firmware>" opens it.
 
-"Restore the M8 firmware" installs Dirtywave's own firmware the same way. The
+"Restore" installs Dirtywave's own firmware the same way. The
 browser downloads Dirtywave's M8Firmware.zip itself (`unzip.js` reads it,
 `DecompressionStream('deflate-raw')` inflates it, its CRC-32 is checked) and
 takes `Firmware/Model0N/…(TyUploader).hex` for the model the loader names.

@@ -180,7 +180,7 @@ function refresh() {
   els.go.textContent = goWaits ? 'Cancel' : 'Install';   // the version is in the panel's title
   els.go.classList.toggle('secondary', goWaits);
   els.go.disabled = busy || !release;
-  els.restoreGo.textContent = awaiting === dirtywaveSource ? 'Cancel' : 'Restore the M8 firmware';
+  els.restoreGo.textContent = awaiting === dirtywaveSource ? 'Cancel' : 'Restore';
   els.restoreGo.disabled = busy || !release?.dirtywave?.zip;
   els.fileActions.hidden = !local;
   els.fileGo.disabled = busy;
