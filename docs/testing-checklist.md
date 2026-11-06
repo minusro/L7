@@ -415,6 +415,20 @@ checked, or turn it into a fix.
 
 ## Open problems
 
+- [ ] **The charger doesn't answer on this unit, so its init and the charge
+  guard do nothing (noticed 2026-11-06).** The 2026-10-09 battery log had the
+  charger's REG0B as 0xFF and no REG0E: `bqRead()` returning -1, i.e. no
+  answer at 0x6A (the fuel gauge at 0x70 did answer). `initChargerB()` then
+  returns at its first read (512 mA, termination and the safety timer never
+  written; `begin()` ignores the result) and `chargeGuard()` returns early
+  every time. The chip is left with whatever it had: stock's settings if they
+  survived, its power-on defaults (2 A) if it was ever reset. To settle: log
+  `initChargerB()`'s result and an I²C scan of `Wire` at boot, with USB in
+  and out; with a flat-ish battery on USB, read the gauge's charge current
+  (should stay near 512 mA).
+- [ ] **No low-battery power-off.** Nothing acts on `batteryPercent()` but
+  the icon: L7 runs until the supply drops out, without the save a power-off
+  does. Power off (and save) at a few percent.
 
 - [ ] **Snags on project load**: a capture of several loads (2026-10-12) heard
   nothing; the log had one tiny dropout on track 7 (112 + 256 samples, ~8 ms)
