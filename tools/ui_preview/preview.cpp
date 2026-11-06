@@ -13,6 +13,8 @@
 #include "audio_follow.h"
 #include "input.h"
 
+bool simFat32 = false;   // (the SD stand-in from tools/looper_sim/stubs asks: an exFAT card here, as the simulator's default)
+
 // What the Teensy-library stand-ins expect from their host (as in looper_sim).
 uint32_t simMicros = 0;
 void (*simDelayHook)(uint32_t us) = nullptr;
