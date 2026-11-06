@@ -1,7 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -14.5 55 55">
-  <!-- The L7 logo, full width, in the accent green of L7's screen (as on the page) -->
+  <!-- The L7 logo, full width: the page's dark grey background colour on a light
+       browser theme, the accent green of L7's screen (as on the page) on a dark one -->
   <style>
-    path { fill: #b4e2c5; }
+    path { fill: #141614; }
+    @media (prefers-color-scheme: dark) { path { fill: #b4e2c5; } }
   </style>
   <path d="M8.667,0 15.67,0 10.33,16 20.33,16 19.67,18 2.667,18Z"/>
   <path d="M55,0 37,18 27,18 38,7 27.33,7 29.67,0Z"/>
