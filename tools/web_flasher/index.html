@@ -121,6 +121,15 @@
     .tabs a:hover { color: var(--accent); }
     .tabs a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--fg); }
     #tab-help { min-height: 240px; }
+    .guide { margin: 24px 0; }
+    .guide h3 { font: 600 18px/24px var(--font-sans); margin: 28px 0 8px; }
+    .guide h3:first-of-type { margin-top: 0; }
+    .guide ol { margin: 0 0 12px; padding-left: 1.6em; }
+    .guide ol > li { margin-bottom: 8px; }
+    .guide ol > li::marker { font-family: var(--font-mono); color: var(--muted); }
+    .guide ul { margin: 6px 0 0; padding-left: 1.2em; }
+    .guide ul > li { margin-bottom: 4px; }
+    .guide .keys { color: var(--muted); }
     footer { color: var(--muted); font-size: 15px; margin-top: 36px; }
 
     @media (max-width: 520px) {
@@ -179,7 +188,7 @@
 
   <section class="panel" id="restore" hidden aria-labelledby="restore-title">
     <h2 id="restore-title">Go back to the M8's own firmware</h2>
-    <p>Downloads the latest firmware from <a id="dw-page" href="https://dirtywave.com/pages/resources-downloads">Dirtywave's downloads page</a> and installs the file for your M8's model. It comes straight from Dirtywave to your browser; this site doesn't host it. Installing it means you agree to Dirtywave's licence (EULA.txt in their download).</p>
+    <p>Downloads the latest firmware from <a id="dw-page" href="https://dirtywave.com/pages/resources-downloads" target="_blank" rel="noopener">Dirtywave's downloads page</a> and installs the file for your M8's model. It comes straight from Dirtywave to your browser; this site doesn't host it. Installing it means you agree to Dirtywave's licence (EULA.txt in their download).</p>
     <div class="actions" id="restore-actions">
       <button id="restore-go" class="secondary" disabled>Restore the M8 firmware</button>
     </div>
@@ -220,18 +229,83 @@
     <h3>The screen stays dark after "Done"</h3>
     <p>Switch the M8 off and on.</p>
     <h3>Linux</h3>
-    <p>Install PJRC's <a href="https://www.pjrc.com/teensy/00-teensy.rules">udev rules for Teensy</a> (the M8 is built around a Teensy), then unplug and replug the M8.</p>
+    <p>Install PJRC's <a href="https://www.pjrc.com/teensy/00-teensy.rules" target="_blank" rel="noopener">udev rules for Teensy</a> (the M8 is built around a Teensy), then unplug and replug the M8.</p>
     <h3 id="manual">Install without this page</h3>
-    <p>Download the file for your M8 and open it in <a href="https://www.pjrc.com/teensy/loader.html">Teensy Loader</a>, the same way you'd install a Dirtywave firmware update:</p>
+    <p>Download the file for your M8 and open it in <a href="https://www.pjrc.com/teensy/loader.html" target="_blank" rel="noopener">Teensy Loader</a>, the same way you'd install a Dirtywave firmware update:</p>
     <ul class="downloads" id="downloads"><li>Looking up the latest release…</li></ul>
   </section>
   </div>
 
-  <div id="tab-help" hidden></div>
+  <div id="tab-help" hidden>
+  <section class="guide" aria-labelledby="guide-title">
+    <h2 id="guide-title">Quickstart</h2>
+    <p class="keys">On the M8: A is EDIT, B is OPT.</p>
+
+    <h3>Getting started</h3>
+    <ol>
+      <li><strong>▲ ▼ ◀ ▶</strong>: select a track or a cell. Moving past the screen's edges goes to the menu.</li>
+      <li><strong>A</strong> is the action button. The icon at the bottom right of the screen shows what it will do on the selected cell.
+        <ul>
+          <li>On a menu card: on an empty card, start a new project and go to the looper. On a used card, load that project. (B works as A in the menu.)</li>
+          <li>On an empty track: record from the next bar line (if the clock is stopped, this starts it). Press A again to stop at the end of that bar. In a new project, a metronome clicks until the first loop is done.</li>
+          <li>On a full track: mute / unmute.</li>
+        </ul>
+      </li>
+      <li><strong>SHIFT + A</strong>: cancel a recording, cut the clip, or paste onto an empty track.</li>
+      <li><strong>B + arrows</strong>: edit the selected cell. B twice resets it.
+        <ul>
+          <li>Waveform: ◀ ▶ moves the loop range, ▲ ▼ makes it longer / shorter (reset: the whole loop).</li>
+          <li>Filter: ◀ ▶ moves the band, ▲ ▼ widens / narrows it (reset: open).</li>
+          <li>Volume: ▲ ▼ sets the track volume, ◀ ▶ the stereo balance (reset: unity, centred).</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h3>Scenes</h3>
+    <p>A scene is a snapshot of all 7 tracks: which clip each one plays, its range, mute, filter, volume and balance. Anything you change is saved into the current scene as you go, so there's no save step. The bottom row shows where you are as SCN n/N, and a project holds up to 200 scenes.</p>
+    <p>Two scenes sit at either end of the list. They aren't stored until you change them:</p>
+    <ul>
+      <li><strong>0*</strong> (shown as 0/N) is an empty scene below scene 1. A new project starts there, so your first recording turns it into scene 1. Changing anything on 0* later inserts a new scene 1 and moves the others up.</li>
+      <li><strong>N+1*</strong> (shown as */N) is a copy of the last scene, above it. Changing anything there makes it a new last scene. To build the next part of a song, step up to N+1* and change or record something.</li>
+    </ul>
+    <ol start="5">
+      <li><strong>SHIFT + B twice</strong>: duplicate the scene.</li>
+      <li><strong>SHIFT + ▲ ▼</strong>: next / previous scene, on the beat after you let go of SHIFT.</li>
+      <li><strong>B + A on an empty track</strong>: resample what you hear into a new scene.</li>
+      <li><strong>A on the scene cell</strong>: next scene. SHIFT + A there duplicates it.</li>
+      <li><strong>SHIFT + ▲ ▼, three quick taps</strong>: jump to the copy of the last scene (N+1*) or to the empty one (0*).</li>
+      <li><strong>SHIFT, B, A in that order</strong>: cut the scene.</li>
+      <li><strong>B, SHIFT, A in that order</strong>: paste the scene after this one.</li>
+    </ol>
+
+    <h3>Clock</h3>
+    <ol start="12">
+      <li><strong>START</strong>: play / stop.</li>
+      <li><strong>SHIFT + START</strong>: resume from where the clock stopped (restart if it's playing).</li>
+      <li><strong>B + arrows on the tempo cell</strong>: ±0.1 BPM (◀ ▶) / ±1 BPM (▲ ▼). The loops stretch to the new tempo and keep their pitch.</li>
+      <li><strong>A on the tempo cell</strong>: tap tempo.</li>
+      <li><strong>B + A on any bottom row cell</strong>: metronome on / off.</li>
+    </ol>
+
+    <h3>More</h3>
+    <ol start="17">
+      <li><strong>B + arrows on the clock cell</strong>: master volume (▲ ▼) and stereo balance (◀ ▶).</li>
+      <li><strong>A held + ▲ ▼ after a mute</strong>: swipe the same mute across tracks. Going back the other way undoes it.</li>
+      <li><strong>SHIFT + ◀ ▶</strong>: previous / next recording on the card.</li>
+      <li><strong>B + A + ▲ ▼ on a track</strong>: move a track that has a clip.</li>
+      <li><strong>B + any cell + A</strong>: nudge by ¼ beat (held: in ms steps).</li>
+      <li><strong>SHIFT + ◀ ▶ on the bottom row while playing</strong>: nudge the tempo faster / slower, like Live's nudge buttons.</li>
+      <li><strong>SHIFT + A on the tempo cell</strong>: audio follow (it follows the tempo heard in the input).</li>
+      <li><strong>SHIFT + A in the menu on a project slot</strong>: cut a project (hold) / paste it into a slot.</li>
+      <li><strong>Menu → Export</strong>: an Ableton Live set in /L7/EXPORTS.</li>
+      <li><strong>Menu → Storage mode</strong>: the SD card shows up as a USB drive. Any key exits.</li>
+    </ol>
+  </section>
+  </div>
 
 
   <footer>
-    <p><a href="https://github.com/minusro/L7">L7 on GitHub</a> · <a id="guide" href="https://github.com/minusro/L7/releases/latest">User guide</a> · <a id="cheatsheet" href="https://github.com/minusro/L7/releases/latest">Cheatsheet</a> · <a href="https://github.com/minusro/L7/releases">All releases</a> · <a href="/">danielstanciu.com</a></p>
+    <p><a href="https://github.com/minusro/L7" target="_blank" rel="noopener">L7 on GitHub</a> · <a id="guide" href="https://github.com/minusro/L7/releases/latest" target="_blank" rel="noopener">User guide</a> · <a id="cheatsheet" href="https://github.com/minusro/L7/releases/latest" target="_blank" rel="noopener">Cheatsheet</a> · <a href="https://github.com/minusro/L7/releases" target="_blank" rel="noopener">All releases</a> · <a href="/" target="_blank" rel="noopener">danielstanciu.com</a></p>
     <p>L7 is an independent project, not made by Dirtywave.</p>
   </footer>
 </main>

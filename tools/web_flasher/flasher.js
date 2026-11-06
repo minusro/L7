@@ -248,14 +248,14 @@ async function loadRelease() {
     els.release.replaceChildren(Object.assign(document.createElement('span'), {
       textContent: "Couldn't look up the latest release. Reload the page to try again.",
     }));
-    els.downloads.innerHTML = '<li><a href="https://github.com/minusro/L7/releases/latest">The latest release on GitHub</a></li>';
+    els.downloads.innerHTML = '<li><a href="https://github.com/minusro/L7/releases/latest" target="_blank" rel="noopener">The latest release on GitHub</a></li>';
     refresh();
     return;
   }
 
   const strong = Object.assign(document.createElement('strong'), { textContent: `L7 ${release.version}` });
   const date = Object.assign(document.createElement('span'), { textContent: `Released ${fmtDate(release.published)}` });
-  const notes = Object.assign(document.createElement('a'), { href: release.url, textContent: 'Release notes' });
+  const notes = Object.assign(document.createElement('a'), { href: release.url, target: '_blank', rel: 'noopener', textContent: 'Release notes' });
   els.release.replaceChildren(strong, date, notes);
 
   els.downloads.replaceChildren();
