@@ -52,8 +52,8 @@
     a:hover { color: var(--accent); }
     .logo { display: block; margin: 0; }
     .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .hero { display: flex; align-items: center; gap: 24px; }
-    .hero-text { flex: 1; min-width: 0; text-align: left; }
+    .hero { display: flex; align-items: stretch; gap: 24px; }
+    .hero-text { flex: 1; min-width: 0; text-align: left; display: flex; flex-direction: column; justify-content: space-between; }
     .hero .lede { margin: 20px 0 0; }
     .demo { display: block; flex: none; width: 320px; max-width: 100%; height: auto; }
     h2 { font: 600 22px/24px var(--font-sans); margin: 0 0 12px; }
