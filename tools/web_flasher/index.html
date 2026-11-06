@@ -132,7 +132,6 @@
     .guide ol > li::marker { font-family: var(--font-mono); color: var(--muted); }
     .guide ul { margin: 6px 0 0; padding-left: 1.2em; }
     .guide ul > li { margin-bottom: 4px; }
-    .guide .keys { color: var(--muted); }
     footer { color: var(--muted); font-size: 15px; margin-top: 36px; }
 
     @media (max-width: 640px) {
@@ -247,28 +246,35 @@
   </div>
 
   <div id="tab-help" hidden>
-  <section class="guide" aria-labelledby="guide-title">
-    <h2 id="guide-title">Quickstart</h2>
-    <p class="keys">On the M8: A is EDIT, B is OPT.</p>
+  <section class="guide" aria-label="Help">
 
     <h3>Getting started</h3>
     <ol>
       <li><strong>▲ ▼ ◀ ▶</strong>: select a track or a cell. Moving past the screen's edges goes to the menu.</li>
-      <li><strong>A</strong> is the action button. The icon at the bottom right of the screen shows what it will do on the selected cell.
+      <li><strong>EDIT</strong> is the action button. The icon at the bottom right of the screen shows what it will do on the selected cell.
         <ul>
-          <li>On a menu card: on an empty card, start a new project and go to the looper. On a used card, load that project. (B works as A in the menu.)</li>
-          <li>On an empty track: record from the next bar line (if the clock is stopped, this starts it). Press A again to stop at the end of that bar. In a new project, a metronome clicks until the first loop is done.</li>
+          <li>On a menu card: on an empty card, start a new project and go to the looper. On a used card, load that project. (OPT works as EDIT in the menu.)</li>
+          <li>On an empty track: record from the next bar line (if the clock is stopped, this starts it). Press EDIT again to stop at the end of that bar. In a new project, a metronome clicks until the first loop is done.</li>
           <li>On a full track: mute / unmute.</li>
         </ul>
       </li>
-      <li><strong>SHIFT + A</strong>: cancel a recording, cut the clip, or paste onto an empty track.</li>
-      <li><strong>B + arrows</strong>: edit the selected cell. B twice resets it.
+      <li><strong>SHIFT + EDIT</strong>: cancel a recording, cut the clip, or paste onto an empty track.</li>
+      <li><strong>OPT + arrows</strong>: edit the selected cell. OPT twice resets it.
         <ul>
           <li>Waveform: ◀ ▶ moves the loop range, ▲ ▼ makes it longer / shorter (reset: the whole loop).</li>
           <li>Filter: ◀ ▶ moves the band, ▲ ▼ widens / narrows it (reset: open).</li>
           <li>Volume: ▲ ▼ sets the track volume, ◀ ▶ the stereo balance (reset: unity, centred).</li>
         </ul>
       </li>
+    </ol>
+
+    <h3>Clock</h3>
+    <ol start="5">
+      <li><strong>START</strong>: play / stop.</li>
+      <li><strong>SHIFT + START</strong>: resume from where the clock stopped (restart if it's playing).</li>
+      <li><strong>OPT + arrows on the tempo cell</strong>: ±0.1 BPM (◀ ▶) / ±1 BPM (▲ ▼). The loops stretch to the new tempo and keep their pitch.</li>
+      <li><strong>EDIT on the tempo cell</strong>: tap tempo.</li>
+      <li><strong>OPT + EDIT on any bottom row cell</strong>: metronome on / off.</li>
     </ol>
 
     <h3>Scenes</h3>
@@ -278,35 +284,26 @@
       <li><strong>0*</strong> (shown as 0/N) is an empty scene below scene 1. A new project starts there, so your first recording turns it into scene 1. Changing anything on 0* later inserts a new scene 1 and moves the others up.</li>
       <li><strong>N+1*</strong> (shown as */N) is a copy of the last scene, above it. Changing anything there makes it a new last scene. To build the next part of a song, step up to N+1* and change or record something.</li>
     </ul>
-    <ol start="5">
-      <li><strong>SHIFT + B twice</strong>: duplicate the scene.</li>
+    <ol start="10">
+      <li><strong>SHIFT + OPT twice</strong>: duplicate the scene.</li>
       <li><strong>SHIFT + ▲ ▼</strong>: next / previous scene, on the beat after you let go of SHIFT.</li>
-      <li><strong>B + A on an empty track</strong>: resample what you hear into a new scene.</li>
-      <li><strong>A on the scene cell</strong>: next scene. SHIFT + A there duplicates it.</li>
+      <li><strong>OPT + EDIT on an empty track</strong>: resample what you hear into a new scene.</li>
+      <li><strong>EDIT on the scene cell</strong>: next scene. SHIFT + EDIT there duplicates it.</li>
       <li><strong>SHIFT + ▲ ▼, three quick taps</strong>: jump to the copy of the last scene (N+1*) or to the empty one (0*).</li>
-      <li><strong>SHIFT, B, A in that order</strong>: cut the scene.</li>
-      <li><strong>B, SHIFT, A in that order</strong>: paste the scene after this one.</li>
-    </ol>
-
-    <h3>Clock</h3>
-    <ol start="12">
-      <li><strong>START</strong>: play / stop.</li>
-      <li><strong>SHIFT + START</strong>: resume from where the clock stopped (restart if it's playing).</li>
-      <li><strong>B + arrows on the tempo cell</strong>: ±0.1 BPM (◀ ▶) / ±1 BPM (▲ ▼). The loops stretch to the new tempo and keep their pitch.</li>
-      <li><strong>A on the tempo cell</strong>: tap tempo.</li>
-      <li><strong>B + A on any bottom row cell</strong>: metronome on / off.</li>
+      <li><strong>SHIFT, OPT, EDIT in that order</strong>: cut the scene.</li>
+      <li><strong>OPT, SHIFT, EDIT in that order</strong>: paste the scene after this one.</li>
     </ol>
 
     <h3>More</h3>
     <ol start="17">
-      <li><strong>B + arrows on the clock cell</strong>: master volume (▲ ▼) and stereo balance (◀ ▶).</li>
-      <li><strong>A held + ▲ ▼ after a mute</strong>: swipe the same mute across tracks. Going back the other way undoes it.</li>
+      <li><strong>OPT + arrows on the clock cell</strong>: master volume (▲ ▼) and stereo balance (◀ ▶).</li>
+      <li><strong>EDIT held + ▲ ▼ after a mute</strong>: swipe the same mute across tracks. Going back the other way undoes it.</li>
       <li><strong>SHIFT + ◀ ▶</strong>: previous / next recording on the card.</li>
-      <li><strong>B + A + ▲ ▼ on a track</strong>: move a track that has a clip.</li>
-      <li><strong>B + any cell + A</strong>: nudge by ¼ beat (held: in ms steps).</li>
+      <li><strong>OPT + EDIT + ▲ ▼ on a track</strong>: move a track that has a clip.</li>
+      <li><strong>OPT + any cell + EDIT</strong>: nudge by ¼ beat (held: in ms steps).</li>
       <li><strong>SHIFT + ◀ ▶ on the bottom row while playing</strong>: nudge the tempo faster / slower, like Live's nudge buttons.</li>
-      <li><strong>SHIFT + A on the tempo cell</strong>: audio follow (it follows the tempo heard in the input).</li>
-      <li><strong>SHIFT + A in the menu on a project slot</strong>: cut a project (hold) / paste it into a slot.</li>
+      <li><strong>SHIFT + EDIT on the tempo cell</strong>: audio follow (it follows the tempo heard in the input).</li>
+      <li><strong>SHIFT + EDIT in the menu on a project slot</strong>: cut a project (hold) / paste it into a slot.</li>
       <li><strong>Menu → Export</strong>: an Ableton Live set in /L7/EXPORTS.</li>
       <li><strong>Menu → Storage mode</strong>: the SD card shows up as a USB drive. Any key exits.</li>
     </ol>
