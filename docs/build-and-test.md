@@ -324,8 +324,10 @@ named `<kind>-<what>[-<model>]`: kind is `install` (the release), `restore`
 or `fail-<code>` (`port-busy`, `download`, `write`, `disconnected`,
 `wrong-model`, `not-m8`, `loader-not-chosen`, `browser-blocked`, `bad-file`,
 ... - the `StepError` codes in flasher.js; the event's title is the message
-shown); model is `model01`/`model02`. Also `download-model0N` (the manual
-.hex links) and `unsupported-browser`.
+shown); model is `model01`/`model02`. Also `download-model0N` (a click on
+either list of .hex links; the title is the file's name, with its version)
+and `unsupported-browser` (sent on load). An event from before count.js has
+loaded waits for it, up to 15 s.
 
 `node tools/web_flasher/check.mjs <file.hex>... --objcopy <arm-none-eabi-objcopy>`
 checks halfkay.js offline: the board each file is for, and its image against

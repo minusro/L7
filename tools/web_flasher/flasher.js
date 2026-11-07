@@ -66,11 +66,16 @@ class StepError extends Error {
 }
 
 // GoatCounter events, on the page's own site (danielstanciu-l7.goatcounter.com).
-// count.js loads after the page and doesn't count on localhost; until it has
-// loaded, or if it's blocked, nothing is counted.
-function track(path, title = path) {
+// count.js loads after the page and doesn't count on localhost. An event from
+// before it has loaded waits for it (up to 15 s); if it's blocked, nothing is
+// counted.
+function track(path, title = path, wait = 15000) {
+  if (typeof window.goatcounter?.count !== 'function') {
+    if (wait > 0) setTimeout(() => track(path, title, wait - 250), 250);
+    return;
+  }
   try {
-    window.goatcounter?.count?.({ path, title: String(title).slice(0, 200), event: true });
+    window.goatcounter.count({ path, title: String(title).slice(0, 200), event: true });
   } catch { /* counting is best-effort */ }
 }
 
@@ -559,8 +564,7 @@ if (document.documentElement.classList.contains('can-flash')) {
     if (e.device.productId === HK.LOADER_PRODUCT_ID) log('loader connected');
   });
 } else {
-  // count.js may not have loaded yet
-  window.addEventListener('load', () => setTimeout(() => track('unsupported-browser', 'Browser without WebHID'), 1000));
+  track('unsupported-browser', 'Browser without WebHID');
 }
 refresh();
 loadRelease();
